@@ -1,0 +1,37 @@
+QGroupBox { 
+    font-size: 14pt; font-weight: bold;
+}
+
+QPushButton { 
+    background-color: #ededed; 
+    color: black; 
+    font-weight: bold;
+}
+
+QComboBox {
+    border: 1.5px solid gray;
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+}
+
+QLineEdit {
+    border: 1px solid gray;
+    border-radius: 3px;
+    padding: 1px, 18px 1px 3px;
+    min-width: 6em;
+}
+
+QSpinBox {
+    border: 1px solid gray;
+    border-radius: 3px;
+    padding: 1px, 4px 1px 3px;
+    min-width: 2em;
+}
+
+QDoubleSpinBox {
+    border: 1px solid gray;
+    border-radius: 3px;
+    padding: 1px, 4px 1px 3px;
+    min-width: 2em;
+}

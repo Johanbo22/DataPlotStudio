@@ -1,0 +1,1787 @@
+# ui/data_tab.py
+import traceback
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont, QIcon
+
+from core import subset_manager
+from core.data_handler import DataHandler
+from core.aggregation_manager import AggregationManager
+from ui.status_bar import StatusBar
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer
+import pandas as pd
+from core.subset_manager import SubsetManager
+from pathlib import Path
+
+
+class DataTab(QWidget):
+    """Tab for viewing and manipulating data"""
+    
+    def __init__(self, data_handler: DataHandler, status_bar: StatusBar, subset_manager: SubsetManager):
+        super().__init__()
+        
+        self.data_handler = data_handler
+        self.status_bar = status_bar
+        self.subset_manager = subset_manager
+        self.aggregation_manager = AggregationManager()
+        self.plot_tab = None
+        self.data_table = None
+        self.stats_text = None
+        self.data_tabs = None
+        self.subset_view_label = None
+        self.aggregation_view_label = None
+        
+        self.init_ui()
+    
+    def set_plot_tab(self, plot_tab):
+        """Sets a reference to the PlotTab"""
+        self.plot_tab = plot_tab
+    
+    def init_ui(self):
+        """Initialize the data tab UI"""
+        main_layout = QHBoxLayout(self)
+        
+        # Left side: Data table and operations (70%)
+        left_layout = QVBoxLayout()
+
+        #data source inor bar
+        self.data_source_container = QWidget()
+        data_source_layout = QHBoxLayout(self.data_source_container)
+        data_source_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.data_source_prefix_label = QLabel("Data Source:")
+        self.data_source_prefix_label.setStyleSheet("color: #2c3e50; font-weight: bold;")
+        data_source_layout.addWidget(self.data_source_prefix_label)
+
+        self.data_source_name_label = QLabel("")
+        self.data_source_name_label.setStyleSheet("color: #3498db; font-style: italic;")
+        data_source_layout.addWidget(self.data_source_name_label)
+
+        self.subset_view_label = QLabel("")
+        self.subset_view_label.setStyleSheet("color: #e67e22; font-weight: bold; margin-left: 10px;")
+        self.subset_view_label.setVisible(False)
+        data_source_layout.addWidget(self.subset_view_label)
+
+        self.aggregation_view_label = QLabel("")
+        self.aggregation_view_label.setStyleSheet("color: #8e44ad; font-weight: bold; margin-left: 10px;")
+        self.aggregation_view_label.setVisible(False)
+        data_source_layout.addWidget(self.aggregation_view_label)
+
+        data_source_layout.addStretch()
+        self.data_source_refresh_button = QPushButton("Refresh Data")
+        self.data_source_refresh_button.setIcon(QIcon("icons/menu_bar/google_sheet.png"))
+        self.data_source_refresh_button.setToolTip("Re-import data from your Google Sheets document")
+        self.data_source_refresh_button.setStyleSheet(
+            "QPushButton { background-color: #27ae60; color: white; font-weight: bold; padding: 6px 12px; }"
+            "QPushButton:hover { background-color: #229954; }"
+        )
+        self.data_source_refresh_button.clicked.connect(self.refresh_google_sheets_data)
+        data_source_layout.addWidget(self.data_source_refresh_button)
+
+        self.data_source_container.setVisible(False)
+        left_layout.addWidget(self.data_source_container)
+        
+        # Create tabs for data and statistics
+        self.data_tabs = QTabWidget()
+        
+        # Data Table Tab
+        self.data_table = QTableWidget()
+        self.data_table.setColumnCount(0)
+        self.data_table.setRowCount(0)
+        data_table_icon = QIcon("icons/data_table.png")
+        self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
+        
+        # Statistics Tab
+        self.stats_text = QTextEdit()
+        self.stats_text.setReadOnly(True)
+        stats_icon = QIcon("icons/data_stats.png")
+        self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
+        
+        left_layout.addWidget(self.data_tabs, 1)
+        
+        # Right side: Operations panel (30%) with tabs
+        right_layout = QVBoxLayout()
+        
+        # Reset button at the top - always visible
+        reset_button = QPushButton("Reset to Original")
+        reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
+        reset_button.clicked.connect(self.reset_data)
+        reset_button.setStyleSheet("QPushButton { background-color: #ffcccc; font-weight: bold; }")
+        right_layout.addWidget(reset_button)
+        
+        # Create tabbed operations interface
+        ops_tabs = QTabWidget()
+        
+        # === TAB 1: CLEANING ===
+        cleaning_tab = QWidget()
+        cleaning_layout = QVBoxLayout(cleaning_tab)
+
+        clean_info = QLabel("This tab includes operations to clean your dataset.")
+        clean_info.setWordWrap(True)
+        clean_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        cleaning_layout.addWidget(clean_info)
+        
+        clean_button = QPushButton("Remove Duplicates")
+        clean_button.setToolTip("Use this to remove any instances of duplicate entries in your dataset")
+        clean_button.setIcon(QIcon("icons/data_operations/remove_duplicates.png"))
+        clean_button.clicked.connect(self.remove_duplicates)
+        cleaning_layout.addWidget(clean_button)
+        
+        drop_missing_button = QPushButton("Drop Missing Values")
+        drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
+        drop_missing_button.setIcon(QIcon("icons/data_operations/drop_missing_values.png"))
+        drop_missing_button.clicked.connect(self.drop_missing)
+        cleaning_layout.addWidget(drop_missing_button)
+        
+        fill_missing_button = QPushButton("Fill Missing Values")
+        fill_missing_button.setToolTip("Use this to fill in 'NaN' values in your dataset to something specific")
+        fill_missing_button.setIcon(QIcon("icons/data_operations/fill_missing_data.png"))
+        fill_missing_button.clicked.connect(self.fill_missing)
+        cleaning_layout.addWidget(fill_missing_button)
+        
+        cleaning_layout.addStretch()
+        data_clean_icon = QIcon("icons/data_operations/data_cleaning.png")
+        ops_tabs.addTab(cleaning_tab, data_clean_icon, "Cleaning")
+
+
+        # === TAB 2: FILTERING ===
+        filter_tab = QWidget()
+        filter_layout = QVBoxLayout(filter_tab)
+
+        filter_info = QLabel("This tab has operations which help you filter your dataset based on your own criteria. Use the 'Advanced Filter' dialog to apply more than one filter")
+        filter_info.setWordWrap(True)
+        filter_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_layout.addWidget(filter_info)
+
+        filter_layout.addWidget(QLabel("Column:"))
+        filter_column_info = QLabel("Select the column you wish to apply a filter to")
+        filter_column_info.setWordWrap(True)
+        filter_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_layout.addWidget(filter_column_info)
+
+        self.filter_column = QComboBox()
+        filter_layout.addWidget(self.filter_column)
+        
+        filter_layout.addWidget(QLabel("Condition:"))
+        filter_condition_info = QLabel("Select which conditional to apply to column. N.B. Uses Python Syntax")
+        filter_condition_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_condition_info.setWordWrap(True)
+        filter_layout.addWidget(filter_condition_info)
+
+        self.filter_condition = QComboBox()
+        self.filter_condition.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains'])
+        filter_layout.addWidget(self.filter_condition)
+        
+        filter_layout.addWidget(QLabel("Value:"))
+        filter_value_info = QLabel("Enter the value you want the column to be evaluate to. Note: reference your data. This is case-sensitive")
+        filter_value_info.setWordWrap(True)
+        filter_value_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_layout.addWidget(filter_value_info)
+
+        self.filter_value = QLineEdit()
+        filter_layout.addWidget(self.filter_value)
+        
+        apply_filter_button = QPushButton("Apply Filter")
+        apply_filter_button.setIcon(QIcon("icons/data_operations/apply_filter.png"))
+        apply_filter_button.clicked.connect(self.apply_filter)
+        filter_layout.addWidget(apply_filter_button)
+        
+        filter_layout.addSpacing(10)
+        
+        adv_filter_button = QPushButton("Advanced Filter")
+        adv_filter_button.setIcon(QIcon("icons/data_operations/advanced_filter.png"))
+        adv_filter_button.clicked.connect(self.open_advanced_filter)
+        filter_layout.addWidget(adv_filter_button)
+        
+        filter_layout.addStretch()
+        filter_icon = QIcon("icons/data_operations/filter.png")
+        ops_tabs.addTab(filter_tab, filter_icon, "Filter Data")
+        
+        # === TAB 3: COLUMNS ===
+        column_tab = QWidget()
+        column_layout = QVBoxLayout(column_tab)
+
+        column_info = QLabel("This tab allows you to change certain elements to the columns of your data")
+        column_info.setWordWrap(True)
+        column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        column_layout.addWidget(column_info)
+        
+        column_layout.addWidget(QLabel("Select Column:"))
+        column_column_info = QLabel("Select the column you wish to work with")
+        column_column_info.setWordWrap(True)
+        column_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        column_layout.addWidget(column_column_info)
+
+        self.column_select = QComboBox()
+        column_layout.addWidget(self.column_select)
+        
+        drop_column_button = QPushButton("Drop Column")
+        drop_column_button.setToolTip("Use this to remove the selected column from the dataset")
+        drop_column_button.setIcon(QIcon("icons/data_operations/drop_column.png"))
+        drop_column_button.clicked.connect(self.drop_column)
+        column_layout.addWidget(drop_column_button)
+        
+        rename_button = QPushButton("Rename Column")
+        rename_button.setToolTip("Use this to rename the selected column")
+        rename_button.setIcon(QIcon("icons/data_operations/rename.png"))
+        rename_button.clicked.connect(self.rename_column)
+        column_layout.addWidget(rename_button)
+
+        column_layout.addSpacing(10)
+
+        #datatype convers
+        type_group = QGroupBox("Change Data Type")
+        type_layout = QVBoxLayout()
+
+        data_type_info = QLabel("This operation allows you to change the datatype of your selected column. To see what datatype your data is; reference the statistics tab next to DataTable")
+        data_type_info.setWordWrap(True)
+        data_type_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        type_layout.addWidget(data_type_info)
+
+        type_layout.addWidget(QLabel("Change selected columns DataType to:"))
+
+        self.type_combo = QComboBox()
+        self.type_combo.addItems([
+            "string (object)",
+            "integer (numeric)",
+            "float (numeric)",
+            "category (optimzied string)",
+            "datetime (dates/times)"
+        ])
+        self.type_combo.setToolTip(
+            "string: For text data\n"
+            "integer: For whole numbers\n"
+            "float: For decimal values\n"
+            "category: For text with few unique values\n"
+            "datetime: For dates and time"
+        )
+        type_layout.addWidget(self.type_combo)
+
+        type_button = QPushButton("Apply DataType Change")
+        type_button.setIcon(QIcon("icons/data_operations/change_datatype.png")) ##Mangler ikons
+        type_button.clicked.connect(self.change_column_type)
+        type_layout.addWidget(type_button)
+
+        type_group.setLayout(type_layout)
+        column_layout.addWidget(type_group)
+        
+        column_layout.addStretch()
+        column_icon = QIcon("icons/data_operations/edit_cols.png")
+        ops_tabs.addTab(column_tab, column_icon, "Columns")
+        
+        # === TAB 4: TRANSFORM ===
+        transform_tab = QWidget()
+        transform_layout = QVBoxLayout(transform_tab)
+
+        transform_info = QLabel("This tab allows you to alter your input data by grouping and aggregation the data based on statistical parameters. Click the 'Aggregate Data' to learn more")
+        transform_info.setWordWrap(True)
+        transform_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        transform_layout.addWidget(transform_info)
+        
+        agg_button = QPushButton("Aggregate Data")
+        agg_button.setIcon(QIcon("icons/data_operations/aggregate_data.png"))
+        agg_button.clicked.connect(self.open_aggregation_dialog)
+        transform_layout.addWidget(agg_button)
+
+        transform_layout.addSpacing(10)
+
+        ##saved agg section
+        saved_agg_group = QGroupBox("Saved Aggregations")
+        saved_agg_layout = QVBoxLayout()
+
+        saved_agg_info = QLabel("Save aggregations to switch between different views of your dataset")
+        saved_agg_info.setWordWrap(True)
+        saved_agg_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        saved_agg_layout.addWidget(saved_agg_info)
+
+        #list of saved aggs
+        self.saved_agg_list = QListWidget()
+        self.saved_agg_list.setMaximumHeight(150)
+        self.saved_agg_list.itemClicked.connect(self.on_saved_agg_selected)
+        saved_agg_layout.addWidget(self.saved_agg_list)
+
+        #buttons
+        saved_agg_buttons = QHBoxLayout()
+        self.view_agg_btn = QPushButton("View Aggregations")
+        self.view_agg_btn.setToolTip("View the selected aggregated data in the Data Table. N.B. This replaces your current data view. Reset to the original dataset by clicking 'Reset to Original'")
+        self.view_agg_btn.setIcon(QIcon("icons/data_operations/view.png"))
+        self.view_agg_btn.setEnabled(False)
+        self.view_agg_btn.clicked.connect(self.view_saved_aggregations)
+        saved_agg_buttons.addWidget(self.view_agg_btn)
+
+        self.refresh_agg_list_btn = QPushButton("Refresh")
+        self.refresh_agg_list_btn.setToolTip("Refresh the list of saved aggregations of your data. Use this if your aggregations does not show up in the list")
+        self.refresh_agg_list_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
+        self.refresh_agg_list_btn.clicked.connect(self.refresh_saved_agg_list)
+        saved_agg_buttons.addWidget(self.refresh_agg_list_btn)
+        saved_agg_layout.addLayout(saved_agg_buttons)
+
+        #delete button
+        self.delete_agg_btn = QPushButton("Delete Selected Aggregtation")
+        self.delete_agg_btn.setToolTip("Use this to delete the selected aggregation from the list")
+        self.delete_agg_btn.setIcon(QIcon("icons/data_operations/delete.png"))
+        self.delete_agg_btn.setEnabled(False)
+        self.delete_agg_btn.clicked.connect(self.delete_saved_aggregation)
+        saved_agg_layout.addWidget(self.delete_agg_btn)
+
+        saved_agg_group.setLayout(saved_agg_layout)
+        transform_layout.addWidget(saved_agg_group)
+        
+        transform_layout.addStretch()
+        transform_icon = QIcon("icons/data_operations/data_transformation.png")
+        ops_tabs.addTab(transform_tab, transform_icon, "Transform")
+
+        # TAB 5: SUBSETS
+        subset_tab = QWidget()
+        subset_layout = QVBoxLayout(subset_tab)
+
+        #info label
+        subset_info = QLabel(
+            "This tab allows you to create and manage data subsets.\n"
+            "Data subsets are smaller, more manageable portions of larger datasets.\n"
+            "Subsets do not modify your original dataset.\n"
+            "Use the 'Manage Subsets' button to create your own subsets or use the 'Auto-Create Subsets' to automatically create subsets for a column"
+        )
+        subset_info.setWordWrap(True)
+        subset_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        subset_layout.addWidget(subset_info)
+
+        subset_layout.addSpacing(10)
+
+        #manage buttons
+        manage_subsets_btn = QPushButton("Manage Subsets")
+        #manage_subsets_btn.setIcon(QIcon("icons/data_operations/subset.png")) # ICON NEEDED!!!!!
+        manage_subsets_btn.clicked.connect(self.open_subset_manager)
+        subset_layout.addWidget(manage_subsets_btn)
+
+        subset_layout.addSpacing(10)
+
+        #qucik subset createion
+        quick_subset_group = QGroupBox("Quick Subset Creation")
+        quick_subset_layout = QVBoxLayout()
+        quick_subset_layout.addWidget(QLabel("Split data by column values:"))
+
+        self.subset_column_combo = QComboBox()
+        quick_subset_layout.addWidget(self.subset_column_combo)
+
+        quick_create_btn = QPushButton("Auto-Create Subsets")
+        #quick_create_btn.setIcon(QIcon("icons/data_operations/auto_subset.png")) #ICON NEEDDED!!!!!
+        quick_create_btn.clicked.connect(self.quick_create_subsets)
+        quick_subset_layout.addWidget(quick_create_btn)
+
+        quick_subset_group.setLayout(quick_subset_layout)
+        subset_layout.addWidget(quick_subset_group)
+
+        subset_layout.addSpacing(10)
+
+        # Current subsets list
+        subset_list_group = QGroupBox("Active Subsets")
+        subset_list_layout = QVBoxLayout()
+
+        self.active_subsets_list = QListWidget()
+        self.active_subsets_list.setMaximumHeight(150)
+        self.active_subsets_list.itemDoubleClicked.connect(self.view_subset_quick)
+        subset_list_layout.addWidget(self.active_subsets_list)
+
+        subset_list_btns = QHBoxLayout()
+
+        view_subset_btn = QPushButton("View")
+        view_subset_btn.setIcon(QIcon("icons/data_operations/view.png"))
+        view_subset_btn.clicked.connect(self.view_subset_quick)
+        subset_list_btns.addWidget(view_subset_btn)
+
+        refresh_subsets_btn = QPushButton("Refresh")
+        refresh_subsets_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
+        refresh_subsets_btn.clicked.connect(self.refresh_active_subsets)
+        subset_list_btns.addWidget(refresh_subsets_btn)
+
+        subset_list_layout.addLayout(subset_list_btns)
+
+        subset_list_group.setLayout(subset_list_layout)
+        subset_layout.addWidget(subset_list_group)
+
+        subset_layout.addStretch()
+
+        # subset injection tool.
+        #this shulld allow the user to view their subset in the active DF
+        inject_group = QGroupBox("View Subset as Active DataFrame")
+        inject_layout = QVBoxLayout()
+
+        inject_info = QLabel(
+            "Insert the selected subset into the active DataFrame to work directly with it.\n"
+            "Warning: This temporarily replaces your current data view."
+        )
+        inject_info.setWordWrap(True)
+        inject_info.setStyleSheet("color: #ff6b35; font-style: italic; font-size: 9pt;")
+        inject_layout.addWidget(inject_info)
+
+        inject_layout.addSpacing(10)
+
+        #thebuttn
+        self.inject_subset_tbn = QPushButton("Insert Selected Subset")
+        #self.inject_subset_tbn.setIcon(QIcon("icons/data_operations/inject.png")) ###mangler ikon
+        self.inject_subset_tbn.setStyleSheet(
+            "QPushButton { background-color: #3498db; color: white; font-weight: bold; padding: 8px;}"
+        )
+        self.inject_subset_tbn.clicked.connect(self.inject_subset_to_dataframe)
+        inject_layout.addWidget(self.inject_subset_tbn)
+
+        #status label
+        self.injection_status_label = QLabel("Status: Working with original data")
+        self.injection_status_label.setStyleSheet(
+            "color: #27ae60; font-weight: bold; padding: 5px; "
+            "background-color: #ecf0f1; border-radius: 3px;"
+        )
+        inject_layout.addWidget(self.injection_status_label)
+
+        inject_layout.addSpacing(10)
+
+        # hmm a restore btn?
+        self.restore_original_btn = QPushButton("Revert to Original Data View")
+        #self.restore_original_btn.setIcon(QIcon("icons/data_operations/restore.png")) #Tilføj et ikon senere
+        self.restore_original_btn.setStyleSheet(
+            "QPushButton { background-color: #e74c3c; color: white; font-weight: bold; padding: 8px;}"
+        )
+        self.restore_original_btn.clicked.connect(self.restore_original_dataframe)
+        self.restore_original_btn.setEnabled(False)
+        inject_layout.addWidget(self.restore_original_btn)
+
+        inject_group.setLayout(inject_layout)
+        subset_layout.addWidget(inject_group)
+
+        subset_layout.addStretch()
+
+        subset_icon = QIcon("icons/data_operations/subset.png")  
+        ops_tabs.addTab(subset_tab, subset_icon, "Subsets")
+        
+        right_layout.addWidget(ops_tabs)
+        
+        # Create widgets for layout management
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+        right_widget = QWidget()
+        right_widget.setLayout(right_layout)
+        
+        # Create splitter
+        from PyQt6.QtWidgets import QSplitter
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setSizes([700, 300])
+        
+        main_layout.addWidget(splitter)
+        self.setLayout(main_layout)
+
+    def inject_subset_to_dataframe(self):
+        """Insert the selected subset into the active dataframe view.\n
+            This allows the user to view their subset and do further manipulation to it, without having to export the subset first."""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+            return
+        
+        # get the selected subset
+        item = self.active_subsets_list.currentItem()
+        if not item:
+            QMessageBox.warning(self, "None selected", "Please select a subset to apply to current data view")
+            return
+        
+        subset_name = item.data(Qt.ItemDataRole.UserRole)
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm",
+            f"Are you sure you want to insert the subset: '{subset_name}' into the active DataFrame\n\n"
+            f"This will temporarily replace the current data view.\n"
+            f"You can restore the original data view by pressing the 'Revert to Original Data View'",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        try:
+            # we need to store the original df first.
+            if not hasattr(self.data_handler, "pre_insert_df") or self.data_handler.pre_insert_df is None:
+                self.data_handler.pre_insert_df = self.data_handler.df.copy()
+                self.data_handler.inserted_subset_name = None
+
+            subset_manager = self.subset_manager
+            subset_df = subset_manager.apply_subset(self.data_handler.df, subset_name, use_cache=False)
+
+            self.data_handler.df = subset_df.copy()
+            self.data_handler.inserted_subset_name = subset_name
+
+            self.refresh_data_view()
+
+            self.injection_status_label.setText(f"Status: Working with a subset: '{subset_name}'")
+            self.injection_status_label.setStyleSheet(
+                "color: #e74c3c; font-weight: bold; padding: 5px;"
+                "background-color: #ffe5e5; border-radius: 3px;"
+            )
+            self.restore_original_btn.setEnabled(True)
+            self.inject_subset_tbn.setEnabled(False)
+
+            self.status_bar.log_action(
+                f"Inserted the subset: '{subset_name}' into the active DataFrame",
+                details={
+                    "subset_name": subset_name,
+                    "subset_rows": len(subset_df),
+                    "original_rows": len(self.data_handler.pre_insert_df),
+                    "operation": "insert_subset_into_active_data_view"
+                },
+                level="SUCCESS"
+            )
+
+            QMessageBox.information(
+                self,
+                "Insertion Complete",
+                f"Subset '{subset_name}' has been inserted into the active DataFrame.\n\n"
+                f"Original data: {len(self.data_handler.pre_insert_df):,} rows\n"
+                f"Subset data: {len(subset_df):,} rows\n\n"
+                f"Click 'Restore Original Data View' to return to the full dataset."
+            )
+        
+        except Exception as e:
+            self.status_bar.log(f"Failed to insert the subset: {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to insert subset:\n{str(e)}")
+            traceback.print_exc()
+
+    def restore_original_dataframe(self):
+        """Restore the original DataFrame into the Active Data View of the Data Table"""
+        if not hasattr(self.data_handler, "pre_insert_df") or self.data_handler.pre_insert_df is None:
+            QMessageBox.warning(self, "Nothing to Restore", "No inserted subset to restore from")
+            return
+        
+        try:
+            subset_name = getattr(self.data_handler, "inserted_subset_name", "Unknown")
+            original_rows = len(self.data_handler.pre_insert_df)
+
+            self.data_handler.df = self.data_handler.pre_insert_df.copy()
+            self.data_handler.pre_insert_df = None
+            self.data_handler.inserted_subset_name = None
+
+            self.refresh_data_view()
+
+            self.injection_status_label.setText("Status: Working with original data")
+            self.injection_status_label.setStyleSheet(
+                "color: #27ae60; font-weight: bold; padding: 5px; "
+                "background-color: #ecf0f1; border-radius: 3px;"
+            )
+            self.restore_original_btn.setEnabled(False)
+            self.inject_subset_tbn.setEnabled(True)
+
+            self.status_bar.log_action(
+                f"Restored original DataFrame (from subset '{subset_name}')",
+                details={
+                    'previous_subset': subset_name,
+                    'restored_rows': original_rows,
+                    'operation': 'restore_original'
+                },
+                level="SUCCESS"
+            )
+            
+            QMessageBox.information(
+                self,
+                "Restore Complete",
+                f"Original DataFrame has been restored.\n\n"
+                f"Restored: {original_rows:,} rows"
+            )
+        
+        except Exception as e:
+            self.status_bar.log(f"Failed to restore original data: {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to restore original data:\n{str(e)}")
+            traceback.print_exc()
+    
+    def refresh_data_view(self):
+        """Refresh the data table and statistics"""
+        if self.data_handler.df is None:
+            self.data_table.setRowCount(0)
+            self.data_table.setColumnCount(0)
+            self.stats_text.clear()
+            self.data_source_container.setVisible(False)
+            return
+        
+        df = self.data_handler.df
+        
+        # Update table
+        self.data_table.setRowCount(len(df))
+        self.data_table.setColumnCount(len(df.columns))
+        self.data_table.setHorizontalHeaderLabels(df.columns)
+        
+        for row in range(len(df)):
+            for col in range(len(df.columns)):
+                item = QTableWidgetItem(str(df.iloc[row, col]))
+                self.data_table.setItem(row, col, item)
+        
+        # Update column selectors
+        columns = list(df.columns)
+        self.filter_column.clear()
+        self.filter_column.addItems(columns)
+        self.column_select.clear()
+        self.column_select.addItems(columns)
+        
+        # Update subset column combo if it exists
+        if hasattr(self, 'subset_column_combo'):
+            try:
+                self.subset_column_combo.clear()
+                self.subset_column_combo.addItems(columns)
+            except Exception as e:
+                print(f"Warning: Could not update subset column combo: {e}")
+        
+        # Update statistics
+        self.update_statistics()
+
+        if self.data_handler.has_google_sheets_import():
+            self.data_source_container.setVisible(True)
+            self.data_source_prefix_label.setText("Google Sheets Data:")
+            self.data_source_name_label.setText(self.data_handler.last_gsheet_name)
+            self.data_source_refresh_button.setVisible(True)
+        elif hasattr(self.data_handler, "file_path") and self.data_handler.file_path:
+            try:
+                file_name = Path(self.data_handler.file_path).name
+            except Exception:
+                file_name = str(self.data_handler.file_path)
+            
+            self.data_source_container.setVisible(True)
+            self.data_source_prefix_label.setText("Local file:")
+            self.data_source_name_label.setText(file_name)
+            self.data_source_refresh_button.setVisible(False)
+        else:
+            self.data_source_container.setVisible(False)
+        
+        # Refresh subsets (clear cache as data changed)
+        try:
+            if hasattr(self, 'subset_manager'):
+                self.subset_manager.clear_cache()
+            if hasattr(self, 'active_subsets_list'):
+                self.refresh_active_subsets()
+        except Exception as e:
+            print(f"Warning: Could not refresh subsets: {e}")
+
+        inserted_name = getattr(self.data_handler, "inserted_subset_name", None)
+        agg_name = getattr(self.data_handler, "viewing_aggregation_name", None)
+
+        if agg_name and self.data_source_container.isVisible():
+            if hasattr(self, "aggregation_view_label"):
+                self.aggregation_view_label.setText(f"Viewing Aggregation: {agg_name}")
+                self.aggregation_view_label.setVisible(True)
+            if hasattr(self, "subset_view_label"):
+                self.subset_view_label.setVisible(False)
+        
+        elif inserted_name and self.data_source_container.isVisible():
+            if hasattr(self, "subset_view_label"):
+                self.subset_view_label.setText(f"Viewing subset: {inserted_name}")
+                self.subset_view_label.setVisible(True)
+            if hasattr(self, "aggregation_view_label"):
+                self.aggregation_view_label.setVisible(False)
+        
+        else:
+            if hasattr(self, "subset_view_label"):
+                self.subset_view_label.setText("")
+                self.subset_view_label.setVisible(False)
+            if hasattr(self, "aggregation_view_label"):
+                self.aggregation_view_label.setText("")
+                self.aggregation_view_label.setVisible(False)
+        
+        self.status_bar.log(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+
+    def quick_create_subsets(self):
+        """Quick create subsets from column values"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
+        if not hasattr(self, 'subset_column_combo'):
+            QMessageBox.warning(self, "Feature Not Available", "Subset feature not fully initialized")
+            return
+        
+        column = self.subset_column_combo.currentText()
+        if not column:
+            QMessageBox.warning(self, "No Column Selected", "Please select a column")
+            return
+        
+        unique_count = self.data_handler.df[column].nunique()
+        
+        reply = QMessageBox.question(
+            self,
+            "Confirm",
+            f"Create {unique_count} subsets (one per unique value in '{column}')?\n\n"
+            f"This is useful for analyzing data by groups (e.g., by location, category, etc.)",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                subset_manager = self.subset_manager
+                created = subset_manager.create_subset_from_unique_values(
+                    self.data_handler.df,
+                    column
+                )
+                
+                # Apply each to get row counts
+                for name in created:
+                    subset_manager.apply_subset(self.data_handler.df, name)
+                
+                self.refresh_active_subsets()
+                
+                self.status_bar.log_action(
+                    f"Created {len(created)} subsets from column '{column}'",
+                    details={
+                        'column': column,
+                        'subsets_created': len(created),
+                        'unique_values': unique_count,
+                        'operation': 'auto_create_subsets'
+                    },
+                    level="SUCCESS"
+                )
+                
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Created {len(created)} subsets from column '{column}'"
+                )
+            except Exception as e:
+                self.status_bar.log(f"Failed to create subsets: {str(e)}", "ERROR")
+                QMessageBox.critical(self, "Error", str(e))
+                import traceback
+                traceback.print_exc()
+    
+    def refresh_active_subsets(self):
+        """Refresh the list of active subsets"""
+        if not hasattr(self, 'active_subsets_list'):
+            return
+        
+        try:
+            self.active_subsets_list.clear()
+            
+            subset_manager = self.subset_manager
+
+            if self.data_handler.df is not None:
+                for name in subset_manager.list_subsets():
+                    try:
+                        subset_manager.apply_subset(self.data_handler.df, name)
+                    except Exception as e:
+                        print(f"Warning: Could not apply subset {name}: {str(e)}")
+
+            for name in subset_manager.list_subsets():
+                subset = subset_manager.get_subset(name)
+                row_text = f"{subset.row_count} rows" if subset.row_count > 0 else "? rows"
+                item = QListWidgetItem(f"{name} ({row_text} rows)")
+                item.setData(Qt.ItemDataRole.UserRole, name)
+                self.active_subsets_list.addItem(item)
+        except Exception as e:
+            print(f"Warning: Could not refresh subset list: {e}")
+    
+    def view_subset_quick(self):
+        """Quick view of selected subset"""
+        if not hasattr(self, 'active_subsets_list'):
+            return
+        
+        item = self.active_subsets_list.currentItem()
+        if not item:
+            return
+        
+        name = item.data(Qt.ItemDataRole.UserRole)
+        
+        try:
+            from ui.dialogs import SubsetDataViewer
+            subset_manager = self.subset_manager
+            subset_df = subset_manager.apply_subset(self.data_handler.df, name)
+            viewer = SubsetDataViewer(subset_df, name, self)
+            viewer.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+            import traceback
+            traceback.print_exc()
+    
+    def open_subset_manager(self):
+        """Open the subset manager dialog"""
+        print("DEBUG open_subset_manager: Opening dialog")
+    
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
+        try:
+            from ui.dialogs import SubsetManagerDialog
+            subset_manager = self.subset_manager
+            
+            print(f"DEBUG open_subset_manager: SubsetManager has {len(subset_manager.list_subsets())} subsets")
+            
+            # Create and show dialog
+            dialog = SubsetManagerDialog(subset_manager, self.data_handler, self)
+            
+            print(f"DEBUG open_subset_manager: Dialog created, executing")
+            dialog.exec()
+            
+            print("DEBUG open_subset_manager: Dialog closed, refreshing active subsets")
+            # Refresh the subset list after dialog closes
+            self.refresh_active_subsets()
+            
+        except Exception as e:
+            print(f"ERROR open_subset_manager: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to open subset manager: {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    def handle_plot_request(self, subset_name: str):
+        """Handle the signal from SubsetManagerDialog to plot the selected subset"""
+        if not self.plot_tab:
+            QMessageBox.warning(self, "Error", "Plot tab reference not set. Cannot switch tabs")
+            self.status_bar.log("Plot tab reference not set", "ERROR")
+            return
+        
+        try:
+            self.plot_tab.activate_subset(subset_name)
+
+            parent_tab_widget = self.parentWidget()
+            if isinstance(parent_tab_widget, QTabWidget):
+                parent_tab_widget.setCurrentWidget(self.plot_tab)
+            else:
+                self.status_bar.log("Could not switch to plot tab automatically", "WARNING")
+            
+        except Exception as e:
+            self.status_bar.log(f"Failed to switch to plotting tab: {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to activate the plot tab: {str(e)}")
+
+    def get_subset_manager(self):
+        """
+        DEPRECATED: Use self.subset_manager directly.
+        Return the subset manager instance
+        """
+        # This function is no longer needed as subset_manager is passed in
+        return self.subset_manager
+    
+    def update_statistics(self) -> None:
+        """Update statistics display"""
+        if self.data_handler.df is None:
+            return
+        
+        try:
+            info = self.data_handler.get_data_info()
+            df = self.data_handler.df
+        except Exception as e:
+            self.stats_text.setHtml(f"<p style='color: red;'>Error loading data info: {str(e)}</p>")
+            return
+
+        # html
+        html = """
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    padding: 15px;
+                    background-color: #f5f5f5;
+                }
+                h2 {
+                    color: #2c3e50;
+                    border-bottom: 3px solid #3498db;
+                    padding-bottom: 8px;
+                    margin-top: 25px;
+                    margin-botom: 15px;
+                }
+                h3 {
+                    color: #34495e;
+                    margin-top: 20px;
+                    margin-bottom: 10px;
+                    font-size: 16px;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-botom: 20px;
+                    background-color: white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                th {
+                    background-color: #3498db;
+                    color: white;
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: bold;
+                    border: 1px solid #2980b9;
+                }
+                td {
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                tr:hover {
+                    background-color: #e8f4f8;
+                }
+                .info-box {
+                    background-color: #ecf0f1;
+                    border-left: 4px solid #3498db;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border-radius: 4px;
+                }
+                .info-item {
+                    margin: 8px 0;
+                    font-size: 14px;
+                }
+                .info-label {
+                    font-weight: bold;
+                    color: #2c3e50;
+                    display: inline-block;
+                    width: 150px;
+                }
+                .info-value {
+                    color: #34495e;
+                }
+                .warning {
+                    background-color: #fff3cd;
+                    border-left: 4px solid #ffc107;
+                    padding: 10px;
+                    margin: 10px 0;
+                    border-radius: 4px;
+                }
+                .numeric_col {
+                    text-align: right;
+                }
+            </style>
+        </head>
+        <body>    
+        """
+
+        #dataset overview
+        html += "<h2>Dataset Overview</h2>"
+        html += "<div class='info-box'>"
+        html += f"<div class='info-item'><span class='info-label'>Total Rows:</span> <span class='info-value'>{info.get('shape', [0])[0]:,}</span></div>"
+        html += f"<div class='info-item'><span class='info-label'>Total Columns:</span> <span class='info-value'>{len(info.get('columns', []))}</span></div>"
+
+        #memory 
+        try:
+            total_memory_bytes = df.memory_usage(deep=True).sum()
+            total_memory = total_memory_bytes / 1024  # Convert to KB
+        
+            if total_memory > 1024:
+                memory_str = f"{total_memory/1024:.2f} MB"
+            else:
+                memory_str = f"{total_memory:.2f} KB"
+        except Exception as e:
+            memory_str = "N/A"
+        
+        html += f"<div class='info-item'><span class='info-label'>Memory Usage:</span> <span class='info-value'>{memory_str}</span></div>"
+
+        #missing values
+        try:
+            total_missing = sum(info.get('missing_values', {}).values())
+        except:
+            total_missing = 0
+        html += f"<div class='info-item'><span class='info-label'>Total Missing Values:</span> <span class='info-value'>{total_missing:,}</span></div>"
+        html += "</div>"
+
+        #column info
+        html += "<h2>Column Information</h2>"
+        html += "<table>"
+        html += "<tr><th>Column Name</th><th>Data Type</th><th>Non-Null Count</th><th>Missing Values</th><th>Missing %</th></tr>"
+        
+        total_rows = info.get("shape", [0])[0]
+        for col in info.get("columns", []):
+            try:
+                dtype = str(info.get("dtypes", {}).get(col, "Unknown"))
+                missing = info.get("missing_values", {}).get(col, 0)
+                non_null = total_rows - missing
+                missing_pct = (missing / total_rows * 100) if total_rows > 0 else 0
+
+                # color coding based on missing pct
+                row_class = ""
+                if missing_pct > 50:
+                    row_class = "style='background-color: #ffebee;'"
+                elif missing_pct > 20:
+                    row_class = "style='background-color: #fff9c4;'"
+                
+                html += f"<tr {row_class}>"
+                html += f"<td><strong>{col}</strong></td>"
+                html += f"<td>{dtype}</td>"
+                html += f"<td class='numeric-col'>{non_null:,}</td>"
+                html += f"<td class='numeric-col'>{missing:,}</td>"
+                html += f"<td class='numeric-col'>{missing_pct:.1f}%</td>"
+                html += "</tr>"
+            except Exception as e:
+                # Skip problematic columns
+                continue
+        
+        html += "</table>"
+
+        # warning for many missing values
+        if total_missing > 0:
+            high_missing_cols = [col for col, missing in info.get("missing_values", {}).items() if missing > 0]
+
+            if high_missing_cols:
+                html += "<div class='warning'>"
+                html += f"<strong>Warning:</strong> {len(high_missing_cols)} column(s) contain missing values. "
+                html += "Consider using data cleaning operations."
+                html += "</div>"
+        
+        # numerical stats - with error handling for list columns
+        try:
+            numeric_df = df.select_dtypes(include=["int64", "int32", "float64", "float32"])
+
+            if len(numeric_df.columns) > 0:
+                html += "<h2>Descriptive Statistics (Numeric Columns)</h2>"
+
+                df_describe = numeric_df.describe()
+
+                html += "<table>"
+                html += "<tr><th>Statistics</th>"
+                for col in df_describe.columns:
+                    html += f"<th>{col}</th>"
+                html += "</tr>"
+
+                stats_labels = {
+                    "count": "Count",
+                    "mean": "Mean",
+                    "std": "Standard Deviation",
+                    "min": "Minimum",
+                    "25%": "25th Percentile",
+                    "50%": "Median",
+                    "75%": "75th Percentile",
+                    "max": "Maximum"
+                }
+
+                for stat in df_describe.index:
+                    html += f"<tr><td><strong>{stats_labels.get(stat, stat)}</strong></td>"
+                    for col in df_describe.columns:
+                        value = df_describe.loc[stat, col]
+                        if stat == "count":
+                            html += f"<td class='numeric-col'>{int(value):,}</td>"
+                        else:
+                            html += f"<td class='numeric-col'>{value:.4f}</td>"
+                    html += "</tr>"
+                
+                html += "</table>"
+        except Exception as e:
+            html += f"<div class='warning'>Unable to calculate numeric statistics: {str(e)}</div>"
+
+        # corr matrix 
+        try:
+            numeric_df = df.select_dtypes(include=["int64", "int32", "float64", "float32"])
+            
+            if len(numeric_df.columns) > 1:
+                html += "<h2>Correlation Matrix</h2>"
+                corr = numeric_df.corr()
+
+                html += "<table>"
+                html += "<tr><th></th>"
+                for col in corr.columns:
+                    html += f"<th>{col}</th>"
+                html += "</tr>"
+
+                for idx in corr.index:
+                    html += f"<tr><td><strong>{idx}</strong></td>"
+                    for col in corr.columns:
+                        value = corr.loc[idx, col]
+
+                        # color coding
+                        if abs(value) >= 0.8 and idx != col:
+                            cell_style = "background-color: #c8e6c9; font-weight: bold;"
+                        elif abs(value) >= 0.5 and idx != col:
+                            cell_style = "background-color: #fff9c4;"
+                        elif idx == col:
+                            cell_style = "background-color: #e3f2fd;"
+                        else:
+                            cell_style = ""
+                        
+                        html += f"<td class='numeric-col' style='{cell_style}'>{value:.3f}</td>"
+                    html += "</tr>"
+                
+                html += "</table>"
+
+                html += "<div class='info-box'>"
+                html += "<strong>Legend:</strong> "
+                html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
+                html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
+                html += "</div>"
+        except Exception as e:
+            html += f"<div class='warning'>Unable to calculate correlation matrix: {str(e)}</div>"
+        
+        # categorical stats
+        try:
+            categorical_df = df.select_dtypes(include=["object", "category"])
+
+            if len(categorical_df.columns) > 0:
+                html += "<h2>Categorical Column Statistics</h2>"
+                html += "<table>"
+                html += "<tr><th>Column</th><th>Unique Values</th><th>Most Common</th><th>Frequency</th></tr>"
+
+                for col in categorical_df.columns:
+                    try:
+                        unique_count = df[col].nunique()
+                        value_counts = df[col].value_counts()
+
+                        if len(value_counts) > 0:
+                            most_common = str(value_counts.index[0])
+                            most_common_freq = value_counts.iloc[0]
+
+                            html += "<tr>"
+                            html += f"<td><strong>{col}</strong></td>"
+                            html += f"<td class='numeric-col'>{unique_count}</td>"
+                            html += f"<td>{most_common}</td>"
+                            html += f"<td class='numeric-col'>{most_common_freq:,}</td>"
+                            html += "</tr>"
+                    except:
+                        #
+                        continue
+                
+                html += "</table>"
+        except Exception as e:
+            html += f"<div class='warning'>Unable to calculate categorical statistics: {str(e)}</div>"
+        
+        html += """
+        </body>
+        </html>
+        """
+
+        self.stats_text.setHtml(html)
+
+    
+    def remove_duplicates(self) -> None:
+        """Remove duplicate rows"""
+        try:
+            before = len(self.data_handler.df)
+            self.data_handler.clean_data("drop_duplicates")
+            after = len(self.data_handler.df)
+            removed = before - after
+
+            self.refresh_data_view()
+
+            #msg
+            self.status_bar.log_action(
+                f"Removed {removed:,} duplicate row(s)",
+                details={
+                    "rows_before": before,
+                    "rows_after": after,
+                    "rows_removed": removed,
+                    "operation": "drop_duplicates"
+                },
+                level="SUCCESS"
+            )
+        except Exception as e:
+            self.status_bar.log(f"Failed to remove duplicates: {str(e)}", "ERROR")
+    
+    def drop_missing(self):
+        """Drop rows with missing values"""
+        try:
+            before = len(self.data_handler.df)
+            self.data_handler.clean_data('drop_missing')
+            after = len(self.data_handler.df)
+            removed = before - after
+
+            self.refresh_data_view()
+
+            self.status_bar.log_action(
+                f"Dropped {removed:,} row(s) with missing values",
+                details={
+                    "rows_before": before,
+                    "rows_after": after,
+                    "rows_removed": removed,
+                    "operation": "drop_missing"
+                },
+                level="SUCCESS"
+            )
+        except Exception as e:
+            self.status_bar.log(f"Failed to drop missing values: {str(e)}", "ERROR")
+    
+    def fill_missing(self):
+        """Fill missing values"""
+        try:
+            df = self.data_handler.df
+            missing_before = df.isnull().sum().sum()
+
+            self.data_handler.clean_data("fill_missing", method="forward")
+            
+            missing_after = self.data_handler.df.isnull().sum().sum()
+            filled = missing_before - missing_after
+
+            self.refresh_data_view()
+
+            self.status_bar.log_action(
+            f"Filled {filled:,} missing value(s)",
+            details={
+                'missing_before': missing_before,
+                'missing_after': missing_after,
+                'filled_count': filled,
+                'method': 'forward_fill',
+                'operation': 'fill_missing'
+            },
+            level="SUCCESS"
+            )
+        except Exception as e:
+            self.status_bar.log(f"Failed to fill missing values: {str(e)}", "ERROR")
+    
+    def apply_filter(self):
+        """Apply filter to data"""
+        try:
+            column = self.filter_column.currentText()
+            condition = self.filter_condition.currentText()
+            value = self.filter_value.text()
+            
+            
+            # Try to convert value to appropriate type
+            try:
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+            except ValueError:
+                pass
+            
+            before = len(self.data_handler.df)
+            self.data_handler.filter_data(column, condition, value)
+            after = len(self.data_handler.df)
+            removed = before - after
+
+            self.refresh_data_view()
+
+            self.status_bar.log_action(
+                f"Filter: {column} {condition} '{value}' → {removed:,} rows removed",
+                details={
+                    'column': column,
+                    'condition': condition,
+                    'value': value,
+                    'rows_before': before,
+                    'rows_after': after,
+                    'rows_removed': removed,
+                    'operation': 'filter'
+                },
+                level="SUCCESS"
+            )
+            
+        except Exception as e:
+            self.status_bar.log(f"Filter failed: {str(e)}", "ERROR")
+    
+    def drop_column(self):
+        """Drop selected column"""
+        try:
+            column = self.column_select.currentText()
+            cols_before = len(self.data_handler.df.columns)
+            
+            self.data_handler.clean_data('drop_column', column=column)
+            
+            cols_after = len(self.data_handler.df.columns)
+            
+            self.refresh_data_view()
+            
+            self.status_bar.log_action(
+                f"Dropped column '{column}'",
+                details={
+                    'column': column,
+                    'columns_before': cols_before,
+                    'columns_after': cols_after,
+                    'operation': 'drop_column'
+                },
+                level="SUCCESS"
+            )
+        except Exception as e:
+            self.status_bar.log(f"Failed to drop column: {str(e)}", "ERROR")
+    
+    def rename_column(self):
+        """Rename selected column"""
+        old_name = self.column_select.currentText()
+        if not old_name:
+            self.status_bar.log("No column selected", "WARNING")
+            return
+        
+        dialog = RenameColumnDialog(old_name, self)
+        if dialog.exec():
+            new_name = dialog.get_new_name()
+            try:
+                self.data_handler.clean_data(
+                    'rename_column', 
+                    old_name=old_name, 
+                    new_name=new_name
+                )
+
+                self.refresh_data_view()
+                self.status_bar.log_action(
+                    f"Renamed '{old_name}' → '{new_name}'",
+                    details={
+                        'old_name': old_name,
+                        'new_name': new_name,
+                        'operation': 'rename_column'
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as e:
+                self.status_bar.log(f"Failed to rename column: {str(e)}", "ERROR")
+
+    def change_column_type(self):
+        """Change the data type of the selected column"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+            return
+
+        column = self.column_select.currentText()
+        if not column:
+            self.status_bar.log("No Column Selected", "WARNING")
+            return
+        
+        type_str = self.type_combo.currentText()
+
+        #mapping the datatypes to their equiv in pandas
+        if type_str.startswith("string"):
+            target_type = "string"
+        elif type_str.startswith("integer"):
+            target_type = "int"
+        elif type_str.startswith("float"):
+            target_type = "float"
+        elif type_str.startswith("category"):
+            target_type = "category"
+        elif type_str.startswith("datetime"):
+            target_type = "datetime"
+        else:
+            self.status_bar.log(f"Unknown DataType: {type_str}", "ERROR")
+            return
+        
+        try:
+            old_type = str(self.data_handler.df[column].dtype)
+
+            #add some warning to the user if the're trying to ex convert from int to str
+            if target_type in ["int", "float", "datetime"]:
+                reply = QMessageBox.question(
+                    self,
+                    "Confirm DataType Conversion",
+                    f"Attempting to convert column: '{column}' to {target_type}.\n\n"
+                    f"This may fail or result in data loss.\n"
+                    f"Invalid values will be converted to 'NaN'.\n\nContinue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.No:
+                    self.status_bar.log(f"Data Type conversion cancelled", "WARNING")
+                    return
+                
+                self.data_handler.clean_data(
+                    "change_data_type",
+                    column=column,
+                    new_type=target_type
+                )
+                self.refresh_data_view()
+
+                new_type = str(self.data_handler.df[column].dtype)
+
+                self.status_bar.log_action(
+                    f"Changed datatype of '{column}' from {old_type} to {new_type}",
+                    details={
+                        "column": column,
+                        "old_type": old_type,
+                        "new_type": new_type,
+                        "operation": "change_data_type"
+                    },
+                    level="SUCCESS"
+                )
+        except Exception as e:
+            error_msg = f"Failed to convert '{column}' to {target_type}: {str(e)}"
+            QMessageBox.critical(self, "Conversion Error", error_msg)
+            self.status_bar.log(error_msg, "ERROR")
+            self.refresh_data_view()
+
+    def reset_data(self):
+        """Reset data to original state"""
+        try:
+            rows_before = len(self.data_handler.df) if self.data_handler.df is not None else 0
+            cols_before = len(self.data_handler.df.columns) if self.data_handler.df is not None else 0
+
+            self.data_handler.reset_data()
+
+            if hasattr(self.data_handler, "pre_insert_df"):
+                self.data_handler.pre_insert_df = None
+            if hasattr(self.data_handler, "inserted_subset_name"):
+                self.data_handler.inserted_subset_name = None
+
+            if hasattr(self.data_handler, "viewing_aggregation_name"):
+                self.data_handler.viewing_aggregtation_name = None
+            if hasattr(self.data_handler, "pre_agg_view_df"):
+                self.data_handler.pre_agg_view_df = None
+
+            if hasattr(self, "injection_status_label"):
+                self.injection_status_label.setText("Status: Working with original data")
+                self.injection_status_label.setStyleSheet(
+                    "color: #27ae60; font-weight: bold; padding: 5px;"
+                    "background-color: #ecf0f1; border-radius: 3px;"
+                )
+                self.restore_original_btn.setEnabled(False)
+                self.inject_subset_tbn.setEnabled(True)
+
+            rows_after = len(self.data_handler.df) if self.data_handler.df is not None else 0
+            cols_after = len(self.data_handler.df.columns) if self.data_handler.df is not None else 0
+
+            self.refresh_data_view()
+
+            self.status_bar.log_action(
+                "Data reset to original state",
+                details={
+                    'rows_restored': rows_after - rows_before,
+                    'cols_restored': cols_after - cols_before,
+                    'final_rows': rows_after,
+                    'final_cols': cols_after,
+                    'operation': 'reset_data'
+                },
+                level="SUCCESS"
+            )
+        except Exception as e:
+            self.status_bar.log(f"Failed to reset data: {str(e)}", "ERROR")
+    
+    def open_advanced_filter(self):
+        """Open advanced filter dialog"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "Warning", "No data loaded")
+            return
+        
+        columns = list(self.data_handler.df.columns)
+        dialog = FilterAdvancedDialog(columns, self)
+        if dialog.exec():
+            filter_config = dialog.get_filters()
+            filters = filter_config['filters']
+            logic = filter_config['logic']
+            
+            try:
+                before = len(self.data_handler.df)
+                
+                # Reset to original first
+                self.data_handler.reset_data()
+                df = self.data_handler.df
+                
+                if logic == 'AND':
+                    # Apply filters sequentially (AND logic)
+                    for f in filters:
+                        # Convert value if needed
+                        value = f['value']
+                        try:
+                            if '.' in str(value):
+                                value = float(value)
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        self.data_handler.filter_data(f['column'], f['condition'], value)
+                else:
+                    # Apply OR logic - combine all conditions
+                    import pandas as pd
+                    mask = pd.Series([False] * len(df))
+                    
+                    for f in filters:
+                        column = f['column']
+                        condition = f['condition']
+                        value = f['value']
+                        
+                        # Try to convert value to appropriate type
+                        try:
+                            if column in df.columns:
+                                col_dtype = df[column].dtype
+                                if col_dtype in ['int64', 'int32', 'int16', 'int8']:
+                                    value = int(value)
+                                elif col_dtype in ['float64', 'float32', 'float16']:
+                                    value = float(value)
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        # Create condition mask
+                        try:
+                            if condition == '>':
+                                mask = mask | (df[column] > value)
+                            elif condition == '<':
+                                mask = mask | (df[column] < value)
+                            elif condition == '==':
+                                mask = mask | (df[column] == value)
+                            elif condition == '!=':
+                                mask = mask | (df[column] != value)
+                            elif condition == '>=':
+                                mask = mask | (df[column] >= value)
+                            elif condition == '<=':
+                                mask = mask | (df[column] <= value)
+                            elif condition == 'contains':
+                                mask = mask | df[column].astype(str).str.contains(str(value), na=False)
+                            elif condition == 'in':
+                                mask = mask | df[column].isin([value])
+                        except Exception as e:
+                            QMessageBox.warning(self, "Warning", f"Error with filter {column} {condition} {value}: {str(e)}")
+                            continue
+                    
+                    # Apply the OR mask
+                    self.data_handler.df = df[mask]
+                
+                after = len(self.data_handler.df)
+                removed = before - after
+                
+                self.refresh_data_view()
+                filter_desc = f" {logic} ".join([f"{f['column']} {f['condition']} '{f['value']}'" for f in filters])
+                self.status_bar.log(
+                    f"Advanced filters ({logic}): {filter_desc} | Rows: {before:,} → {after:,} (-{removed:,})",
+                    "SUCCESS"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+                self.status_bar.log(f"Filter failed: {str(e)}", "ERROR")
+    
+    def open_aggregation_dialog(self):
+        """Open aggregation dialog"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "Warning", "No data loaded")
+            return
+        
+        columns = list(self.data_handler.df.columns)
+        dialog = AggregationDialog(columns, self)
+        if dialog.exec():
+            config = dialog.get_aggregation_config()
+            try:
+                self.data_handler.reset_data()
+
+                group_cols = config["group_by"]
+                agg_cols = config["agg_columns"]
+                agg_func = config["agg_func"]
+                agg_name = config.get("aggregation_name", "")
+
+                self.data_handler.aggregate_data(group_cols, agg_cols, agg_func)
+                result_df = self.data_handler.df.copy()
+
+                #ask the user if they want ot save this agg
+                if agg_name:
+                    try:
+                        description = f"{agg_func}({', '.join(agg_cols)}) grouped by {', '.join(group_cols)}"
+                        self.aggregation_manager.save_aggregation(
+                            name=agg_name,
+                            description=description,
+                            group_by=group_cols,
+                            agg_columns=agg_cols,
+                            agg_func=agg_func,
+                            result_df=result_df
+                        )
+                        self.refresh_saved_agg_list()
+                        self.status_bar.log(f"Saved aggregation: {agg_name}", "SUCCESS")
+                    except ValueError as e:
+                        QMessageBox.warning(self, "Error", str(e))
+                
+                self.refresh_data_view()
+
+                group_by_str = ", ".join(group_cols)
+                agg_cols_str = ", ".join(agg_cols)
+
+                self.status_bar.log_action(
+                    f"Aggregated data by [{group_by_str}]: {agg_func}([{agg_cols_str}])",
+                    details={
+                        "group_by_columns": group_cols,
+                        "agg_columns": agg_cols,
+                        "agg_function": agg_func,
+                        "result_rows": len(self.data_handler.df),
+                        "operation": "aggregate",
+                        "saved": bool(agg_name)
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+                self.status_bar.log(f"Aggregation failed: {str(e)}", "ERROR")
+    
+    def refresh_saved_agg_list(self):
+        """Refreshes the list of saved aggs"""
+        if not hasattr(self, "saved_agg_list"):
+            return
+        
+        try:
+            self.saved_agg_list.clear()
+
+            agg_names = self.aggregation_manager.list_aggregations()
+            if not agg_names:
+                placeholder = QListWidgetItem("(No saved aggregations)")
+                placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.saved_agg_list.addItem(placeholder)
+                return
+            
+            for name in agg_names:
+                agg = self.aggregation_manager.get_aggregation(name)
+                if agg:
+                    item_text = f"{name} ({agg.row_count} rows)"
+                    item = QListWidgetItem(item_text)
+                    item.setData(Qt.ItemDataRole.UserRole, name)
+                    self.saved_agg_list.addItem(item)
+        except Exception as e:
+            print(f"Warning: Could not refresh aggregation list: {str(e)}")
+    
+    def on_saved_agg_selected(self, item):
+        """Handle selection o fs saved aggs"""
+        if not item or not item.data(Qt.ItemDataRole.UserRole):
+            self.view_agg_btn.setEnabled(False)
+            self.delete_agg_btn.setEnabled(False)
+            return
+        
+        self.view_agg_btn.setEnabled(True)
+        self.delete_agg_btn.setEnabled(True)
+    
+    def view_saved_aggregations(self):
+        """View the current selected agg in the table"""
+        if not hasattr(self, "saved_agg_list"):
+            return
+        
+        item = self.saved_agg_list.currentItem()
+        if not item or not item.data(Qt.ItemDataRole.UserRole):
+            return
+        
+        agg_name = item.data(Qt.ItemDataRole.UserRole)
+
+        try:
+            agg_df = self.aggregation_manager.get_aggregation_df(agg_name)
+            if agg_df is None:
+                QMessageBox.warning(self, "Error", "Aggregation data not found")
+                return
+            
+            #storing state
+            if not hasattr(self.data_handler, "pre_agg_view_df") or self.data_handler.pre_agg_view_df is None:
+                self.data_handler.pre_agg_view_df = self.data_handler.df.copy()
+            
+            self.data_handler.df = agg_df.copy()
+            self.data_handler.viewing_aggregation_name = agg_name
+            self.data_handler.inserted_subset_name = None
+            self.refresh_data_view()
+
+            agg = self.aggregation_manager.get_aggregation(agg_name)
+            self.status_bar.log_action(
+                f"Viewing saved aggregation: {agg_name}",
+                details={
+                    "aggregation_name": agg_name,
+                    "rows": len(agg_df),
+                    "columns": len(agg_df.columns),
+                    "operation": "view_saved_aggregation"
+                },
+                level="INFO"
+            )
+            QMessageBox.information(
+                self,
+                "Aggregation Loaded",
+                f"Now viewing aggregation: {agg_name}\n\n"
+                f"Rows: {len(agg_df):,}\n"
+                f"Columns: {len(agg_df.columns)}\n\n"
+                f"Click 'Reset to Original' to return to your full dataset."
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to view aggregation:\n{str(e)}")
+            traceback.print_exc() 
+    
+    def delete_saved_aggregation(self):
+        """Delete a saved aggregation """
+        if not hasattr(self, "saved_agg_list"):
+            return
+        
+        item = self.saved_agg_list.currentItem()
+        if not item or not item.data(Qt.ItemDataRole.UserRole):
+            return
+        
+        agg_name = item.data(Qt.ItemDataRole.UserRole)
+        
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete the saved aggregation '{agg_name}'?\n\n"
+            "This will not affect your current data view.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.aggregation_manager.delete_aggregation(agg_name):
+                self.refresh_saved_agg_list()
+                self.view_agg_btn.setEnabled(False)
+                self.delete_agg_btn.setEnabled(False)
+                self.status_bar.log(f"Deleted aggregation: {agg_name}", "SUCCESS")
+
+    
+    def refresh_google_sheets_data(self):
+        """Refresh data from the last imported Google Sheet document"""
+        try:
+            print(f"DEBUG: Attempting to refresh Google Sheets")
+            print(f"DEBUG: Sheet ID: {self.data_handler.last_gsheet_id}")
+            print(f"DEBUG: Sheet Name: {self.data_handler.last_gsheet_name}")
+            print(f"DEBUG: Delimiter: '{self.data_handler.last_gsheet_delimiter}'")
+            print(f"DEBUG: Decimal: '{self.data_handler.last_gsheet_decimal}'")
+            print(f"DEBUG: Thousands: '{self.data_handler.last_gsheet_thousands}'")
+            print(f"DEBUG: Has import: {self.data_handler.has_google_sheets_import()}")
+
+            if not self.data_handler.has_google_sheets_import():
+                QMessageBox.warning(self, "No Import History", "No Google Sheets import data found")
+                return
+        
+            progress_dialog = ProgressDialog(
+                title="Refreshing Google Sheets data",
+                message=f"Reconnecting to {self.data_handler.last_gsheet_id}"
+            )
+            progress_dialog.show()
+            progress_dialog.update_progress(10, "Establishing connection")
+            QApplication.processEvents()
+
+            rows_before = len(self.data_handler.df) if self.data_handler.df is not None else 0
+            print(f"DEBUG: Rows before refresh: {rows_before}")
+
+            progress_dialog.update_progress(30, f"Downloading data from: '{self.data_handler.last_gsheet_id}'")
+            QApplication.processEvents()
+
+            print(f"DEBUG: Calling refresh_google_sheets()...")
+            self.data_handler.refresh_google_sheets()
+            print(f"DEBUG: refresh_google_sheets() completed successfully")
+
+            progress_dialog.update_progress(70, "Processing data")
+            QApplication.processEvents()
+
+            print(f"DEBUG: Refreshing data view...")
+            self.refresh_data_view()
+            print(f"DEBUG: Data view refreshed")
+
+            progress_dialog.update_progress(100, "Complete")
+            QTimer.singleShot(300, progress_dialog.accept)
+
+            rows_after = len(self.data_handler.df)
+            rows_diff = rows_after - rows_before
+            diff_text = f"+{rows_diff}" if rows_diff > 0  else str(rows_diff)
+
+            print(f"DEBUG: Rows after refresh: {rows_after}")
+            print(f"DEBUG: Row difference: {diff_text}")
+
+            #loogg
+            self.status_bar.log_action(
+                f"Refreshed Google sheets data: {self.data_handler.last_gsheet_id}",
+                details={
+                    "sheet_name": self.data_handler.last_gsheet_name,
+                    "sheed_id": self.data_handler.last_gsheet_id,
+                    "rows_before": rows_before,
+                    "rows_after": rows_after,
+                    "rows_changed": rows_diff,
+                    "operation": "refresh_google_sheets"
+                },
+                level="SUCCESS"
+            )
+            QMessageBox.information(
+                    self,
+                    "Refresh Complete",
+                    f"Google Sheets data refreshed successfully\n\n"
+                    f"Sheet: {self.data_handler.last_gsheet_name}\n"
+                    f"Rows: {rows_after:,} ({diff_text})\n"
+                    f"Columns: {len(self.data_handler.df.columns)}"
+            )
+        except Exception as e:
+            print(f"DEBUG: Exception occurred during refresh: {type(e).__name__}")
+            print(f"DEBUG: Exception message: {str(e)}")
+            print(f"DEBUG: Traceback:\n{traceback.format_exc()}")
+            if "progress_dialog" in locals() and progress_dialog:
+                progress_dialog.accept()
+            self.status_bar.log(f"Failed to refresh Google Sheet Data: {str(e)}", "ERROR")
+            QMessageBox.critical(
+                self,
+                "Refresh Failed",
+                f"Failed to refresh Google Sheets data:\n\n{str(e)}\n\n"
+                "Please check:\n"
+                "• Internet connection\n"
+                "• Sheet is still shared publicly\n"
+                "• Sheet name has not changed"
+            )
+
+    def clear(self):
+        """Clear the data tab"""
+        self.data_table.setRowCount(0)
+        self.data_table.setColumnCount(0)
+        self.stats_text.clear()
+
+        if hasattr(self, "data_source_container"):
+            self.data_source_container.setVisible(False)
