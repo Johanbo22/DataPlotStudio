@@ -16,7 +16,6 @@ from core.logger import Logger
 from ui.dialogs import ProgressDialog, ExportDialog
 import traceback
 
-
 class DataPlotStudio(QMainWindow):
     """Main application window"""
     
