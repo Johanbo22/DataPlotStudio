@@ -1,0 +1,16 @@
+[
+  {
+    "userId": 1,
+    "username": "johndoe",
+    "email": "johndoe@example.com",
+    "isActive": true,
+    "roles": ["admin", "editor"]
+  },
+  {
+    "userId": 2,
+    "username": "janedoe",
+    "email": "janedoe@example.com",
+    "isActive": false,
+    "roles": ["viewer"]
+  }
+]
