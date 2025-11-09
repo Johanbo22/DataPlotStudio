@@ -5,17 +5,106 @@ This class (PlotTabUI) is responsible for creating and laying out all
 widgets. It does not contain any application logic or event handlers.
 """
 
+from turtle import color
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
     QLabel, QSpinBox, QDoubleSpinBox, QCheckBox, QLineEdit, QScrollArea,
     QGroupBox, QListWidget, QListWidgetItem, QSlider, QFontComboBox,
     QTabWidget, QFormLayout
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 
+class AnimatedButton(QPushButton):
+    """Custom QPush Button that animates on hover. This is currently testing"""
+
+    def __init__(self, text, base_color_hex: str, hover_color_hex: str, parent=None):
+        super().__init__(text, parent)
+
+        self._base_color = QColor(base_color_hex)
+        self._hover_color = QColor(hover_color_hex)
+
+        self._animated_color = self._base_color
+
+        self.enter_animation = QPropertyAnimation(self, b"animated_color")
+        self.enter_animation.setDuration(150)
+        self.enter_animation.setEndValue(self._hover_color)
+        self.enter_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        self.leave_animation = QPropertyAnimation(self, b"animated_color")
+        self.leave_animation.setDuration(250)
+        self.leave_animation.setEndValue(self._base_color)
+        self.leave_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        self._update_stylesheet(self._base_color)
+
+    @pyqtProperty(QColor)
+    def animated_color(self) -> QColor:
+        """Get the current animated color."""
+        return self._animated_color
+
+    @animated_color.setter
+    def animated_color(self, color: QColor):
+        """Set the animated color and update the stylesheet."""
+        self._animated_color = color
+        self._update_stylesheet(color)
+    
+    def _update_stylesheet(self, color: QColor):
+        """
+        Updates the button's stylesheet based on its role (determined by base color)
+        and the current animated color.
+        """
+        # Check if this is the "Generate" button
+        if self._base_color.name() == "#4caf50":
+            # Style for "Generate Plot"
+            pressed_color = self._hover_color.darker(120).name()
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {color.name()};
+                    color: white;
+                    font-weight: bold;
+                    padding: 8px;
+                    border: none;
+                    border-radius: 4px;
+                }}
+                QPushButton:pressed {{
+                    background-color: {pressed_color};
+                }}
+            """)
+        else:
+            # Style for "Clear"
+            pressed_color = self._hover_color.darker(110).name()
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {color.name()};
+                    color: black;
+                    font-weight: bold;
+                    padding: 8px;
+                    border: 1px solid #c9c9c9;
+                    border-radius: 4px;
+                }}
+                QPushButton:pressed {{
+                    background-color: {pressed_color};
+                }}
+            """)
+
+    def enterEvent(self, event):
+        """Called when the mouse enters the button widget."""
+        self.leave_animation.stop()
+        self.enter_animation.setStartValue(self.animated_color) # Start from current color
+        self.enter_animation.start()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Called when the mouse leaves the button widget."""
+        self.enter_animation.stop()
+        self.leave_animation.setStartValue(self.animated_color) # Start from current color
+        self.leave_animation.start()
+        super().leaveEvent(event)
+        
+    
 class PlotTabUI(QWidget):
     """
     UI Base Class for the Plotting Tab.
@@ -80,14 +169,20 @@ class PlotTabUI(QWidget):
         # Buttons at bottom
         button_layout = QHBoxLayout()
         
-        self.plot_button = QPushButton("Generate Plot")
-        self.plot_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }")
+        self.plot_button = AnimatedButton(
+            "Generate Plot",
+            base_color_hex="#4CAF50",    # Original color
+            hover_color_hex="#5cb85c"     # A slightly lighter green for hover
+        )
         self.plot_button.setMinimumHeight(40)
         self.plot_button.setShortcut("Ctrl+Return")
         button_layout.addWidget(self.plot_button)
         
-        self.clear_button = QPushButton("Clear")
-        self.clear_button.setStyleSheet("QPushButton { background-color: #ededed; color: black; font-weight: bold; padding: 8px; }")
+        self.clear_button = AnimatedButton(
+            "Clear",
+            base_color_hex="#ededed",    # Original color
+            hover_color_hex="#f5f5f5"     # A slightly lighter gray for hover
+        )
         self.clear_button.setMinimumHeight(40)
         button_layout.addWidget(self.clear_button)
         
