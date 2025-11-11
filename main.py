@@ -566,6 +566,7 @@ def load_stylesheet(relative_path: str) -> str:
 
 
 def main():
+    print("DEBUG: Application starting")
     app = QApplication(sys.argv)
     qss = load_stylesheet("style.css")
     app.setStyleSheet(qss)

@@ -20,7 +20,7 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 class AnimatedButton(QPushButton):
     """Custom QPush Button that animates on hover. This is currently testing"""
 
-    def __init__(self, text, base_color_hex: str, hover_color_hex: str, parent=None):
+    def __init__(self, text, base_color_hex: str, hover_color_hex: str, parent=None) -> None:
         super().__init__(text, parent)
 
         self._base_color = QColor(base_color_hex)
@@ -46,12 +46,12 @@ class AnimatedButton(QPushButton):
         return self._animated_color
 
     @animated_color.setter
-    def animated_color(self, color: QColor):
+    def animated_color(self, color: QColor) -> None:
         """Set the animated color and update the stylesheet."""
         self._animated_color = color
         self._update_stylesheet(color)
     
-    def _update_stylesheet(self, color: QColor):
+    def _update_stylesheet(self, color: QColor) -> None:
         """
         Updates the button's stylesheet based on its role (determined by base color)
         and the current animated color.
@@ -90,14 +90,14 @@ class AnimatedButton(QPushButton):
                 }}
             """)
 
-    def enterEvent(self, event):
+    def enterEvent(self, event) -> None:
         """Called when the mouse enters the button widget."""
         self.leave_animation.stop()
         self.enter_animation.setStartValue(self.animated_color) # Start from current color
         self.enter_animation.start()
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event) -> None:
         """Called when the mouse leaves the button widget."""
         self.enter_animation.stop()
         self.leave_animation.setStartValue(self.animated_color) # Start from current color
