@@ -567,7 +567,7 @@ def load_stylesheet(relative_path: str) -> str:
 
 def main():
     app = QApplication(sys.argv)
-    qss = load_stylesheet("style.qss")
+    qss = load_stylesheet("style.css")
     app.setStyleSheet(qss)
     window = DataPlotStudio()
     window.showMaximized()
