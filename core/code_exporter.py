@@ -25,6 +25,8 @@ class CodeExporter:
         self.imports.add("import requests")
         self.imports.add("from io import StringIO")
         self.imports.add("import traceback")
+        self.imports.add("from sqlalchemy import create_engine")
+        self.imports.add("from sqlalchemy.sql import text")
         
         plot_type = plot_config.get("plot_type")
         
@@ -83,17 +85,38 @@ class CodeExporter:
         header.extend(sorted(list(self.imports)))
         return "\n".join(header)
 
-    def _generate_data_loader(self, data_filepath: str, gsheet_info: Dict[str, Any]) -> str:
+    def _generate_data_loader(self, data_filepath: str, source_info: Dict[str, Any]) -> str:
         """Generates the data loading section."""
         lines = ["", "def load_data():", "    \"\"\"Load data from source.\"\"\""]
         
-        if gsheet_info.get("is_temp_file"):
+        if source_info.get("last_db_connection_string") and source_info.get("last_db_query"):
+            conn_string = self._clean_value(source_info.get("last_db_connection_string"))
+            query = self._clean_value(source_info.get("last_db_query"))
+            
+            lines.append("    print('Loading data from Database...')")
+            lines.append(f"    connection_string = {conn_string}")
+            lines.append(f"    query = text({query})")
+            lines.append("    try:")
+            lines.append("        engine = create_engine(connection_string)")
+            lines.append("        with engine.connect() as connection:")
+            lines.append("            df = pd.read_sql_query(query, connection)")
+            lines.append("        print('Data loaded successfully from database.')")
+            lines.append("        return df")
+            lines.append("    except ImportError as e:")
+            lines.append("        print('Error: Missing database driver. Please install, e.g., pip install psycopg2-binary')")
+            lines.append("        return None")
+            lines.append("    except Exception as e:")
+            lines.append("        print(f'Failed to load from database: {{e}}')")
+            lines.append("        print('Please check connection string (password may be missing), query, and drivers.')")
+            lines.append("        return None")
+
+        elif source_info.get("is_temp_file"):
             # It's a Google Sheet import
-            sheet_id = self._clean_value(gsheet_info.get("last_gsheet_id"))
-            sheet_name = self._clean_value(gsheet_info.get("last_gsheet_name"))
-            delimiter = self._clean_value(gsheet_info.get("last_gsheet_delimiter", ","))
-            decimal = self._clean_value(gsheet_info.get("last_gsheet_decimal", "."))
-            thousands = self._clean_value(gsheet_info.get("last_gsheet_thousands"))
+            sheet_id = self._clean_value(source_info.get("last_gsheet_id"))
+            sheet_name = self._clean_value(source_info.get("last_gsheet_name"))
+            delimiter = self._clean_value(source_info.get("last_gsheet_delimiter", ","))
+            decimal = self._clean_value(source_info.get("last_gsheet_decimal", "."))
+            thousands = self._clean_value(source_info.get("last_gsheet_thousands"))
 
             lines.append("    print('Loading data from Google Sheets...')")
             lines.append(f"    sheet_id = {sheet_id}")
@@ -815,7 +838,7 @@ class CodeExporter:
     def generate_full_script(self, 
                             df: pd.DataFrame,
                             data_filepath: str, 
-                            gsheet_info: Dict[str, Any], 
+                            source_info: Dict[str, Any], 
                             data_operations: List[Dict[str, Any]], 
                             plot_config: Dict[str, Any],
                             export_type: str = "Data + Plot"
@@ -830,7 +853,7 @@ class CodeExporter:
         
         # 2. Generate script sections
         header = self._generate_header()
-        loader_func = self._generate_data_loader(data_filepath, gsheet_info)
+        loader_func = self._generate_data_loader(data_filepath, source_info)
         processor_func = self._generate_data_ops(data_operations)
         
         plot_func = ""
