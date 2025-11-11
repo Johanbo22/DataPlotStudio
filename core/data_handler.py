@@ -1,5 +1,6 @@
 # core/data_handler.py
 from itertools import groupby
+from duckdb import connect
 import pandas as pd
 import numpy as np
 import json
@@ -7,6 +8,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 import requests
 import os, tempfile, atexit
+from sqlalchemy import create_engine
+from sqlalchemy.sql import text
 
 
 
@@ -33,6 +36,10 @@ class DataHandler:
         self.last_gsheet_decimal: Optional[str] = None
         self.last_gsheet_thousands: Optional[str] = None
 
+        #Track database credentials
+        self.last_db_connection_string: Optional[str] = None
+        self.last_db_query: Optional[str] = None
+
         # Register clean up upon exit
         atexit.register(self.cleanup_temp_files)
 
@@ -48,7 +55,7 @@ class DataHandler:
                 print(f"DEBUG: Failed to delete temp file: {str(e)}")
             finally:
                 self.temp_csv_path = None
-                self.is_temp_file = False
+                self.is_temp_file: bool = False
     
     def _create_temp_csv(self, df: pd.DataFrame, source_name: str = "google_sheets") -> Path:
         """Creates a temporary csv file from the dataframe when importing a google sheets sheet"""
@@ -266,6 +273,56 @@ class DataHandler:
             decimal=self.last_gsheet_decimal,
             thousands=self.last_gsheet_thousands
         )
+    
+    def import_from_database(self, connection_string: str, query: str) -> pd.DataFrame:
+        """Import data from a database witha connection and a query request"""
+        try:
+            #first delete temp files
+            if self.is_temp_file:
+                self.cleanup_temp_files()
+            
+            #raise error if there is no connection string or no query
+            if not connection_string or not query:
+                raise ValueError("A connection string and a query are needed to import from a database.")
+            
+            #store parameters so we can refresh the data again
+            self.last_db_connection_string = connection_string
+            self.last_db_query = query
+
+            #remove any other import source information to not make conflicts
+            self.last_gsheet_id = None
+            self.last_gsheet_name = None
+            self.file_path = None
+            self.is_temp_file = False
+
+            #create and connect
+            engine = create_engine(connection_string)
+            with engine.connect() as connection:
+                df = pd.read_sql_query(text(query), connection)
+            
+            #raise error if connection is empty or returns none
+            if df is None or len(df) == 0:
+                raise ValueError("Query returned no data.")
+            
+            self.df = df
+            self.original_df = self.df.copy()
+
+            #from the database data we create a temp_csv file for the storing and saving logic to better work.
+            self.temp_csv_path = self._create_temp_csv(self.df, "db_import")
+            self.file_path = self.temp_csv_path
+            self.is_temp_file = True
+
+            self.undo_stack.clear()
+            self.redo_stack.clear()
+            self.operation_log.clear()
+            return self.df
+        
+        except ImportError:
+            raise Exception("SQLAlchemy or database driver is not installed.\nPlease install 'sqlalchemy' and appropriate drivers (e.g., 'psycopg2-binary').")
+        except Exception as e:
+            self.last_db_connection_string = None
+            self.last_db_query = None
+            raise Exception(f"Database import failed:\n{str(e)}")
 
     def get_data_info(self) -> Dict[str, Any]:
         """Get comprehensive statistics about the data"""
@@ -458,7 +515,9 @@ class DataHandler:
             "file_path": str(self.file_path) if self.file_path else None,
             "is_temp_file": self.is_temp_file,
             "temp_csv_path": str(self.temp_csv_path) if self.temp_csv_path else None,
-            "has_data": self.df is not None
+            "has_data": self.df is not None,
+            "last_db_connection_string": self.last_db_connection_string,
+            "last_db_query": self.last_db_query
         }
     
     def refresh_google_sheets(self) -> pd.DataFrame:
