@@ -4,3 +4,4 @@ f_and_b.txt
 *.env
 *.venv
 desktop.ini
+__pycache__/
