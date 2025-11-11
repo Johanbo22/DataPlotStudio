@@ -1,4 +1,5 @@
 # ui/menu_bar.py
+from stat import filemode
 from PyQt6.QtWidgets import QMenuBar, QMenu
 from PyQt6.QtGui import QAction, QIcon
 
@@ -37,6 +38,10 @@ class MenuBar(QMenuBar):
         self.import_sheets = QAction(QIcon("icons/menu_bar/google_sheet.png"), "&Import from Google Sheets", parent)
         self.import_sheets.setToolTip("Import data from Google Sheet")
         file_menu.addAction(self.import_sheets)
+
+        self.import_database = QAction(QIcon("icons/menu_bar/database.png"), "Import from &Database", parent)
+        self.import_database.setToolTip("Import data from a database (SQLite, PostgreSQL, MySQL)")
+        file_menu.addAction(self.import_database)
         
         file_menu.addSeparator()
         
@@ -86,7 +91,7 @@ class MenuBar(QMenuBar):
         # Export menu
         export_menu = self.addMenu("&Export Data")
 
-        self.export_data_action = QAction(QIcon("icon/menu_bar/export.png"), "Export &Data", parent)
+        self.export_data_action = QAction(QIcon("icon/menu_bar/export.png"), "&Export Data", parent)
         self.export_data_action.setToolTip("Export the current data view into a new file")
         export_menu.addAction(self.export_data_action)
 
