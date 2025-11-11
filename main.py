@@ -13,7 +13,7 @@ from core.project_manager import ProjectManager
 from core.data_handler import DataHandler
 from core.code_exporter import CodeExporter
 from core.logger import Logger
-from ui.dialogs import ProgressDialog, ExportDialog
+from ui.dialogs import ProgressDialog, ExportDialog, GoogleSheetsDialog, DatabaseConnectionDialog
 import traceback
 
 
@@ -62,6 +62,7 @@ class DataPlotStudio(QMainWindow):
         self.menu_bar.file_save.triggered.connect(self.save_project)
         self.menu_bar.import_file.triggered.connect(self.import_data_file)
         self.menu_bar.import_sheets.triggered.connect(self.import_google_sheets)
+        self.menu_bar.import_database.triggered.connect(self.import_from_database)
         self.menu_bar.export_code.triggered.connect(self.export_code)
         self.menu_bar.export_logs.triggered.connect(self.export_logs)
         
@@ -271,6 +272,74 @@ class DataPlotStudio(QMainWindow):
                             "• Sheet name exists\n"
                             "• Sheet is shared publicly\n"
                             "• You have internet connection")
+            
+    def import_from_database(self):
+        """Import data from a database connection"""
+        try:
+            dialog = DatabaseConnectionDialog(self)
+            if dialog.exec():
+                db_type, connection_string, query = dialog.get_details()
+
+                if not connection_string or not query:
+                    QMessageBox.warning(self, "Input Error", "Invalid connection details or query")
+                    return
+                
+                progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message=f"Connecting to {db_type}...", parent=self)
+                progress_dialog.show()
+                progress_dialog.update_progress(10, "Establishing connection")
+                QApplication.processEvents()
+                
+                self.status_bar_widget.log(f"Connecting to {db_type} database...")
+                
+                progress_dialog.update_progress(30, "Executing query...")
+                QApplication.processEvents()
+                
+                # Actual import
+                self.data_handler.import_from_database(connection_string, query)
+
+                progress_dialog.update_progress(70, "Processing data")
+                QApplication.processEvents()
+
+                self.main_widget.data_tab.refresh_data_view()
+
+                progress_dialog.update_progress(90, "Updating interface")
+                QApplication.processEvents()
+
+                self.main_widget.plot_tab.update_column_combo()
+
+                progress_dialog.update_progress(100, "Complete")
+                QTimer.singleShot(300, progress_dialog.accept)
+
+                # Log
+                rows, cols = self.data_handler.df.shape
+                self.status_bar_widget.log_action(
+                    f"✓ Successfully imported {rows:,} rows from {db_type} database", 
+                    details={
+                        "db_type": db_type,
+                        "rows": rows,
+                        "columns": cols,
+                        "query": query,
+                        "operation": "import_database"
+                }, level="SUCCESS")
+                
+                QMessageBox.information(self, "Success", 
+                    f"Database import complete\n\n"
+                    f"Type: {db_type}\n"
+                    f"Rows: {rows:,}\n"
+                    f"Columns: {cols}")
+                
+        except Exception as e:
+            if "progress_dialog" in locals() and progress_dialog:
+                progress_dialog.accept()
+            error_msg = str(e)
+            self.status_bar_widget.log(f"✗ Database import failed: {error_msg}")
+            QMessageBox.critical(self, "Import Error", 
+                            f"Failed to import from database:\n\n{error_msg}\n\n"
+                            "Please verify:\n"
+                            "• Connection details (host, port, user, pass)\n"
+                            "• Database name is correct\n"
+                            "• SQL query is valid\n"
+                            "• Necessary drivers (e.g., psycopg2) are installed")
     
     def undo_action(self):
         """Undo last action"""
@@ -358,13 +427,15 @@ class DataPlotStudio(QMainWindow):
         data_filepath = source_info.get("file_path")
         is_temp = source_info.get("is_temp_file", False)
 
-        gsheet_info = {
+        source_info = {
             "is_temp_file": is_temp,
             "last_gsheet_id": self.data_handler.last_gsheet_id,
             "last_gsheet_name": self.data_handler.last_gsheet_name,
             "last_gsheet_delimiter": self.data_handler.last_gsheet_delimiter,
             "last_gsheet_decimal": self.data_handler.last_gsheet_decimal,
             "last_gsheet_thousands": self.data_handler.last_gsheet_thousands,
+            "last_db_connection_string": self.data_handler.last_db_connection_string,
+            "last_db_query": self.data_handler.last_db_query
         }
         
         data_operations = self.data_handler.operation_log
@@ -441,7 +512,7 @@ class DataPlotStudio(QMainWindow):
             script = self.code_exporter.generate_full_script(
                 df=dataframe,
                 data_filepath=str(data_filepath),
-                gsheet_info=gsheet_info,
+                source_info=source_info,
                 data_operations=data_operations,
                 plot_config=plot_config,
                 export_type=export_type #
