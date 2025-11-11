@@ -7,6 +7,16 @@ QPushButton {
     color: black; 
     font-weight: bold;
 }
+QPushButton:hover {
+    background-color: #d8d8d8;
+}
+QPushButton:pressed {
+    background-color: #c6c6c6;
+}
+QPushButton:disabled {
+    background-color: #f5f5f5;
+    color: #a0a0a0
+}
 
 QComboBox {
     border: 1.5px solid gray;
@@ -16,22 +26,264 @@ QComboBox {
 }
 
 QLineEdit {
-    border: 1px solid gray;
+    border: 1.5px solid gray;
     border-radius: 3px;
-    padding: 1px, 18px 1px 3px;
+    padding: 1px 18px 1px 3px;
     min-width: 6em;
 }
 
 QSpinBox {
-    border: 1px solid gray;
+    border: 1.5px solid gray;
     border-radius: 3px;
-    padding: 1px, 4px 1px 3px;
+    padding: 1px 4px 1px 3px;
     min-width: 2em;
 }
 
 QDoubleSpinBox {
-    border: 1px solid gray;
+    border: 1.5px solid gray;
     border-radius: 3px;
-    padding: 1px, 4px 1px 3px;
+    padding: 1px 4px 1px 3px;
     min-width: 2em;
+}
+
+/*Focus states for input widgets */
+QLineEdit:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QComboBox:focus {
+    border: 1.5px solid #0078d7;
+}
+
+QComboBox:on {
+    border: 1.5px solid #0078d7;
+}
+
+QTabWidget::pane {
+    border-top: 2px solid #c2c2c2;
+    background: white;
+}
+
+QTabBar::tab {
+    background: #ededed;
+    border: 1px solid #c2c2c2;
+    border-bottom: none;
+    padding: 5px 10px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background: white;
+    border-bottom: 2px solid white;
+    margin-bottom: -2px;
+}
+
+QTabBar::tab:hover {
+    background: #f0f0f0;
+}
+
+QMenuBar {
+    background-color: #f0f0f0;
+    spacing: 3px;
+}
+
+QMenuBar::item {
+    padding: 2px 5px;
+    background: transparent;
+    border-radius: 3px;
+}
+
+QMenuBar::item:selected {
+    background-color: #d8d8d8;
+}
+
+QMenu {
+    background-color: white;
+    border: 1px solid #c2c2c2;
+    padding: 2px;
+}
+
+QMenu::item {
+    padding: 4px 20px 2px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #0078d7;
+    color: white;
+}
+
+
+QStatusBar {
+    background: #f0f0f0;
+    border-top: 1px solid #c2c2c2;
+}
+
+
+QToolTip {
+    background-color: black;
+    color: white;
+    border: 1px solid black;
+    padding: 2px;
+    opacity: 200; 
+}
+
+QLabel {
+    font-size: 11pt;
+    color: #333;
+}
+
+
+/* --- Radio Buttons --- */
+QRadioButton {
+    spacing: 5px;
+}
+
+QRadioButton::indicator {
+    width: 13px;
+    height: 13px;
+    border: 1px solid #777;
+    border-radius: 7px; /* Makes it a circle */
+    background-color: #fcfcfc;
+}
+
+QRadioButton::indicator:hover {
+    border: 1.5px solid #0078d7;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #fcfcfc;
+    border: 1.5px solid #0078d7;
+}
+
+QRadioButton::indicator:checked::after {
+    /* This is the inner dot */
+    content: '';
+    display: block;
+    width: 9px;
+    height: 9px;
+    border-radius: 4.5px;
+    background-color: #0078d7;
+    margin: 2px; /* Centers the dot */
+}
+
+QRadioButton::indicator:disabled {
+    background-color: #e0e0e0;
+    border: 1px solid #b0b0b0;
+}
+
+QRadioButton:disabled {
+    color: #a0a0a0;
+}
+
+/* --- Sliders --- */
+QSlider::groove:horizontal {
+    border: 1px solid #bbb;
+    background: white;
+    height: 8px; /* Height of the track */
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: #0078d7;
+    border: 1px solid #0078d7;
+    width: 16px; /* Width of the handle */
+    margin: -4px 0; /* Vertically center */
+    border-radius: 8px;
+}
+
+QSlider::handle:horizontal:hover {
+    background: #005a9e; /* Darker blue on hover */
+    border: 1px solid #005a9e;
+}
+
+QSlider::groove:vertical {
+    border: 1px solid #bbb;
+    background: white;
+    width: 8px; /* Width of the track */
+    border-radius: 4px;
+}
+
+QSlider::handle:vertical {
+    background: #0078d7;
+    border: 1px solid #0078d7;
+    height: 16px; /* Height of the handle */
+    margin: 0 -4px; /* Horizontally center */
+    border-radius: 8px;
+}
+
+QSlider::handle:vertical:hover {
+    background: #005a9e;
+    border: 1px solid #005a9e;
+}
+
+/* --- Scroll Bars --- */
+QScrollBar:vertical {
+    border: 1px solid #c2c2c2;
+    background: #f0f0f0;
+    width: 15px;
+    margin: 15px 0 15px 0; /* Top/bottom buttons */
+}
+
+QScrollBar::handle:vertical {
+    background: #c0c0c0;
+    min-height: 20px;
+    border-radius: 7px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #a0a0a0;
+}
+
+QScrollBar:horizontal {
+    border: 1px solid #c2c2c2;
+    background: #f0f0f0;
+    height: 15px;
+    margin: 0 15px 0 15px; /* Left/right buttons */
+}
+
+QScrollBar::handle:horizontal {
+    background: #c0c0c0;
+    min-width: 20px;
+    border-radius: 7px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #a0a0a0;
+}
+
+/* Scroll bar buttons (arrows) */
+QScrollBar::add-line, QScrollBar::sub-line {
+    border: 1px solid #c2c2c2;
+    background: #e0e0e0;
+    height: 14px;
+    width: 14px;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:vertical {
+    subcontrol-position: bottom;
+}
+
+QScrollBar::sub-line:vertical {
+    subcontrol-position: top;
+}
+
+QScrollBar::add-line:horizontal {
+    subcontrol-position: right;
+}
+
+QScrollBar::sub-line:horizontal {
+    subcontrol-position: left;
+}
+
+/* --- Dialogs (for dialogs.py) --- */
+QDialog {
+    background-color: #fdfdfd;
+}
+
+/* Styles for QDialogButtonBox (often in dialogs) */
+QDialogButtonBox {
+    /* Buttons are covered by QPushButton style */
+    alignment: 'AlignRight';
 }
