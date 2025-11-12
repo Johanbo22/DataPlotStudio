@@ -21,7 +21,7 @@ from matplotlib.colors import to_hex
 from typing import Dict, List, Any
 
 
-class PlotTab(PlotTabUI):  # Inherit from the UI class
+class PlotTab(PlotTabUI):
     """Tab for creating and customizing plots"""
     
     def __init__(self, data_handler: DataHandler, status_bar: StatusBar, subset_manager=None) -> None:
@@ -60,36 +60,36 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
 
         #plot dispatcher
         self.plot_strategies = {
-            "Line": self._plot_line_strategy,
-            "Scatter": self._plot_scatter_strategy,
-            "Bar": self._plot_bar_strategy,
-            "Histogram": self._plot_histogram_strategy,
-            "Box": self._plot_box_strategy,
-            "Violin": self._plot_violin_strategy,
-            "Heatmap": self._plot_heatmap_strategy,
-            "KDE": self._plot_kde_strategy,
-            "Area": self._plot_area_strategy,
-            "Pie": self._plot_pie_strategy,
-            "Count Plot": self._plot_count_strategy,
-            "Hexbin": self._plot_hexbin_strategy,
-            "2D Density": self._plot_2d_density_strategy,
-            "Stem": self._plot_stem_strategy,
-            "Stackplot": self._plot_stackplot_strategy,
-            "Stairs": self._plot_stairs_strategy,
-            "Eventplot": self._plot_eventplot_strategy,
-            "ECDF": self._plot_ecdf_strategy,
-            "2D Histogram": self._plot_hist2d_strategy,
-            "Image Show (imshow)": self._plot_imshow_strategy,
-            "pcolormesh": self._plot_pcolormesh_strategy,
-            "Contour": self._plot_contour_strategy,
-            "Contourf": self._plot_contourf_strategy,
-            "Barbs": self._plot_barbs_strategy,
-            "Quiver": self._plot_quiver_strategy,
-            "Streamplot": self._plot_streamplot_strategy,
-            "Tricontour": self._plot_tricontour_strategy,
-            "Tricontourf": self._plot_tricontourf_strategy,
-            "Tripcolor": self._plot_tripcolor_strategy,
-            "Triplot": self._plot_triplot_strategy,
+            "Line": self.plot_engine.strategy_line,
+            "Scatter": self.plot_engine.strategy_scatter,
+            "Bar": self.plot_engine.strategy_bar,
+            "Histogram": self.plot_engine.strategy_histogram,
+            "Box": self.plot_engine.strategy_box,
+            "Violin": self.plot_engine.strategy_violin,
+            "Heatmap": self.plot_engine.strategy_heatmap,
+            "KDE": self.plot_engine.strategy_kde,
+            "Area": self.plot_engine.strategy_area,
+            "Pie": self.plot_engine.strategy_pie,
+            "Count Plot": self.plot_engine.strategy_count,
+            "Hexbin": self.plot_engine.strategy_hexbin,
+            "2D Density": self.plot_engine.strategy_2d_density,
+            "Stem": self.plot_engine.strategy_stem,
+            "Stackplot": self.plot_engine.strategy_stackplot,
+            "Stairs": self.plot_engine.strategy_stairs,
+            "Eventplot": self.plot_engine.strategy_eventplot,
+            "ECDF": self.plot_engine.strategy_ecdf,
+            "2D Histogram": self.plot_engine.strategy_hist2d,
+            "Image Show (imshow)": self.plot_engine.strategy_imshow,
+            "pcolormesh": self.plot_engine.strategy_pcolormesh,
+            "Contour": self.plot_engine.strategy_contour,
+            "Contourf": self.plot_engine.strategy_contourf,
+            "Barbs": self.plot_engine.strategy_barbs,
+            "Quiver": self.plot_engine.strategy_quiver,
+            "Streamplot": self.plot_engine.strategy_streamplot,
+            "Tricontour": self.plot_engine.strategy_tricontour,
+            "Tricontourf": self.plot_engine.strategy_tricontourf,
+            "Tripcolor": self.plot_engine.strategy_tripcolor,
+            "Triplot": self.plot_engine.strategy_triplot,
         }
         
         # Create canvas and toolbar
@@ -99,7 +99,7 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
         
         self.init_ui(canvas, toolbar)
         
-        #populate box in general tab
+        #populate box in general tab with icons
         for label, icon_key in self.plot_engine.AVAILABLE_PLOTS.items():
             icon_path = f"icons/plot_tab/plots/{icon_key}.png"
             icon = QIcon(icon_path)
@@ -918,732 +918,6 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
     def on_y_datetime_format_changed(self, text) -> None:
         """Handle y-axis format change"""
         self.x_custom_datetime_input.setEnabled(text == "Custom")
-
-    def is_datetime_column(self, data) -> bool:
-        """Check if data is datetime"""
-        if data is None:
-            return False
-        
-        try:
-            if isinstance(data, pd.Series):
-                if pd.api.types.is_datetime64_any_dtype(data):
-                    return True
-                if data.dtype == "object":
-                    sample = data.dropna().head(1)
-                    if len(sample) > 0:
-                        try:
-                            pd.to_datetime(sample.iloc[0], utc=True)
-                            return True
-                        except: pass
-            elif hasattr(data, "dtype"):
-                return pd.api.types.is_datetime64_any_dtype(data.dtype)
-        except Exception as e:
-            self.status_bar.log(f"DateTime detection warning: {str(e)}", "WARNING")
-        return False
-
-    def _format_datetime_axis(self, ax, x_data, y_data=None) -> None:
-        """Format datetime axes with proper tick spacing to avoid cluttering"""
-        import pandas as pd
-        
-        #check if axes are datetime
-        is_x_datetime = self.is_datetime_column(x_data)
-        is_y_datetime = self.is_datetime_column(y_data) if y_data is not None else False
-
-        #custom fmts
-        use_custom_format: bool = self.custom_datetime_check.isChecked()
-
-        #format xaxis
-        if is_x_datetime:
-            try:
-                if isinstance(x_data, pd.Series):
-                    if x_data.dtype == "object":
-                        x_data = pd.to_datetime(x_data, utc=True, errors="coerce")
-                    elif not hasattr(x_data.dtype, "tz") or x_data.dtype.tz is None:
-                        x_data = x_data.dt.tz_localize("UTC", nonexistent="shift_forward", ambiguous="infer")
-            except Exception as e:
-                self.status_bar.log(f"X-axis timezone handling: {str(e)}", "WARNING")
-            
-            if use_custom_format:
-                format_text = self.x_datetime_format_combo.currentText()
-
-                if format_text == "Custom":
-                    custom_format = self.x_custom_datetime_input.text().strip()
-                    if custom_format:
-                        try:
-                            ax.xaxis.set_major_formatter(mdates.DateFormatter(custom_format))
-                            self._set_intelligent_locator(ax.xaxis, x_data)
-                        except Exception as e:
-                            self.status_bar.log(f"Invalid datetime format: {str(e)}", "WARNING")
-                            self._apply_auto_datetime_format(ax.xaxis, x_data)
-                    else:
-                        self._apply_auto_datetime_format(ax.xaxis, x_data)
-                elif format_text == "Auto":
-                    self._apply_auto_datetime_format(ax.xaxis, x_data)
-                else:
-                    format_code = format_text.split(" ")[0]
-                    try:
-                        ax.xaxis.set_major_formatter(mdates.DateFormatter(format_code))
-                        self._set_intelligent_locator(ax.xaxis, x_data)
-                    except Exception as e:
-                        self.status_bar.log(f"Invalid datetime format: {str(e)}", "WARNING")
-                        self._apply_auto_datetime_format(ax.xaxis, x_data)
-            else:
-                self._apply_auto_datetime_format(ax.xaxis, x_data)
-
-        #fmt yaxis
-        if is_y_datetime:
-            try:
-                if isinstance(y_data, pd.Series):
-                    if y_data.dtype == 'object':
-                        y_data = pd.to_datetime(y_data, utc=True, errors='coerce')
-                    elif not hasattr(y_data.dtype, 'tz') or y_data.dtype.tz is None:
-                        y_data = y_data.dt.tz_localize('UTC', nonexistent='shift_forward', ambiguous='infer')
-            except Exception as e:
-                self.status_bar.log(f"Y-axis timezone handling: {str(e)}", "WARNING")
-            
-            if use_custom_format:
-                format_text = self.y_datetime_format_combo.currentText()
-
-                if format_text == "Custom":
-                    custom_format = self.y_custom_datetime_input.text().strip()
-                    if custom_format:
-                        try:
-                            ax.yaxis.set_major_formatter(mdates.DateFormatter(custom_format))
-                            self._set_intelligent_locator(ax.yaxis, y_data)
-                        except Exception as e:
-                            self.status_bar.log(f"Invalid datetime format: {str(e)}", "WARNING")
-                            self._apply_auto_datetime_format(ax.yaxis, y_data)
-                    else:
-                        self._apply_auto_datetime_format(ax.yaxis, y_data)
-                elif format_text == "Auto":
-                    self._apply_auto_datetime_format(ax.yaxis, y_data)
-                else:
-                    format_code = format_text.split(" ")[0]
-                    try:
-                        ax.yaxis.set_major_formatter(mdates.DateFormatter(format_code))
-                        self._set_intelligent_locator(ax.yaxis, y_data)
-                    except Exception as e:
-                        self.status_bar.log(f"Invalid datetime format: {str(e)}", "WARNING")
-                        self._apply_auto_datetime_format(ax.yaxis, y_data)
-            else:
-                self._apply_auto_datetime_format(ax.yaxis, y_data)
-    
-    def _apply_auto_datetime_format(self, axis, data):
-        """Apply datetimeformat based on input datarange auto"""
-        if data is None or len(data) < 2:
-            return
-        import pandas as pd
-
-        try:
-            if isinstance(data, pd.Series):
-                if data.dtype == "object":
-                    data = pd.to_datetime(data, utc=True, errors="coerce")
-                
-            data = data.dropna()
-
-            if len(data) < 2:
-                return
-
-            date_range = data.max() - data.min()
-
-            if date_range <= pd.Timedelta(hours=6):
-                axis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-                axis.set_major_locator(mdates.MinuteLocator(interval=max(1, len(data) // 10)))
-            elif date_range <= pd.Timedelta(days=1):
-                axis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-                axis.set_major_locator(mdates.HourLocator(interval=max(1, len(data) // 12)))
-            elif date_range <= pd.Timedelta(days=7):
-                axis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
-                axis.set_major_locator(mdates.DayLocator(interval=1))
-            elif date_range <= pd.Timedelta(days=30):
-                axis.set_major_formatter(mdates.DateFormatter("%m/%d"))
-                axis.set_major_locator(mdates.DayLocator(interval=max(1, date_range.days // 10)))
-            elif date_range <= pd.Timedelta(days=365):
-                axis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-                axis.set_major_locator(mdates.MonthLocator(interval=max(1, date_range.days // 90)))
-            else:
-                axis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-                axis.set_major_locator(mdates.YearLocator())
-        except Exception as e:
-            self.status_bar.log(f"Failed to auto-format datetime: {e}", "WARNING")
-    
-    def _set_intelligent_locator(self, axis, data):
-        """Set tick locator based on datarange"""
-        if data is None or len(data) < 2:
-            return
-            
-        try:
-            if isinstance(data, pd.Series):
-                if data.dtype == "object":
-                    data = pd.to_datetime(data, utc=True, errors="coerce")
-            data = data.dropna()
-
-            if len(data) < 2:
-                return
-
-            date_range = data.max() - data.min()
-            
-            if date_range <= pd.Timedelta(hours=6):
-                axis.set_major_locator(mdates.MinuteLocator(interval=max(1, len(data) // 10)))
-            elif date_range <= pd.Timedelta(days=1):
-                axis.set_major_locator(mdates.HourLocator(interval=max(1, len(data) // 12)))
-            elif date_range <= pd.Timedelta(days=7):
-                axis.set_major_locator(mdates.DayLocator(interval=1))
-            elif date_range <= pd.Timedelta(days=30):
-                axis.set_major_locator(mdates.MonthLocator(interval=max(1, date_range.days // 10)))
-            elif date_range <= pd.Timedelta(days=365):
-                axis.set_major_locator(mdates.MonthLocator(interval=max(1, date_range.days // 90)))
-            else:
-                axis.set_major_locator(mdates.YearLocator())
-        except Exception as e:
-            self.status_bar.log(f"Failed to set datetime locator: {e}", "WARNING")
-
-    
-    # Plot strategies
-    def _plot_line_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Line plot strategy"""
-        if axes_flipped:
-            #remove formatting kwargs
-            general_kwargs.pop("title", None)
-            general_kwargs.pop("xlabel", None)
-            general_kwargs.pop("ylabel", None)
-            general_kwargs.pop("legend", None)
-            general_kwargs.pop("hue", None)
-
-            for col in y_cols:
-                self.plot_engine.current_ax.plot(
-                    self.data_handler.df[col],
-                    self.data_handler.df[x_col],
-                    label=col,
-                    **plot_kwargs
-                )
-            
-            self._apply_flipped_labels(x_col, y_cols, font_family)
-            if len(y_cols) > 1 or general_kwargs.get("hue"):
-                self.plot_engine.current_ax.legend()
-            
-            #datetime
-            try:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    y_data,
-                    self.data_handler.df[x_col]
-                )
-            except: pass
-        else:
-            #normal orientation
-            plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Line"])
-            plot_method(self.data_handler.df, x_col, y_cols, **general_kwargs)
-
-            #datetime formatting
-            try:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    y_data
-                )
-            except: pass
-    
-    def _plot_area_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Area plot strategy"""
-        if axes_flipped:
-            general_kwargs.pop("title", None)
-            general_kwargs.pop("xlabel", None)
-            general_kwargs.pop("ylabel", None)
-            general_kwargs.pop("legend", None)
-            general_kwargs.pop("hue", None)
-
-            for col in y_cols:
-                self.plot_engine.current_ax.fill_betweenx(
-                    self.data_handler.df[x_col],
-                    0,
-                    self.data_handler.df[col],
-                    label=col,
-                    alpha=self.alpha_slider.value() # Default alpha for area
-                )
-            
-            self._apply_flipped_labels(x_col, y_cols, font_family)
-            if len(y_cols) > 1:
-                self.plot_engine.current_ax.legend()
-            
-            #datetime
-            try:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    y_data,
-                    self.data_handler.df[x_col]
-                )
-            except: pass
-        else:
-            #normal orientation
-            plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Area"])
-            plot_method(self.data_handler.df, x_col, y_cols, **general_kwargs)
-
-            #datetime
-            try:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    y_data
-                )
-            except: pass
-    
-    def _plot_scatter_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Scatter plot strategy"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Scatter only supports one y column. Using: {y_cols[0]}", "WARNING")
-        
-        y_col = y_cols[0]
-
-        if axes_flipped:
-            hue_val = general_kwargs.pop("hue", None)
-            general_kwargs.pop("title", None)
-            general_kwargs.pop("xlabel", None)
-            general_kwargs.pop("ylabel", None)
-            general_kwargs.pop("legend", None)
-
-            if hue_val:
-                # Use seaborn for hue logic
-                sns.scatterplot(
-                    data=self.data_handler.df,
-                    x=y_col,
-                    y=x_col,
-                    hue=hue_val,
-                    ax=self.plot_engine.current_ax,
-                    **plot_kwargs
-                )
-            else:
-                self.plot_engine.current_ax.scatter(
-                    self.data_handler.df[y_col],
-                    self.data_handler.df[x_col],
-                    **plot_kwargs
-                )
-
-            self._apply_flipped_labels(x_col, [y_col], font_family)
-            
-            #datetime
-            try:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[y_col],
-                    self.data_handler.df[x_col]
-                )
-            except: pass
-        else:
-            plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Scatter"])
-            plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-
-            #datetime
-            try:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    self.data_handler.df[y_col]
-                )
-            except: pass
-
-        #Regression analysis - Run after plotting, handle flipped axes inside
-        if (self.regression_line_check.isChecked() or self.show_r2_check.isChecked() or 
-            self.show_rmse_check.isChecked() or self.show_equation_check.isChecked() or 
-            self.error_bars_combo.currentText() != "None"):
-            
-            if axes_flipped:
-                self._add_regression_analysis(y_col, x_col, flipped=True)
-            else:
-                self._add_regression_analysis(x_col, y_col, flipped=False)
-    
-    def _plot_bar_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Bar chart plotting strategy"""
-        general_kwargs["width"] = self.bar_width_spin.value()
-        general_kwargs["horizontal"] = axes_flipped
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Bar"])
-        plot_method(self.data_handler.df, x_col, y_cols, **general_kwargs)
-
-        if axes_flipped:
-            self._apply_flipped_labels(x_col, y_cols, font_family)
-        
-        try:
-            if axes_flipped:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    y_data,
-                    self.data_handler.df[x_col]
-                )
-            else:
-                y_data = self.data_handler.df[y_cols[0]] if len(y_cols) == 1 else None
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    y_data
-                )
-        except: pass
-    
-    def _plot_box_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Box plot plotting strategy"""
-        if axes_flipped:
-            general_kwargs.pop("title", None)
-            general_kwargs.pop("xlabel", None)
-            general_kwargs.pop("ylabel", None)
-            general_kwargs.pop("legend", None)
-            general_kwargs.pop("hue", None)
-
-            self.data_handler.df[y_cols].plot(
-                kind="box",
-                ax=self.plot_engine.current_ax,
-                vert=False,
-                **plot_kwargs
-            )
-
-            self._apply_flipped_labels(x_col, y_cols, font_family)
-        else:
-            plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Box"])
-            plot_method(self.data_handler.df, y_cols, **general_kwargs)
-    
-    
-    def _plot_histogram_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Histogram plotting generation"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Histogram only supports one column. Using: {y_cols[0]}", "WARNING")
-        
-        # Use first y_col as the data source
-        data_col = y_cols[0]
-        general_kwargs["xlabel"] = self.xlabel_input.text() or data_col
-        
-        general_kwargs["bins"] = self.histogram_bins_spin.value()
-        general_kwargs["show_normal"] = self.histogram_show_normal_check.isChecked()
-        general_kwargs["show_kde"] = self.histogram_show_kde_check.isChecked()
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Histogram"])
-        plot_method(self.data_handler.df, data_col, **general_kwargs)
-
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[data_col])
-        except: pass
-    
-    def _plot_violin_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Violin plot"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Violin plots support only one y column. Using {y_cols[0]}")
-        
-        y_col = y_cols[0]
-
-        if axes_flipped:
-            general_kwargs["x"] = y_col
-            general_kwargs["y"] = x_col
-            general_kwargs["orient"] = "h"
-            self._apply_flipped_labels(x_col, [y_col], font_family)
-        else:
-            general_kwargs["x"] = x_col
-            general_kwargs["y"] = y_col
-            general_kwargs["orient"] = "v"
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Violin"])
-        plot_method(self.data_handler.df, **general_kwargs) # Pass x, y, hue, orient
-
-        try:
-            if axes_flipped:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[y_col],
-                    self.data_handler.df[x_col]
-                )
-            else:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    self.data_handler.df[y_col]
-                )
-        except: pass
-
-    def _plot_pie_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Pie chart generaton"""
-        y_col = y_cols[0] if y_cols else None
-        general_kwargs["show_percentages"] = self.pie_show_percentages_check.isChecked()
-        general_kwargs["start_angle"] = self.pie_start_angle_spin.value()
-        general_kwargs["explode_first"] = self.pie_explode_check.isChecked()
-        general_kwargs["explode_distance"] = self.pie_explode_distance_spin.value()
-        general_kwargs["shadow"] = self.pie_shadow_check.isChecked()
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Pie"])
-        plot_method(self.data_handler.df, y_col, x_col, **general_kwargs)
-
-    def _plot_heatmap_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Heatmap plot generation"""
-        # Heatmap ignores x/y, uses all numerical columns
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Heatmap"])
-        plot_method(self.data_handler.df, **general_kwargs)
-    
-    def _plot_kde_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Kernel density estimation plot generation"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"KDE plot only supports one column. Using: {y_cols[0]}", "WARNING")
-        
-        data_col = y_cols[0]
-        general_kwargs["xlabel"] = self.xlabel_input.text() or data_col
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["KDE"])
-        plot_method(self.data_handler.df, data_col, **general_kwargs)
-
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[data_col])
-        except: pass
-    
-    def _plot_count_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Count plot strategy"""
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Count Plot"])
-        plot_method(self.data_handler.df, x_col, **general_kwargs)
-
-    def _plot_hexbin_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Hexbin plot generation"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Hexbin plot only supports one y column. Using: {y_cols[0]}", "WARNING")
-        
-        y_col = y_cols[0] if y_cols else None
-        
-        if axes_flipped:
-            general_kwargs["x"] = y_col
-            general_kwargs["y"] = x_col
-            self._apply_flipped_labels(x_col, [y_col], font_family)
-        else:
-            general_kwargs["x"] = x_col
-            general_kwargs["y"] = y_col
-            
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Hexbin"])
-        plot_method(self.data_handler.df, **general_kwargs)
-
-    def _plot_2d_density_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """2d desnity plot generaton"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"2D density only supports one y column of values Using: {y_cols[0]}")
-        
-        y_col = y_cols[0]
-
-        if axes_flipped:
-            general_kwargs["x"] = y_col
-            general_kwargs["y"] = x_col
-            self._apply_flipped_labels(x_col, [y_col], font_family)
-            
-            try:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[y_col],
-                    self.data_handler.df[x_col]
-                )
-            except: pass
-        else:
-            general_kwargs["x"] = x_col
-            general_kwargs["y"] = y_col
-            
-            try:
-                self._format_datetime_axis(
-                    self.plot_engine.current_ax,
-                    self.data_handler.df[x_col],
-                    self.data_handler.df[y_col]
-                )
-            except: pass
-            
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["2D Density"])
-        plot_method(self.data_handler.df, **general_kwargs)
-
-    def _plot_stem_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Stem plot strategy"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Stem only supports one y column. Using: {y_cols[0]}", "WARNING")
-        y_col = y_cols[0]
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Stem"])
-        plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[x_col], self.data_handler.df[y_col])
-        except: pass
-    
-    def _plot_stackplot_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Stackplot strategy"""
-        if len(y_cols) < 2:
-            QMessageBox.warning(self, "Warning", "Stackplot requires at least two Y columns.")
-            return
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Stackplot"])
-        plot_method(self.data_handler.df, x_col, y_cols, **general_kwargs)
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[x_col])
-        except: pass
-
-    def _plot_stairs_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Stairs plot strategy"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"Stairs only supports one y column. Using: {y_cols[0]}", "WARNING")
-        y_col = y_cols[0]
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Stairs"])
-        plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[x_col], self.data_handler.df[y_col])
-        except: pass
-    
-    def _plot_eventplot_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """Eventplot strategy"""
-        
-        general_kwargs["xlabel"] = self.xlabel_input.text() or "Value"
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["Eventplot"])
-        plot_method(self.data_handler.df, y_cols, **general_kwargs)
-        try:
-        
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[y_cols[0]])
-        except: pass
-    
-    def _plot_hist2d_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """2D Histogram strategy"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"2D Histogram only supports one y column. Using: {y_cols[0]}", "WARNING")
-        y_col = y_cols[0]
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["2D Histogram"])
-        plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[x_col], self.data_handler.df[y_col])
-        except: pass
-
-    def _plot_ecdf_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        """ECDF strategy"""
-        if len(y_cols) > 1:
-            self.status_bar.log(f"ECDF only supports one y column. Using: {y_cols[0]}", "WARNING")
-        y_col = y_cols[0]
-        general_kwargs["xlabel"] = self.xlabel_input.text() or y_col
-
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS["ECDF"])
-        plot_method(self.data_handler.df, y_col, **general_kwargs)
-        try:
-            self._format_datetime_axis(self.plot_engine.current_ax, self.data_handler.df[y_col])
-        except: pass
-
-    def _plot_gridded_strategy(self, plot_name: str, x_col, y_cols, general_kwargs):
-        """Common strategy for plots requiring gridded x, y, z data."""
-        if len(y_cols) < 2:
-            QMessageBox.warning(self, "Warning", f"{plot_name} requires a Z column. Please select a second Y column (Z-value).")
-            return
-        
-        y_col = y_cols[0] # Y-axis
-        z_col = y_cols[1] # Z-axis (color)
-        
-        general_kwargs["ylabel"] = self.ylabel_input.text() or y_col
-        general_kwargs["z"] = z_col
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS[plot_name])
-        plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-    
-    def _plot_imshow_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_gridded_strategy("Image Show (imshow)", x_col, y_cols, general_kwargs)
-
-    def _plot_pcolormesh_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_gridded_strategy("pcolormesh", x_col, y_cols, general_kwargs)
-
-    def _plot_contour_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_gridded_strategy("Contour", x_col, y_cols, general_kwargs)
-
-    def _plot_contourf_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_gridded_strategy("Contourf", x_col, y_cols, general_kwargs)
-
-    def _plot_vector_strategy(self, plot_name: str, x_col, y_cols, general_kwargs):
-        """Common strategy for vector plots (barbs, quiver, streamplot)."""
-        if len(y_cols) < 3:
-            QMessageBox.warning(self, "Warning", f"{plot_name} requires 3 Y columns: Y-position, U (x-component), V (y-component).")
-            return
-        
-        y_col = y_cols[0]
-        u_col = y_cols[1]
-        v_col = y_cols[2]
-        
-        general_kwargs["ylabel"] = self.ylabel_input.text() or y_col
-        general_kwargs["u"] = u_col
-        general_kwargs["v"] = v_col
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS[plot_name])
-        plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-    
-    def _plot_barbs_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_vector_strategy("Barbs", x_col, y_cols, general_kwargs)
-
-    def _plot_quiver_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_vector_strategy("Quiver", x_col, y_cols, general_kwargs)
-
-    def _plot_streamplot_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_vector_strategy("Streamplot", x_col, y_cols, general_kwargs)
-
-    def _plot_triangulation_strategy(self, plot_name: str, x_col, y_cols, general_kwargs):
-        """Common strategy for unstructured triangulation plots."""
-        if len(y_cols) < 2 and plot_name != "Triplot":
-            QMessageBox.warning(self, "Warning", f"{plot_name} requires a Z column. Please select a second Y column (Z-axis).")
-            return
-        elif not y_cols and plot_name == "Triplot":
-            QMessageBox.warning(self, "Warning", f"{plot_name} requires a Y column.")
-            return
-
-        y_col = y_cols[0] 
-        z_col = y_cols[1] if len(y_cols) > 1 else None 
-        
-        general_kwargs["ylabel"] = self.ylabel_input.text() or y_col
-        
-        plot_method = getattr(self.plot_engine, self.plot_engine.AVAILABLE_PLOTS[plot_name])
-
-        if plot_name == "Triplot":
-            plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-        else:
-            if not z_col: 
-                return
-            general_kwargs["z"] = z_col
-            plot_method(self.data_handler.df, x_col, y_col, **general_kwargs)
-        
-    def _plot_tricontour_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_triangulation_strategy("Tricontour", x_col, y_cols, general_kwargs)
-
-    def _plot_tricontourf_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_triangulation_strategy("Tricontourf", x_col, y_cols, general_kwargs)
-
-    def _plot_tripcolor_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_triangulation_strategy("Tripcolor", x_col, y_cols, general_kwargs)
-
-    def _plot_triplot_strategy(self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        self._plot_triangulation_strategy("Triplot", x_col, y_cols, general_kwargs)
-
-    def _apply_flipped_labels(self, x_col, y_cols, font_family):
-        """Helper function to correctly apply labels when flipping axes"""
-        
-        # Flipped: X-axis label (from UI) goes to Y-axis (on plot)
-        if self.xlabel_check.isChecked():
-            ylabel_to_use = self.xlabel_input.text() or x_col
-            self.plot_engine.current_ax.set_ylabel(
-                ylabel_to_use,
-                fontsize=self.xlabel_size_spin.value(), # Use X label's size
-                fontweight=self.xlabel_weight_combo.currentText(), # Use X label's weight
-                fontfamily=font_family
-            )
-        
-        # Flipped: Y-axis label (from UI) goes to X-axis (on plot)
-        if self.ylabel_check.isChecked():
-            xlabel_to_use = self.ylabel_input.text() or (y_cols[0] if len(y_cols) == 1 else str(y_cols))
-            self.plot_engine.current_ax.set_xlabel(
-                xlabel_to_use,
-                fontsize=self.ylabel_size_spin.value(), # Use Y label's size
-                fontweight=self.ylabel_weight_combo.currentText(), # Use Y label's weight
-                fontfamily=font_family
-            )
-        
-        if self.title_check.isChecked():
-            title_to_use = self.title_input.text() if self.title_input.text() else self.plot_type.currentText()
-            self.plot_engine.current_ax.set_title(
-                title_to_use,
-                fontsize=self.title_size_spin.value(),
-                fontweight=self.title_weight_combo.currentText(),
-                fontfamily=font_family
-            )
     
     def generate_plot(self):
         """Generate plot based on current settings"""
@@ -1664,13 +938,13 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
         y_cols = self.get_selected_y_columns()
 
         try:
-            if x_col and self.is_datetime_column(active_df[x_col]):
+            if x_col and self.plot_engine._helper_is_datetime_column(self, active_df[x_col]): # Use engine's helper
                 if not pd.api.types.is_datetime64_any_dtype(active_df[x_col]):
                     active_df[x_col] = pd.to_datetime(active_df[x_col], utc=True, errors="coerce")
                     self.status_bar.log(f"Converted column: '{x_col}' to datetime", "INFO")
             
             for y_col in y_cols:
-                if y_col and self.is_datetime_column(active_df[y_col]):
+                if y_col and self.plot_engine._helper_is_datetime_column(self, active_df[y_col]): # Use engine's helper
                     if not pd.api.types.is_datetime64_any_dtype(active_df[y_col]):
                         active_df[y_col] = pd.to_datetime(active_df[y_col], utc=True, errors="coerce")
                         self.status_bar.log(f"Converted column: '{y_col}' to datetime", "INFO")
@@ -1824,7 +1098,30 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
                 original_df = self.data_handler.df
                 self.data_handler.df = active_df
                 try:
-                    self.plot_strategies[plot_type](x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs)
+                    #
+                    # === THIS IS THE MODIFIED PART ===
+                    #
+                    strategy_func = self.plot_strategies[plot_type]
+                    # Pass `self` (the PlotTab instance) to the strategy method
+                    error_message = strategy_func(
+                        self, 
+                        x_col, 
+                        y_cols, 
+                        axes_flipped, 
+                        font_family, 
+                        plot_kwargs, 
+                        general_kwargs
+                    )
+                    
+                    # Check if the strategy returned an error message
+                    if error_message:
+                        QMessageBox.warning(self, "Warning", error_message)
+                        if progress_dialog:
+                            progress_dialog.accept()
+                        return # Stop plot generation
+                    #
+                    # === END OF MODIFIED PART ===
+                    #
                 finally:
                     #restore original dataframe
                     self.data_handler.df = original_df
@@ -1842,7 +1139,7 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
                 if progress_dialog.is_cancelled():
                     return
             
-            # ==== FORMATTING ====
+            # format
             if not axes_flipped:
                 self._apply_plot_appearance(x_col, y_cols, font_family, general_kwargs)
 
@@ -2712,174 +2009,3 @@ class PlotTab(PlotTabUI):  # Inherit from the UI class
         self.title_input.clear()
         self.xlabel_input.clear()
         self.ylabel_input.clear()
-
-    def _add_regression_analysis(self, x_col: str, y_col: str, flipped: bool = False) -> None:
-        try:
-            import numpy as np
-            from scipy import stats
-
-            df = self.data_handler.df
-
-            # Remove NaN/Inf values from both columns
-            mask = np.isfinite(df[x_col]) & np.isfinite(df[y_col])
-            x_data = df.loc[mask, x_col].values
-            y_data = df.loc[mask, y_col].values
-
-            if len(x_data) < 2:
-                self.status_bar.log("Not enough data points to perform regressional analysis", "WARNING")
-                return
-            
-            # perform linreg
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
-
-            # generate regression line
-            x_line = np.linspace(x_data.min(), x_data.max(), 100)
-            y_line = slope * x_line + intercept
-
-
-            # plot regression line
-            if self.regression_line_check.isChecked():
-                plot_args = (x_line, y_line) if not flipped else (y_line, x_line)
-                reg_line = self.plot_engine.current_ax.plot(
-                    *plot_args, 
-                    color="red", linestyle="-", linewidth=2, 
-                    label=f"Linear Fit", alpha=0.5
-                )[0]
-                reg_line.set_gid("regression_line")
-            
-            # calculate confidence interval
-            if self.confidence_interval_check.isChecked():
-                confidence = self.confidence_level_spin.value() / 100.0
-                
-                # standard error of the fit
-                residuals = y_data - (slope * x_data + intercept)
-                n = len(x_data)
-                residual_std = np.sqrt(np.sum(residuals**2) / (n - 2))
-
-                #std eror for each prediction
-                x_mean = np.mean(x_data)
-                se_line = residual_std * np.sqrt(1/n + (x_line - x_mean)**2 / np.sum((x_data - x_mean)**2))
-
-                from scipy.stats import t as t_dist
-                t_val = t_dist.ppf((1 + confidence) / 2, n - 2)
-                margin = t_val * se_line
-                
-                fill_args = (x_line, y_line - margin, y_line + margin) if not flipped else (y_line - margin, y_line + margin, x_line)
-
-                if not flipped:
-                    ci_poly = self.plot_engine.current_ax.fill_between(
-                        fill_args[0], fill_args[1], fill_args[2],
-                        color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
-                    )
-                else:
-                    ci_poly = self.plot_engine.current_ax.fill_betweenx(
-                        fill_args[2], fill_args[0], fill_args[1], # y, x1, x2
-                        color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
-                    )
-                ci_poly.set_gid("confidence_interval")
-
-            # calculate rmse
-            y_pred = slope * x_data + intercept
-            rmse = np.sqrt(np.mean((y_data - y_pred)**2))
-
-            #b uild stats text
-            stats_text = []
-            
-            eq_x_label = "y" if flipped else "x"
-            eq_y_label = "x" if flipped else "y"
-
-
-            if self.show_equation_check.isChecked():
-                if intercept >= 0:
-                    stats_text.append(f'{eq_y_label} = {slope:.4f}{eq_x_label} + {intercept:.4f}')
-                else:
-                    stats_text.append(f'{eq_y_label} = {slope:.4f}{eq_x_label} - {abs(intercept):.4f}')
-            
-            if self.show_r2_check.isChecked():
-                stats_text.append(f"R² = {r_value**2:.4f}")
-            
-            if self.show_rmse_check.isChecked():
-                stats_text.append(f"RMSE = {rmse:.4f}")
-            
-            #display on plot
-            if stats_text:
-                textstr = "\n".join(stats_text)
-                props = dict(boxstyle="round", facecolor="wheat", alpha=0.85, edgecolor="black", linewidth=1)
-                font_family = self.font_family_combo.currentFont().family()
-
-                self.plot_engine.current_ax.text(0.05, 0.95, textstr, transform=self.plot_engine.current_ax.transAxes, fontsize=11, verticalalignment='top', bbox=props, fontfamily=font_family, zorder=15)
-            
-            #add errorbars
-            error_bar_type = self.error_bars_combo.currentText()
-            if error_bar_type == "Standard Deviation":
-                # calculate residuals
-                y_pred_all = slope * x_data + intercept
-                residuals = y_data - y_pred_all
-
-                # calculate std in bins
-                n_bins = min(20, len(x_data) // 5)
-                if n_bins > 1: # Need at least 2 bins
-                    # sort by x vals
-                    sorted_indices = np.argsort(x_data)
-                    x_sorted = x_data[sorted_indices]
-                    y_sorted = y_data[sorted_indices]
-                    residuals_sorted = residuals[sorted_indices]
-
-                    # calc std bins
-                    bin_size = len(x_data) // n_bins
-                    x_centers = []
-                    y_centers = []
-                    y_errors = []
-
-                    for i in range(n_bins):
-                        start = i * bin_size
-                        end = start + bin_size if i < n_bins - 1 else len(x_data)
-
-                        if end - start > 1: 
-                            x_centers.append(np.mean(x_sorted[start:end]))
-                            y_centers.append(np.mean(y_sorted[start:end]))
-                            y_errors.append(np.std(residuals_sorted[start:end]))
-                    
-                    if x_centers:
-                        err_args = (x_centers, y_centers)
-                        err_kwargs = {"yerr": y_errors} if not flipped else {"xerr": y_errors}
-                        
-                        self.plot_engine.current_ax.errorbar(
-                            *err_args, **err_kwargs,
-                            fmt="o", markersize=3, ecolor="gray", alpha=0.5, 
-                            capsize=4, zorder=8, markerfacecolor="none", 
-                            markeredgecolor="gray", linestyle="none"
-                        )
-            
-            elif error_bar_type == "Standard Error":
-                y_pred_all = slope * x_data + intercept
-                residuals = y_data - y_pred_all
-                residual_std = np.sqrt(np.sum(residuals**2) / (len(x_data) - 2))
-
-                #se for each xvals
-                x_mean = np.mean(x_data)
-                se_points = residual_std * np.sqrt(1/len(x_data) + (x_data - x_mean)**2 / np.sum((x_data - x_mean)**2))
-
-                # sample points
-                step = max(1, len(x_data) // 30)
-                
-                err_args = (x_data[::step], y_data[::step])
-                err_kwargs = {"yerr": se_points[::step]} if not flipped else {"xerr": se_points[::step]}
-                
-                self.plot_engine.current_ax.errorbar(
-                    *err_args, **err_kwargs,
-                    fmt="none", ecolor="gray", markersize=3, alpha=0.5, 
-                    capsize=4, zorder=8, markerfacecolor="none", 
-                    markeredgecolor="none", elinewidth=1, 
-                    linestyle="none"
-                )
-
-            self.status_bar.log(
-                f"✓ Regression: R²={r_value**2:.4f}, RMSE={rmse:.4f}, slope={slope:.4f}, p={p_value:.4e}",
-                "SUCCESS"
-            )
-        
-        except Exception as e:
-            self.status_bar.log(f"Regression analysis failed: {str(e)}", "ERROR")
-            import traceback
-            print(f"Regression error: {traceback.format_exc()}") 
