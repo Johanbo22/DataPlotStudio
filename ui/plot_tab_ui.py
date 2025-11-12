@@ -699,6 +699,13 @@ class PlotTabUI(QWidget):
         self.x_scale_combo = QComboBox()
         self.x_scale_combo.addItems(['linear', 'log', 'symlog'])
         xaxis_limit_layout.addWidget(self.x_scale_combo)
+
+        xaxis_limit_layout.addSpacing(5)
+        xaxis_limit_layout.addWidget(QLabel("X-axis Display Units:"))
+        self.x_display_units_combo = QComboBox()
+        self.x_display_units_combo.addItems(["None", "Hundreds (100s)", "Thousands", "Millions", "Billions"])
+        self.x_display_units_combo.setToolTip("Format axis labels to display in units")
+        xaxis_limit_layout.addWidget(self.x_display_units_combo)
         xaxis_limit_group.setLayout(xaxis_limit_layout)
 
         scroll_layout.addWidget(xaxis_limit_group)
@@ -797,6 +804,14 @@ class PlotTabUI(QWidget):
         self.y_scale_combo = QComboBox()
         self.y_scale_combo.addItems(['linear', 'log', 'symlog'])
         yaxis_limit_layout.addWidget(self.y_scale_combo)
+        
+        yaxis_limit_layout.addSpacing(5)
+        yaxis_limit_layout.addWidget(QLabel("Y-axis Display Units"))
+        self.y_display_units_combo = QComboBox()
+        self.y_display_units_combo.addItems(["None", "Hundreds (100s)", "Thousands", "Millions", "Billions"])
+        self.y_display_units_combo.setToolTip("Format axis labels to display in units")
+        yaxis_limit_layout.addWidget(self.y_display_units_combo)
+
         yaxis_limit_group.setLayout(yaxis_limit_layout)
 
         scroll_layout.addWidget(yaxis_limit_group)
