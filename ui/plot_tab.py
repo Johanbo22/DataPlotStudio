@@ -186,8 +186,6 @@ class PlotTab(PlotTabUI):
         self.annotations_list.itemClicked.connect(self.on_annotation_selected)
         self.clear_annotations_button.clicked.connect(self.clear_annotations)
 
-    ### START OF LOGIC / FUNCTIONALITY
-
     def activate_subset(self, subset_name: str):
         """Activates the 'Use Subset' checkbox and selects the selected subset"""
         if not self.subset_manager:
@@ -326,14 +324,14 @@ class PlotTab(PlotTabUI):
         if facecolor:
             self.bar_color = facecolor
             self.bar_color_label.setText(facecolor)
-            self.bar_color_button.setStyleSheet(f"background-color: {facecolor}")
+            self.bar_color_button.updateColors(base_color_hex=self.bar_color)
         
         #edge color
         edgecolor = to_hex(patch.get_edgecolor())
         if edgecolor:
             self.bar_edge_color = edgecolor
             self.bar_edge_label.setText(edgecolor)
-            self.bar_edge_button.setStyleSheet(f"background-color: {edgecolor}")
+            self.bar_edge_button.updateColors(base_color_hex=self.bar_edge_color)
 
         #load the bar edge width
         self.bar_edge_width_spin.blockSignals(True)
@@ -420,7 +418,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.x_major_grid_color = color.name()
             self.x_major_grid_color_label.setText(self.x_major_grid_color)
-            self.x_major_grid_color_button.setStyleSheet(f"background-color: {self.x_major_grid_color}")
+            self.x_major_grid_color_button.updateColors(base_color_hex=self.x_major_grid_color)
 
     def choose_x_minor_grid_color(self):
         """Choose the colour for the minor x gridlnies"""
@@ -428,7 +426,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.x_minor_grid_color = color.name()
             self.x_minor_grid_color_label.setText(self.x_minor_grid_color)
-            self.x_minor_grid_color_button.setStyleSheet(f"background-color: {self.x_minor_grid_color}")
+            self.x_minor_grid_color_button.updateColors(base_color_hex=self.x_minor_grid_color)
     
     def choose_y_major_grid_color(self):
         """Choose color for x-axis major gridlines"""
@@ -436,7 +434,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.y_major_grid_color = color.name()
             self.y_major_grid_color_label.setText(self.y_major_grid_color)
-            self.y_major_grid_color_button.setStyleSheet(f"background-color: {self.y_major_grid_color}")
+            self.y_major_grid_color_button.updateColors(base_color_hex=self.y_major_grid_color)
 
     def choose_y_minor_grid_color(self):
         """Choose the colour for the minor x gridlnies"""
@@ -444,7 +442,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.y_minor_grid_color = color.name()
             self.y_minor_grid_color_label.setText(self.y_minor_grid_color)
-            self.y_minor_grid_color_button.setStyleSheet(f"background-color: {self.y_minor_grid_color}")
+            self.y_minor_grid_color_button.updateColors(base_color_hex=self.y_minor_grid_color)
     
     def toggle_multi_y(self):
         """Toggle between multi and single y slections"""
@@ -488,7 +486,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.bg_color = color.name()
             self.bg_color_label.setText(self.bg_color)
-            self.bg_color_button.setStyleSheet(f"background-color: {self.bg_color}")
+            self.bg_color_button.updateColors(base_color_hex=self.bg_color)
 
     def choose_face_color(self) -> None:
         """Open the color picker tool for the face of the plotting axes"""
@@ -496,7 +494,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.face_color = color.name()
             self.face_color_label.setText(self.face_color)
-            self.face_color_button.setStyleSheet(f"background-color: {self.face_color}")
+            self.face_color_button.updateColors(base_color_hex=self.face_color)
 
     def toggle_line_selector(self) -> None:
         """Show/enable line selection"""
@@ -597,7 +595,7 @@ class PlotTab(PlotTabUI):
             if color:
                 self.line_color = color
                 self.line_color_label.setText(color)
-                self.line_color_button.setStyleSheet("background-color: { color}")
+                self.line_color_button.updateColors(base_color_hex=self.line_color)
 
             #load markers
             marker = line.get_marker()
@@ -616,7 +614,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.top_spine_color = color.name()
             self.top_spine_color_label.setText(self.top_spine_color)
-            self.top_spine_color_button.setStyleSheet(f"background-color: {self.top_spine_color}")
+            self.top_spine_color_button.updateColors(base_color_hex=self.top_spine_color)
     
     def choose_bottom_spine_color(self):
         """Open color picker for bottom spine"""
@@ -624,7 +622,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.bottom_spine_color = color.name()
             self.bottom_spine_color_label.setText(self.bottom_spine_color)
-            self.bottom_spine_color_button.setStyleSheet(f"background-color: {self.bottom_spine_color}")
+            self.bottom_spine_color_button.updateColors(base_color_hex=self.bottom_spine_color)
     
     def choose_left_spine_color(self):
         """Open color picker for left spine"""
@@ -632,7 +630,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.left_spine_color = color.name()
             self.left_spine_color_label.setText(self.left_spine_color)
-            self.left_spine_color_button.setStyleSheet(f"background-color: {self.left_spine_color}")
+            self.left_spine_color_button.updateColors(base_color_hex=self.left_spine_color)
     
     def choose_right_spine_color(self):
         """Open color picker for right spine"""
@@ -640,7 +638,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.right_spine_color = color.name()
             self.right_spine_color_label.setText(self.right_spine_color)
-            self.right_spine_color_button.setStyleSheet(f"background-color: {self.right_spine_color}")
+            self.right_spine_color_button.updateColors(base_color_hex=self.right_spine_color)
     
     def preset_all_spines(self):
         """Preset: Show all spines"""
@@ -673,7 +671,7 @@ class PlotTab(PlotTabUI):
             self.line_color = color.name()
             self.line_color_label.setText(self.line_color)
             # Show color preview
-            self.line_color_button.setStyleSheet(f"background-color: {self.line_color}")
+            self.line_color_button.updateColors(base_color_hex=self.line_color)
     
     def choose_marker_color(self):
         """Open color picker for marker color"""
@@ -681,7 +679,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.marker_color = color.name()
             self.marker_color_label.setText(self.marker_color)
-            self.marker_color_button.setStyleSheet(f"background-color: {self.marker_color}")
+            self.marker_color_button.updateColors(base_color_hex=self.marker_color)
     
     def choose_marker_edge_color(self):
         """Open color picker for marker edge color"""
@@ -689,7 +687,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.marker_edge_color = color.name()
             self.marker_edge_label.setText(self.marker_edge_color)
-            self.marker_edge_button.setStyleSheet(f"background-color: {self.marker_edge_color}")
+            self.marker_edge_button.updateColors(base_color_hex=self.marker_edge_color)
     
     def choose_bar_color(self):
         """Open color picker for bar color"""
@@ -697,7 +695,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.bar_color = color.name()
             self.bar_color_label.setText(self.bar_color)
-            self.bar_color_button.setStyleSheet(f"background-color: {self.bar_color}")
+            self.bar_color_button.updateColors(base_color_hex=self.bar_color)
             self._update_bar_customization_live()
     
     def choose_bar_edge_color(self):
@@ -706,7 +704,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.bar_edge_color = color.name()
             self.bar_edge_label.setText(self.bar_edge_color)
-            self.bar_edge_button.setStyleSheet(f"background-color: {self.bar_edge_color}")
+            self.bar_edge_button.updateColors(base_color_hex=self.bar_edge_color)
             self._update_bar_customization_live()
     
     def choose_annotation_color(self):
@@ -715,7 +713,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.annotation_color = color.name()
             self.annotation_color_label.setText(self.annotation_color)
-            self.annotation_color_button.setStyleSheet(f"background-color: {self.annotation_color}")
+            self.annotation_color_button.updateColors(base_color_hex=self.annotation_color)
     
     def choose_textbox_bg_color(self):
         """Open color picker for text box background"""
@@ -723,7 +721,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.textbox_bg_color = color.name()
             self.textbox_bg_label.setText(self.textbox_bg_color)
-            self.textbox_bg_button.setStyleSheet(f"background-color: {self.textbox_bg_color}")
+            self.textbox_bg_button.updateColors(base_color_hex=self.textbox_bg_color)
     
     def choose_legend_bg_color(self):
         """Open color picker for legend background"""
@@ -731,7 +729,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.legend_bg_color = color.name()
             self.legend_bg_label.setText(self.legend_bg_color)
-            self.legend_bg_button.setStyleSheet(f"background-color: {self.legend_bg_color}")
+            self.legend_bg_button.updateColors(base_color_hex=self.legend_bg_color)
     
     def choose_legend_edge_color(self):
         """Open color picker for legend edge color"""
@@ -739,7 +737,7 @@ class PlotTab(PlotTabUI):
         if color.isValid():
             self.legend_edge_color = color.name()
             self.legend_edge_label.setText(self.legend_edge_color)
-            self.legend_edge_button.setStyleSheet(f"background-color: {self.legend_edge_color}")
+            self.legend_edge_button.updateColors(base_color_hex=self.legend_edge_color)
     
     def add_annotation(self):
         """Add text annotation to plot"""
