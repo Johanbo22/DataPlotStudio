@@ -1583,6 +1583,12 @@ class DatabaseConnectionDialog(QDialog):
         self.query_editor.setFontFamily("Courier")
         self.query_editor.setMinimumHeight(150)
         query_layout.addWidget(self.query_editor)
+
+        #query validation
+        self.query_status_label = QLabel(" ")
+        self.query_status_label.setStyleSheet("font-weight: bold;")
+        query_layout.addWidget(self.query_status_label)
+
         query_group.setLayout(query_layout)
         main_layout.addWidget(query_group)
 
@@ -1592,8 +1598,28 @@ class DatabaseConnectionDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         main_layout.addWidget(self.button_box)
 
+        self.query_editor.textChanged.connect(self.on_query_changed)
+
         self.on_db_type_changed("SQLite")
+        self.on_query_changed()
     
+    def on_query_changed(self) -> None:
+        """Validate the query"""
+        query = self.query_editor.toPlainText().strip()
+
+        if not query:
+            self.query_status_label.setText("✘ Query cannot be empty")
+            self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
+            self.query_status_label.setVisible(True)
+        elif query.lower().startswith("select"):
+            self.query_status_label.setText("✔ Valid Query")
+            self.query_status_label.setStyleSheet("color: #388e3c; font-weight: bold;")
+            self.query_status_label.setVisible(True)
+        else:
+            self.query_status_label.setText("✘ Invalid Query (Must be SELECT)")
+            self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
+            self.query_status_label.setVisible(True)
+
     def on_db_type_changed(self, db_type) -> None:
         """Show or hide fields based on db type"""
         is_sqlite = (db_type == "SQLite")
@@ -1643,6 +1669,14 @@ class DatabaseConnectionDialog(QDialog):
 
         if not query:
             QMessageBox.warning(self, "Input Error", "Please enter a SQL query.")
+            return
+        
+        if not query.lower().startswith("select"):
+            QMessageBox.warning(
+                self,
+                "Invalid Query Syntax",
+                "The SQL query must be a 'SELECT' statement."
+            )
             return
         
         try:
