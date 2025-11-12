@@ -4,6 +4,7 @@ from re import M
 from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon, QColor
+from flask.cli import F
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -13,7 +14,7 @@ from ui.dialogs import ProgressDialog
 from ui.plot_tab_ui import PlotTabUI 
 import pandas as pd
 import matplotlib.dates as mdates
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, FuncFormatter
 import seaborn as sns
 import matplotlib.pyplot as plt
 import traceback
@@ -824,17 +825,16 @@ class PlotTab(PlotTabUI):
 
 
         #CONTROL FOR THE VISIBLE CUSTOMIZATIONS IN ADVANCED TAB. i think i need to add more
-        if plot_type != "Bar":
-            self.bar_group.setVisible(False)
-        else:
-            self.bar_group.setVisible(False)
-
-        if plot_type != "Histogram":
+        if plot_type != "Histogram" and plot_type != "Bar":
             self.histogram_group.setVisible(False)
             self.bar_group.setVisible(False)
         else:
-            self.histogram_group.setVisible(True)
-            self.bar_group.setVisible(True)
+            if plot_type == "Histogram":
+                self.histogram_group.setVisible(True)
+                self.bar_group.setVisible(True)
+            elif plot_type == "Bar":
+                self.histogram_group.setVisible(False)
+                self.bar_group.setVisible(True)
 
         if plot_type != "Pie":
             self.pie_group.setVisible(False)
@@ -1617,6 +1617,23 @@ class PlotTab(PlotTabUI):
                 width=self.y_minor_tick_width_spin.value()
             )
         
+        #add formatts if user specified
+        try:
+            x_unit_str = self.x_display_units_combo.currentText()
+            if x_unit_str != "None":
+                x_formatter = self._create_axis_formatter(x_unit_str)
+                if x_formatter:
+                    self.plot_engine.current_ax.xaxis.set_major_formatter(x_formatter)
+            
+            y_unit_str = self.y_display_units_combo.currentText()
+            if y_unit_str != "None":
+                y_formatter = self._create_axis_formatter(y_unit_str)
+                if y_formatter:
+                    self.plot_engine.current_ax.yaxis.set_major_formatter(y_formatter)
+        except Exception as e:
+            self.status_bar.log(f"Failed to apply display units: {str(e)}", "WARNING")
+
+        
         #rotation
         plt.setp(self.plot_engine.current_ax.get_xticklabels(), rotation=self.xtick_rotation_spin.value())
         plt.setp(self.plot_engine.current_ax.get_yticklabels(), rotation=self.ytick_rotation_spin.value())
@@ -1687,6 +1704,38 @@ class PlotTab(PlotTabUI):
                     horizontalalignment=ha,
                     bbox=dict(boxstyle=style, facecolor=self.textbox_bg_color, alpha=0.8, pad=1)
                 )
+    
+    def _create_axis_formatter(self, unit_str: str) -> FuncFormatter:
+        """Create a matplitlib Funcfomatter based on the selected unit"""
+
+        def formatter(x, pos):
+            try:
+                if unit_str == "Hundreds (100s)":
+                    val = x / 1e2
+                    return f"{val:.1f}H"
+                elif unit_str == "Thousands":
+                    val = x / 1e3
+                    if abs(val) >= 1000:
+                        return f"{val / 1e3:.1f}M"
+                    return f"{val:.1f}K"
+                elif unit_str == "Millions":
+                    val = x / 1e6
+                    if abs(val) >= 1000:
+                        return f"{val / 1e3:.1f}B"
+                    return f"{val:.1f}M"
+                elif unit_str == "Billions":
+                    val = x / 1e9
+                    return f"{val:.1f}B"
+                else:
+                    return f"{x:g}"
+            except (ValueError, TypeError):
+                return f"{x:g}"
+
+        if unit_str == "None":
+            return None
+        
+        return FuncFormatter(formatter)
+            
 
     def _apply_spines_customization(self):
         """Apply spines customization t the current ax"""
@@ -1854,6 +1903,7 @@ class PlotTab(PlotTabUI):
                 "minor_tick_direction": self.x_minor_tick_direction_combo.currentText(),
                 "minor_tick_width": self.x_minor_tick_width_spin.value(),
                 "scale": self.x_scale_combo.currentText(),
+                "display_units": self.x_display_units_combo.currentText()
             },
             "y_axis": {
                 "auto_limits": self.y_auto_check.isChecked(),
@@ -1869,6 +1919,7 @@ class PlotTab(PlotTabUI):
                 "minor_tick_direction": self.y_minor_tick_direction_combo.currentText(),
                 "minor_tick_width": self.y_minor_tick_width_spin.value(),
                 "scale": self.y_scale_combo.currentText(),
+                "display_units": self.y_display_units_combo.currentText()
             },
             "flip_axes": self.flip_axes_check.isChecked(),
             "datetime": {
