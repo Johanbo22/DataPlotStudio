@@ -6,8 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from pathlib import Path
 import sys
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
-
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox
 
 class GoogleSheetsDialog(QDialog):
     """Dialog for importing data from Google Sheets"""
@@ -34,7 +33,7 @@ class GoogleSheetsDialog(QDialog):
         
         # Sheet ID input
         sheet_id_label = QLabel("Sheet ID:")
-        self.sheet_id = QLineEdit()
+        self.sheet_id = AnimatedLineEdit()
         self.sheet_id.setToolTip("This is the unique sheet ID for your sheet.")
         self.sheet_id.setPlaceholderText("e.g., 1BxiMVs0XRA5nFMoon9FFBiMKo6YcK7...")
         self.sheet_id.setMinimumWidth(350)
@@ -42,7 +41,7 @@ class GoogleSheetsDialog(QDialog):
         
         # Sheet Name input
         sheet_name_label = QLabel("Sheet Name:")
-        self.sheet_name = QLineEdit()
+        self.sheet_name = AnimatedLineEdit()
         self.sheet_name.setToolTip("This is the name of the sheet you want to import data from.")
         self.sheet_name.setPlaceholderText("e.g., Sheet1")
         form_layout.addRow(sheet_name_label, self.sheet_name)
@@ -52,7 +51,7 @@ class GoogleSheetsDialog(QDialog):
         layout.addSpacing(10)
 
         #delimter
-        delimiter_group = QGroupBox("CSV Delimtter Settings")
+        delimiter_group = AnimatedGroupBox("CSV Delimtter Settings", parent=self)
         delimiter_layout = QVBoxLayout()
 
         delimiter_info = QLabel("Google Sheets exports data as a CSV. Choose the delimitter used in your sheet")
@@ -64,7 +63,7 @@ class GoogleSheetsDialog(QDialog):
         delimiter_select_layout = QHBoxLayout()
         delimiter_select_layout.addWidget(QLabel("Delimiter:"))
 
-        self.delimiter_combo = QComboBox()
+        self.delimiter_combo = AnimatedComboBox()
         self.delimiter_combo.addItems([
             "Comma (,) - Standard",
             "Semicolon (;) - European",
@@ -81,7 +80,7 @@ class GoogleSheetsDialog(QDialog):
         #custom
         custom_delimiter_layout = QHBoxLayout()
         custom_delimiter_layout.addWidget(QLabel("Custom Delimiter:"))
-        self.custom_delimiter_input = QLineEdit()
+        self.custom_delimiter_input = AnimatedLineEdit()
         self.custom_delimiter_input.setPlaceholderText("Enter single delimiter character")
         self.custom_delimiter_input.setMaxLength(1)
         self.custom_delimiter_input.setEnabled(False)
@@ -93,7 +92,7 @@ class GoogleSheetsDialog(QDialog):
         #decimal sep
         decimal_layout = QHBoxLayout()
         decimal_layout.addWidget(QLabel("Decimal Separator:"))
-        self.decimal_combo = QComboBox()
+        self.decimal_combo = AnimatedComboBox()
         self.decimal_combo.addItems([
             "Dot (.) - UK/US",
             "Comma (,) - European",
@@ -105,7 +104,7 @@ class GoogleSheetsDialog(QDialog):
         #1000sep
         thousands_layout = QHBoxLayout()
         thousands_layout.addWidget(QLabel("Thousands Separator"))
-        self.thousands_combo = QComboBox()
+        self.thousands_combo = AnimatedComboBox()
         self.thousands_combo.addItems([
             "None",
             "Comma (,) - US Style",
@@ -237,7 +236,7 @@ class RenameColumnDialog(QDialog):
         # Old name display
         old_name_layout = QHBoxLayout()
         old_name_layout.addWidget(QLabel("Current Name:"))
-        old_name_display = QLineEdit()
+        old_name_display = AnimatedLineEdit()
         old_name_display.setText(self.column_name)
         old_name_display.setReadOnly(True)
         old_name_layout.addWidget(old_name_display)
@@ -246,7 +245,7 @@ class RenameColumnDialog(QDialog):
         # New name input
         new_name_layout = QHBoxLayout()
         new_name_layout.addWidget(QLabel("New Name:"))
-        self.new_name_input = QLineEdit()
+        self.new_name_input = AnimatedLineEdit()
         self.new_name_input.setPlaceholderText(f"Enter new name for '{self.column_name}'")
         self.new_name_input.setMinimumWidth(200)
         new_name_layout.addWidget(self.new_name_input)
@@ -370,7 +369,7 @@ class AggregationDialog(QDialog):
         #aggregation function selection
         agg_func_layout = QHBoxLayout()
         agg_func_layout.addWidget(QLabel("Aggregation Function:"))
-        self.agg_func_combo = QComboBox()
+        self.agg_func_combo = AnimatedComboBox()
         self.agg_func_combo.addItems(["mean", "sum", "median", "min", "max", "count", "std", "var", "first", "last"])
         self.agg_func_combo.setToolTip("This funciton will be applied to all selected columns")
         agg_func_layout.addWidget(self.agg_func_combo)
@@ -399,13 +398,13 @@ class AggregationDialog(QDialog):
         layout.addSpacing(20)
 
         #save aggregation
-        self.save_agg_group = QGroupBox("Save this aggregation")
+        self.save_agg_group = AnimatedGroupBox("Save this aggregation", parent=self)
         self.save_agg_group.setCheckable(True)
         self.save_agg_group.setChecked(False)
         self.save_agg_group.setToolTip("Check this box to save this aggregation")
 
         save_layout = QFormLayout()
-        self.save_name_input = QLineEdit()
+        self.save_name_input = AnimatedLineEdit()
         self.save_name_input.setPlaceholderText("e.g. 'Sales by Region'")
         save_layout.addRow(QLabel("Save as:"), self.save_name_input)
 
@@ -528,14 +527,14 @@ class ExportDialog(QDialog):
         format_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         layout.addWidget(format_label)
         
-        self.format_combo = QComboBox()
+        self.format_combo = AnimatedComboBox()
         self.format_combo.addItems(['CSV', 'XLSX', 'JSON'])
         layout.addWidget(self.format_combo)
         
         layout.addSpacing(10)
         
         # Options
-        options_group = QGroupBox("Options")
+        options_group = AnimatedGroupBox("Options", parent=self)
         options_layout = QVBoxLayout()
         
         self.include_index_check = QCheckBox("Include Index")
@@ -623,7 +622,7 @@ class FilterAdvancedDialog(QDialog):
         # Logical operator selection
         logic_layout = QHBoxLayout()
         logic_layout.addWidget(QLabel("Combine filters using:"))
-        self.logic_combo = QComboBox()
+        self.logic_combo = AnimatedComboBox()
         self.logic_combo.addItems(["AND", "OR"])
         self.logic_combo.setToolTip("AND = All conditions must be True\nOR = Any condition can be True")
         logic_layout.addWidget(self.logic_combo)
@@ -636,7 +635,7 @@ class FilterAdvancedDialog(QDialog):
         self.filter_rows = []
         for i in range(5):
             #create group bxo ofr each filter element
-            filter_group = QGroupBox(f"Filter {i+1}")
+            filter_group = AnimatedGroupBox(f"Filter {i+1}", parent=self)
             filter_layout = QHBoxLayout()
             
             #checkbox
@@ -645,19 +644,19 @@ class FilterAdvancedDialog(QDialog):
             filter_layout.addWidget(enable_check)
 
             # Column selector
-            column_combo = QComboBox()
+            column_combo = AnimatedComboBox()
             column_combo.addItems(self.columns)
             filter_layout.addWidget(QLabel("Column:"))
             filter_layout.addWidget(column_combo, 1)
             
             # Condition selector
-            condition_combo = QComboBox()
+            condition_combo = AnimatedComboBox()
             condition_combo.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains', 'in'])
             filter_layout.addWidget(QLabel("Condition:"))
             filter_layout.addWidget(condition_combo, 1)
             
             # Value input
-            value_input = QLineEdit()
+            value_input = AnimatedLineEdit()
             value_input.setPlaceholderText("Enter value...")
             filter_layout.addWidget(QLabel("Value:"))
             filter_layout.addWidget(value_input, 2)
@@ -946,7 +945,7 @@ class SubsetManagerDialog(QDialog):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
 
-        self.details_group = QGroupBox("Subset Details")
+        self.details_group = AnimatedGroupBox("Subset Details", parent=self)
         details_layout = QVBoxLayout()
 
         #name
@@ -1306,7 +1305,7 @@ class CreateSubsetDialog(QDialog):
         if not self.existing_subset:
             name_layout = QHBoxLayout()
             name_layout.addWidget(QLabel("Subset Name:"))
-            self.name_input = QLineEdit()
+            self.name_input = AnimatedLineEdit()
             self.name_input.setPlaceholderText("e.g. high_values, location_A, etc")
             name_layout.addWidget(self.name_input)
             layout.addLayout(name_layout)
@@ -1314,7 +1313,7 @@ class CreateSubsetDialog(QDialog):
         #description
         desc_layout = QHBoxLayout()
         desc_layout.addWidget(QLabel("Description:"))
-        self.desc_input = QLineEdit()
+        self.desc_input = AnimatedLineEdit()
         self.desc_input.setPlaceholderText("Optional description")
         desc_layout.addWidget(self.desc_input)
         layout.addLayout(desc_layout)
@@ -1324,7 +1323,7 @@ class CreateSubsetDialog(QDialog):
         # Logic selection
         logic_layout = QHBoxLayout()
         logic_layout.addWidget(QLabel("Combine filters using:"))
-        self.logic_combo = QComboBox()
+        self.logic_combo = AnimatedComboBox()
         self.logic_combo.addItems(["AND", "OR"])
         self.logic_combo.setToolTip("AND = All conditions must be true\nOR = Any condition can be true")
         logic_layout.addWidget(self.logic_combo)
@@ -1338,7 +1337,7 @@ class CreateSubsetDialog(QDialog):
         
         # Add up to 5 filter rows
         for i in range(5):
-            filter_group = QGroupBox(f"Filter {i+1}")
+            filter_group = AnimatedGroupBox(f"Filter {i+1}", parent=self)
             filter_layout = QHBoxLayout()
             
             # Enable checkbox
@@ -1347,19 +1346,19 @@ class CreateSubsetDialog(QDialog):
             filter_layout.addWidget(enable_check)
             
             # Column
-            column_combo = QComboBox()
+            column_combo = AnimatedComboBox()
             column_combo.addItems(self.columns)
             filter_layout.addWidget(QLabel("Column:"))
             filter_layout.addWidget(column_combo, 1)
             
             # Condition
-            condition_combo = QComboBox()
+            condition_combo = AnimatedComboBox()
             condition_combo.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains'])
             filter_layout.addWidget(QLabel("Condition:"))
             filter_layout.addWidget(condition_combo, 1)
             
             # Value
-            value_input = QLineEdit()
+            value_input = AnimatedLineEdit()
             value_input.setPlaceholderText("Value...")
             filter_layout.addWidget(QLabel("Value:"))
             filter_layout.addWidget(value_input, 2)
@@ -1528,41 +1527,41 @@ class DatabaseConnectionDialog(QDialog):
         #type selection
         db_type_layout = QHBoxLayout()
         db_type_layout.addWidget(QLabel("Database Type:"))
-        self.db_type_combo = QComboBox()
+        self.db_type_combo = AnimatedComboBox()
         self.db_type_combo.addItems(["SQLite", "PostgreSQL", "MySQL"])
         self.db_type_combo.currentTextChanged.connect(self.on_db_type_changed)
         db_type_layout.addWidget(self.db_type_combo)
         main_layout.addLayout(db_type_layout)
 
         #connection details
-        self.connection_group = QGroupBox("Connection Details")
+        self.connection_group = AnimatedGroupBox("Connection Details", parent=self)
         self.connection_layout = QFormLayout()
 
         self.host_label = QLabel("Host:")
-        self.host_input = QLineEdit("localhost")
+        self.host_input = AnimatedLineEdit("localhost")
         self.connection_layout.addRow(self.host_label, self.host_input)
 
         self.port_label = QLabel("Port:")
-        self.port_input = QLineEdit()
+        self.port_input = AnimatedLineEdit()
         self.connection_layout.addRow(self.port_label, self.port_input)
 
         self.user_label = QLabel("User:")
-        self.user_input = QLineEdit("postgres")
+        self.user_input = AnimatedLineEdit("postgres")
         self.connection_layout.addRow(self.user_label, self.user_input)
 
         self.password_label = QLabel("Password:")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input = AnimatedLineEdit()
+        self.password_input.setEchoMode(AnimatedLineEdit.EchoMode.Password)
         self.connection_layout.addRow(self.password_label, self.password_input)
 
         self.dbname_label = QLabel("Database:")
-        self.dbname_input = QLineEdit("postgres")
+        self.dbname_input = AnimatedLineEdit("postgres")
         self.connection_layout.addRow(self.dbname_label, self.dbname_input)
 
         # SQLITE specific
         self.sqlite_layout = QHBoxLayout()
         self.sqlite_label = QLabel("Database File:")
-        self.sqlite_path_input = QLineEdit()
+        self.sqlite_path_input = AnimatedLineEdit()
         self.sqlite_path_input.setPlaceholderText("Click 'Browse' to select a .db, .sqlite, or .sqlite3 file")
         self.sqlite_browse_btn = AnimatedButton("Browse", parent=self)
         self.sqlite_browse_btn.clicked.connect(self.browse_sqlite_file)
@@ -1576,7 +1575,7 @@ class DatabaseConnectionDialog(QDialog):
         main_layout.addWidget(self.connection_group)
 
         #querey editor
-        query_group = QGroupBox("SQL Query")
+        query_group = AnimatedGroupBox("SQL Query", parent=self)
         query_layout = QVBoxLayout()
         self.query_editor = QTextEdit()
         self.query_editor.setPlaceholderText("Enter your SQL query here, e.g.,\nSELECT * FROM my_table LIMIT 1000;")

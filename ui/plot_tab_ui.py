@@ -16,7 +16,7 @@ from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox
 
 
 class PlotTabUI(QWidget):
@@ -131,7 +131,7 @@ class PlotTabUI(QWidget):
         self.plot_type_group = AnimatedGroupBox("Plot Type")
         #self.plot_type_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         plot_type_layout = QVBoxLayout()
-        self.plot_type = QComboBox()
+        self.plot_type = AnimatedComboBox()
         # bith plot type is in the plotTab.py
         
         plot_type_layout.addWidget(self.plot_type)
@@ -146,7 +146,7 @@ class PlotTabUI(QWidget):
         # x column selection
         x_layout = QHBoxLayout()
         x_layout.addWidget(QLabel("X Column:"))
-        self.x_column = QComboBox()
+        self.x_column = AnimatedComboBox()
         x_layout.addWidget(self.x_column, 1)
         data_layout.addLayout(x_layout)
 
@@ -162,7 +162,7 @@ class PlotTabUI(QWidget):
         data_layout.addLayout(y_label_layout)
 
         #single y cols selection
-        self.y_column = QComboBox()
+        self.y_column = AnimatedComboBox()
         data_layout.addWidget(self.y_column)
 
         # multiple ycols list
@@ -195,7 +195,7 @@ class PlotTabUI(QWidget):
         hue_group = AnimatedGroupBox("Hue/Group:")
         hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         hue_layout = QVBoxLayout()
-        self.hue_column = QComboBox()
+        self.hue_column = AnimatedComboBox()
         self.hue_column.addItem("None")
         hue_layout.addWidget(self.hue_column)
         hue_group.setLayout(hue_layout)
@@ -218,7 +218,7 @@ class PlotTabUI(QWidget):
         self.use_subset_check.setChecked(False)
         subset_layout.addWidget(self.use_subset_check)
 
-        self.subset_combo = QComboBox()
+        self.subset_combo = AnimatedComboBox()
         self.subset_combo.addItem("(Full Dataset)")
         self.subset_combo.setEnabled(False)
         subset_layout.addWidget(self.subset_combo)
@@ -292,14 +292,14 @@ class PlotTabUI(QWidget):
         
         # enter title
         title_layout.addWidget(QLabel("Title:"))
-        self.title_input = QLineEdit()
+        self.title_input = AnimatedLineEdit()
         self.title_input.setPlaceholderText("Enter plot title")
         title_layout.addWidget(self.title_input)
         title_group.setLayout(title_layout)
         
         # Title font size
         title_layout.addWidget(QLabel("Title Size:"))
-        self.title_size_spin = QSpinBox()
+        self.title_size_spin = AnimatedSpinBox()
         self.title_size_spin.setRange(8, 32)
         self.title_size_spin.setValue(14)
         title_layout.addWidget(self.title_size_spin)
@@ -307,7 +307,7 @@ class PlotTabUI(QWidget):
 
         # title font weight
         title_layout.addWidget(QLabel("Title Font Weight:"))
-        self.title_weight_combo = QComboBox()
+        self.title_weight_combo = AnimatedComboBox()
         self.title_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.title_weight_combo.setCurrentText("bold")
         title_layout.addWidget(self.title_weight_combo)
@@ -326,13 +326,13 @@ class PlotTabUI(QWidget):
         xlabel_group.setLayout(xlabel_layout)
         
         xlabel_layout.addWidget(QLabel("X Label:"))
-        self.xlabel_input = QLineEdit()
+        self.xlabel_input = AnimatedLineEdit()
         self.xlabel_input.setPlaceholderText("X axis label")
         xlabel_layout.addWidget(self.xlabel_input)
         xlabel_group.setLayout(xlabel_layout)
 
         xlabel_layout.addWidget(QLabel("X Label fontsize:"))
-        self.xlabel_size_spin = QSpinBox()
+        self.xlabel_size_spin = AnimatedSpinBox()
         self.xlabel_size_spin.setRange(5, 32)
         self.xlabel_size_spin.setValue(12)
         xlabel_layout.addWidget(self.xlabel_size_spin)
@@ -340,7 +340,7 @@ class PlotTabUI(QWidget):
 
         #xlabel font weight
         xlabel_layout.addWidget(QLabel("X Label Font Weight"))
-        self.xlabel_weight_combo = QComboBox()
+        self.xlabel_weight_combo = AnimatedComboBox()
         self.xlabel_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.xlabel_weight_combo.setCurrentText("normal")
         xlabel_layout.addWidget(self.xlabel_weight_combo)
@@ -358,13 +358,13 @@ class PlotTabUI(QWidget):
         ylabel_group.setLayout(ylabel_layout)
         
         ylabel_layout.addWidget(QLabel("Y Label:"))
-        self.ylabel_input = QLineEdit()
+        self.ylabel_input = AnimatedLineEdit()
         self.ylabel_input.setPlaceholderText("Y axis label")
         ylabel_layout.addWidget(self.ylabel_input)
         ylabel_group.setLayout(ylabel_layout)
 
         ylabel_layout.addWidget(QLabel("Y Label fontsize:"))
-        self.ylabel_size_spin = QSpinBox()
+        self.ylabel_size_spin = AnimatedSpinBox()
         self.ylabel_size_spin.setRange(5, 32)
         self.ylabel_size_spin.setValue(12)
         ylabel_layout.addWidget(self.ylabel_size_spin)
@@ -372,7 +372,7 @@ class PlotTabUI(QWidget):
 
         # ylabel font weight
         ylabel_layout.addWidget(QLabel("Y Label Font Weight:"))
-        self.ylabel_weight_combo = QComboBox()
+        self.ylabel_weight_combo = AnimatedComboBox()
         self.ylabel_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.ylabel_weight_combo.setCurrentText("normal")
         ylabel_layout.addWidget(self.ylabel_weight_combo)
@@ -400,7 +400,7 @@ class PlotTabUI(QWidget):
         top_spine_layout.addWidget(self.top_spine_visible_check)
 
         top_spine_layout.addWidget(QLabel("Line Width:"))
-        self.top_spine_width_spin = QDoubleSpinBox()
+        self.top_spine_width_spin = AnimatedDoubleSpinBox()
         self.top_spine_width_spin.setRange(0.1, 5.0)
         self.top_spine_width_spin.setValue(1.0)
         self.top_spine_width_spin.setSingleStep(0.1)
@@ -426,7 +426,7 @@ class PlotTabUI(QWidget):
         bottom_spine_layout.addWidget(self.bottom_spine_visible_check)
         
         bottom_spine_layout.addWidget(QLabel("Line Width:"))
-        self.bottom_spine_width_spin = QDoubleSpinBox()
+        self.bottom_spine_width_spin = AnimatedDoubleSpinBox()
         self.bottom_spine_width_spin.setRange(0.1, 5.0)
         self.bottom_spine_width_spin.setValue(1.0)
         self.bottom_spine_width_spin.setSingleStep(0.1)
@@ -452,7 +452,7 @@ class PlotTabUI(QWidget):
         left_spine_layout.addWidget(self.left_spine_visible_check)
         
         left_spine_layout.addWidget(QLabel("Line Width:"))
-        self.left_spine_width_spin = QDoubleSpinBox()
+        self.left_spine_width_spin = AnimatedDoubleSpinBox()
         self.left_spine_width_spin.setRange(0.1, 5.0)
         self.left_spine_width_spin.setValue(1.0)
         self.left_spine_width_spin.setSingleStep(0.1)
@@ -478,7 +478,7 @@ class PlotTabUI(QWidget):
         right_spine_layout.addWidget(self.right_spine_visible_check)
         
         right_spine_layout.addWidget(QLabel("Line Width:"))
-        self.right_spine_width_spin = QDoubleSpinBox()
+        self.right_spine_width_spin = AnimatedDoubleSpinBox()
         self.right_spine_width_spin.setRange(0.1, 5.0)
         self.right_spine_width_spin.setValue(1.0)
         self.right_spine_width_spin.setSingleStep(0.1)
@@ -528,14 +528,14 @@ class PlotTabUI(QWidget):
         figure_size_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         figure_size_layout = QVBoxLayout()
         figure_size_layout.addWidget(QLabel("Figure Width:"))
-        self.width_spin = QSpinBox()
+        self.width_spin = AnimatedSpinBox()
         self.width_spin.setRange(4, 20)
         self.width_spin.setValue(13)
         figure_size_layout.addWidget(self.width_spin)
         figure_size_group.setLayout(figure_size_layout)
         
         figure_size_layout.addWidget(QLabel("Figure Height:"))
-        self.height_spin = QSpinBox()
+        self.height_spin = AnimatedSpinBox()
         self.height_spin.setRange(4, 20)
         self.height_spin.setValue(8)
         figure_size_layout.addWidget(self.height_spin)
@@ -543,7 +543,7 @@ class PlotTabUI(QWidget):
 
         # DPI
         figure_size_layout.addWidget(QLabel("DPI (Resolution):"))
-        self.dpi_spin = QSpinBox()
+        self.dpi_spin = AnimatedSpinBox()
         self.dpi_spin.setRange(50, 300)
         self.dpi_spin.setValue(100)
         figure_size_layout.addWidget(self.dpi_spin)
@@ -569,7 +569,7 @@ class PlotTabUI(QWidget):
         
         # Color palette
         figure_size_layout.addWidget(QLabel("Color Palette:"))
-        self.palette_combo = QComboBox()
+        self.palette_combo = AnimatedComboBox()
         self.palette_combo.addItems(['deep', 'muted', 'pastel', 'bright', 'dark', 'colorblind', 'husl', 'Set2'])
         figure_size_layout.addWidget(self.palette_combo)
     
@@ -581,7 +581,7 @@ class PlotTabUI(QWidget):
         figure_size_layout.addWidget(self.tight_layout_check)
         
         figure_size_layout.addWidget(QLabel("Style:"))
-        self.style_combo = QComboBox()
+        self.style_combo = AnimatedComboBox()
         self.style_combo.addItems(['default', 'ggplot', 'seaborn', 'dark_background', 'bmh'])
         figure_size_layout.addWidget(self.style_combo)
 
@@ -619,34 +619,34 @@ class PlotTabUI(QWidget):
         xaxis_limit_layout.addWidget(self.x_invert_axis_check)
         
         xaxis_limit_layout.addWidget(QLabel("X Min:"))
-        self.x_min_spin = QDoubleSpinBox()
+        self.x_min_spin = AnimatedDoubleSpinBox()
         self.x_min_spin.setRange(-1000000, 1000000)
         self.x_min_spin.setEnabled(False)
         xaxis_limit_layout.addWidget(self.x_min_spin)
         xaxis_limit_group.setLayout(xaxis_limit_layout)
         
         xaxis_limit_layout.addWidget(QLabel("X Max:"))
-        self.x_max_spin = QDoubleSpinBox()
+        self.x_max_spin = AnimatedDoubleSpinBox()
         self.x_max_spin.setRange(-1000000, 1000000)
         self.x_max_spin.setEnabled(False)
         xaxis_limit_layout.addWidget(self.x_max_spin)
 
         # x-axis label size
         xaxis_limit_layout.addWidget(QLabel("X-axis Tick Label Size:"))
-        self.xtick_label_size_spin = QSpinBox()
+        self.xtick_label_size_spin = AnimatedSpinBox()
         self.xtick_label_size_spin.setRange(6, 20)
         self.xtick_label_size_spin.setValue(10)
         xaxis_limit_layout.addWidget(self.xtick_label_size_spin)
 
         #xaxus rotation
         xaxis_limit_layout.addWidget(QLabel("X-axis Tick Rotation:"))
-        self.xtick_rotation_spin = QSpinBox()
+        self.xtick_rotation_spin = AnimatedSpinBox()
         self.xtick_rotation_spin.setRange(-90, 90)
         self.xtick_rotation_spin.setValue(0)
         xaxis_limit_layout.addWidget(self.xtick_rotation_spin)
         
         xaxis_limit_layout.addWidget(QLabel("Max Number of Ticks"))
-        self.x_max_ticks_spin = QSpinBox()
+        self.x_max_ticks_spin = AnimatedSpinBox()
         self.x_max_ticks_spin.setRange(3, 30)
         self.x_max_ticks_spin.setValue(10)
         self.x_max_ticks_spin.setToolTip("Maximum number of tick labels on the x-axis")
@@ -664,14 +664,14 @@ class PlotTabUI(QWidget):
         xaxis_limit_layout.addSpacing(5)
         #Direction of ticks (major)
         xaxis_limit_layout.addWidget(QLabel("X-axis major Tick Direction:"))
-        self.x_major_tick_direction_combo = QComboBox()
+        self.x_major_tick_direction_combo = AnimatedComboBox()
         self.x_major_tick_direction_combo.addItems(["out", "in", "inout"])
         self.x_major_tick_direction_combo.setToolTip("Direction of the major tick marks")
         xaxis_limit_layout.addWidget(self.x_major_tick_direction_combo)
 
         #width of the major ticks [major]
         xaxis_limit_layout.addWidget(QLabel("X-axis Major Tick Width"))
-        self.x_major_tick_width_spin = QDoubleSpinBox()
+        self.x_major_tick_width_spin = AnimatedDoubleSpinBox()
         self.x_major_tick_width_spin.setRange(0.1, 5.0)
         self.x_major_tick_width_spin.setValue(1.0)
         self.x_major_tick_width_spin.setSingleStep(0.1)
@@ -680,14 +680,14 @@ class PlotTabUI(QWidget):
 
         #ticks direction (minor)
         xaxis_limit_layout.addWidget(QLabel("X-axis Minor Tick Direction"))
-        self.x_minor_tick_direction_combo = QComboBox()
+        self.x_minor_tick_direction_combo = AnimatedComboBox()
         self.x_minor_tick_direction_combo.addItems(["out", "in", "inout"])
         self.x_minor_tick_direction_combo.setToolTip("Direction of the minor tick marks")
         xaxis_limit_layout.addWidget(self.x_minor_tick_direction_combo)
 
         #tick width (minor)
         xaxis_limit_layout.addWidget(QLabel("X-axis Minor Tick Width"))
-        self.x_minor_tick_width_spin = QDoubleSpinBox()
+        self.x_minor_tick_width_spin = AnimatedDoubleSpinBox()
         self.x_minor_tick_width_spin.setRange(0.1, 5.0)
         self.x_minor_tick_width_spin.setValue(0.5)
         self.x_minor_tick_width_spin.setSingleStep(0.1)
@@ -696,13 +696,13 @@ class PlotTabUI(QWidget):
 
         #xaxis scale
         xaxis_limit_layout.addWidget(QLabel("X Scale:"))
-        self.x_scale_combo = QComboBox()
+        self.x_scale_combo = AnimatedComboBox()
         self.x_scale_combo.addItems(['linear', 'log', 'symlog'])
         xaxis_limit_layout.addWidget(self.x_scale_combo)
 
         xaxis_limit_layout.addSpacing(5)
         xaxis_limit_layout.addWidget(QLabel("X-axis Display Units:"))
-        self.x_display_units_combo = QComboBox()
+        self.x_display_units_combo = AnimatedComboBox()
         self.x_display_units_combo.addItems(["None", "Hundreds (100s)", "Thousands", "Millions", "Billions"])
         self.x_display_units_combo.setToolTip("Format axis labels to display in units")
         xaxis_limit_layout.addWidget(self.x_display_units_combo)
@@ -727,33 +727,33 @@ class PlotTabUI(QWidget):
         yaxis_limit_layout.addWidget(self.y_invert_axis_check)
         
         yaxis_limit_layout.addWidget(QLabel("Y Min:"))
-        self.y_min_spin = QDoubleSpinBox()
+        self.y_min_spin = AnimatedDoubleSpinBox()
         self.y_min_spin.setRange(-1000000, 1000000)
         self.y_min_spin.setEnabled(False)
         yaxis_limit_layout.addWidget(self.y_min_spin)
         
         yaxis_limit_layout.addWidget(QLabel("Y Max:"))
-        self.y_max_spin = QDoubleSpinBox()
+        self.y_max_spin = AnimatedDoubleSpinBox()
         self.y_max_spin.setRange(-1000000, 1000000)
         self.y_max_spin.setEnabled(False)
         yaxis_limit_layout.addWidget(self.y_max_spin)
 
         # y-axis label size
         yaxis_limit_layout.addWidget(QLabel("Y-axis Tick Label Size:"))
-        self.ytick_label_size_spin = QSpinBox()
+        self.ytick_label_size_spin = AnimatedSpinBox()
         self.ytick_label_size_spin.setRange(6, 20)
         self.ytick_label_size_spin.setValue(10)
         yaxis_limit_layout.addWidget(self.ytick_label_size_spin)
 
         #yaxus rotation
         yaxis_limit_layout.addWidget(QLabel("Y-axis Tick Rotation:"))
-        self.ytick_rotation_spin = QSpinBox()
+        self.ytick_rotation_spin = AnimatedSpinBox()
         self.ytick_rotation_spin.setRange(-90, 90)
         self.ytick_rotation_spin.setValue(0)
         yaxis_limit_layout.addWidget(self.ytick_rotation_spin)
 
         yaxis_limit_layout.addWidget(QLabel("Max Number of Ticks"))
-        self.y_max_ticks_spin = QSpinBox()
+        self.y_max_ticks_spin = AnimatedSpinBox()
         self.y_max_ticks_spin.setRange(3, 30)
         self.y_max_ticks_spin.setValue(10)
         self.y_max_ticks_spin.setToolTip("Maximum number of tick labels on the y-axis")
@@ -770,14 +770,14 @@ class PlotTabUI(QWidget):
         yaxis_limit_layout.addSpacing(5)
         #yaxis tickdirection (major)
         yaxis_limit_layout.addWidget(QLabel("Y-axis Major Tick Direction:"))
-        self.y_major_tick_direction_combo = QComboBox()
+        self.y_major_tick_direction_combo = AnimatedComboBox()
         self.y_major_tick_direction_combo.addItems(["out", "in", "inout"])
         self.y_major_tick_direction_combo.setToolTip("Direction of the major tick marks on the Y-axis")
         yaxis_limit_layout.addWidget(self.y_major_tick_direction_combo)
 
         #major tickwidth
         yaxis_limit_layout.addWidget(QLabel("Y-axis Major Tick Width:"))
-        self.y_major_tick_width_spin = QDoubleSpinBox()
+        self.y_major_tick_width_spin = AnimatedDoubleSpinBox()
         self.y_major_tick_width_spin.setRange(0.1, 5.0)
         self.y_major_tick_width_spin.setValue(1.0)
         self.y_major_tick_width_spin.setSingleStep(0.1)
@@ -786,13 +786,13 @@ class PlotTabUI(QWidget):
 
         #mino direction
         yaxis_limit_layout.addWidget(QLabel("Y-axis Minor Tick Direction"))
-        self.y_minor_tick_direction_combo = QComboBox()
+        self.y_minor_tick_direction_combo = AnimatedComboBox()
         self.y_minor_tick_direction_combo.addItems(["out", "in", "inout"])
         self.y_minor_tick_direction_combo.setToolTip("Direction of the minor tick marks on the Y-axis")
         yaxis_limit_layout.addWidget(self.y_minor_tick_direction_combo)
 
         yaxis_limit_layout.addWidget(QLabel("Y-axis Minor Tick Width:"))
-        self.y_minor_tick_width_spin = QDoubleSpinBox()
+        self.y_minor_tick_width_spin = AnimatedDoubleSpinBox()
         self.y_minor_tick_width_spin.setRange(0.1, 5.0)
         self.y_minor_tick_width_spin.setValue(0.5)
         self.y_minor_tick_width_spin.setSingleStep(0.1)
@@ -801,13 +801,13 @@ class PlotTabUI(QWidget):
 
         # yaxis scale
         yaxis_limit_layout.addWidget(QLabel("Y Scale:"))
-        self.y_scale_combo = QComboBox()
+        self.y_scale_combo = AnimatedComboBox()
         self.y_scale_combo.addItems(['linear', 'log', 'symlog'])
         yaxis_limit_layout.addWidget(self.y_scale_combo)
         
         yaxis_limit_layout.addSpacing(5)
         yaxis_limit_layout.addWidget(QLabel("Y-axis Display Units"))
-        self.y_display_units_combo = QComboBox()
+        self.y_display_units_combo = AnimatedComboBox()
         self.y_display_units_combo.addItems(["None", "Hundreds (100s)", "Thousands", "Millions", "Billions"])
         self.y_display_units_combo.setToolTip("Format axis labels to display in units")
         yaxis_limit_layout.addWidget(self.y_display_units_combo)
@@ -841,7 +841,7 @@ class PlotTabUI(QWidget):
         self.format_x_datetime_label = QLabel("Format for the X-axis")
         self.format_x_datetime_label.setVisible(False)
         datetime_format_layout.addWidget(self.format_x_datetime_label)
-        self.x_datetime_format_combo = QComboBox()
+        self.x_datetime_format_combo = AnimatedComboBox()
         self.x_datetime_format_combo.setVisible(False)
         self.x_datetime_format_combo.setEnabled(False)
         self.x_datetime_format_combo.addItems([
@@ -872,7 +872,7 @@ class PlotTabUI(QWidget):
         self.custom_x_axis_format_label = QLabel("Custom X-axis Format")
         self.custom_x_axis_format_label.setVisible(False)
         datetime_format_layout.addWidget(self.custom_x_axis_format_label)
-        self.x_custom_datetime_input = QLineEdit()
+        self.x_custom_datetime_input = AnimatedLineEdit()
         self.x_custom_datetime_input.setPlaceholderText("e.g. %d/%m/%Y %H:%M")
         self.x_custom_datetime_input.setEnabled(False)
         self.x_custom_datetime_input.setVisible(False)
@@ -895,7 +895,7 @@ class PlotTabUI(QWidget):
         self.format_y_datetime_label = QLabel("Format for the Y-axis")
         datetime_format_layout.addWidget(self.format_y_datetime_label)
         self.format_y_datetime_label.setVisible(False)
-        self.y_datetime_format_combo = QComboBox()
+        self.y_datetime_format_combo = AnimatedComboBox()
         self.y_datetime_format_combo.setEnabled(False)
         self.y_datetime_format_combo.setVisible(False)
         self.y_datetime_format_combo.addItems([
@@ -926,7 +926,7 @@ class PlotTabUI(QWidget):
         self.custom_y_axis_format_label = QLabel("Custom Y-axis Format")
         datetime_format_layout.addWidget(self.custom_y_axis_format_label)
         self.custom_y_axis_format_label.setVisible(False)
-        self.y_custom_datetime_format_input = QLineEdit()
+        self.y_custom_datetime_format_input = AnimatedLineEdit()
         self.y_custom_datetime_format_input.setPlaceholderText("e.g. %d/%m/%Y %H:%M")
         self.y_custom_datetime_format_input.setEnabled(False)
         self.y_custom_datetime_format_input.setVisible(False)
@@ -996,7 +996,7 @@ class PlotTabUI(QWidget):
         self.legend_location_label = QLabel("Legend Placement:")
         self.legend_location_label.setVisible(False)
         legend_layout.addWidget(self.legend_location_label)
-        self.legend_loc_combo = QComboBox()
+        self.legend_loc_combo = AnimatedComboBox()
         self.legend_loc_combo.addItems(['best', 'upper right', 'upper left', 'lower left', 'lower right', 'right', 'center left', 'center right', 'lower center', 'upper center', 'center'])
         self.legend_loc_combo.setVisible(False)
         legend_layout.addWidget(self.legend_loc_combo)
@@ -1004,7 +1004,7 @@ class PlotTabUI(QWidget):
         self.legend_title_label = QLabel("Legend Title:")
         self.legend_title_label.setVisible(False)
         legend_layout.addWidget(self.legend_title_label)
-        self.legend_title_input = QLineEdit()
+        self.legend_title_input = AnimatedLineEdit()
         self.legend_title_input.setPlaceholderText("Enter legend title")
         self.legend_title_input.setVisible(False)
         legend_layout.addWidget(self.legend_title_input)
@@ -1012,7 +1012,7 @@ class PlotTabUI(QWidget):
         self.legend_font_size_label = QLabel("Legend Font Size:")
         self.legend_font_size_label.setVisible(False)
         legend_layout.addWidget(self.legend_font_size_label)
-        self.legend_size_spin = QSpinBox()
+        self.legend_size_spin = AnimatedSpinBox()
         self.legend_size_spin.setRange(6, 20)
         self.legend_size_spin.setValue(10)
         self.legend_size_spin.setVisible(False)
@@ -1021,7 +1021,7 @@ class PlotTabUI(QWidget):
         self.legend_ncols_label = QLabel("Number of Columns:")
         self.legend_ncols_label.setVisible(False)
         legend_layout.addWidget(self.legend_ncols_label)
-        self.legend_columns_spin = QSpinBox()
+        self.legend_columns_spin = AnimatedSpinBox()
         self.legend_columns_spin.setRange(1, 5)
         self.legend_columns_spin.setValue(1)
         self.legend_columns_spin.setVisible(False)
@@ -1030,7 +1030,7 @@ class PlotTabUI(QWidget):
         self.legend_column_spacing_label = QLabel("Column Spacing:")
         self.legend_column_spacing_label.setVisible(False)
         legend_layout.addWidget(self.legend_column_spacing_label)
-        self.legend_colspace_spin = QDoubleSpinBox()
+        self.legend_colspace_spin = AnimatedDoubleSpinBox()
         self.legend_colspace_spin.setRange(0.5, 5.0)
         self.legend_colspace_spin.setValue(1.0)
         self.legend_colspace_spin.setSingleStep(0.1)
@@ -1076,7 +1076,7 @@ class PlotTabUI(QWidget):
         box_styling_layout.addLayout(legend_edge_layout)
         
         box_styling_layout.addWidget(QLabel("Edge Width:"))
-        self.legend_edge_width_spin = QDoubleSpinBox()
+        self.legend_edge_width_spin = AnimatedDoubleSpinBox()
         self.legend_edge_width_spin.setRange(0.5, 3.0)
         self.legend_edge_width_spin.setValue(1.0)
         self.legend_edge_width_spin.setSingleStep(0.1)
@@ -1113,7 +1113,7 @@ class PlotTabUI(QWidget):
 
         #gridline type
         global_grid_layout.addWidget(QLabel("Type:"))
-        self.grid_which_type_combo = QComboBox()
+        self.grid_which_type_combo = AnimatedComboBox()
         self.grid_which_type_combo.addItems(["major", "minor", "both"])
         self.grid_which_type_combo.setToolTip("major = Primary gridlines\nminor = Secondary gridlines\nboth = All gridlines")
         self.grid_which_type_combo.setEnabled(False)
@@ -1121,7 +1121,7 @@ class PlotTabUI(QWidget):
 
         #which axis
         global_grid_layout.addWidget(QLabel("Apply to which axis:"))
-        self.grid_axis_combo = QComboBox()
+        self.grid_axis_combo = AnimatedComboBox()
         self.grid_axis_combo.addItems(["both", "x", "y"])
         self.grid_axis_combo.setToolTip("Choose which axis to show gridlines")
         global_grid_layout.addWidget(self.grid_axis_combo)
@@ -1159,7 +1159,7 @@ class PlotTabUI(QWidget):
         x_major_layout.addWidget(self.x_major_grid_check)
 
         x_major_layout.addWidget(QLabel("Linestyle:"))
-        self.x_major_grid_style_combo = QComboBox()
+        self.x_major_grid_style_combo = AnimatedComboBox()
         self.x_major_grid_style_combo.addItems(["-", "--", "-.", ":"])
         self.x_major_grid_style_combo.setItemText(0, "Solid (-)")
         self.x_major_grid_style_combo.setItemText(1, "Dashed (--)")
@@ -1168,7 +1168,7 @@ class PlotTabUI(QWidget):
         x_major_layout.addWidget(self.x_major_grid_style_combo)
 
         x_major_layout.addWidget(QLabel("Linewidth:"))
-        self.x_major_grid_linewidth_spin = QDoubleSpinBox()
+        self.x_major_grid_linewidth_spin = AnimatedDoubleSpinBox()
         self.x_major_grid_linewidth_spin.setRange(0.1, 5.0)
         self.x_major_grid_linewidth_spin.setValue(0.8)
         self.x_major_grid_linewidth_spin.setSingleStep(0.1)
@@ -1204,7 +1204,7 @@ class PlotTabUI(QWidget):
 
         #linestyle
         x_minor_layout.addWidget(QLabel("Linestyle:"))
-        self.x_minor_grid_style_combo = QComboBox()
+        self.x_minor_grid_style_combo = AnimatedComboBox()
         self.x_minor_grid_style_combo.addItems(['-', '--', '-.', ':'])
         self.x_minor_grid_style_combo.setItemText(0, 'Solid (-)')
         self.x_minor_grid_style_combo.setItemText(1, 'Dashed (--)')
@@ -1215,7 +1215,7 @@ class PlotTabUI(QWidget):
 
         #linewidth
         x_minor_layout.addWidget(QLabel("Linewidth:"))
-        self.x_minor_grid_linewidth_spin = QDoubleSpinBox()
+        self.x_minor_grid_linewidth_spin = AnimatedDoubleSpinBox()
         self.x_minor_grid_linewidth_spin.setRange(0.1, 5.0)
         self.x_minor_grid_linewidth_spin.setValue(0.5)
         self.x_minor_grid_linewidth_spin.setSingleStep(0.1)
@@ -1259,7 +1259,7 @@ class PlotTabUI(QWidget):
 
         #linestyle
         y_major_layout.addWidget(QLabel("Linestyle:"))
-        self.y_major_grid_style_combo = QComboBox()
+        self.y_major_grid_style_combo = AnimatedComboBox()
         self.y_major_grid_style_combo.addItems(['-', '--', '-.', ':'])
         self.y_major_grid_style_combo.setItemText(0, 'Solid (-)')
         self.y_major_grid_style_combo.setItemText(1, 'Dashed (--)')
@@ -1269,7 +1269,7 @@ class PlotTabUI(QWidget):
 
         #linewidth
         y_major_layout.addWidget(QLabel("Linewidth:"))
-        self.y_major_grid_linewidth_spin = QDoubleSpinBox()
+        self.y_major_grid_linewidth_spin = AnimatedDoubleSpinBox()
         self.y_major_grid_linewidth_spin.setRange(0.1, 5.0)
         self.y_major_grid_linewidth_spin.setValue(0.8)
         self.y_major_grid_linewidth_spin.setSingleStep(0.1)
@@ -1307,7 +1307,7 @@ class PlotTabUI(QWidget):
 
         #linestyle
         y_minor_layout.addWidget(QLabel("Linestyle:"))
-        self.y_minor_grid_style_combo = QComboBox()
+        self.y_minor_grid_style_combo = AnimatedComboBox()
         self.y_minor_grid_style_combo.addItems(['-', '--', '-.', ':'])
         self.y_minor_grid_style_combo.setItemText(0, 'Solid (-)')
         self.y_minor_grid_style_combo.setItemText(1, 'Dashed (--)')
@@ -1318,7 +1318,7 @@ class PlotTabUI(QWidget):
 
         #linewidth
         y_minor_layout.addWidget(QLabel("Linewidth:"))
-        self.y_minor_grid_linewidth_spin = QDoubleSpinBox()
+        self.y_minor_grid_linewidth_spin = AnimatedDoubleSpinBox()
         self.y_minor_grid_linewidth_spin.setRange(0.1, 5.0)
         self.y_minor_grid_linewidth_spin.setValue(0.5)
         self.y_minor_grid_linewidth_spin.setSingleStep(0.1)
@@ -1385,19 +1385,19 @@ class PlotTabUI(QWidget):
         self.line_selector_label.setVisible(False)
         line_layout.addWidget(self.line_selector_label)
 
-        self.line_selector_combo = QComboBox()
+        self.line_selector_combo = AnimatedComboBox()
         self.line_selector_combo.setVisible(False)
         line_layout.addWidget(self.line_selector_combo)
         
         line_layout.addWidget(QLabel("Line Width:"))
-        self.linewidth_spin = QDoubleSpinBox()
+        self.linewidth_spin = AnimatedDoubleSpinBox()
         self.linewidth_spin.setRange(0.5, 5.0)
         self.linewidth_spin.setValue(1.5)
         self.linewidth_spin.setSingleStep(0.1)
         line_layout.addWidget(self.linewidth_spin)
         
         line_layout.addWidget(QLabel("Line Style:"))
-        self.linestyle_combo = QComboBox()
+        self.linestyle_combo = AnimatedComboBox()
         self.linestyle_combo.addItems(['-', '--', '-.', ':', 'None'])
         self.linestyle_combo.setItemText(0, 'Solid')
         self.linestyle_combo.setItemText(1, 'Dashed')
@@ -1427,12 +1427,12 @@ class PlotTabUI(QWidget):
         marker_layout = QVBoxLayout()
 
         marker_layout.addWidget(QLabel("Marker Shape:"))
-        self.marker_combo = QComboBox()
+        self.marker_combo = AnimatedComboBox()
         self.marker_combo.addItems(['None', 'o', 's', '^', 'v', 'D', '*', '+', 'x', '|', '_', 'p', 'H', 'h'])
         marker_layout.addWidget(self.marker_combo)
         
         marker_layout.addWidget(QLabel("Marker Size:"))
-        self.marker_size_spin = QSpinBox()
+        self.marker_size_spin = AnimatedSpinBox()
         self.marker_size_spin.setRange(2, 20)
         self.marker_size_spin.setValue(6)
         marker_layout.addWidget(self.marker_size_spin)
@@ -1454,7 +1454,7 @@ class PlotTabUI(QWidget):
         marker_layout.addLayout(marker_edge_layout)
         
         marker_layout.addWidget(QLabel("Marker Edge Width:"))
-        self.marker_edge_width_spin = QDoubleSpinBox()
+        self.marker_edge_width_spin = AnimatedDoubleSpinBox()
         self.marker_edge_width_spin.setRange(0, 3)
         self.marker_edge_width_spin.setValue(1)
         self.marker_edge_width_spin.setSingleStep(0.1)
@@ -1480,12 +1480,12 @@ class PlotTabUI(QWidget):
         bar_layout.addWidget(self.bar_selector_label)
 
         #selectionboc
-        self.bar_selector_combo = QComboBox()
+        self.bar_selector_combo = AnimatedComboBox()
         self.bar_selector_combo.setVisible(False)
         bar_layout.addWidget(self.bar_selector_combo)
 
         bar_layout.addWidget(QLabel("Bar Width:"))
-        self.bar_width_spin = QDoubleSpinBox()
+        self.bar_width_spin = AnimatedDoubleSpinBox()
         self.bar_width_spin.setRange(0.1, 1.0)
         self.bar_width_spin.setValue(0.8)
         self.bar_width_spin.setSingleStep(0.05)
@@ -1508,7 +1508,7 @@ class PlotTabUI(QWidget):
         bar_layout.addLayout(bar_edge_layout)
         
         bar_layout.addWidget(QLabel("Bar Edge Width:"))
-        self.bar_edge_width_spin = QDoubleSpinBox()
+        self.bar_edge_width_spin = AnimatedDoubleSpinBox()
         self.bar_edge_width_spin.setRange(0, 3)
         self.bar_edge_width_spin.setValue(1)
         self.bar_edge_width_spin.setSingleStep(0.1)
@@ -1529,7 +1529,7 @@ class PlotTabUI(QWidget):
         histogram_layout = QVBoxLayout()
         
         histogram_layout.addWidget(QLabel("Number of Bins:"))
-        self.histogram_bins_spin = QSpinBox()
+        self.histogram_bins_spin = AnimatedSpinBox()
         self.histogram_bins_spin.setRange(5, 200)
         self.histogram_bins_spin.setValue(30)
         histogram_layout.addWidget(self.histogram_bins_spin)
@@ -1587,12 +1587,12 @@ class PlotTabUI(QWidget):
         scatter_layout.addWidget(self.show_equation_check)
 
         scatter_layout.addWidget(QLabel("Error Bars:"))
-        self.error_bars_combo = QComboBox()
+        self.error_bars_combo = AnimatedComboBox()
         self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
         scatter_layout.addWidget(self.error_bars_combo)
 
         scatter_layout.addWidget(QLabel("Confidence Level (%):"))
-        self.confidence_level_spin = QSpinBox()
+        self.confidence_level_spin = AnimatedSpinBox()
         self.confidence_level_spin.setRange(80, 99)
         self.confidence_level_spin.setValue(95)
         scatter_layout.addWidget(self.confidence_level_spin)
@@ -1611,7 +1611,7 @@ class PlotTabUI(QWidget):
         pie_layout.addWidget(self.pie_show_percentages_check)
 
         pie_layout.addWidget(QLabel("Start Angle (degress):"))
-        self.pie_start_angle_spin = QSpinBox()
+        self.pie_start_angle_spin = AnimatedSpinBox()
         self.pie_start_angle_spin.setRange(0, 360)
         self.pie_start_angle_spin.setValue(0)
         pie_layout.addWidget(self.pie_start_angle_spin)
@@ -1621,7 +1621,7 @@ class PlotTabUI(QWidget):
         pie_layout.addWidget(self.pie_explode_check)
 
         pie_layout.addWidget(QLabel("Explode Distance:"))
-        self.pie_explode_distance_spin = QDoubleSpinBox()
+        self.pie_explode_distance_spin = AnimatedDoubleSpinBox()
         self.pie_explode_distance_spin.setRange(0.0, 0.5)
         self.pie_explode_distance_spin.setValue(0.1)
         self.pie_explode_distance_spin.setSingleStep(0.05)
@@ -1655,26 +1655,26 @@ class PlotTabUI(QWidget):
         annotations_layout = QVBoxLayout()
         
         annotations_layout.addWidget(QLabel("Annotation Text:"))
-        self.annotation_text = QLineEdit()
+        self.annotation_text = AnimatedLineEdit()
         self.annotation_text.setPlaceholderText("Enter text to add to plot")
         annotations_layout.addWidget(self.annotation_text)
         
         annotations_layout.addWidget(QLabel("X Position (0-1):"))
-        self.annotation_x_spin = QDoubleSpinBox()
+        self.annotation_x_spin = AnimatedDoubleSpinBox()
         self.annotation_x_spin.setRange(0, 1)
         self.annotation_x_spin.setValue(0.5)
         self.annotation_x_spin.setSingleStep(0.05)
         annotations_layout.addWidget(self.annotation_x_spin)
         
         annotations_layout.addWidget(QLabel("Y Position (0-1):"))
-        self.annotation_y_spin = QDoubleSpinBox()
+        self.annotation_y_spin = AnimatedDoubleSpinBox()
         self.annotation_y_spin.setRange(0, 1)
         self.annotation_y_spin.setValue(0.5)
         self.annotation_y_spin.setSingleStep(0.05)
         annotations_layout.addWidget(self.annotation_y_spin)
         
         annotations_layout.addWidget(QLabel("Font Size:"))
-        self.annotation_fontsize_spin = QSpinBox()
+        self.annotation_fontsize_spin = AnimatedSpinBox()
         self.annotation_fontsize_spin.setRange(6, 36)
         self.annotation_fontsize_spin.setValue(12)
         annotations_layout.addWidget(self.annotation_fontsize_spin)
@@ -1700,17 +1700,17 @@ class PlotTabUI(QWidget):
         text_box_layout = QVBoxLayout()
         
         text_box_layout.addWidget(QLabel("Text Box Content:"))
-        self.textbox_content = QLineEdit()
+        self.textbox_content = AnimatedLineEdit()
         self.textbox_content.setPlaceholderText("Enter text for text box")
         text_box_layout.addWidget(self.textbox_content)
         
         text_box_layout.addWidget(QLabel("Text Box Position:"))
-        self.textbox_position_combo = QComboBox()
+        self.textbox_position_combo = AnimatedComboBox()
         self.textbox_position_combo.addItems(['upper left', 'upper center', 'upper right','center left', 'center', 'center right', 'lower left', 'lower center', 'lower right'])
         text_box_layout.addWidget(self.textbox_position_combo)
         
         text_box_layout.addWidget(QLabel("Text Box Style:"))
-        self.textbox_style_combo = QComboBox()
+        self.textbox_style_combo = AnimatedComboBox()
         self.textbox_style_combo.addItems(['round', 'square', 'round,pad=1', 'round4,pad=0.5'])
         self.textbox_style_combo.setItemText(0, 'Rounded')
         self.textbox_style_combo.setItemText(1, 'Square')

@@ -12,7 +12,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox
 
 
 class DataTab(QWidget):
@@ -158,7 +158,7 @@ class DataTab(QWidget):
         filter_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         filter_layout.addWidget(filter_column_info)
 
-        self.filter_column = QComboBox()
+        self.filter_column = AnimatedComboBox()
         filter_layout.addWidget(self.filter_column)
         
         filter_layout.addWidget(QLabel("Condition:"))
@@ -167,7 +167,7 @@ class DataTab(QWidget):
         filter_condition_info.setWordWrap(True)
         filter_layout.addWidget(filter_condition_info)
 
-        self.filter_condition = QComboBox()
+        self.filter_condition = AnimatedComboBox()
         self.filter_condition.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains'])
         filter_layout.addWidget(self.filter_condition)
         
@@ -177,7 +177,7 @@ class DataTab(QWidget):
         filter_value_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         filter_layout.addWidget(filter_value_info)
 
-        self.filter_value = QLineEdit()
+        self.filter_value = AnimatedLineEdit()
         filter_layout.addWidget(self.filter_value)
         
         apply_filter_button = AnimatedButton("Apply Filter", parent=self)
@@ -211,7 +211,7 @@ class DataTab(QWidget):
         column_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         column_layout.addWidget(column_column_info)
 
-        self.column_select = QComboBox()
+        self.column_select = AnimatedComboBox()
         column_layout.addWidget(self.column_select)
         
         drop_column_button = AnimatedButton("Drop Column", parent=self)
@@ -239,7 +239,7 @@ class DataTab(QWidget):
 
         type_layout.addWidget(QLabel("Change selected columns DataType to:"))
 
-        self.type_combo = QComboBox()
+        self.type_combo = AnimatedComboBox()
         self.type_combo.addItems([
             "string (object)",
             "integer (numeric)",
@@ -360,7 +360,7 @@ class DataTab(QWidget):
         quick_subset_layout = QVBoxLayout()
         quick_subset_layout.addWidget(QLabel("Split data by column values:"))
 
-        self.subset_column_combo = QComboBox()
+        self.subset_column_combo = AnimatedComboBox()
         quick_subset_layout.addWidget(self.subset_column_combo)
 
         quick_create_btn = AnimatedButton("Auto-Create Subsets", parent=self)

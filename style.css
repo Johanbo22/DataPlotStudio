@@ -46,18 +46,6 @@ QDoubleSpinBox {
     min-width: 2em;
 }
 
-/*Focus states for input widgets */
-QLineEdit:focus,
-QSpinBox:focus,
-QDoubleSpinBox:focus,
-QComboBox:focus {
-    border: 1.5px solid #0078d7;
-}
-
-QComboBox:on {
-    border: 1.5px solid #0078d7;
-}
-
 QTabWidget::pane {
     border-top: 2px solid #c2c2c2;
     background: white;
