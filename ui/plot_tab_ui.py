@@ -16,95 +16,9 @@ from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
 
-class AnimatedButton(QPushButton):
-    """Custom QPush Button that animates on hover. This is currently testing"""
 
-    def __init__(self, text, base_color_hex: str, hover_color_hex: str, parent=None) -> None:
-        super().__init__(text, parent)
-
-        self._base_color = QColor(base_color_hex)
-        self._hover_color = QColor(hover_color_hex)
-
-        self._animated_color = self._base_color
-
-        self.enter_animation = QPropertyAnimation(self, b"animated_color")
-        self.enter_animation.setDuration(150)
-        self.enter_animation.setEndValue(self._hover_color)
-        self.enter_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-        self.leave_animation = QPropertyAnimation(self, b"animated_color")
-        self.leave_animation.setDuration(250)
-        self.leave_animation.setEndValue(self._base_color)
-        self.leave_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-        self._update_stylesheet(self._base_color)
-
-    @pyqtProperty(QColor)
-    def animated_color(self) -> QColor:
-        """Get the current animated color."""
-        return self._animated_color
-
-    @animated_color.setter
-    def animated_color(self, color: QColor) -> None:
-        """Set the animated color and update the stylesheet."""
-        self._animated_color = color
-        self._update_stylesheet(color)
-    
-    def _update_stylesheet(self, color: QColor) -> None:
-        """
-        Updates the button's stylesheet based on its role (determined by base color)
-        and the current animated color.
-        """
-        # Check if this is the "Generate" button
-        if self._base_color.name() == "#4caf50":
-            # Style for "Generate Plot"
-            pressed_color = self._hover_color.darker(120).name()
-            self.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {color.name()};
-                    color: white;
-                    font-weight: bold;
-                    padding: 8px;
-                    border: none;
-                    border-radius: 4px;
-                }}
-                QPushButton:pressed {{
-                    background-color: {pressed_color};
-                }}
-            """)
-        else:
-            # Style for "Clear"
-            pressed_color = self._hover_color.darker(110).name()
-            self.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {color.name()};
-                    color: black;
-                    font-weight: bold;
-                    padding: 8px;
-                    border: 1px solid #c9c9c9;
-                    border-radius: 4px;
-                }}
-                QPushButton:pressed {{
-                    background-color: {pressed_color};
-                }}
-            """)
-
-    def enterEvent(self, event) -> None:
-        """Called when the mouse enters the button widget."""
-        self.leave_animation.stop()
-        self.enter_animation.setStartValue(self.animated_color) # Start from current color
-        self.enter_animation.start()
-        super().enterEvent(event)
-
-    def leaveEvent(self, event) -> None:
-        """Called when the mouse leaves the button widget."""
-        self.enter_animation.stop()
-        self.leave_animation.setStartValue(self.animated_color) # Start from current color
-        self.leave_animation.start()
-        super().leaveEvent(event)
-        
-    
 class PlotTabUI(QWidget):
     """
     UI Base Class for the Plotting Tab.
@@ -162,7 +76,7 @@ class PlotTabUI(QWidget):
         
         # === TAB 6: ANNOTATIONS ===
         annotations_tab = self._create_annotations_tab()
-        custom_tabs.addTab(annotations_tab, "Annotations") # need an icon here
+        custom_tabs.addTab(annotations_tab, "Annotations") #forgor icon
         
         right_layout.addWidget(custom_tabs, 1)
         
@@ -171,8 +85,12 @@ class PlotTabUI(QWidget):
         
         self.plot_button = AnimatedButton(
             "Generate Plot",
-            base_color_hex="#4CAF50",    # Original color
-            hover_color_hex="#5cb85c"     # A slightly lighter green for hover
+            parent=self,
+            base_color_hex="#4CAF50",    
+            hover_color_hex="#5cb85c",
+            pressed_color_hex="#4a9c4d",
+            text_color_hex="#FFFFFF",
+            border_style="none"
         )
         self.plot_button.setMinimumHeight(40)
         self.plot_button.setShortcut("Ctrl+Return")
@@ -180,8 +98,12 @@ class PlotTabUI(QWidget):
         
         self.clear_button = AnimatedButton(
             "Clear",
-            base_color_hex="#ededed",    # Original color
-            hover_color_hex="#f5f5f5"     # A slightly lighter gray for hover
+            parent=self,
+            base_color_hex="#ededed",    
+            hover_color_hex="#f5f5f5",
+            pressed_color_hex="#dcdcdc",
+            text_color_hex="#000000",
+            border_style="1px solid #c9c9c9"
         )
         self.clear_button.setMinimumHeight(40)
         button_layout.addWidget(self.clear_button)
@@ -206,8 +128,8 @@ class PlotTabUI(QWidget):
         layout = QVBoxLayout(basic_tab)
         
         # plot type
-        self.plot_type_group = QGroupBox("Plot Type")
-        self.plot_type_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        self.plot_type_group = AnimatedGroupBox("Plot Type")
+        #self.plot_type_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         plot_type_layout = QVBoxLayout()
         self.plot_type = QComboBox()
         # bith plot type is in the plotTab.py
@@ -217,8 +139,8 @@ class PlotTabUI(QWidget):
         layout.addWidget(self.plot_type_group)
 
         # data selection
-        data_group = QGroupBox("Data")
-        data_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        data_group = AnimatedGroupBox("Data")
+        data_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         data_layout = QVBoxLayout()
 
         # x column selection
@@ -252,11 +174,11 @@ class PlotTabUI(QWidget):
 
         #btns for multi ycols
         multi_y_buttons = QHBoxLayout()
-        self.select_all_y_btn = QPushButton("Select All")
+        self.select_all_y_btn = AnimatedButton("Select All", parent=self)
         self.select_all_y_btn.setVisible(False)
         multi_y_buttons.addWidget(self.select_all_y_btn)
 
-        self.clear_all_y_btn = QPushButton("Clear All")
+        self.clear_all_y_btn = AnimatedButton("Clear All", parent=self)
         self.clear_all_y_btn.setVisible(False)
         multi_y_buttons.addWidget(self.clear_all_y_btn)
         data_layout.addLayout(multi_y_buttons)
@@ -270,8 +192,8 @@ class PlotTabUI(QWidget):
         data_group.setLayout(data_layout)
         layout.addWidget(data_group)
 
-        hue_group = QGroupBox("Hue/Group:")
-        hue_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        hue_group = AnimatedGroupBox("Hue/Group:")
+        hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         hue_layout = QVBoxLayout()
         self.hue_column = QComboBox()
         self.hue_column.addItem("None")
@@ -280,8 +202,8 @@ class PlotTabUI(QWidget):
         layout.addWidget(hue_group)
 
         # === SUBSET SELECTION ===
-        subset_group = QGroupBox("Data Subset (Optional)")
-        subset_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        subset_group = AnimatedGroupBox("Data Subset (Optional)")
+        subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         subset_layout = QVBoxLayout()
 
         subset_info = QLabel(
@@ -305,7 +227,7 @@ class PlotTabUI(QWidget):
         self.use_subset_check.stateChanged.connect(
             lambda state: self.subset_combo.setEnabled(state == Qt.CheckState.Checked.value)
         )
-        refresh_subsets_btn = QPushButton("Refresh Subset List")
+        refresh_subsets_btn = AnimatedButton("Refresh Subset List", parent=self)
         refresh_subsets_btn.clicked.connect(self.refresh_subset_list)
         subset_layout.addWidget(refresh_subsets_btn)
 
@@ -316,8 +238,8 @@ class PlotTabUI(QWidget):
         layout.addSpacing(10)
 
         #plot description tab
-        description_group = QGroupBox(f"Plot Description: ")
-        description_group.setStyleSheet("QGroupBox { font-size: 16pt; font-weight: bold;}")
+        description_group = AnimatedGroupBox(f"Plot Description: ")
+        description_group.setStyleSheet("AnimatedGroupBox { font-size: 16pt; font-weight: bold;}")
         description_layout = QVBoxLayout()
         self.description_label = QLabel()
         self.description_label.setWordWrap(True)
@@ -341,11 +263,12 @@ class PlotTabUI(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
         # Font FAMILY
-        font_group = QGroupBox("Font Settings")
-        font_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        font_group = AnimatedGroupBox("Font Settings")
+        font_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         font_layout = QVBoxLayout()
 
         font_layout.addWidget(QLabel("Font Family:"))
@@ -359,8 +282,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(15)
         
         # Title
-        title_group = QGroupBox("Title Options")
-        title_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        title_group = AnimatedGroupBox("Title Options")
+        title_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         title_layout = QVBoxLayout()
         self.title_check = QCheckBox("Show Title")
         self.title_check.setChecked(True)
@@ -394,8 +317,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(title_group)
 
         # X Label
-        xlabel_group = QGroupBox("X Label Options")
-        xlabel_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        xlabel_group = AnimatedGroupBox("X Label Options")
+        xlabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         xlabel_layout = QVBoxLayout()
         self.xlabel_check = QCheckBox("Show X Label")
         self.xlabel_check.setChecked(True)
@@ -426,8 +349,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(xlabel_group)
         
         # Y Label
-        ylabel_group = QGroupBox("Y Label Options")
-        ylabel_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        ylabel_group = AnimatedGroupBox("Y Label Options")
+        ylabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         ylabel_layout = QVBoxLayout()
         self.ylabel_check = QCheckBox("Show Y Label")
         self.ylabel_check.setChecked(True)
@@ -458,7 +381,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(ylabel_group)
 
         #### PLOTBORDERS aka spines
-        spines_group = QGroupBox("Plot Spines (Borders)")
+        spines_group = AnimatedGroupBox("Plot Spines (Borders)")
         spines_layout = QVBoxLayout()
 
         #inf label
@@ -469,7 +392,7 @@ class PlotTabUI(QWidget):
         spines_layout.addSpacing(10)
 
         #top spine
-        top_spine_group = QGroupBox("Top Spine")
+        top_spine_group = AnimatedGroupBox("Top Spine")
         top_spine_layout = QVBoxLayout()
 
         self.top_spine_visible_check = QCheckBox("Show Top Spine")
@@ -485,7 +408,7 @@ class PlotTabUI(QWidget):
         
         top_spine_layout.addWidget(QLabel("Color:"))
         top_spine_color_layout = QHBoxLayout()
-        self.top_spine_color_button = QPushButton("Choose Color")
+        self.top_spine_color_button = AnimatedButton("Choose Color", parent=self)
         self.top_spine_color_label = QLabel("Black")
         top_spine_color_layout.addWidget(self.top_spine_color_button)
         top_spine_color_layout.addWidget(self.top_spine_color_label)
@@ -495,7 +418,7 @@ class PlotTabUI(QWidget):
         spines_layout.addWidget(top_spine_group)
 
         # Bottom Spine
-        bottom_spine_group = QGroupBox("Bottom Spine")
+        bottom_spine_group = AnimatedGroupBox("Bottom Spine")
         bottom_spine_layout = QVBoxLayout()
         
         self.bottom_spine_visible_check = QCheckBox("Show Bottom Spine")
@@ -511,7 +434,7 @@ class PlotTabUI(QWidget):
         
         bottom_spine_layout.addWidget(QLabel("Color:"))
         bottom_spine_color_layout = QHBoxLayout()
-        self.bottom_spine_color_button = QPushButton("Choose Color")
+        self.bottom_spine_color_button = AnimatedButton("Choose Color", parent=self)
         self.bottom_spine_color_label = QLabel("Black")
         bottom_spine_color_layout.addWidget(self.bottom_spine_color_button)
         bottom_spine_color_layout.addWidget(self.bottom_spine_color_label)
@@ -521,7 +444,7 @@ class PlotTabUI(QWidget):
         spines_layout.addWidget(bottom_spine_group)
         
         # Left Spine
-        left_spine_group = QGroupBox("Left Spine")
+        left_spine_group = AnimatedGroupBox("Left Spine")
         left_spine_layout = QVBoxLayout()
         
         self.left_spine_visible_check = QCheckBox("Show Left Spine")
@@ -537,7 +460,7 @@ class PlotTabUI(QWidget):
         
         left_spine_layout.addWidget(QLabel("Color:"))
         left_spine_color_layout = QHBoxLayout()
-        self.left_spine_color_button = QPushButton("Choose Color")
+        self.left_spine_color_button = AnimatedButton("Choose Color", parent=self)
         self.left_spine_color_label = QLabel("Black")
         left_spine_color_layout.addWidget(self.left_spine_color_button)
         left_spine_color_layout.addWidget(self.left_spine_color_label)
@@ -547,7 +470,7 @@ class PlotTabUI(QWidget):
         spines_layout.addWidget(left_spine_group)
         
         # Right Spine
-        right_spine_group = QGroupBox("Right Spine")
+        right_spine_group = AnimatedGroupBox("Right Spine")
         right_spine_layout = QVBoxLayout()
         
         self.right_spine_visible_check = QCheckBox("Show Right Spine")
@@ -563,7 +486,7 @@ class PlotTabUI(QWidget):
         
         right_spine_layout.addWidget(QLabel("Color:"))
         right_spine_color_layout = QHBoxLayout()
-        self.right_spine_color_button = QPushButton("Choose Color")
+        self.right_spine_color_button = AnimatedButton("Choose Color", parent=self)
         self.right_spine_color_label = QLabel("Black")
         right_spine_color_layout.addWidget(self.right_spine_color_button)
         right_spine_color_layout.addWidget(self.right_spine_color_label)
@@ -581,17 +504,17 @@ class PlotTabUI(QWidget):
         presets_button_layout = QHBoxLayout()
         
         #all spines
-        self.all_spines_btn = QPushButton("All Spines")
+        self.all_spines_btn = AnimatedButton("All Spines", parent=self)
         self.all_spines_btn.setToolTip("Show all four spines")
         presets_button_layout.addWidget(self.all_spines_btn)
 
         #box only (Lshape)
-        self.box_only_btn = QPushButton("Box Only")
+        self.box_only_btn = AnimatedButton("Box Only", parent=self)
         self.box_only_btn.setToolTip("Show only left and bottom spines")
         presets_button_layout.addWidget(self.box_only_btn)
 
         #no spines preset
-        self.no_spines_btn = QPushButton("No Spines")
+        self.no_spines_btn = AnimatedButton("No Spines", parent=self)
         self.no_spines_btn.setToolTip("Hide all spines")
         presets_button_layout.addWidget(self.no_spines_btn)
 
@@ -601,8 +524,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(spines_group)
 
         # Figure size
-        figure_size_group = QGroupBox("Figure Settings")
-        figure_size_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        figure_size_group = AnimatedGroupBox("Figure Settings")
+        figure_size_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         figure_size_layout = QVBoxLayout()
         figure_size_layout.addWidget(QLabel("Figure Width:"))
         self.width_spin = QSpinBox()
@@ -629,7 +552,7 @@ class PlotTabUI(QWidget):
         # Background color
         figure_size_layout.addWidget(QLabel("Background Color:"))
         bg_layout = QHBoxLayout()
-        self.bg_color_button = QPushButton("Choose Color")
+        self.bg_color_button = AnimatedButton("Choose Color", parent=self)
         self.bg_color_label = QLabel("White")
         bg_layout.addWidget(self.bg_color_button)
         bg_layout.addWidget(self.bg_color_label)
@@ -638,7 +561,7 @@ class PlotTabUI(QWidget):
         #facecolor color color color color color color colorcolorcolor color color color color
         figure_size_layout.addWidget(QLabel("Plot Area Color"))
         face_layout = QHBoxLayout()
-        self.face_color_button = QPushButton("Choose Color")
+        self.face_color_button = AnimatedButton("Choose Color", parent=self)
         self.face_color_label = QLabel("White")
         face_layout.addWidget(self.face_color_button)
         face_layout.addWidget(self.face_color_label)
@@ -676,11 +599,12 @@ class PlotTabUI(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
         
         # X-axis limits
-        xaxis_limit_group = QGroupBox("X-axis Options")
-        xaxis_limit_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        xaxis_limit_group = AnimatedGroupBox("X-axis Options")
+        xaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         xaxis_limit_layout = QVBoxLayout()
 
         xaxis_limit_layout.addWidget(QLabel("X-axis - Auto Limit:"))
@@ -782,8 +706,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(15)
         
         # Y-axis limits
-        yaxis_limit_group = QGroupBox("Y-axis Options")
-        yaxis_limit_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        yaxis_limit_group = AnimatedGroupBox("Y-axis Options")
+        yaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         yaxis_limit_layout = QVBoxLayout()
         yaxis_limit_layout.addWidget(QLabel("Y-axis - Auto Limit:"))
         self.y_auto_check = QCheckBox("Auto")
@@ -878,8 +802,8 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(yaxis_limit_group)
 
         # FLiping axis feature
-        flip_axes_group = QGroupBox("Axis Orientation")
-        flip_axes_group.setStyleSheet("QGroupBox { font-size: 14pt; font-weight: bold;}")
+        flip_axes_group = AnimatedGroupBox("Axis Orientation")
+        flip_axes_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         flip_axes_layout = QVBoxLayout()
 
         self.flip_axes_check = QCheckBox("Flip Axis (Swap X and Y axis)")
@@ -890,7 +814,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(flip_axes_group)
 
         #datetime formatting
-        datetime_format_group = QGroupBox("DateTime Formatting")
+        datetime_format_group = AnimatedGroupBox("DateTime Formatting")
         datetime_format_layout = QVBoxLayout()
 
         #enable custom datetimeformatting
@@ -1043,10 +967,11 @@ class PlotTabUI(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
         
         # === LEGEND SETTINGS ===
-        legend_group = QGroupBox("Legend")
+        legend_group = AnimatedGroupBox("Legend")
         legend_layout = QVBoxLayout()
         
         self.legend_check = QCheckBox("Show Legend")
@@ -1103,7 +1028,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
         
         # === LEGEND BOX STYLING ===
-        self.box_styling_group = QGroupBox("Legend Box Styling")
+        self.box_styling_group = AnimatedGroupBox("Legend Box Styling")
         self.box_styling_group.setVisible(False)
         box_styling_layout = QVBoxLayout()
         
@@ -1121,7 +1046,7 @@ class PlotTabUI(QWidget):
         
         box_styling_layout.addWidget(QLabel("Background Color:"))
         legend_bg_layout = QHBoxLayout()
-        self.legend_bg_button = QPushButton("Choose")
+        self.legend_bg_button = AnimatedButton("Choose", parent=self)
         self.legend_bg_label = QLabel("White")
         legend_bg_layout.addWidget(self.legend_bg_button)
         legend_bg_layout.addWidget(self.legend_bg_label)
@@ -1129,7 +1054,7 @@ class PlotTabUI(QWidget):
         
         box_styling_layout.addWidget(QLabel("Edge Color:"))
         legend_edge_layout = QHBoxLayout()
-        self.legend_edge_button = QPushButton("Choose")
+        self.legend_edge_button = AnimatedButton("Choose", parent=self)
         self.legend_edge_label = QLabel("Black")
         legend_edge_layout.addWidget(self.legend_edge_button)
         legend_edge_layout.addWidget(self.legend_edge_label)
@@ -1158,7 +1083,7 @@ class PlotTabUI(QWidget):
         
         # === GRID SETTINGS ===
         #docs https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.grid.html
-        grid_group = QGroupBox("Gridlines")
+        grid_group = AnimatedGroupBox("Gridlines")
         grid_layout = QVBoxLayout()
 
         self.grid_check = QCheckBox("Show Gridlines") # set visible in docs
@@ -1167,7 +1092,7 @@ class PlotTabUI(QWidget):
         grid_layout.addSpacing(10)
 
         #GLOBAL gridline settings
-        self.global_grid_group = QGroupBox("Global Gridline Settings")
+        self.global_grid_group = AnimatedGroupBox("Global Gridline Settings")
         self.global_grid_group.setVisible(False)
         global_grid_layout = QVBoxLayout()
 
@@ -1211,7 +1136,7 @@ class PlotTabUI(QWidget):
         x_grid_layout = QVBoxLayout(x_grid_tab)
 
         # X major gridline
-        x_major_group = QGroupBox("X-axis Major Gridlines")
+        x_major_group = AnimatedGroupBox("X-axis Major Gridlines")
         x_major_layout = QVBoxLayout()
 
         self.x_major_grid_check = QCheckBox("Show X major gridlines")
@@ -1236,7 +1161,7 @@ class PlotTabUI(QWidget):
 
         x_major_layout.addWidget(QLabel("Color"))
         x_major_color_layout = QHBoxLayout()
-        self.x_major_grid_color_button = QPushButton("Choose Color")
+        self.x_major_grid_color_button = AnimatedButton("Choose Color", parent=self)
         self.x_major_grid_color_label = QLabel("Gray")
         x_major_color_layout.addWidget(self.x_major_grid_color_button)
         x_major_color_layout.addWidget(self.x_major_grid_color_label)
@@ -1254,7 +1179,7 @@ class PlotTabUI(QWidget):
         x_grid_layout.addWidget(x_major_group)
 
         #X axis minor gridlines
-        x_minor_group = QGroupBox("X-axis Minor Gridlines")
+        x_minor_group = AnimatedGroupBox("X-axis Minor Gridlines")
         x_minor_layout = QVBoxLayout()
 
         #check
@@ -1284,7 +1209,7 @@ class PlotTabUI(QWidget):
         #color
         x_minor_layout.addWidget(QLabel("Color:"))
         x_minor_color_layout = QHBoxLayout()
-        self.x_minor_grid_color_button = QPushButton("Choose Color")
+        self.x_minor_grid_color_button = AnimatedButton("Choose Color", parent=self)
         self.x_minor_grid_color_label = QLabel("Light Gray")
         x_minor_color_layout.addWidget(self.x_minor_grid_color_button)
         x_minor_color_layout.addWidget(self.x_minor_grid_color_label)
@@ -1309,7 +1234,7 @@ class PlotTabUI(QWidget):
         y_grid_tab = QWidget()
         y_grid_layout = QVBoxLayout(y_grid_tab)
 
-        y_major_group = QGroupBox("Y-Axis Major Gridlines")
+        y_major_group = AnimatedGroupBox("Y-Axis Major Gridlines")
         y_major_layout = QVBoxLayout()
 
         #check
@@ -1338,7 +1263,7 @@ class PlotTabUI(QWidget):
         #color
         y_major_layout.addWidget(QLabel("Color:"))
         y_major_color_layout = QHBoxLayout()
-        self.y_major_grid_color_button = QPushButton("Choose Color")
+        self.y_major_grid_color_button = AnimatedButton("Choose Color", parent=self)
         self.y_major_grid_color_label = QLabel("Gray")
         y_major_color_layout.addWidget(self.y_major_grid_color_button)
         y_major_color_layout.addWidget(self.y_major_grid_color_label)
@@ -1357,7 +1282,7 @@ class PlotTabUI(QWidget):
         y_grid_layout.addWidget(y_major_group)
 
         # Y-Axis Minor Gridlines
-        y_minor_group = QGroupBox("Y-Axis Minor Gridlines")
+        y_minor_group = AnimatedGroupBox("Y-Axis Minor Gridlines")
         y_minor_layout = QVBoxLayout()
 
         #check
@@ -1387,7 +1312,7 @@ class PlotTabUI(QWidget):
         #color customization
         y_minor_layout.addWidget(QLabel("Color:"))
         y_minor_color_layout = QHBoxLayout()
-        self.y_minor_grid_color_button = QPushButton("Choose Color")
+        self.y_minor_grid_color_button = AnimatedButton("Choose Color", parent=self)
         self.y_minor_grid_color_label = QLabel("Light Gray")
         y_minor_color_layout.addWidget(self.y_minor_grid_color_button)
         y_minor_color_layout.addWidget(self.y_minor_grid_color_label)
@@ -1427,11 +1352,12 @@ class PlotTabUI(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
         #line properties
         
-        line_group = QGroupBox("Line Properties")
+        line_group = AnimatedGroupBox("Line Properties")
         line_layout = QVBoxLayout()
 
         #multi line toggle
@@ -1466,13 +1392,13 @@ class PlotTabUI(QWidget):
         
         line_layout.addWidget(QLabel("Line Color:"))
         line_color_layout = QHBoxLayout()
-        self.line_color_button = QPushButton("Choose")
+        self.line_color_button = AnimatedButton("Choose", parent=self)
         self.line_color_label = QLabel("Auto")
         line_color_layout.addWidget(self.line_color_button)
         line_color_layout.addWidget(self.line_color_label)
         line_layout.addLayout(line_color_layout)
 
-        self.save_line_custom_button = QPushButton("Save Settings to Selected Line")
+        self.save_line_custom_button = AnimatedButton("Save Settings to Selected Line", parent=self)
         self.save_line_custom_button.setVisible(False)
         line_layout.addWidget(self.save_line_custom_button)
 
@@ -1482,7 +1408,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
         
         # === MARKER PROPERTIES ===
-        marker_group = QGroupBox("Marker Properties")
+        marker_group = AnimatedGroupBox("Marker Properties")
         marker_layout = QVBoxLayout()
 
         marker_layout.addWidget(QLabel("Marker Shape:"))
@@ -1498,7 +1424,7 @@ class PlotTabUI(QWidget):
         
         marker_layout.addWidget(QLabel("Marker Color:"))
         marker_color_layout = QHBoxLayout()
-        self.marker_color_button = QPushButton("Choose")
+        self.marker_color_button = AnimatedButton("Choose", parent=self)
         self.marker_color_label = QLabel("Auto")
         marker_color_layout.addWidget(self.marker_color_button)
         marker_color_layout.addWidget(self.marker_color_label)
@@ -1506,7 +1432,7 @@ class PlotTabUI(QWidget):
         
         marker_layout.addWidget(QLabel("Marker Edge Color:"))
         marker_edge_layout = QHBoxLayout()
-        self.marker_edge_button = QPushButton("Choose")
+        self.marker_edge_button = AnimatedButton("Choose", parent=self)
         self.marker_edge_label = QLabel("Auto")
         marker_edge_layout.addWidget(self.marker_edge_button)
         marker_edge_layout.addWidget(self.marker_edge_label)
@@ -1525,7 +1451,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
         
         # === BAR PROPERTIES ===
-        self.bar_group = QGroupBox("Bar Properties")
+        self.bar_group = AnimatedGroupBox("Bar Properties")
         bar_layout = QVBoxLayout()
 
         # toggle for more bars to customize
@@ -1552,7 +1478,7 @@ class PlotTabUI(QWidget):
         
         bar_layout.addWidget(QLabel("Bar Color:"))
         bar_color_layout = QHBoxLayout()
-        self.bar_color_button = QPushButton("Choose Color")
+        self.bar_color_button = AnimatedButton("Choose Color", parent=self)
         self.bar_color_label = QLabel("Auto")
         bar_color_layout.addWidget(self.bar_color_button)
         bar_color_layout.addWidget(self.bar_color_label)
@@ -1560,7 +1486,7 @@ class PlotTabUI(QWidget):
         
         bar_layout.addWidget(QLabel("Bar Edge Color:"))
         bar_edge_layout = QHBoxLayout()
-        self.bar_edge_button = QPushButton("Choose")
+        self.bar_edge_button = AnimatedButton("Choose", parent=self)
         self.bar_edge_label = QLabel("Auto")
         bar_edge_layout.addWidget(self.bar_edge_button)
         bar_edge_layout.addWidget(self.bar_edge_label)
@@ -1574,7 +1500,7 @@ class PlotTabUI(QWidget):
         bar_layout.addWidget(self.bar_edge_width_spin)
 
         #Button to save customization for a bar to generate
-        self.save_bar_custom_button = QPushButton("Save Customization to Selected Bar")
+        self.save_bar_custom_button = AnimatedButton("Save Customization to Selected Bar", parent=self)
         self.save_bar_custom_button.setVisible(False)
         bar_layout.addWidget(self.save_bar_custom_button)
 
@@ -1584,7 +1510,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
 
         # === Histogram Properties ===
-        self.histogram_group = QGroupBox("Histogram Properties")
+        self.histogram_group = AnimatedGroupBox("Histogram Properties")
         histogram_layout = QVBoxLayout()
         
         histogram_layout.addWidget(QLabel("Number of Bins:"))
@@ -1608,7 +1534,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
         
         # === TRANSPARENCY ===
-        alpha_group = QGroupBox("Transparency")
+        alpha_group = AnimatedGroupBox("Transparency")
         alpha_layout = QVBoxLayout()
         
         alpha_layout.addWidget(QLabel("Alpha/Transparency:"))
@@ -1626,7 +1552,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
 
         # === SCatter stats ===
-        self.scatter_group = QGroupBox("Scatter Plot Analysis")
+        self.scatter_group = AnimatedGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
 
         self.regression_line_check = QCheckBox("Show Linear Regresssion Line")
@@ -1662,7 +1588,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
         
         # === PiE CHART PROPERTIRES
-        self.pie_group = QGroupBox("Pie Chart Properties")
+        self.pie_group = AnimatedGroupBox("Pie Chart Properties")
         pie_layout = QVBoxLayout()
 
         self.pie_show_percentages_check = QCheckBox("Show % on slices")
@@ -1706,10 +1632,11 @@ class PlotTabUI(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
         
         # === TEXT ANNOTATIONS ===
-        annotations_group = QGroupBox("Text Annotations")
+        annotations_group = AnimatedGroupBox("Text Annotations")
         annotations_layout = QVBoxLayout()
         
         annotations_layout.addWidget(QLabel("Annotation Text:"))
@@ -1739,13 +1666,13 @@ class PlotTabUI(QWidget):
         
         annotations_layout.addWidget(QLabel("Font Color:"))
         annotation_color_layout = QHBoxLayout()
-        self.annotation_color_button = QPushButton("Choose")
+        self.annotation_color_button = AnimatedButton("Choose", parent=self)
         self.annotation_color_label = QLabel("Black")
         annotation_color_layout.addWidget(self.annotation_color_button)
         annotation_color_layout.addWidget(self.annotation_color_label)
         annotations_layout.addLayout(annotation_color_layout)
         
-        self.add_annotation_button = QPushButton("Add Annotation")
+        self.add_annotation_button = AnimatedButton("Add Annotation", parent=self)
         annotations_layout.addWidget(self.add_annotation_button)
 
         annotations_group.setLayout(annotations_layout)
@@ -1754,7 +1681,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(15)
         
         # === TEXT BOX ===
-        text_box_group = QGroupBox("Text Box")
+        text_box_group = AnimatedGroupBox("Text Box")
         text_box_layout = QVBoxLayout()
         
         text_box_layout.addWidget(QLabel("Text Box Content:"))
@@ -1776,7 +1703,7 @@ class PlotTabUI(QWidget):
         
         text_box_layout.addWidget(QLabel("Background Color:"))
         textbox_bg_layout = QHBoxLayout()
-        self.textbox_bg_button = QPushButton("Choose")
+        self.textbox_bg_button = AnimatedButton("Choose", parent=self)
         self.textbox_bg_label = QLabel("White")
         textbox_bg_layout.addWidget(self.textbox_bg_button)
         textbox_bg_layout.addWidget(self.textbox_bg_label)
@@ -1791,13 +1718,13 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(15)
         
         # === ANNOTATIONS LIST ===
-        annotation_list_group = QGroupBox("Annotations List")
+        annotation_list_group = AnimatedGroupBox("Annotations List")
         annotation_list_layout = QVBoxLayout()
         
         self.annotations_list = QListWidget()
         annotation_list_layout.addWidget(self.annotations_list)
         
-        self.clear_annotations_button = QPushButton("Clear All Annotations")
+        self.clear_annotations_button = AnimatedButton("Clear All Annotations", parent=self)
         annotation_list_layout.addWidget(self.clear_annotations_button)
 
         annotation_list_group.setLayout(annotation_list_layout)
