@@ -1375,6 +1375,22 @@ class DataTab(QWidget):
 
     def reset_data(self):
         """Reset data to original state"""
+
+        #confirmation
+        reply = QMessageBox.question(
+            self,
+            "Confirm Reset",
+            "Are you sure you want to reset the data to its original state?\n\n"
+            "This will discard all changes "
+            "and restore the original dataset.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.No:
+            self.status_bar.log("Data reset cancelled", "INFO")
+            return
+
         try:
             rows_before = len(self.data_handler.df) if self.data_handler.df is not None else 0
             cols_before = len(self.data_handler.df.columns) if self.data_handler.df is not None else 0
