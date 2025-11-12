@@ -16,7 +16,7 @@ from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox
 
 
 class PlotTabUI(QWidget):
@@ -156,7 +156,7 @@ class PlotTabUI(QWidget):
         y_label_layout.addStretch()
 
         #toggle between two and more ycols
-        self.multi_y_check = QCheckBox("Multiple Y Columns")
+        self.multi_y_check = AnimatedCheckBox("Multiple Y Columns")
         self.multi_y_check.setChecked(False)
         y_label_layout.addWidget(self.multi_y_check)
         data_layout.addLayout(y_label_layout)
@@ -214,7 +214,7 @@ class PlotTabUI(QWidget):
         subset_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         subset_layout.addWidget(subset_info)
 
-        self.use_subset_check = QCheckBox("Use Subset")
+        self.use_subset_check = AnimatedCheckBox("Use Subset")
         self.use_subset_check.setChecked(False)
         subset_layout.addWidget(self.use_subset_check)
 
@@ -285,7 +285,7 @@ class PlotTabUI(QWidget):
         title_group = AnimatedGroupBox("Title Options")
         title_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         title_layout = QVBoxLayout()
-        self.title_check = QCheckBox("Show Title")
+        self.title_check = AnimatedCheckBox("Show Title")
         self.title_check.setChecked(True)
         title_layout.addWidget(self.title_check)
         title_group.setLayout(title_layout)
@@ -320,7 +320,7 @@ class PlotTabUI(QWidget):
         xlabel_group = AnimatedGroupBox("X Label Options")
         xlabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         xlabel_layout = QVBoxLayout()
-        self.xlabel_check = QCheckBox("Show X Label")
+        self.xlabel_check = AnimatedCheckBox("Show X Label")
         self.xlabel_check.setChecked(True)
         xlabel_layout.addWidget(self.xlabel_check)
         xlabel_group.setLayout(xlabel_layout)
@@ -352,7 +352,7 @@ class PlotTabUI(QWidget):
         ylabel_group = AnimatedGroupBox("Y Label Options")
         ylabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         ylabel_layout = QVBoxLayout()
-        self.ylabel_check = QCheckBox("Show Y Label")
+        self.ylabel_check = AnimatedCheckBox("Show Y Label")
         self.ylabel_check.setChecked(True)
         ylabel_layout.addWidget(self.ylabel_check)
         ylabel_group.setLayout(ylabel_layout)
@@ -395,7 +395,7 @@ class PlotTabUI(QWidget):
         top_spine_group = AnimatedGroupBox("Top Spine")
         top_spine_layout = QVBoxLayout()
 
-        self.top_spine_visible_check = QCheckBox("Show Top Spine")
+        self.top_spine_visible_check = AnimatedCheckBox("Show Top Spine")
         self.top_spine_visible_check.setChecked(True)
         top_spine_layout.addWidget(self.top_spine_visible_check)
 
@@ -421,7 +421,7 @@ class PlotTabUI(QWidget):
         bottom_spine_group = AnimatedGroupBox("Bottom Spine")
         bottom_spine_layout = QVBoxLayout()
         
-        self.bottom_spine_visible_check = QCheckBox("Show Bottom Spine")
+        self.bottom_spine_visible_check = AnimatedCheckBox("Show Bottom Spine")
         self.bottom_spine_visible_check.setChecked(True)
         bottom_spine_layout.addWidget(self.bottom_spine_visible_check)
         
@@ -447,7 +447,7 @@ class PlotTabUI(QWidget):
         left_spine_group = AnimatedGroupBox("Left Spine")
         left_spine_layout = QVBoxLayout()
         
-        self.left_spine_visible_check = QCheckBox("Show Left Spine")
+        self.left_spine_visible_check = AnimatedCheckBox("Show Left Spine")
         self.left_spine_visible_check.setChecked(True)
         left_spine_layout.addWidget(self.left_spine_visible_check)
         
@@ -473,7 +473,7 @@ class PlotTabUI(QWidget):
         right_spine_group = AnimatedGroupBox("Right Spine")
         right_spine_layout = QVBoxLayout()
         
-        self.right_spine_visible_check = QCheckBox("Show Right Spine")
+        self.right_spine_visible_check = AnimatedCheckBox("Show Right Spine")
         self.right_spine_visible_check.setChecked(True)
         right_spine_layout.addWidget(self.right_spine_visible_check)
         
@@ -576,7 +576,7 @@ class PlotTabUI(QWidget):
         # === OTHER SETTINGS ===
         
         figure_size_layout.addWidget(QLabel("Layout:"))
-        self.tight_layout_check = QCheckBox("Tight Layout")
+        self.tight_layout_check = AnimatedCheckBox("Tight Layout")
         self.tight_layout_check.setChecked(True)
         figure_size_layout.addWidget(self.tight_layout_check)
         
@@ -608,12 +608,12 @@ class PlotTabUI(QWidget):
         xaxis_limit_layout = QVBoxLayout()
 
         xaxis_limit_layout.addWidget(QLabel("X-axis - Auto Limit:"))
-        self.x_auto_check = QCheckBox("Auto")
+        self.x_auto_check = AnimatedCheckBox("Auto")
         self.x_auto_check.setChecked(True)
         xaxis_limit_layout.addWidget(self.x_auto_check)
         xaxis_limit_group.setLayout(xaxis_limit_layout)
 
-        self.x_invert_axis_check = QCheckBox("Invert X-axis")
+        self.x_invert_axis_check = AnimatedCheckBox("Invert X-axis")
         self.x_invert_axis_check.setChecked(False)
         self.x_invert_axis_check.setToolTip("Reverses the direction of data on the x-axis")
         xaxis_limit_layout.addWidget(self.x_invert_axis_check)
@@ -656,7 +656,7 @@ class PlotTabUI(QWidget):
         # X-axis minor ticks
         #visibility of the ticks
         
-        self.x_show_minor_ticks_check = QCheckBox("Show Minor X-axis Ticks")
+        self.x_show_minor_ticks_check = AnimatedCheckBox("Show Minor X-axis Ticks")
         self.x_show_minor_ticks_check.setChecked(False)
         self.x_show_minor_ticks_check.setToolTip("Display the minor tick marks and labels on the x-axis")
         xaxis_limit_layout.addWidget(self.x_show_minor_ticks_check)
@@ -717,11 +717,11 @@ class PlotTabUI(QWidget):
         yaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         yaxis_limit_layout = QVBoxLayout()
         yaxis_limit_layout.addWidget(QLabel("Y-axis - Auto Limit:"))
-        self.y_auto_check = QCheckBox("Auto")
+        self.y_auto_check = AnimatedCheckBox("Auto")
         self.y_auto_check.setChecked(True)
         yaxis_limit_layout.addWidget(self.y_auto_check)
 
-        self.y_invert_axis_check = QCheckBox("Invert Y-axis")
+        self.y_invert_axis_check = AnimatedCheckBox("Invert Y-axis")
         self.y_invert_axis_check.setChecked(False)
         self.y_invert_axis_check.setToolTip("Reverses the direction of data on the y-axis")
         yaxis_limit_layout.addWidget(self.y_invert_axis_check)
@@ -762,7 +762,7 @@ class PlotTabUI(QWidget):
         yaxis_limit_layout.addSpacing(5)
         #YAXIS minors
         #visibility
-        self.y_show_minor_ticks_check = QCheckBox("Show Y-axis Minor Ticks")
+        self.y_show_minor_ticks_check = AnimatedCheckBox("Show Y-axis Minor Ticks")
         self.y_show_minor_ticks_check.setChecked(False)
         self.y_show_minor_ticks_check.setToolTip("Display the minor tick marks and labels on yhe y-axis")
         yaxis_limit_layout.addWidget(self.y_show_minor_ticks_check)
@@ -821,7 +821,7 @@ class PlotTabUI(QWidget):
         flip_axes_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         flip_axes_layout = QVBoxLayout()
 
-        self.flip_axes_check = QCheckBox("Flip Axis (Swap X and Y axis)")
+        self.flip_axes_check = AnimatedCheckBox("Flip Axis (Swap X and Y axis)")
         self.flip_axes_check.setChecked(False)
         flip_axes_layout.addWidget(self.flip_axes_check)
 
@@ -833,7 +833,7 @@ class PlotTabUI(QWidget):
         datetime_format_layout = QVBoxLayout()
 
         #enable custom datetimeformatting
-        self.custom_datetime_check = QCheckBox("Enable Custom formatting of DateTime Axis")
+        self.custom_datetime_check = AnimatedCheckBox("Enable Custom formatting of DateTime Axis")
         self.custom_datetime_check.setChecked(False)
         datetime_format_layout.addWidget(self.custom_datetime_check)
 
@@ -989,7 +989,7 @@ class PlotTabUI(QWidget):
         legend_group = AnimatedGroupBox("Legend")
         legend_layout = QVBoxLayout()
         
-        self.legend_check = QCheckBox("Show Legend")
+        self.legend_check = AnimatedCheckBox("Show Legend")
         self.legend_check.setChecked(False)
         legend_layout.addWidget(self.legend_check)
         
@@ -1047,15 +1047,15 @@ class PlotTabUI(QWidget):
         self.box_styling_group.setVisible(False)
         box_styling_layout = QVBoxLayout()
         
-        self.legend_frame_check = QCheckBox("Show Frame")
+        self.legend_frame_check = AnimatedCheckBox("Show Frame")
         self.legend_frame_check.setChecked(True)
         box_styling_layout.addWidget(self.legend_frame_check)
         
-        self.legend_fancybox_check = QCheckBox("Fancy Box (Rounded Corners)")
+        self.legend_fancybox_check = AnimatedCheckBox("Fancy Box (Rounded Corners)")
         self.legend_fancybox_check.setChecked(True)
         box_styling_layout.addWidget(self.legend_fancybox_check)
         
-        self.legend_shadow_check = QCheckBox("Show Shadow")
+        self.legend_shadow_check = AnimatedCheckBox("Show Shadow")
         self.legend_shadow_check.setChecked(False)
         box_styling_layout.addWidget(self.legend_shadow_check)
         
@@ -1101,7 +1101,7 @@ class PlotTabUI(QWidget):
         grid_group = AnimatedGroupBox("Gridlines")
         grid_layout = QVBoxLayout()
 
-        self.grid_check = QCheckBox("Show Gridlines") # set visible in docs
+        self.grid_check = AnimatedCheckBox("Show Gridlines") # set visible in docs
         grid_layout.addWidget(self.grid_check)
 
         grid_layout.addSpacing(10)
@@ -1138,7 +1138,7 @@ class PlotTabUI(QWidget):
         grid_layout.addWidget(self.global_grid_group)
 
         # INDEPENDENTA AXIS
-        self.independent_grid_check = QCheckBox("Enable Independent Axis Customization")
+        self.independent_grid_check = AnimatedCheckBox("Enable Independent Axis Customization")
         self.independent_grid_check.setChecked(False)
         grid_layout.addWidget(self.independent_grid_check)
 
@@ -1154,7 +1154,7 @@ class PlotTabUI(QWidget):
         x_major_group = AnimatedGroupBox("X-axis Major Gridlines")
         x_major_layout = QVBoxLayout()
 
-        self.x_major_grid_check = QCheckBox("Show X major gridlines")
+        self.x_major_grid_check = AnimatedCheckBox("Show X major gridlines")
         self.x_major_grid_check.setChecked(True)
         x_major_layout.addWidget(self.x_major_grid_check)
 
@@ -1198,7 +1198,7 @@ class PlotTabUI(QWidget):
         x_minor_layout = QVBoxLayout()
 
         #check
-        self.x_minor_grid_check = QCheckBox("Show minor X-axis Gridlines")
+        self.x_minor_grid_check = AnimatedCheckBox("Show minor X-axis Gridlines")
         self.x_minor_grid_check.setChecked(False)
         x_minor_layout.addWidget(self.x_minor_grid_check)
 
@@ -1253,7 +1253,7 @@ class PlotTabUI(QWidget):
         y_major_layout = QVBoxLayout()
 
         #check
-        self.y_major_grid_check = QCheckBox("Show Major Y-axis Gridlines")
+        self.y_major_grid_check = AnimatedCheckBox("Show Major Y-axis Gridlines")
         self.y_major_grid_check.setChecked(True)
         y_major_layout.addWidget(self.y_major_grid_check)
 
@@ -1301,7 +1301,7 @@ class PlotTabUI(QWidget):
         y_minor_layout = QVBoxLayout()
 
         #check
-        self.y_minor_grid_check = QCheckBox("Show Y Minor Gridlines")
+        self.y_minor_grid_check = AnimatedCheckBox("Show Y Minor Gridlines")
         self.y_minor_grid_check.setChecked(False)
         y_minor_layout.addWidget(self.y_minor_grid_check)
 
@@ -1376,7 +1376,7 @@ class PlotTabUI(QWidget):
         line_layout = QVBoxLayout()
 
         #multi line toggle
-        self.multiline_custom_check = QCheckBox("Enable per-line customization")
+        self.multiline_custom_check = AnimatedCheckBox("Enable per-line customization")
         self.multiline_custom_check.setChecked(False)
         line_layout.addWidget(self.multiline_custom_check)
 
@@ -1470,7 +1470,7 @@ class PlotTabUI(QWidget):
         bar_layout = QVBoxLayout()
 
         # toggle for more bars to customize
-        self.multibar_custom_check = QCheckBox("Enable per-bar customization")
+        self.multibar_custom_check = AnimatedCheckBox("Enable per-bar customization")
         self.multibar_custom_check.setChecked(False)
         bar_layout.addWidget(self.multibar_custom_check)
 
@@ -1535,11 +1535,11 @@ class PlotTabUI(QWidget):
         histogram_layout.addWidget(self.histogram_bins_spin)
 
         #normal distribution curve
-        self.histogram_show_normal_check = QCheckBox("Overlay a Normal Distribution Curve")
+        self.histogram_show_normal_check = AnimatedCheckBox("Overlay a Normal Distribution Curve")
         self.histogram_show_normal_check.setChecked(False)
         histogram_layout.addWidget(self.histogram_show_normal_check)
 
-        self.histogram_show_kde_check = QCheckBox("Overlay Kernel Density Estimate")
+        self.histogram_show_kde_check = AnimatedCheckBox("Overlay Kernel Density Estimate")
         self.histogram_show_kde_check.setChecked(False)
         histogram_layout.addWidget(self.histogram_show_kde_check)
 
@@ -1570,20 +1570,20 @@ class PlotTabUI(QWidget):
         self.scatter_group = AnimatedGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
 
-        self.regression_line_check = QCheckBox("Show Linear Regresssion Line")
+        self.regression_line_check = AnimatedCheckBox("Show Linear Regresssion Line")
         scatter_layout.addWidget(self.regression_line_check)
 
-        self.confidence_interval_check = QCheckBox("Show 95% confidence interval")
+        self.confidence_interval_check = AnimatedCheckBox("Show 95% confidence interval")
         scatter_layout.addWidget(self.confidence_interval_check)
 
-        self.show_r2_check = QCheckBox("Show R² score")
+        self.show_r2_check = AnimatedCheckBox("Show R² score")
         self.show_r2_check.setChecked(False)
         scatter_layout.addWidget(self.show_r2_check)
 
-        self.show_rmse_check = QCheckBox("Show Root Mean Square Error (RMSE)")
+        self.show_rmse_check = AnimatedCheckBox("Show Root Mean Square Error (RMSE)")
         scatter_layout.addWidget(self.show_rmse_check)
 
-        self.show_equation_check = QCheckBox("Show Regression Equation")
+        self.show_equation_check = AnimatedCheckBox("Show Regression Equation")
         scatter_layout.addWidget(self.show_equation_check)
 
         scatter_layout.addWidget(QLabel("Error Bars:"))
@@ -1606,7 +1606,7 @@ class PlotTabUI(QWidget):
         self.pie_group = AnimatedGroupBox("Pie Chart Properties")
         pie_layout = QVBoxLayout()
 
-        self.pie_show_percentages_check = QCheckBox("Show % on slices")
+        self.pie_show_percentages_check = AnimatedCheckBox("Show % on slices")
         self.pie_show_percentages_check.setChecked(False)
         pie_layout.addWidget(self.pie_show_percentages_check)
 
@@ -1616,7 +1616,7 @@ class PlotTabUI(QWidget):
         self.pie_start_angle_spin.setValue(0)
         pie_layout.addWidget(self.pie_start_angle_spin)
 
-        self.pie_explode_check = QCheckBox("Explode First Slice")
+        self.pie_explode_check = AnimatedCheckBox("Explode First Slice")
         self.pie_explode_check.setChecked(False)
         pie_layout.addWidget(self.pie_explode_check)
 
@@ -1627,7 +1627,7 @@ class PlotTabUI(QWidget):
         self.pie_explode_distance_spin.setSingleStep(0.05)
         pie_layout.addWidget(self.pie_explode_distance_spin)
 
-        self.pie_shadow_check = QCheckBox("Add Shadow")
+        self.pie_shadow_check = AnimatedCheckBox("Add Shadow")
         self.pie_shadow_check.setChecked(False)
         pie_layout.addWidget(self.pie_shadow_check)
 
@@ -1724,7 +1724,7 @@ class PlotTabUI(QWidget):
         textbox_bg_layout.addWidget(self.textbox_bg_label)
         text_box_layout.addLayout(textbox_bg_layout)
         
-        self.textbox_enable_check = QCheckBox("Enable Text Box")
+        self.textbox_enable_check = AnimatedCheckBox("Enable Text Box")
         text_box_layout.addWidget(self.textbox_enable_check)
 
         text_box_group.setLayout(text_box_layout)

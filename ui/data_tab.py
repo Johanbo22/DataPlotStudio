@@ -12,7 +12,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox
 
 
 class DataTab(QWidget):

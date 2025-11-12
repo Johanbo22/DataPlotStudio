@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from pathlib import Path
 import sys
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox, AnimatedCheckBox, AnimatedRadioButton
 
 class GoogleSheetsDialog(QDialog):
     """Dialog for importing data from Google Sheets"""
@@ -537,7 +537,7 @@ class ExportDialog(QDialog):
         options_group = AnimatedGroupBox("Options", parent=self)
         options_layout = QVBoxLayout()
         
-        self.include_index_check = QCheckBox("Include Index")
+        self.include_index_check = AnimatedCheckBox("Include Index")
         self.include_index_check.setChecked(False)
         options_layout.addWidget(self.include_index_check)
         
@@ -639,7 +639,7 @@ class FilterAdvancedDialog(QDialog):
             filter_layout = QHBoxLayout()
             
             #checkbox
-            enable_check = QCheckBox("Active")
+            enable_check = AnimatedCheckBox("Active")
             enable_check.setChecked(i == 0)
             filter_layout.addWidget(enable_check)
 
@@ -1341,7 +1341,7 @@ class CreateSubsetDialog(QDialog):
             filter_layout = QHBoxLayout()
             
             # Enable checkbox
-            enable_check = QCheckBox("Active")
+            enable_check = AnimatedCheckBox("Active")
             enable_check.setChecked(i == 0)
             filter_layout.addWidget(enable_check)
             
