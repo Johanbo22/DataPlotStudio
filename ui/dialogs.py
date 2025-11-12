@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from pathlib import Path
 import sys
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
 
 
 class GoogleSheetsDialog(QDialog):
@@ -138,12 +139,12 @@ class GoogleSheetsDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         
-        import_button = QPushButton("Import")
+        import_button = AnimatedButton("Import", parent=self)
         import_button.setMinimumWidth(100)
         import_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(import_button)
         
-        cancel_button = QPushButton("Cancel")
+        cancel_button = AnimatedButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
@@ -256,12 +257,12 @@ class RenameColumnDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         
-        ok_button = QPushButton("Rename")
+        ok_button = AnimatedButton("Rename", parent=self)
         ok_button.setMinimumWidth(100)
         ok_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(ok_button)
         
-        cancel_button = QPushButton("Cancel")
+        cancel_button = AnimatedButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
@@ -323,12 +324,12 @@ class AggregationDialog(QDialog):
 
         #quick select buttons
         group_buttons = QHBoxLayout()
-        select_all_group_btn = QPushButton("Select All")
+        select_all_group_btn = AnimatedButton("Select All", parent=self)
         select_all_group_btn.clicked.connect(lambda: self.group_by_list.selectAll())
         group_buttons.addWidget(select_all_group_btn)
 
         #clear all btn
-        clear_group_btn = QPushButton("Clear All")
+        clear_group_btn = AnimatedButton("Clear All", parent=self)
         clear_group_btn.clicked.connect(lambda: self.group_by_list.clearSelection())
         group_buttons.addWidget(clear_group_btn)
         layout.addLayout(group_buttons)
@@ -354,12 +355,12 @@ class AggregationDialog(QDialog):
         #quick selection buttons
         #selcet all
         agg_buttons = QHBoxLayout()
-        select_all_agg_btn = QPushButton("Select All")
+        select_all_agg_btn = AnimatedButton("Select All", parent=self)
         select_all_agg_btn.clicked.connect(lambda: self.agg_columns_list.selectAll())
         agg_buttons.addWidget(select_all_agg_btn)
 
         #clearbtn
-        clear_agg_btn = QPushButton("Clear All")
+        clear_agg_btn = AnimatedButton("Clear All", parent=self)
         clear_agg_btn.clicked.connect(lambda: self.agg_columns_list.clearSelection())
         agg_buttons.addWidget(clear_agg_btn)
         layout.addLayout(agg_buttons)
@@ -417,14 +418,13 @@ class AggregationDialog(QDialog):
         button_layout = QHBoxLayout()
 
         #apply
-        apply_button = QPushButton("Apply Aggregation")
+        apply_button = AnimatedButton("Apply Aggregation", parent=self, base_color_hex="#4caf50", text_color_hex="white")
         apply_button.setMinimumWidth(120)
-        apply_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }")
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
         #cancel
-        cancel_button = QPushButton("Cancel")
+        cancel_button = AnimatedButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
@@ -550,12 +550,12 @@ class ExportDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         
-        export_button = QPushButton("Export")
+        export_button = AnimatedButton("Export", parent=self)
         export_button.setMinimumWidth(100)
         export_button.clicked.connect(self.on_export_clicked)
         button_layout.addWidget(export_button)
         
-        cancel_button = QPushButton("Cancel")
+        cancel_button = AnimatedButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
@@ -694,14 +694,12 @@ class FilterAdvancedDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         
-        apply_button = QPushButton("Apply Filters")
-        apply_button.setStyleSheet("QPushButton { background-color: #e8f5fa; font-weight: bold; }")
+        apply_button = AnimatedButton("Apply Filters", parent=self, base_color_hex="#e8f5fa")
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
         
-        cancel_button = QPushButton("Cancel")
-        cancel_button.setStyleSheet("QPushButton { background-color: #e8f5fa; font-weight: bold; }")
+        cancel_button = AnimatedButton("Cancel", parent=self, base_color_hex="#e8f5fa")
         cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
@@ -803,7 +801,7 @@ class ProgressDialog(QDialog):
         layout.addSpacing(10)
 
         #canel btn
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = AnimatedButton("Cancel", parent=self)
         self.cancel_button.setMaximumWidth(100)
         self.cancel_button.clicked.connect(self.reject)
         button_layout = QHBoxLayout()
@@ -932,11 +930,11 @@ class SubsetManagerDialog(QDialog):
         # buttons for the list
         list_buttons = QHBoxLayout()
 
-        self.new_btn = QPushButton("New Subset")
+        self.new_btn = AnimatedButton("New Subset", parent=self)
         self.new_btn.clicked.connect(self.create_new_subset)
         list_buttons.addWidget(self.new_btn)
 
-        self.auto_create_btn = QPushButton("Auto create subsets by column")
+        self.auto_create_btn = AnimatedButton("Auto create subsets by column", parent=self)
         self.auto_create_btn.clicked.connect(self.auto_create_subsets)
         list_buttons.addWidget(self.auto_create_btn)
 
@@ -988,22 +986,22 @@ class SubsetManagerDialog(QDialog):
         # Action buttons
         action_buttons = QHBoxLayout()
         
-        self.view_btn = QPushButton("View Data")
+        self.view_btn = AnimatedButton("View Data", parent=self)
         self.view_btn.clicked.connect(self.view_subset_data)
         self.view_btn.setEnabled(False)
         action_buttons.addWidget(self.view_btn)
         
-        self.plot_btn = QPushButton("Plot Subset")
+        self.plot_btn = AnimatedButton("Plot Subset", parent=self)
         self.plot_btn.clicked.connect(self.plot_subset)
         self.plot_btn.setEnabled(False)
         action_buttons.addWidget(self.plot_btn)
         
-        self.edit_btn = QPushButton("Edit")
+        self.edit_btn = AnimatedButton("Edit", parent=self)
         self.edit_btn.clicked.connect(self.edit_subset)
         self.edit_btn.setEnabled(False)
         action_buttons.addWidget(self.edit_btn)
         
-        self.delete_btn = QPushButton("Delete")
+        self.delete_btn = AnimatedButton("Delete", parent=self)
         self.delete_btn.clicked.connect(self.delete_subset)
         self.delete_btn.setEnabled(False)
         action_buttons.addWidget(self.delete_btn)
@@ -1024,7 +1022,7 @@ class SubsetManagerDialog(QDialog):
         bottom_buttons = QHBoxLayout()
         bottom_buttons.addStretch()
         
-        close_btn = QPushButton("Close")
+        close_btn = AnimatedButton("Close", parent=self)
         close_btn.clicked.connect(self.accept)
         bottom_buttons.addWidget(close_btn)
         
@@ -1382,12 +1380,11 @@ class CreateSubsetDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
         
-        create_btn = QPushButton("Create" if not self.existing_subset else "Update")
-        create_btn.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }")
+        create_btn = AnimatedButton("Create" if not self.existing_subset else "Update", parent=self, base_color_hex="#4caf50", text_color_hex="white")
         create_btn.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(create_btn)
         
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = AnimatedButton("Cancel", parent=self)
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
         
@@ -1484,12 +1481,12 @@ class SubsetDataViewer(QDialog):
         layout.addWidget(table)
 
         #export btn
-        export_btn = QPushButton("Export this subset")
+        export_btn = AnimatedButton("Export this subset", parent=self)
         export_btn.clicked.connect(self.export_subset)
         layout.addWidget(export_btn)
         
         #close btn
-        close_btn = QPushButton("Close")
+        close_btn = AnimatedButton("Close", parent=self)
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
     
@@ -1567,7 +1564,7 @@ class DatabaseConnectionDialog(QDialog):
         self.sqlite_label = QLabel("Database File:")
         self.sqlite_path_input = QLineEdit()
         self.sqlite_path_input.setPlaceholderText("Click 'Browse' to select a .db, .sqlite, or .sqlite3 file")
-        self.sqlite_browse_btn = QPushButton("Browse")
+        self.sqlite_browse_btn = AnimatedButton("Browse", parent=self)
         self.sqlite_browse_btn.clicked.connect(self.browse_sqlite_file)
         self.sqlite_layout.addWidget(self.sqlite_path_input)
         self.sqlite_layout.addWidget(self.sqlite_browse_btn)
