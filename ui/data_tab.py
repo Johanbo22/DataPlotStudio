@@ -12,6 +12,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
 
 
 class DataTab(QWidget):
@@ -68,13 +69,11 @@ class DataTab(QWidget):
         data_source_layout.addWidget(self.aggregation_view_label)
 
         data_source_layout.addStretch()
-        self.data_source_refresh_button = QPushButton("Refresh Data")
+        self.data_source_refresh_button = AnimatedButton("Refresh Data", parent=self, base_color_hex="#27ae60",hover_color_hex="#229954", text_color_hex="white", font_weight="bold", padding="6px 12px")
+        
         self.data_source_refresh_button.setIcon(QIcon("icons/menu_bar/google_sheet.png"))
         self.data_source_refresh_button.setToolTip("Re-import data from your Google Sheets document")
-        self.data_source_refresh_button.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; font-weight: bold; padding: 6px 12px; }"
-            "QPushButton:hover { background-color: #229954; }"
-        )
+        
         self.data_source_refresh_button.clicked.connect(self.refresh_google_sheets_data)
         data_source_layout.addWidget(self.data_source_refresh_button)
 
@@ -103,10 +102,10 @@ class DataTab(QWidget):
         right_layout = QVBoxLayout()
         
         # Reset button at the top - always visible
-        reset_button = QPushButton("Reset to Original")
+        reset_button = AnimatedButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf")
         reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
         reset_button.clicked.connect(self.reset_data)
-        reset_button.setStyleSheet("QPushButton { background-color: #ffcccc; font-weight: bold; }")
+        #reset_button.setStyleSheet("AnimatedButton { background-color: #ffcccc; font-weight: bold; }")
         right_layout.addWidget(reset_button)
         
         # Create tabbed operations interface
@@ -121,19 +120,19 @@ class DataTab(QWidget):
         clean_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         cleaning_layout.addWidget(clean_info)
         
-        clean_button = QPushButton("Remove Duplicates")
+        clean_button = AnimatedButton("Remove Duplicates", parent=self)
         clean_button.setToolTip("Use this to remove any instances of duplicate entries in your dataset")
         clean_button.setIcon(QIcon("icons/data_operations/remove_duplicates.png"))
         clean_button.clicked.connect(self.remove_duplicates)
         cleaning_layout.addWidget(clean_button)
         
-        drop_missing_button = QPushButton("Drop Missing Values")
+        drop_missing_button = AnimatedButton("Drop Missing Values", parent=self)
         drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
         drop_missing_button.setIcon(QIcon("icons/data_operations/drop_missing_values.png"))
         drop_missing_button.clicked.connect(self.drop_missing)
         cleaning_layout.addWidget(drop_missing_button)
         
-        fill_missing_button = QPushButton("Fill Missing Values")
+        fill_missing_button = AnimatedButton("Fill Missing Values", parent=self)
         fill_missing_button.setToolTip("Use this to fill in 'NaN' values in your dataset to something specific")
         fill_missing_button.setIcon(QIcon("icons/data_operations/fill_missing_data.png"))
         fill_missing_button.clicked.connect(self.fill_missing)
@@ -181,14 +180,14 @@ class DataTab(QWidget):
         self.filter_value = QLineEdit()
         filter_layout.addWidget(self.filter_value)
         
-        apply_filter_button = QPushButton("Apply Filter")
+        apply_filter_button = AnimatedButton("Apply Filter", parent=self)
         apply_filter_button.setIcon(QIcon("icons/data_operations/apply_filter.png"))
         apply_filter_button.clicked.connect(self.apply_filter)
         filter_layout.addWidget(apply_filter_button)
         
         filter_layout.addSpacing(10)
         
-        adv_filter_button = QPushButton("Advanced Filter")
+        adv_filter_button = AnimatedButton("Advanced Filter", parent=self)
         adv_filter_button.setIcon(QIcon("icons/data_operations/advanced_filter.png"))
         adv_filter_button.clicked.connect(self.open_advanced_filter)
         filter_layout.addWidget(adv_filter_button)
@@ -215,13 +214,13 @@ class DataTab(QWidget):
         self.column_select = QComboBox()
         column_layout.addWidget(self.column_select)
         
-        drop_column_button = QPushButton("Drop Column")
+        drop_column_button = AnimatedButton("Drop Column", parent=self)
         drop_column_button.setToolTip("Use this to remove the selected column from the dataset")
         drop_column_button.setIcon(QIcon("icons/data_operations/drop_column.png"))
         drop_column_button.clicked.connect(self.drop_column)
         column_layout.addWidget(drop_column_button)
         
-        rename_button = QPushButton("Rename Column")
+        rename_button = AnimatedButton("Rename Column", parent=self)
         rename_button.setToolTip("Use this to rename the selected column")
         rename_button.setIcon(QIcon("icons/data_operations/rename.png"))
         rename_button.clicked.connect(self.rename_column)
@@ -230,7 +229,7 @@ class DataTab(QWidget):
         column_layout.addSpacing(10)
 
         #datatype convers
-        type_group = QGroupBox("Change Data Type")
+        type_group = AnimatedGroupBox("Change Data Type")
         type_layout = QVBoxLayout()
 
         data_type_info = QLabel("This operation allows you to change the datatype of your selected column. To see what datatype your data is; reference the statistics tab next to DataTable")
@@ -257,7 +256,7 @@ class DataTab(QWidget):
         )
         type_layout.addWidget(self.type_combo)
 
-        type_button = QPushButton("Apply DataType Change")
+        type_button = AnimatedButton("Apply DataType Change", parent=self)
         type_button.setIcon(QIcon("icons/data_operations/change_datatype.png")) ##Mangler ikons
         type_button.clicked.connect(self.change_column_type)
         type_layout.addWidget(type_button)
@@ -278,7 +277,7 @@ class DataTab(QWidget):
         transform_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         transform_layout.addWidget(transform_info)
         
-        agg_button = QPushButton("Aggregate Data")
+        agg_button = AnimatedButton("Aggregate Data", parent=self)
         agg_button.setIcon(QIcon("icons/data_operations/aggregate_data.png"))
         agg_button.clicked.connect(self.open_aggregation_dialog)
         transform_layout.addWidget(agg_button)
@@ -286,7 +285,7 @@ class DataTab(QWidget):
         transform_layout.addSpacing(10)
 
         ##saved agg section
-        saved_agg_group = QGroupBox("Saved Aggregations")
+        saved_agg_group = AnimatedGroupBox("Saved Aggregations")
         saved_agg_layout = QVBoxLayout()
 
         saved_agg_info = QLabel("Save aggregations to switch between different views of your dataset")
@@ -302,14 +301,14 @@ class DataTab(QWidget):
 
         #buttons
         saved_agg_buttons = QHBoxLayout()
-        self.view_agg_btn = QPushButton("View Aggregations")
+        self.view_agg_btn = AnimatedButton("View Aggregations", parent=self)
         self.view_agg_btn.setToolTip("View the selected aggregated data in the Data Table. N.B. This replaces your current data view. Reset to the original dataset by clicking 'Reset to Original'")
         self.view_agg_btn.setIcon(QIcon("icons/data_operations/view.png"))
         self.view_agg_btn.setEnabled(False)
         self.view_agg_btn.clicked.connect(self.view_saved_aggregations)
         saved_agg_buttons.addWidget(self.view_agg_btn)
 
-        self.refresh_agg_list_btn = QPushButton("Refresh")
+        self.refresh_agg_list_btn = AnimatedButton("Refresh", parent=self)
         self.refresh_agg_list_btn.setToolTip("Refresh the list of saved aggregations of your data. Use this if your aggregations does not show up in the list")
         self.refresh_agg_list_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
         self.refresh_agg_list_btn.clicked.connect(self.refresh_saved_agg_list)
@@ -317,7 +316,7 @@ class DataTab(QWidget):
         saved_agg_layout.addLayout(saved_agg_buttons)
 
         #delete button
-        self.delete_agg_btn = QPushButton("Delete Selected Aggregtation")
+        self.delete_agg_btn = AnimatedButton("Delete Selected Aggregtation", parent=self)
         self.delete_agg_btn.setToolTip("Use this to delete the selected aggregation from the list")
         self.delete_agg_btn.setIcon(QIcon("icons/data_operations/delete.png"))
         self.delete_agg_btn.setEnabled(False)
@@ -349,7 +348,7 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         #manage buttons
-        manage_subsets_btn = QPushButton("Manage Subsets")
+        manage_subsets_btn = AnimatedButton("Manage Subsets", parent=self)
         #manage_subsets_btn.setIcon(QIcon("icons/data_operations/subset.png")) # ICON NEEDED!!!!!
         manage_subsets_btn.clicked.connect(self.open_subset_manager)
         subset_layout.addWidget(manage_subsets_btn)
@@ -357,14 +356,14 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         #qucik subset createion
-        quick_subset_group = QGroupBox("Quick Subset Creation")
+        quick_subset_group = AnimatedGroupBox("Quick Subset Creation")
         quick_subset_layout = QVBoxLayout()
         quick_subset_layout.addWidget(QLabel("Split data by column values:"))
 
         self.subset_column_combo = QComboBox()
         quick_subset_layout.addWidget(self.subset_column_combo)
 
-        quick_create_btn = QPushButton("Auto-Create Subsets")
+        quick_create_btn = AnimatedButton("Auto-Create Subsets", parent=self)
         #quick_create_btn.setIcon(QIcon("icons/data_operations/auto_subset.png")) #ICON NEEDDED!!!!!
         quick_create_btn.clicked.connect(self.quick_create_subsets)
         quick_subset_layout.addWidget(quick_create_btn)
@@ -375,7 +374,7 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         # Current subsets list
-        subset_list_group = QGroupBox("Active Subsets")
+        subset_list_group = AnimatedGroupBox("Active Subsets")
         subset_list_layout = QVBoxLayout()
 
         self.active_subsets_list = QListWidget()
@@ -385,12 +384,12 @@ class DataTab(QWidget):
 
         subset_list_btns = QHBoxLayout()
 
-        view_subset_btn = QPushButton("View")
+        view_subset_btn = AnimatedButton("View", parent=self)
         view_subset_btn.setIcon(QIcon("icons/data_operations/view.png"))
         view_subset_btn.clicked.connect(self.view_subset_quick)
         subset_list_btns.addWidget(view_subset_btn)
 
-        refresh_subsets_btn = QPushButton("Refresh")
+        refresh_subsets_btn = AnimatedButton("Refresh", parent=self)
         refresh_subsets_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
         refresh_subsets_btn.clicked.connect(self.refresh_active_subsets)
         subset_list_btns.addWidget(refresh_subsets_btn)
@@ -404,7 +403,7 @@ class DataTab(QWidget):
 
         # subset injection tool.
         #this shulld allow the user to view their subset in the active DF
-        inject_group = QGroupBox("View Subset as Active DataFrame")
+        inject_group = AnimatedGroupBox("View Subset as Active DataFrame")
         inject_layout = QVBoxLayout()
 
         inject_info = QLabel(
@@ -418,11 +417,8 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         #thebuttn
-        self.inject_subset_tbn = QPushButton("Insert Selected Subset")
+        self.inject_subset_tbn = AnimatedButton("Insert Selected Subset", parent=self, base_color_hex="#3409db", text_color_hex="white", font_weight="bold", padding="8px")
         #self.inject_subset_tbn.setIcon(QIcon("icons/data_operations/inject.png")) ###mangler ikon
-        self.inject_subset_tbn.setStyleSheet(
-            "QPushButton { background-color: #3498db; color: white; font-weight: bold; padding: 8px;}"
-        )
         self.inject_subset_tbn.clicked.connect(self.inject_subset_to_dataframe)
         inject_layout.addWidget(self.inject_subset_tbn)
 
@@ -437,11 +433,8 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         # hmm a restore btn?
-        self.restore_original_btn = QPushButton("Revert to Original Data View")
+        self.restore_original_btn = AnimatedButton("Revert to Original Data View", parent=self, base_color_hex="#e74c3c", text_color_hex="white", padding="8px")
         #self.restore_original_btn.setIcon(QIcon("icons/data_operations/restore.png")) #Tilføj et ikon senere
-        self.restore_original_btn.setStyleSheet(
-            "QPushButton { background-color: #e74c3c; color: white; font-weight: bold; padding: 8px;}"
-        )
         self.restore_original_btn.clicked.connect(self.restore_original_dataframe)
         self.restore_original_btn.setEnabled(False)
         inject_layout.addWidget(self.restore_original_btn)
