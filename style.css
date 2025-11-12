@@ -217,6 +217,14 @@ QSlider::handle:vertical:hover {
     border: 1px solid #005a9e;
 }
 
+QWidget#ScrollContent {
+    background-color: white;
+    border: none; 
+}
+QScrollArea {
+    border: none;
+}
+
 /* --- Scroll Bars --- */
 QScrollBar:vertical {
     border: 1px solid #c2c2c2;
@@ -282,7 +290,7 @@ QDialog {
     background-color: #fdfdfd;
 }
 
-/* Styles for QDialogButtonBox (often in dialogs) */
+/* S */
 QDialogButtonBox {
     /* Buttons are covered by QPushButton style */
     alignment: 'AlignRight';
