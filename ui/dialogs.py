@@ -15,7 +15,7 @@ class GoogleSheetsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Import Google Sheets")
         self.setModal(True)
-        self.setGeometry(100, 100, 500, 350)
+        self.resize(600, 300)
         
         self.init_ui()
     
@@ -224,7 +224,7 @@ class RenameColumnDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Rename Column")
         self.setModal(True)
-        self.setGeometry(100, 100, 400, 150)
+        self.resize(400, 150)
         
         self.column_name = column_name
         self.init_ui()
@@ -296,7 +296,7 @@ class AggregationDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Aggregate Data")
         self.setModal(True)
-        self.setGeometry(100, 100, 600, 500)
+        self.resize(600, 500)
         self.setMaximumHeight(600)
         self.columns = columns
         self.init_ui()
@@ -514,7 +514,7 @@ class ExportDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Export Data")
         self.setModal(True)
-        self.setGeometry(100, 100, 500, 250)
+        self.resize(500, 250)
         
         self.init_ui()
     
@@ -605,7 +605,7 @@ class FilterAdvancedDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Advanced Filter")
         self.setModal(True)
-        self.setGeometry(100, 100, 650, 450)
+        self.resize(650, 450)
         
         self.columns = columns
         self.filters = []
@@ -848,7 +848,7 @@ class SubsetManagerDialog(QDialog):
         self.data_handler = data_handler
         self.setWindowTitle("Data Subsets Tool")
         self.setModal(True)
-        self.setGeometry(100, 100, 900, 600)
+        self.resize(900, 600)
 
         self.init_ui()
         print(f"DEBUG: SubsetManager has {len(self.subset_manager.list_subsets())} subsets")
@@ -1290,7 +1290,7 @@ class CreateSubsetDialog(QDialog):
 
         self.setWindowTitle("Create Subset" if not existing_subset else "Edit Subset")
         self.setModal(True)
-        self.setGeometry(100, 100, 650, 500)
+        self.resize(650, 500)
 
         self.init_ui()
 
@@ -1454,7 +1454,7 @@ class SubsetDataViewer(QDialog):
         super().__init__(parent)
         self.df = df
         self.setWindowTitle(f"Subset Data: {subset_name}")
-        self.setGeometry(100, 100, 800, 600)
+        self.resize(800, 600)
 
         layout = QVBoxLayout(self)
 
@@ -1619,6 +1619,7 @@ class DatabaseConnectionDialog(QDialog):
         self.setWindowTitle("Import from Database")
         self.setWindowIcon(QIcon("icons/menu_bar/database.png"))
         self.setMinimumWidth(600)
+        self.resize(500, 400)
 
         self.details = {}
 
@@ -1679,7 +1680,7 @@ class DatabaseConnectionDialog(QDialog):
         query_layout = QVBoxLayout()
         self.query_editor = QTextEdit()
         self.query_editor.setPlaceholderText("Enter your SQL query here, e.g.,\nSELECT * FROM my_table LIMIT 1000;")
-        self.query_editor.setFontFamily("Courier")
+        self.query_editor.setFontFamily("JetBrains Mono")
         self.query_editor.setMinimumHeight(150)
         query_layout.addWidget(self.query_editor)
 
@@ -1711,11 +1712,11 @@ class DatabaseConnectionDialog(QDialog):
             self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
             self.query_status_label.setVisible(True)
         elif query.lower().startswith("select"):
-            self.query_status_label.setText("✔ Valid Query")
+            self.query_status_label.setText("✔ Valid Query Expression")
             self.query_status_label.setStyleSheet("color: #388e3c; font-weight: bold;")
             self.query_status_label.setVisible(True)
         else:
-            self.query_status_label.setText("✘ Invalid Query (Must be SELECT)")
+            self.query_status_label.setText("✘ Invalid Query Expression (Must be SELECT)")
             self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
             self.query_status_label.setVisible(True)
 
