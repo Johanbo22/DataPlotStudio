@@ -438,11 +438,47 @@ class DataHandler:
             elif action == 'drop_missing':
                 self.df = self.df.dropna()
             elif action == 'fill_missing':
-                method = kwargs.get('method', 'ffill')
-                # Use newer pandas API: method parameter changed from 'forward' to 'ffill'
-                if method == 'forward':
-                    method = 'ffill'
-                self.df = self.df.fillna(method=method)
+                method = kwargs.get("method", "ffill")
+                column = kwargs.get("column", "All Columns")
+                fill_value = kwargs.get("value", None)
+
+                if column == "All Columns" or column is None:
+                    target_cols = self.df.columns
+                else:
+                    target_cols = [column]
+                
+                if method == "static_value":
+                    for col in target_cols:
+                        val_to_use = fill_value
+                        if pd.api.types.is_numeric_dtype(self.df[col]) and isinstance(fill_value, str):
+                            try:
+                                if "." in fill_value:
+                                    val_to_use = float(fill_value)
+                                else:
+                                    val_to_use = int(fill_value)
+                            except ValueError:
+                                pass
+                        
+                        self.df[col] = self.df[col].fillna(val_to_use)
+                
+                elif method in ["mean", "median", "mode"]:
+                    for col in target_cols:
+                        if method in ["mean", "median"] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                            continue
+                        if method == "mean":
+                            fill_val = self.df[col].mean()
+                        elif method == "median":
+                            fill_val = self.df[col].median()
+                        elif method == "mode":
+                            modes = self.df[col].mode()
+                            fill_val = modes[0] if not modes.empty else None
+                        
+                        if fill_val is not None:
+                            self.df[col] = self.df[col].fillna(fill_val)
+                
+                elif method in ["ffill", "bfill"]:
+                    for col in target_cols:
+                        self.df[col] = self.df[col].fillna(method=method)
             elif action == 'drop_column':
                 column = kwargs.get('column')
                 self.df = self.df.drop(columns=[column])
@@ -521,7 +557,8 @@ class DataHandler:
         }
     
     def refresh_google_sheets(self) -> pd.DataFrame:
-        """Refresh the CSV data from the last imported Google Sheets document\nwithout the user having to re-enter SheetID"""
+        """Refresh the CSV data from the last imported Google Sheets document 
+        without the user having to re-enter SheetID"""
         if not self.last_gsheet_id or not self.last_gsheet_name:
             raise ValueError("No history a Google Sheet Import")
         
