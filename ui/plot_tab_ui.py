@@ -77,6 +77,10 @@ class PlotTabUI(QWidget):
         #  TAB 6: ANNOTATIONS 
         annotations_tab = self._create_annotations_tab()
         custom_tabs.addTab(annotations_tab, "Annotations") #forgor icon
+
+        geospatial_tab = self._create_geospatial_tab()
+        geospatial_tab_icon = QIcon("icons/plot_tab/customization_tabs/geospatial.png")
+        custom_tabs.addTab(geospatial_tab, geospatial_tab_icon, "GeoSpatial")
         
         right_layout.addWidget(custom_tabs, 1)
         
@@ -570,7 +574,7 @@ class PlotTabUI(QWidget):
         # Color palette
         figure_size_layout.addWidget(QLabel("Color Palette:"))
         self.palette_combo = AnimatedComboBox()
-        self.palette_combo.addItems(['deep', 'muted', 'pastel', 'bright', 'dark', 'colorblind', 'husl', 'Set2'])
+        self.palette_combo.addItems(['viridis','deep', 'muted', 'pastel', 'bright', 'dark', 'colorblind', 'husl', 'Set2'])
         figure_size_layout.addWidget(self.palette_combo)
     
         # === OTHER SETTINGS ===
@@ -1767,6 +1771,117 @@ class PlotTabUI(QWidget):
         scroll.setWidget(scroll_widget)
         layout.addWidget(scroll)
         
+        return tab
+    
+    def _create_geospatial_tab(self):
+        """Create the geospatial tab"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        #settings for choropleth mapping
+        choro_group = AnimatedGroupBox("Choropleth and Classification")
+        choro_layout = QVBoxLayout()
+
+        choro_layout.addWidget(QLabel("Classification Scheme:"))
+        self.geo_scheme_combo = AnimatedComboBox()
+        self.geo_scheme_combo.addItems([
+            "None", "quantiles", "equal_interval", "fisher_jenks", "natural_breaks", "box_plot", "breaks"
+        ])
+        choro_layout.addWidget(self.geo_scheme_combo)
+
+        choro_layout.addWidget(QLabel("Number of classes:"))
+        self.geo_k_spin = AnimatedSpinBox()
+        self.geo_k_spin.setRange(2, 20)
+        self.geo_k_spin.setValue(5)
+        choro_layout.addWidget(self.geo_k_spin)
+
+        choro_group.setLayout(choro_layout)
+        scroll_layout.addWidget(choro_group)
+        scroll_layout.addSpacing(10)
+
+        #legend axes
+        geo_legend_group = AnimatedGroupBox("Map Legend and Axes")
+        geo_legend_layout = QVBoxLayout()
+
+        self.geo_legend_check = AnimatedCheckBox("Show Map Legend")
+        self.geo_legend_loc_combo = AnimatedComboBox()
+        self.geo_legend_loc_combo.addItems(["vertical", "horizontal"])
+        geo_legend_layout.addWidget(self.geo_legend_loc_combo)
+
+        self.geo_use_divider_check = AnimatedCheckBox("Use Divider")
+        self.geo_use_divider_check.setToolTip("Use mpl_toolkits divider to align legend")
+        geo_legend_layout.addWidget(self.geo_use_divider_check)
+
+        self.geo_cax_check = AnimatedCheckBox("Plot on Separate CAX")
+        self.geo_cax_check.setToolTip("Plot legend/colorbar on a separate axis")
+        geo_legend_layout.addWidget(self.geo_cax_check)
+
+        self.geo_axis_off_check = AnimatedCheckBox("Turn Off Axis")
+        self.geo_axis_off_check.setChecked(False)
+        geo_legend_layout.addWidget(self.geo_axis_off_check)
+
+        geo_legend_group.setLayout(geo_legend_layout)
+        scroll_layout.addWidget(geo_legend_group)
+        scroll_layout.addSpacing(10)
+
+        missing_group = AnimatedGroupBox("Missing Data Handling")
+        missing_layout = QVBoxLayout()
+        
+        missing_layout.addWidget(QLabel("Missing Data Label:"))
+        self.geo_missing_label_input = AnimatedLineEdit()
+        self.geo_missing_label_input.setPlaceholderText("NaN")
+        missing_layout.addWidget(self.geo_missing_label_input)
+
+        missing_layout.addWidget(QLabel("Missing Data Color:"))
+        missing_color_layout = QHBoxLayout()
+        self.geo_missing_color_btn = AnimatedButton("Choose", parent=self)
+        self.geo_missing_color_label = QLabel("Light Gray")
+        self.geo_missing_color = "lightgray" # Default storage
+        missing_color_layout.addWidget(self.geo_missing_color_btn)
+        missing_color_layout.addWidget(self.geo_missing_color_label)
+        missing_layout.addLayout(missing_color_layout)
+
+        missing_layout.addWidget(QLabel("Hatch Pattern:"))
+        self.geo_hatch_combo = AnimatedComboBox()
+        self.geo_hatch_combo.addItems(["None", "/", "\\", "|", "-", "+", "x", "o", "O", ".", "*"])
+        missing_layout.addWidget(self.geo_hatch_combo)
+
+        missing_group.setLayout(missing_layout)
+        scroll_layout.addWidget(missing_group)
+        scroll_layout.addSpacing(10)
+
+        boundary_group = AnimatedGroupBox("Boundary Customization")
+        boundary_layout = QVBoxLayout()
+
+        self.geo_boundary_check = AnimatedCheckBox("Plot Boundary Only")
+        boundary_layout.addWidget(self.geo_boundary_check)
+
+        boundary_layout.addWidget(QLabel("Edge Color:"))
+        bound_color_layout = QHBoxLayout()
+        self.geo_edge_color_btn = AnimatedButton("Choose", parent=self)
+        self.geo_edge_color_label = QLabel("Black")
+        self.geo_edge_color = "black"
+        bound_color_layout.addWidget(self.geo_edge_color_btn)
+        bound_color_layout.addWidget(self.geo_edge_color_label)
+        boundary_layout.addLayout(bound_color_layout)
+
+        boundary_layout.addWidget(QLabel("Line Width:"))
+        self.geo_linewidth_spin = AnimatedDoubleSpinBox()
+        self.geo_linewidth_spin.setRange(0.1, 10.0)
+        self.geo_linewidth_spin.setValue(1.0)
+        boundary_layout.addWidget(self.geo_linewidth_spin)
+
+        boundary_group.setLayout(boundary_layout)
+        scroll_layout.addWidget(boundary_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
         return tab
 
     def _create_splitter(self, left, right) -> QSplitter:
