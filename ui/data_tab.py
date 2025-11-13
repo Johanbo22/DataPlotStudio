@@ -8,7 +8,7 @@ from core import subset_manager
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
@@ -1182,30 +1182,51 @@ class DataTab(QWidget):
     
     def fill_missing(self):
         """Fill missing values"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
         try:
-            df = self.data_handler.df
-            missing_before = df.isnull().sum().sum()
+            columns = list(self.data_handler.df.columns)
+            dialog = FillMissingDialog(columns, self)
 
-            self.data_handler.clean_data("fill_missing", method="forward")
-            
-            missing_after = self.data_handler.df.isnull().sum().sum()
-            filled = missing_before - missing_after
+            if dialog.exec():
+                config = dialog.get_config()
 
-            self.refresh_data_view()
+                df = self.data_handler.df
+                missing_before = df.isnull().sum().sum()
 
-            self.status_bar.log_action(
-            f"Filled {filled:,} missing value(s)",
-            details={
-                'missing_before': missing_before,
-                'missing_after': missing_after,
-                'filled_count': filled,
-                'method': 'forward_fill',
-                'operation': 'fill_missing'
-            },
-            level="SUCCESS"
-            )
+                self.data_handler.clean_data(
+                    "fill_missing",
+                    column=config["column"],
+                    method=config["method"],
+                    value=config["value"]
+                )
+
+                missing_after = self.data_handler.df.isnull().sum().sum()
+                filled = missing_before - missing_after
+
+                self.refresh_data_view()
+                col_msg = config["column"]
+                method_msg = config["method"]
+                if method_msg == "static_value":
+                    method_msg = f"value '{config['value']}'"
+                
+                self.status_bar.log_action(
+                    f"Filled {filled:,} missing values in {col_msg} using {method_msg}",
+                    details={
+                        "missing_before": missing_before,
+                        "missing_after": missing_after,
+                        "filled_count": filled,
+                        "method": config["method"],
+                        "column": config["column"],
+                        "operation": "fill_missing"
+                    },
+                    level="SUCCESS"
+                )
         except Exception as e:
-            self.status_bar.log(f"Failed to fill missing values: {str(e)}", "ERROR")
+            self.status_bar.log(f"Failed to execute 'Fill Missing values': {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to execute 'Fill Missing Values':\n{str(e)}")
     
     def apply_filter(self):
         """Apply filter to data"""
