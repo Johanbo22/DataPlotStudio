@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QListWidget, QListWidgetItem, QSlider, QFontComboBox,
     QTabWidget, QFormLayout
 )
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtProperty
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
@@ -50,31 +50,31 @@ class PlotTabUI(QWidget):
         # Create tabbed customization interface
         custom_tabs = QTabWidget()
         
-        # === TAB 1: BASIC ===
+        #  TAB 1: BASIC 
         basic_tab = self._create_basic_tab()
         basic_tab_icon = QIcon("icons/plot_tab/customization_tabs/general.png")
         custom_tabs.addTab(basic_tab, basic_tab_icon, "General")
         
-        # === TAB 2: APPEARANCE ===
+        # TAB 2: APPEARANCE
         appearance_tab = self._create_appearance_tab()
         appearance_tab_icon = QIcon("icons/plot_tab/customization_tabs/appearance.png")
         custom_tabs.addTab(appearance_tab, appearance_tab_icon, "Appearance")
         
-        # === TAB 3: AXES ===
+        # TAB 3: AXES 
         axes_tab = self._create_axes_tab()
         axes_tab_icon = QIcon("icons/plot_tab/customization_tabs/axis.png")
         custom_tabs.addTab(axes_tab, axes_tab_icon, "Axes")
         
-        # === TAB 4: LEGEND & GRID ===
+        # TAB 4: LEGEND & GRID 
         legend_tab = self._create_legend_tab()
         legend_tab_icon = QIcon("icons/plot_tab/customization_tabs/gridlines.png")
         custom_tabs.addTab(legend_tab, legend_tab_icon, "Legend and Grid")
         
-        # === TAB 5: ADVANCED ===
+        # TAB 5: ADVANCED 
         advanced_tab = self._create_advanced_tab()
         custom_tabs.addTab(advanced_tab, "Advanced") # need an icon here
         
-        # === TAB 6: ANNOTATIONS ===
+        #  TAB 6: ANNOTATIONS 
         annotations_tab = self._create_annotations_tab()
         custom_tabs.addTab(annotations_tab, "Annotations") #forgor icon
         
@@ -1650,8 +1650,8 @@ class PlotTabUI(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
         
-        # === TEXT ANNOTATIONS ===
-        annotations_group = AnimatedGroupBox("Text Annotations")
+        # TEXT ANNOTATIONS 
+        annotations_group = AnimatedGroupBox("Manual Annotations")
         annotations_layout = QVBoxLayout()
         
         annotations_layout.addWidget(QLabel("Annotation Text:"))
@@ -1694,8 +1694,26 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(annotations_group)
         
         scroll_layout.addSpacing(15)
+
+        # automated annotations based on datapoints
+        auto_annotate_group = AnimatedGroupBox("Annotate Data Points")
+        auto_annotate_layout = QVBoxLayout()
+
+        self.auto_annotate_check = AnimatedCheckBox("Annotate All points")
+        self.auto_annotate_check.setToolTip("Automatically set text labels to all data points")
+        auto_annotate_layout.addWidget(self.auto_annotate_check)
+
+        auto_annotate_layout.addWidget(QLabel("Label Source Column:"))
+        self.auto_annotate_col_combo = AnimatedComboBox()
+        self.auto_annotate_col_combo.setToolTip("Select the column to use for the point labels")
+        self.auto_annotate_col_combo.addItem("Default (Y-value)")
+        self.auto_annotate_col_combo.setEnabled(False)
+        auto_annotate_layout.addWidget(self.auto_annotate_col_combo)
+
+        auto_annotate_group.setLayout(auto_annotate_layout)
+        scroll_layout.addWidget(auto_annotate_group)
         
-        # === TEXT BOX ===
+        #  TEXT BOX 
         text_box_group = AnimatedGroupBox("Text Box")
         text_box_layout = QVBoxLayout()
         
@@ -1732,7 +1750,7 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(15)
         
-        # === ANNOTATIONS LIST ===
+        #  ANNOTATIONS LIST 
         annotation_list_group = AnimatedGroupBox("Annotations List")
         annotation_list_layout = QVBoxLayout()
         
