@@ -10,6 +10,10 @@ import requests
 import os, tempfile, atexit
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
+try:
+    import geopandas as gpd
+except ImportError:
+    gpd = None
 
 
 
@@ -148,6 +152,10 @@ class DataHandler:
                 self.df = pd.read_csv(filepath, sep='\t')
             elif extension == '.json':
                 self.df = pd.read_json(filepath)
+            elif extension in [".geojson", ".shp", ".gpkg", ".shx"]:
+                if gpd is None:
+                    raise ImportError("GeoPandas is not installed. Please install GeoPandas to load spatial data")
+                self.df = gpd.read_file(filepath)
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
             
