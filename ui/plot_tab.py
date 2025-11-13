@@ -91,6 +91,7 @@ class PlotTab(PlotTabUI):
             "Tricontourf": self.plot_engine.strategy_tricontourf,
             "Tripcolor": self.plot_engine.strategy_tripcolor,
             "Triplot": self.plot_engine.strategy_triplot,
+            "GeoSpatial": self.plot_engine.strategy_geospatial
         }
         
         # Create canvas and toolbar
@@ -880,7 +881,7 @@ class PlotTab(PlotTabUI):
             "Heatmap", "Pie", "Histogram", "KDE", "Count Plot", "Stackplot", "Eventplot",
             "Image Show (imshow)", "pcolormesh", "Contour", "Contourf", "Tricontour",
             "Tricontourf", "Tripcolor", "Triplot", "2D Histogram", "ECDF", "Stairs", "Stem",
-            "Barbs", "Quiver", "Streamplot"
+            "Barbs", "Quiver", "Streamplot", "GeoSpatial"
         ]
         self.hue_column.setEnabled(plot_type not in plots_without_hue)
 
@@ -891,7 +892,7 @@ class PlotTab(PlotTabUI):
         incompatible_plots: list[str] = [
             "Histogram", "Pie", "Heatmap", "KDE", "Stackplot", "Eventplot",
             "Image Show (imshow)", "pcolormesh", "Contour", "Contourf", "Barbs", "Quiver",
-            "Streamplot", "Tricontour", "Tricontourf", "Tripcolor", "Triplot", "2D Histogram", "ECDF"
+            "Streamplot", "Tricontour", "Tricontourf", "Tripcolor", "Triplot", "2D Histogram", "ECDF", "GeoSpatial"
         ]
         self.flip_axes_check.setEnabled(plot_type not in incompatible_plots)
         if plot_type in incompatible_plots:
@@ -987,8 +988,8 @@ class PlotTab(PlotTabUI):
             y_cols = self.get_selected_y_columns()
 
             # Validation ---
-            plots_no_x = ["Box", "Histogram", "KDE", "Heatmap", "Pie", "ECDF", "Eventplot"]
-            plots_no_y = ["Count Plot", "Heatmap"]
+            plots_no_x = ["Box", "Histogram", "KDE", "Heatmap", "Pie", "ECDF", "Eventplot", "GeoSpatial"]
+            plots_no_y = ["Count Plot", "Heatmap", "GeoSpatial"]
             plots_gridded = ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]
             plots_vector = ["Barbs", "Quiver", "Streamplot"]
             plots_triangulation_z = ["Tricontour", "Tricontourf", "Tripcolor"]
