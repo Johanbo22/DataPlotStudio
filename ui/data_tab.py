@@ -1,4 +1,5 @@
 # ui/data_tab.py
+from tkinter import NO
 import traceback
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication)
 from PyQt6.QtCore import Qt, QTimer
@@ -1234,16 +1235,36 @@ class DataTab(QWidget):
             column = self.filter_column.currentText()
             condition = self.filter_condition.currentText()
             value = self.filter_value.text()
-            
-            
-            # Try to convert value to appropriate type
+
             try:
-                if '.' in value:
+                if "." in value:
                     value = float(value)
                 else:
                     value = int(value)
             except ValueError:
                 pass
+
+            #we reset to original before apply a new filter. this is so the user doesnt have to click the button themselves
+            if self.data_handler.original_df is not None:
+                self.data_handler.reset_data()
+
+                if hasattr(self.data_handler, "pre_insert_df"):
+                    self.data_handler.pre_insert_df = None
+                if hasattr(self.data_handler, "inserted_subset_name"):
+                    self.data_handler.inserted_subset_name = None
+                if hasattr(self.data_handler, "viewing_aggregation_name"):
+                    self.data_handler.viewing_aggregation_name = None
+                if hasattr(self.data_handler, "pree_agg_view_df"):
+                    self.data_handler.pre_agg_view_df = None
+                
+                if hasattr(self, "injection_status_label"):
+                    self.injection_status_label.setText("Status: Working with original data")
+                    self.injection_status_label.setStyleSheet(
+                        "color: #27ae60; font-weight: bold; padding: 5px;"
+                        "background-color: #ecf0f1; border-radius: 3px;"
+                    )
+                    self.restore_original_btn.setEnabled(False)
+                    self.inject_subset_tbn.setEnabled(True)
             
             before = len(self.data_handler.df)
             self.data_handler.filter_data(column, condition, value)
@@ -1253,21 +1274,22 @@ class DataTab(QWidget):
             self.refresh_data_view()
 
             self.status_bar.log_action(
-                f"Filter: {column} {condition} '{value}' → {removed:,} rows removed",
+                f"Filter: {column} {condition} '{value}' -> {removed:,} rows removed",
                 details={
-                    'column': column,
-                    'condition': condition,
-                    'value': value,
-                    'rows_before': before,
-                    'rows_after': after,
-                    'rows_removed': removed,
-                    'operation': 'filter'
+                    "column": column,
+                    "condition": condition,
+                    "value": value,
+                    "rows_before": before,
+                    "rows_after": after,
+                    "rows_removed": removed,
+                    "operation": "filter"
                 },
                 level="SUCCESS"
             )
-            
+        
         except Exception as e:
-            self.status_bar.log(f"Filter failed: {str(e)}", "ERROR")
+            self.status_bar.log(f"Failed to execute 'Filter': {str(e)}", "ERROR")
+
     
     def drop_column(self):
         """Drop selected column"""
