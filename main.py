@@ -508,7 +508,6 @@ class DataPlotStudio(QMainWindow):
             return
         
         try:
-            # --- MODIFICATION: Call new exporter with export_type ---
             script = self.code_exporter.generate_full_script(
                 df=dataframe,
                 data_filepath=str(data_filepath),
