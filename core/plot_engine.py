@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from ui.plot_tab import PlotTab
 try:
     import geopandas as gpd
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
 except ImportError:
     gpd = None
 
@@ -1735,49 +1736,55 @@ class PlotEngine:
     def strategy_triplot(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         return self._strategy_triangulation(plot_tab, "Triplot", x_col, y_cols, general_kwargs)
 
-    def plot_geospatial(self, df: pd.DataFrame, column: str = None, **kwargs) -> None:
+    def plot_geospatial(self, gdf, column=None, ax=None, title=None, **kwargs) -> None:
         """Create a geospatial plot"""
-        title = kwargs.pop("title", None)
+        if ax is None:
+            ax = self.current_ax
 
-        if gpd is None or not isinstance(df, gpd.GeoDataFrame):
-            if "geometry" in df.columns:
-                if gpd:
-                    df = gpd.GeoDataFrame(df, geometry="geometry")
-                else:
-                    raise ValueError("GeoPandas is required for spatial plotting")
-            else:
-                raise ValueError("Data is not a GeoDataFrame or lacks a geometry column")
-            
-        if column and column in df.columns:
-            if not pd.api.types.is_numeric_dtype(df[column]):
-                kwargs["categorical"] = True
+        use_divider = kwargs.pop("use_divider", False)
+        cax_enabled = kwargs.pop("cax_enabled", False)
+        axis_off = kwargs.pop("axis_off", False)
 
-        
-        if column and "cmap" not in kwargs:
-            kwargs["cmap"] = "viridis"
-        try:
-            df.plot(column=column, ax=self.current_ax, **kwargs)
-        except TypeError as te:
-            if "isnan" in str(e) and not kwargs.get("categorical"):
-                kwargs["categorical"] = True
-                df.plot(column=column, ax=self.current_ax, **kwargs)
-            else:
-                raise te
+        cax = None
+        if use_divider and column:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+            kwargs["cax"] = cax
+            kwargs["legend"] = True
+        elif cax_enabled and column:
+            pass
+
+        gdf.plot(column=column, ax=ax, **kwargs)
 
         if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight="bold")
-            
+            ax.set_title(title, fontsize=14, fontweight="bold")
+        
+        if axis_off:
+            ax.set_axis_off()
+        
         self.current_figure.tight_layout()
     
     def strategy_geospatial(self, plot_tab: "PlotTab", x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """GeoSpatial plotting strategy"""
+        if gpd is None:
+            return "GeoPandas is not installed. Geospatial plotting is not available"
 
-        column_to_plot = x_col if x_col else None
+        if not isinstance(plot_tab.data_handler.df, gpd.GeoDataFrame):
+            return "Current dataset is not a GeoDataFrame"
+        
+        column_to_plot = None
+        if general_kwargs.get("hue"):
+            column_to_plot = general_kwargs.get("hue")
+        elif y_cols:
+            column_to_plot = y_cols[0]
+        
+        title = general_kwargs.pop("title", None)
 
-        general_kwargs["column"] = column_to_plot
-        general_kwargs.pop("xlabel", None)
-        general_kwargs.pop("ylabel", None)
-
-        plot_method = getattr(self, self.AVAILABLE_PLOTS["GeoSpatial"])
-        plot_method(plot_tab.data_handler.df, **general_kwargs)
+        self.plot_geospatial(
+            plot_tab.data_handler.df,
+            column=column_to_plot,
+            ax=self.current_ax,
+            title=title,
+            **plot_kwargs
+        )
         return None
