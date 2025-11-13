@@ -11,6 +11,7 @@ import seaborn as sns
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import matplotlib.dates as mdates
 from matplotlib.ticker import MaxNLocator
+import matplotlib.ticker as ticker
 from scipy import stats
 from scipy.stats import t as t_dist
 if TYPE_CHECKING:
@@ -211,11 +212,9 @@ class PlotEngine:
                     self.current_ax.bar(x_pos + offset, values, width=bar_width, label=col, **kwargs)
             
             if horizontal:
-                self.current_ax.set_yticks(x_pos)
-                self.current_ax.set_yticklabels(x_labels)
+                self._helper_format_categorical_axis(self.current_ax.yaxis, x_labels)
             else:
-                self.current_ax.set_xticks(x_pos)
-                self.current_ax.set_xticklabels(x_labels)
+                self._helper_format_categorical_axis(self.current_ax.xaxis, x_labels)
         
         elif hue:
             # Single y with hue using seaborn
@@ -785,6 +784,28 @@ class PlotEngine:
         """Return the current figure"""
         return self.current_figure
 
+    def _helper_format_categorical_axis(self, axis, labels):
+        """Format categorical axis with better tick spacing"""
+        if labels is None or len(labels) == 0:
+            return
+        
+        n_labels = len(labels)
+        MAX_TICKS = 20
+
+        if n_labels > MAX_TICKS:
+            step = int(np.ceil(n_labels / MAX_TICKS))
+            indices = np.arange(0, n_labels, step)
+            subset_labels = [labels[i] for i in indices]
+
+            axis.set_major_locator(ticker.FixedLocator(indices))
+            axis.set_major_formatter(ticker.FixedFormatter(subset_labels))
+        else:
+            axis.set_major_locator(ticker.FixedLocator(np.arange(n_labels)))
+            axis.set_major_formatter(ticker.FixedFormatter(labels))
+        
+        if axis == self.current_ax.xaxis:
+            plt.setp(axis.get_xticklabels(), rotation=45, ha="right")
+
     def _helper_is_datetime_column(self, plot_tab: "PlotTab", data) -> bool:
         """Check if data is datetime"""
         if data is None:
@@ -945,6 +966,13 @@ class PlotEngine:
                             self._helper_apply_auto_datetime_format(plot_tab, ax.yaxis, y_data)
                     else:
                         self._helper_apply_auto_datetime_format(plot_tab, ax.yaxis, y_data)
+                elif x_data is not None and hasattr(x_data, "dtype") and (x_data.dtype == "object" or isinstance(x_data.dtype, pd.CategoricalDtype)):
+                    try:
+                        labels = x_data.unique()
+                        labels = [l for l in labels if pd.notna(l)]
+                        self._helper_format_categorical_axis(ax.xaxis, labels)
+                    except Exception:
+                        pass
                 elif format_text == "Auto":
                     self._helper_apply_auto_datetime_format(plot_tab, ax.yaxis, y_data)
                 else:
