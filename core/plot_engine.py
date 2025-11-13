@@ -16,6 +16,10 @@ from scipy import stats
 from scipy.stats import t as t_dist
 if TYPE_CHECKING:
     from ui.plot_tab import PlotTab
+try:
+    import geopandas as gpd
+except ImportError:
+    gpd = None
 
 
 class PlotEngine:
@@ -51,7 +55,8 @@ class PlotEngine:
         "Tricontour": "plot_tricontour",
         "Tricontourf": "plot_tricontourf",
         "Tripcolor": "plot_tripcolor",
-        "Triplot": "plot_triplot"
+        "Triplot": "plot_triplot",
+        "GeoSpatial": "plot_geospatial"
     }
     
     PLOT_DESCRIPTIONS: Dict[str, str] = {
@@ -97,6 +102,7 @@ class PlotEngine:
         "Tricontourf": "A filled triangular contour plot. Like `contourf`, it fills the areas between the contour lines generated from an unstructured (x, y, z) dataset.",
         "Tripcolor": "Creates a pseudocolor plot from an unstructured (x, y, z) dataset. It triangulates the (x, y) points and colors each triangle based on its Z value.",
         "Triplot": "A simple plot that draws the underlying triangulation of an (x, y) dataset, showing the network of triangles used for other tri-plots.",
+        "GeoSpatial": "Visualizes geospatial data using GeoPandas. Requires a GeoDataFrame (imported from .shp, .geojson, etc.). The 'X Column' can be used to select a column for choropleth coloring (values determine color)."
     }
 
     
@@ -1728,3 +1734,50 @@ class PlotEngine:
 
     def strategy_triplot(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         return self._strategy_triangulation(plot_tab, "Triplot", x_col, y_cols, general_kwargs)
+
+    def plot_geospatial(self, df: pd.DataFrame, column: str = None, **kwargs) -> None:
+        """Create a geospatial plot"""
+        title = kwargs.pop("title", None)
+
+        if gpd is None or not isinstance(df, gpd.GeoDataFrame):
+            if "geometry" in df.columns:
+                if gpd:
+                    df = gpd.GeoDataFrame(df, geometry="geometry")
+                else:
+                    raise ValueError("GeoPandas is required for spatial plotting")
+            else:
+                raise ValueError("Data is not a GeoDataFrame or lacks a geometry column")
+            
+        if column and column in df.columns:
+            if not pd.api.types.is_numeric_dtype(df[column]):
+                kwargs["categorical"] = True
+
+        
+        if column and "cmap" not in kwargs:
+            kwargs["cmap"] = "viridis"
+        try:
+            df.plot(column=column, ax=self.current_ax, **kwargs)
+        except TypeError as te:
+            if "isnan" in str(e) and not kwargs.get("categorical"):
+                kwargs["categorical"] = True
+                df.plot(column=column, ax=self.current_ax, **kwargs)
+            else:
+                raise te
+
+        if title:
+            self.current_ax.set_title(title, fontsize=14, fontweight="bold")
+            
+        self.current_figure.tight_layout()
+    
+    def strategy_geospatial(self, plot_tab: "PlotTab", x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
+        """GeoSpatial plotting strategy"""
+
+        column_to_plot = x_col if x_col else None
+
+        general_kwargs["column"] = column_to_plot
+        general_kwargs.pop("xlabel", None)
+        general_kwargs.pop("ylabel", None)
+
+        plot_method = getattr(self, self.AVAILABLE_PLOTS["GeoSpatial"])
+        plot_method(plot_tab.data_handler.df, **general_kwargs)
+        return None
