@@ -136,7 +136,7 @@ class DataPlotStudio(QMainWindow):
                 if show_progress:
                     progress_dialog = ProgressDialog(title="Importing data", message=f"Loading {path.name} ({file_size_kb:.1f} KB)", parent=self)
                     progress_dialog.show()
-                    progress_dialog.update(10, "Reading file")
+                    progress_dialog.update_progress(10, "Reading file")
                     QApplication.processEvents()
                 
                 self.data_handler.import_file(filepath)
