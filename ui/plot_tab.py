@@ -182,10 +182,16 @@ class PlotTab(PlotTabUI):
         
         # --- Tab 6: Annotations ---
         self.annotation_color_button.clicked.connect(self.choose_annotation_color)
+        self.auto_annotate_check.clicked.connect(self.toggle_auto_annotate)
         self.add_annotation_button.clicked.connect(self.add_annotation)
         self.textbox_bg_button.clicked.connect(self.choose_textbox_bg_color)
         self.annotations_list.itemClicked.connect(self.on_annotation_selected)
         self.clear_annotations_button.clicked.connect(self.clear_annotations)
+    
+    def toggle_auto_annotate(self):
+        """Enable auto annotation controls"""
+        is_enabled = self.auto_annotate_check.isChecked()
+        self.auto_annotate_col_combo.setEnabled(is_enabled)
 
     def activate_subset(self, subset_name: str):
         """Activates the 'Use Subset' checkbox and selects the selected subset"""
@@ -791,6 +797,7 @@ class PlotTab(PlotTabUI):
         self.y_column.blockSignals(True)
         self.hue_column.blockSignals(True)
         self.y_columns_list.blockSignals(True)
+        self.auto_annotate_col_combo.blockSignals(True)
         
         #update xcol
         self.x_column.clear()
@@ -809,12 +816,19 @@ class PlotTab(PlotTabUI):
         self.hue_column.clear()
         self.hue_column.addItem("None")
         self.hue_column.addItems(columns)
+
+        #update auto annotations
+        self.auto_annotate_col_combo.clear()
+        self.auto_annotate_col_combo.addItem("Defalt (Y-value)")
+        self.auto_annotate_col_combo.addItems(columns)
         
         # Unblock signals
         self.x_column.blockSignals(False)
         self.y_column.blockSignals(False)
         self.hue_column.blockSignals(False)
         self.y_columns_list.blockSignals(False)
+        self.auto_annotate_col_combo.blockSignals(False)
+
     
     def on_plot_type_changed(self, plot_type: str):
         """Handle plot type change"""
@@ -1178,7 +1192,7 @@ class PlotTab(PlotTabUI):
                     return
             
             #annotations
-            self._apply_annotations()
+            self._apply_annotations(active_df, x_col, y_cols)
 
             # tick customization
             self._apply_tick_customization()
@@ -1482,8 +1496,10 @@ class PlotTab(PlotTabUI):
             self.status_bar.log(f"Failed to apply legend: {e}", "WARNING")
 
     
-    def _apply_annotations(self):
+    def _apply_annotations(self, df=None, x_col=None, y_cols=None):
         """Apply text annotations"""
+
+        #manual annotations
         for ann in self.annotations:
             self.plot_engine.current_ax.text(
                 ann["x"], ann["y"], ann["text"],
@@ -1493,6 +1509,55 @@ class PlotTab(PlotTabUI):
                 ha="center", va="center",
                 bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5)
             )
+        
+        #auto annotations based on datapoints
+        if self.auto_annotate_check.isChecked() and df is not None and x_col and y_cols:
+            try:
+                label_choice = self.auto_annotate_col_combo.currentText()
+                is_flipped = self.flip_axes_check.isChecked()
+
+                MAX_POINTS = 2000
+                if len(df) > MAX_POINTS:
+                    self.status_bar.log(f"Auto-annotations is limited to first {MAX_POINTS} points for performance")
+                    df_to_annotate = df.iloc[:MAX_POINTS]
+                else:
+                    df_to_annotate = df
+
+                y_col_target = y_cols[0]
+                font_size = self.annotation_fontsize_spin.value()
+                font_color = self.annotation_color
+
+                for idx, row in df_to_annotate.iterrows():
+                    x_val = row[x_col]
+                    y_val = row[y_col_target]
+
+                    if label_choice == "Default (Y-value)":
+                        text = f"{y_val:.2f}" if isinstance(y_val, (int, float)) else str(y_val)
+                    else:
+                        text = str(row[label_choice])
+                    
+                    #apply
+                    if is_flipped:
+                        self.plot_engine.current_ax.annotate(
+                            text,
+                            (y_val, x_val),
+                            xytext=(5,5),
+                            textcoords="offset points",
+                            fontsize=font_size,
+                            color=font_color if font_color else "black"
+                        )
+                    else:
+                        self.plot_engine.current_ax.annotate(
+                            text,
+                            (x_val, y_val),
+                            xytext=(5,5),
+                            textcoords="offset points",
+                            fontsize=font_size,
+                            color=font_color if font_color else "black"
+                        )
+            except Exception as e:
+                self.status_bar.log(f"Error applying annotations to data points: {str(e)}", "ERROR")
+                print(f"Auto-annotation error: {str(e)}")
 
     def _apply_gridlines_customizations(self) -> None:
         """Apply gridlines customizations"""
