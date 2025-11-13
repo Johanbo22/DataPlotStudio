@@ -188,6 +188,24 @@ class PlotTab(PlotTabUI):
         self.textbox_bg_button.clicked.connect(self.choose_textbox_bg_color)
         self.annotations_list.itemClicked.connect(self.on_annotation_selected)
         self.clear_annotations_button.clicked.connect(self.clear_annotations)
+
+        #tab 7 geospatial
+        self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
+        self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+    
+    def choose_geo_missing_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.geo_missing_color = color.name()
+            self.geo_missing_color_label.setText(self.geo_missing_color)
+            self.geo_missing_color_btn.updateColors(base_color_hex=self.geo_missing_color)
+
+    def choose_geo_edge_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.geo_edge_color = color.name()
+            self.geo_edge_color_label.setText(self.geo_edge_color)
+            self.geo_edge_color_btn.updateColors(base_color_hex=self.geo_edge_color)
     
     def toggle_auto_annotate(self):
         """Enable auto annotation controls"""
@@ -1054,6 +1072,31 @@ class PlotTab(PlotTabUI):
             
             # plot specific kwargs
             plot_kwargs = {}
+
+            if plot_type == "GeoSpatial":
+                plot_kwargs["scheme"] = self.geo_scheme_combo.currentText() if self.geo_scheme_combo.currentText() != "None" else None
+                plot_kwargs["k"] = self.geo_k_spin.value()
+                plot_kwargs["cmap"] = self.palette_combo.currentText()
+                plot_kwargs["legend"] = self.geo_legend_check.isChecked()
+                plot_kwargs["legend_kwds"] = {
+                    "loc": "best",
+                    "orientation": self.geo_legend_loc_combo.currentText()
+                }
+                plot_kwargs["use_divider"] = self.geo_use_divider_check.isChecked()
+                plot_kwargs["cax_enabled"] = self.geo_cax_check.isChecked()
+                plot_kwargs["axis_off"] = self.geo_axis_off_check.isChecked()
+                plot_kwargs["missing_kwds"] = {
+                    "color": self.geo_missing_color,
+                    "label": self.geo_missing_label_input.text(),
+                    "hatch": self.geo_hatch_combo.currentText() if self.geo_hatch_combo.currentText() != "None" else None
+                }
+                if self.geo_boundary_check.isChecked():
+                    plot_kwargs["facecolor"] = "none"
+                
+                plot_kwargs["edgecolor"] = self.geo_edge_color
+                plot_kwargs["linewidth"] = self.geo_linewidth_spin.value()
+                
+
 
             if show_progress:
                 progress_dialog.update_progress(20, "Building plot configurations")
