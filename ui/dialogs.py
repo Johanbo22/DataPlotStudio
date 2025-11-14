@@ -3,9 +3,9 @@ from logging import warning
 from re import I, T
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QPushButton, QMessageBox, QInputDialog, QComboBox,QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QFormLayout, QFileDialog, QProgressBar, QApplication, QListWidget, QSplitter, QWidget, QTextEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QDialogButtonBox, QFrame, QScrollArea)
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtGui import QFont, QIcon, QPixmap
 from pathlib import Path
-import sys
+import sys, os
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox, AnimatedCheckBox, AnimatedRadioButton
 
 class GoogleSheetsDialog(QDialog):
@@ -1828,11 +1828,11 @@ class HelpDialog(QDialog):
     Dialog window to display tutorial content
     """
 
-    def __init__(self, title: str, description: str, image: str, link: str, parent=None):
+    def __init__(self, title: str, description: str, full_image_path: str, link: str, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle(f"Help: {title}")
-        self.resize(600, 500)
+        self.resize(600, 600)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         self.setWindowFlag(Qt.WindowType.Tool, True)
@@ -1868,9 +1868,20 @@ class HelpDialog(QDialog):
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
 
-        if image:
-            self.image_label = QLabel(f'<img src="{image}" alt="{title}">')
-            layout.addWidget(self.link_label)
+        if full_image_path and os.path.exists(full_image_path):
+            try:
+                pixmap = QPixmap(full_image_path)
+                img_label = QLabel()
+                img_label.setPixmap(pixmap.scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
+                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                img_label.setStyleSheet("margin-top: 10px; margin-bottom: 5px;")
+                layout.addWidget(img_label)
+            except Exception as e:
+                print(f"Error loadig help image: {full_image_path}: {str(e)}")
+        elif full_image_path:
+            # Path was given but not found
+            print(f"HelpDialog: Image file not found at {full_image_path}")
+        
 
         if link:
             self.link_label = QLabel(f'<a href="{link}">More Information</a>')
