@@ -132,20 +132,30 @@ class DataTab(QWidget):
         self.remove_duplicates_help.clicked.connect(self.show_help_dialog)
         remove_dups_layout.addWidget(clean_button, 1)
         remove_dups_layout.addWidget(self.remove_duplicates_help)
-
         cleaning_layout.addLayout(remove_dups_layout)
         
+        drop_missing_layout = QHBoxLayout()
         drop_missing_button = AnimatedButton("Drop Missing Values", parent=self)
         drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
         drop_missing_button.setIcon(QIcon("icons/data_operations/drop_missing_values.png"))
         drop_missing_button.clicked.connect(self.drop_missing)
-        cleaning_layout.addWidget(drop_missing_button)
+        self.drop_missing_help = HelpIcon('drop_missing')
+        self.drop_missing_help.clicked.connect(self.show_help_dialog)
+        drop_missing_layout.addWidget(drop_missing_button)
+        drop_missing_layout.addWidget(self.drop_missing_help)
+        cleaning_layout.addLayout(drop_missing_layout)
         
+        fill_missing_layout = QHBoxLayout()
         fill_missing_button = AnimatedButton("Fill Missing Values", parent=self)
         fill_missing_button.setToolTip("Use this to fill in 'NaN' values in your dataset to something specific")
         fill_missing_button.setIcon(QIcon("icons/data_operations/fill_missing_data.png"))
         fill_missing_button.clicked.connect(self.fill_missing)
-        cleaning_layout.addWidget(fill_missing_button)
+        self.fill_missing_help = HelpIcon('fill_missing')
+        self.fill_missing_help.clicked.connect(self.show_help_dialog)
+
+        fill_missing_layout.addWidget(fill_missing_button)
+        fill_missing_layout.addWidget(self.fill_missing_help)
+        cleaning_layout.addLayout(fill_missing_layout)
         
         cleaning_layout.addStretch()
         data_clean_icon = QIcon("icons/data_operations/data_cleaning.png")
@@ -189,17 +199,27 @@ class DataTab(QWidget):
         self.filter_value = AnimatedLineEdit()
         filter_layout.addWidget(self.filter_value)
         
+        apply_filter_layout = QHBoxLayout()
         apply_filter_button = AnimatedButton("Apply Filter", parent=self)
         apply_filter_button.setIcon(QIcon("icons/data_operations/apply_filter.png"))
         apply_filter_button.clicked.connect(self.apply_filter)
-        filter_layout.addWidget(apply_filter_button)
+        self.apply_filter_help = HelpIcon("apply_filter")
+        self.apply_filter_help.clicked.connect(self.show_help_dialog)
+        apply_filter_layout.addWidget(apply_filter_button)
+        apply_filter_layout.addWidget(self.apply_filter_help)
+        filter_layout.addLayout(apply_filter_layout)
         
         filter_layout.addSpacing(10)
         
+        advanced_filter_layout = QHBoxLayout()
         adv_filter_button = AnimatedButton("Advanced Filter", parent=self)
         adv_filter_button.setIcon(QIcon("icons/data_operations/advanced_filter.png"))
         adv_filter_button.clicked.connect(self.open_advanced_filter)
-        filter_layout.addWidget(adv_filter_button)
+        self.apply_filter_help = HelpIcon("apply_filter")
+        self.apply_filter_help.clicked.connect(self.show_help_dialog)
+        advanced_filter_layout.addWidget(adv_filter_button)
+        advanced_filter_layout.addWidget(self.apply_filter_help)
+        filter_layout.addLayout(advanced_filter_layout)
         
         filter_layout.addStretch()
         filter_icon = QIcon("icons/data_operations/filter.png")
@@ -1849,10 +1869,10 @@ class DataTab(QWidget):
     @pyqtSlot(str)
     def show_help_dialog(self, topic_id: str):
         try:
-            title, description, image_url, link = self.help_manager.get_help_topic(topic_id)
+            title, description, full_image_path, link  = self.help_manager.get_help_topic(topic_id)
 
             if title:
-                dialog = HelpDialog(title, description, image_url, link, self)
+                dialog = HelpDialog(title, description, full_image_path, link, self)
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
