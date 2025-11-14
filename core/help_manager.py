@@ -5,8 +5,9 @@ class HelpManager:
     """Manages the connection and fetching of help /tutorials from the help database"""
 
     def __init__(self, db_name="tutorial.db"):
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.db_path = os.path.join(base_dir, "resources", db_name)
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.db_path = os.path.join(self.base_dir, "resources", db_name)
+        self.image_dir = os.path.join(self.base_dir, "resources", "images")
         self.connection = None
         self._connect()
 
@@ -27,7 +28,7 @@ class HelpManager:
             topic_id (str): The unique id for the topic
 
         Returns:
-            tuple: (title, description, image_url, link) or (None, None, None, None) if not found
+            tuple: (title, description, image, link) or (None, None, None, None) if not found
         """
         if not self.connection:
             print(f"No Database connection")
@@ -36,11 +37,20 @@ class HelpManager:
         try:
             cursor = self.connection.cursor()
             cursor.execute(
-                "SELECT title, description, link FROM help_topics WHERE topic_Id = ?", (topic_id,)
+                "SELECT title, description, image, link FROM help_topics WHERE topic_Id = ?", (topic_id,)
             )
             row = cursor.fetchone()
             if row:
-                return row["title"], row["description"], row["image_url"], row["link"]
+                title = row["title"]
+                description = row["description"]
+                image_filename = row["image"]
+                link = row["link"]
+                
+                full_image_path = None
+                if image_filename:
+                    full_image_path = os.path.join(self.image_dir, image_filename)
+
+                return title, description, full_image_path, link
             else:
                 print(f"No topic found with topic_id: {topic_id}")
                 return None, None, None, None
