@@ -2,18 +2,19 @@
 from tkinter import NO
 import traceback
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication)
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QFont, QIcon
 
 from core import subset_manager
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog, HelpDialog
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon
+from core.help_manager import HelpManager
 
 
 class DataTab(QWidget):
@@ -26,6 +27,7 @@ class DataTab(QWidget):
         self.status_bar = status_bar
         self.subset_manager = subset_manager
         self.aggregation_manager = AggregationManager()
+        self.help_manager = HelpManager()
         self.plot_tab = None
         self.data_table = None
         self.stats_text = None
@@ -121,11 +123,17 @@ class DataTab(QWidget):
         clean_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         cleaning_layout.addWidget(clean_info)
         
+        remove_dups_layout = QHBoxLayout()
         clean_button = AnimatedButton("Remove Duplicates", parent=self)
         clean_button.setToolTip("Use this to remove any instances of duplicate entries in your dataset")
         clean_button.setIcon(QIcon("icons/data_operations/remove_duplicates.png"))
         clean_button.clicked.connect(self.remove_duplicates)
-        cleaning_layout.addWidget(clean_button)
+        self.remove_duplicates_help = HelpIcon('remove_duplicates')
+        self.remove_duplicates_help.clicked.connect(self.show_help_dialog)
+        remove_dups_layout.addWidget(clean_button, 1)
+        remove_dups_layout.addWidget(self.remove_duplicates_help)
+
+        cleaning_layout.addLayout(remove_dups_layout)
         
         drop_missing_button = AnimatedButton("Drop Missing Values", parent=self)
         drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
@@ -1837,3 +1845,17 @@ class DataTab(QWidget):
 
         if hasattr(self, "data_source_container"):
             self.data_source_container.setVisible(False)
+
+    @pyqtSlot(str)
+    def show_help_dialog(self, topic_id: str):
+        try:
+            title, description, link = self.help_manager.get_help_topic(topic_id)
+
+            if title:
+                dialog = HelpDialog(title, description, link, self)
+                dialog.exec()
+            else:
+                QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
+        except Exception as e:
+            self.status_bar.log(f"Error displaying help dialog: {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Help Error", "Could not load help content. See log for details")
