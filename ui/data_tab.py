@@ -243,17 +243,27 @@ class DataTab(QWidget):
         self.column_select = AnimatedComboBox()
         column_layout.addWidget(self.column_select)
         
+        drop_column_layout = QHBoxLayout()
         drop_column_button = AnimatedButton("Drop Column", parent=self)
         drop_column_button.setToolTip("Use this to remove the selected column from the dataset")
         drop_column_button.setIcon(QIcon("icons/data_operations/drop_column.png"))
         drop_column_button.clicked.connect(self.drop_column)
-        column_layout.addWidget(drop_column_button)
+        self.drop_column_help = HelpIcon("drop_column")
+        self.drop_column_help.clicked.connect(self.show_help_dialog)
+        drop_column_layout.addWidget(drop_column_button)
+        drop_column_layout.addWidget(self.drop_column_help)
+        column_layout.addLayout(drop_column_layout)
         
+        rename_layout = QHBoxLayout()
         rename_button = AnimatedButton("Rename Column", parent=self)
         rename_button.setToolTip("Use this to rename the selected column")
         rename_button.setIcon(QIcon("icons/data_operations/rename.png"))
         rename_button.clicked.connect(self.rename_column)
-        column_layout.addWidget(rename_button)
+        self.rename_column_help = HelpIcon("rename_column")
+        self.rename_column_help.clicked.connect(self.show_help_dialog)
+        rename_layout.addWidget(rename_button)
+        rename_layout.addWidget(self.rename_column_help)
+        column_layout.addLayout(rename_layout)
 
         column_layout.addSpacing(10)
 
@@ -285,10 +295,15 @@ class DataTab(QWidget):
         )
         type_layout.addWidget(self.type_combo)
 
+        datatype_layout = QHBoxLayout()
         type_button = AnimatedButton("Apply DataType Change", parent=self)
-        type_button.setIcon(QIcon("icons/data_operations/change_datatype.png")) ##Mangler ikons
+        type_button.setIcon(QIcon("icons/data_operations/change_datatype.png"))
         type_button.clicked.connect(self.change_column_type)
-        type_layout.addWidget(type_button)
+        self.change_datatype_help = HelpIcon("change_datatype")
+        self.change_datatype_help.clicked.connect(self.show_help_dialog)
+        datatype_layout.addWidget(type_button)
+        datatype_layout.addWidget(self.change_datatype_help)
+        type_layout.addLayout(datatype_layout)
 
         type_group.setLayout(type_layout)
         column_layout.addWidget(type_group)
@@ -297,7 +312,7 @@ class DataTab(QWidget):
         column_icon = QIcon("icons/data_operations/edit_cols.png")
         ops_tabs.addTab(column_tab, column_icon, "Columns")
         
-        # === TAB 4: TRANSFORM ===
+        #  TAB 4: TRANSFORM 
         transform_tab = QWidget()
         transform_layout = QVBoxLayout(transform_tab)
 
@@ -306,10 +321,15 @@ class DataTab(QWidget):
         transform_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         transform_layout.addWidget(transform_info)
         
+        agg_layout = QHBoxLayout()
         agg_button = AnimatedButton("Aggregate Data", parent=self)
         agg_button.setIcon(QIcon("icons/data_operations/aggregate_data.png"))
         agg_button.clicked.connect(self.open_aggregation_dialog)
-        transform_layout.addWidget(agg_button)
+        self.agg_help = HelpIcon("aggregate_data")
+        self.agg_help.clicked.connect(self.show_help_dialog)
+        agg_layout.addWidget(agg_button)
+        agg_layout.addWidget(self.agg_help)
+        transform_layout.addLayout(agg_layout)
 
         transform_layout.addSpacing(10)
 
