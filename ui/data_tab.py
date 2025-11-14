@@ -1849,10 +1849,10 @@ class DataTab(QWidget):
     @pyqtSlot(str)
     def show_help_dialog(self, topic_id: str):
         try:
-            title, description, link = self.help_manager.get_help_topic(topic_id)
+            title, description, image_url, link = self.help_manager.get_help_topic(topic_id)
 
             if title:
-                dialog = HelpDialog(title, description, link, self)
+                dialog = HelpDialog(title, description, image_url, link, self)
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")

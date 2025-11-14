@@ -1828,7 +1828,7 @@ class HelpDialog(QDialog):
     Dialog window to display tutorial content
     """
 
-    def __init__(self, title: str, description: str, link: str, parent=None):
+    def __init__(self, title: str, description: str, image: str, link: str, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle(f"Help: {title}")
@@ -1867,6 +1867,10 @@ class HelpDialog(QDialog):
         scroll_layout.addStretch(1)
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
+
+        if image:
+            self.image_label = QLabel(f'<img src="{image}" alt="{title}">')
+            layout.addWidget(self.link_label)
 
         if link:
             self.link_label = QLabel(f'<a href="{link}">More Information</a>')

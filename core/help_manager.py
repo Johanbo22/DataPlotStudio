@@ -27,11 +27,11 @@ class HelpManager:
             topic_id (str): The unique id for the topic
 
         Returns:
-            tuple: (title, description, link) or (None, None, None) if not found
+            tuple: (title, description, image_url, link) or (None, None, None, None) if not found
         """
         if not self.connection:
             print(f"No Database connection")
-            return None, None, None
+            return None, None, None, None
         
         try:
             cursor = self.connection.cursor()
@@ -40,13 +40,13 @@ class HelpManager:
             )
             row = cursor.fetchone()
             if row:
-                return row["title"], row["description"], row["link"]
+                return row["title"], row["description"], row["image_url"], row["link"]
             else:
                 print(f"No topic found with topic_id: {topic_id}")
-                return None, None, None
+                return None, None, None, None
         except sqlite3.Error as e:
             print(f"Error fetching data for topic_id '{topic_id}: ERROR: {str(e)}'")
-            return None, None, None
+            return None, None, None, None
     
     def close(self):
         """Close the connection to database"""
