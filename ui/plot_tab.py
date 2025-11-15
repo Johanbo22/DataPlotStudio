@@ -968,6 +968,20 @@ class PlotTab(PlotTabUI):
         x_col = self.x_column.currentText()
         y_cols = self.get_selected_y_columns()
 
+        #sampling for better performance
+        MAX_PLOT_POINTS = 500_000
+        plot_type = self.plot_type.currentText()
+        PLOTS_TO_SAMPLE = [
+            "Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"
+        ]
+        if len(active_df) > MAX_PLOT_POINTS and plot_type in PLOTS_TO_SAMPLE:
+            self.status_bar.log(
+                f"Dataset is too large ({len(active_df):,} rows) for '{plot_type}' plot."
+                f"Plotting a random sample of {MAX_PLOT_POINTS:,} points",
+                "WARNING"
+            )
+            active_df = active_df.sample(n=MAX_PLOT_POINTS, random_state=42)
+
         try:
             if x_col and self.plot_engine._helper_is_datetime_column(self, active_df[x_col]): # Use engine's helper
                 if not pd.api.types.is_datetime64_any_dtype(active_df[x_col]):
