@@ -1,6 +1,7 @@
 # core/data_handler.py
 from itertools import groupby
 from duckdb import connect
+from flask.cli import F
 import pandas as pd
 import numpy as np
 import json
@@ -134,7 +135,14 @@ class DataHandler:
         return len(self.redo_stack) > 0
     
     def import_file(self, filepath: str) -> pd.DataFrame:
-        """Import data from various file formats"""
+        """Import data from various file formats
+        
+        Args:
+            filepath (str): The path to file file that is imported
+        
+        Returns:
+            data (pd.DataFrame):
+        """
 
         #check if any tempfiles exist
         if self.is_temp_file:
@@ -147,9 +155,25 @@ class DataHandler:
             if extension in ['.xlsx', '.xls']: # xls format is sometimes janky
                 self.df = pd.read_excel(filepath)
             elif extension == '.csv':
-                self.df = pd.read_csv(filepath)
+                con = connect(database=':memory:', read_only=False)
+                try:
+                    self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}')").df()
+                except Exception as import_file_error:
+                    con.close()
+                    print(f"DEBUG: DuckDB failed ({str(import_file_error)}), falling back to pandas")
+                    self.df = pd.read_csv(filepath)
+                finally:
+                    con.close()
             elif extension == '.txt':
-                self.df = pd.read_csv(filepath, sep='\t')
+                con = connect(database=":memory:", read_only=False)
+                try:
+                    self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\t')").df()
+                except Exception as import_file_error:
+                    con.close()
+                    print(f"DEBUG: DuckDB failed: ({str(import_file_error)}), falling back to pandas")
+                    self.df = pd.read_csv(filepath, sep="\t")
+                finally:
+                    con.close()
             elif extension == '.json':
                 self.df = pd.read_json(filepath)
             elif extension in [".geojson", ".shp", ".gpkg", ".shx"]:
