@@ -600,8 +600,11 @@ class PlotEngine:
             Y = pivot_df.index.values
             Z = pivot_df.values
 
-            if np.isnan(Z).any():
-                Z = pd.DataFrame(Z).fillna(0).values()
+            try:
+                if np.isnan(Z).any():
+                    Z = pd.DataFrame(Z).fillna(0).values
+            except TypeError:
+                pass
             
             return X, Y, Z
         except Exception as e:
@@ -823,11 +826,23 @@ class PlotEngine:
                 if pd.api.types.is_datetime64_any_dtype(data):
                     return True
                 if data.dtype == "object":
-                    sample = data.dropna().head(1)
-                    if len(sample) > 0:
-                        try:
-                            pd.to_datetime(sample.iloc[0], utc=True)
-                        except: pass
+                    if data.empty:
+                        return False
+                    sample_val = None
+                    for val in data.head(50):
+                        if val is not None:
+                            sample_val = val
+                            break
+                    if sample_val is None:
+                        return False
+                    
+                    if not isinstance(sample_val, str):
+                        return False
+                    try:
+                        pd.to_datetime(sample_val, utc=True)
+                        return True
+                    except:
+                        pass
             elif hasattr(data, "dtype"):
                 return pd.api.types.is_datetime64_any_dtype(data.dtype)
         except Exception as e:
@@ -836,7 +851,7 @@ class PlotEngine:
 
     def _helper_apply_auto_datetime_format(self, plot_tab: "PlotTab", axis, data):
         """Apply datetime formatting based on the input datarange"""
-        if data is None or len(data) < 2:
+        if data is None or len(data) < 2 or not self._helper_is_datetime_column(plot_tab, data):
             return
         
         try:
@@ -873,7 +888,7 @@ class PlotEngine:
 
     def _helper_set_intelligent_locator(self, plot_tab: "PlotTab", axis, data):
         """Set tick locators based on tghe datarange"""
-        if data is None or len(data) < 2:
+        if data is None or len(data) < 2 or not self._helper_is_datetime_column(plot_tab, data):
             return
         
         try:
@@ -1029,7 +1044,11 @@ class PlotEngine:
 
             df = plot_tab.data_handler.df
 
-            # Remove NaN/Inf values from both columns
+            if not pd.api.types.is_numeric_dtype(df[x_col]) or not pd.api.types.is_numeric_dtype(df[y_col]):
+                plot_tab.status_bar.log(f"Regression analysis skipped: '{x_col}' or '{y_col}' is not numeric", "INFO")
+                return
+
+            # Remove NaN/inf values from both columns
             mask = np.isfinite(df[x_col]) & np.isfinite(df[y_col])
             x_data = df.loc[mask, x_col].values
             y_data = df.loc[mask, y_col].values
@@ -1769,14 +1788,18 @@ class PlotEngine:
         if gpd is None:
             return "GeoPandas is not installed. Geospatial plotting is not available"
 
+        gdf = plot_tab.data_handler.df
         if not isinstance(plot_tab.data_handler.df, gpd.GeoDataFrame):
             return "Current dataset is not a GeoDataFrame"
         
+        geo_col_name = gdf.geometry.name
+
         column_to_plot = None
         if general_kwargs.get("hue"):
             column_to_plot = general_kwargs.get("hue")
         elif y_cols:
-            column_to_plot = y_cols[0]
+            if y_cols[0] != geo_col_name:
+                column_to_plot = y_cols[0]
         
         title = general_kwargs.pop("title", None)
 
