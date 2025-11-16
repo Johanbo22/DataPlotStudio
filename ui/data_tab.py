@@ -13,7 +13,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon, AnimatedTabWidget
 from core.help_manager import HelpManager
 
 
@@ -84,7 +84,7 @@ class DataTab(QWidget):
         left_layout.addWidget(self.data_source_container)
         
         # Create tabs for data and statistics
-        self.data_tabs = QTabWidget()
+        self.data_tabs = AnimatedTabWidget()
         
         # Data Table Tab
         self.data_table = QTableWidget()
@@ -112,7 +112,7 @@ class DataTab(QWidget):
         right_layout.addWidget(reset_button)
         
         # Create tabbed operations interface
-        ops_tabs = QTabWidget()
+        ops_tabs = AnimatedTabWidget()
         
         # === TAB 1: CLEANING ===
         cleaning_tab = QWidget()
@@ -877,7 +877,7 @@ class DataTab(QWidget):
             self.plot_tab.activate_subset(subset_name)
 
             parent_tab_widget = self.parentWidget()
-            if isinstance(parent_tab_widget, QTabWidget):
+            if isinstance(parent_tab_widget, AnimatedTabWidget):
                 parent_tab_widget.setCurrentWidget(self.plot_tab)
             else:
                 self.status_bar.log("Could not switch to plot tab automatically", "WARNING")
