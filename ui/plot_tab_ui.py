@@ -4,8 +4,6 @@ Contains the UI definition for the PlotTab.
 This class (PlotTabUI) is responsible for creating and laying out all
 widgets. It does not contain any application logic or event handlers.
 """
-
-from turtle import color
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
     QLabel, QSpinBox, QDoubleSpinBox, QCheckBox, QLineEdit, QScrollArea,
@@ -16,7 +14,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget
 
 
 class PlotTabUI(QWidget):
@@ -48,7 +46,7 @@ class PlotTabUI(QWidget):
         right_layout = QVBoxLayout()
         
         # Create tabbed customization interface
-        custom_tabs = QTabWidget()
+        custom_tabs = AnimatedTabWidget()
         
         #  TAB 1: BASIC 
         basic_tab = self._create_basic_tab()
@@ -1147,7 +1145,7 @@ class PlotTabUI(QWidget):
         grid_layout.addWidget(self.independent_grid_check)
 
         #Tabs for x and y axis ad thier gridlines
-        self.grid_axis_tab = QTabWidget()
+        self.grid_axis_tab = AnimatedTabWidget()
         self.grid_axis_tab.setVisible(False)
 
         #X AXIS GRIDLINES
