@@ -176,10 +176,12 @@ class DataHandler:
                     con.close()
             elif extension == '.json':
                 self.df = pd.read_json(filepath)
-            elif extension in [".geojson", ".shp", ".gpkg", ".shx"]:
+            elif extension in [".geojson", ".shp", ".gpkg"]:
                 if gpd is None:
                     raise ImportError("GeoPandas is not installed. Please install GeoPandas to load spatial data")
                 self.df = gpd.read_file(filepath)
+            elif extension == ".shx":
+                raise ValueError("This is an shapefile index (.shx) file.\nPlease open the shapefile (.shp) fil instead.")
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
             

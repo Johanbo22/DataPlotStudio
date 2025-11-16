@@ -60,7 +60,7 @@ class DataPlotStudio(QMainWindow):
         self.menu_bar.file_new.triggered.connect(self.new_project)
         self.menu_bar.file_open.triggered.connect(self.open_project)
         self.menu_bar.file_save.triggered.connect(self.save_project)
-        self.menu_bar.import_file.triggered.connect(self.import_data_file)
+        self.menu_bar.import_file.triggered.connect(self.main_widget.import_file)
         self.menu_bar.import_sheets.triggered.connect(self.import_google_sheets)
         self.menu_bar.import_database.triggered.connect(self.import_from_database)
         self.menu_bar.export_code.triggered.connect(self.export_code)
@@ -117,70 +117,6 @@ class DataPlotStudio(QMainWindow):
         except Exception as e:
             self.status_bar_widget.log(f"Save failed: {str(e)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(e)}")
-    
-    def import_data_file(self):
-        """Import a data file"""
-        file_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json);;All Files (*)"
-        filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
-        
-        if filepath:
-            try:
-                from pathlib import Path
-                path = Path(filepath)
-                file_size_kb = path.stat().st_size / 1024
-
-                #show prgs bar for larger files
-                show_progress = file_size_kb > 500
-
-                progress_dialog = None
-                if show_progress:
-                    progress_dialog = ProgressDialog(title="Importing data", message=f"Loading {path.name} ({file_size_kb:.1f} KB)", parent=self)
-                    progress_dialog.show()
-                    progress_dialog.update_progress(10, "Reading file")
-                    QApplication.processEvents()
-                
-                self.data_handler.import_file(filepath)
-
-                #clear any GS import from memory
-                self.data_handler.last_gsheet_id = None
-                self.data_handler.last_gsheet_name = None
-
-                if show_progress:
-                    progress_dialog.update_progress(70, "Processing data")
-                    QApplication.processEvents()
-
-                rows, cols = self.data_handler.df.shape
-                
-                self.main_widget.data_tab.refresh_data_view()
-
-                if show_progress:
-                    progress_dialog.update_progress(90, "Updating interface")
-                    QApplication.processEvents()
-
-                self.main_widget.plot_tab.update_column_combo()
-
-                if show_progress:
-                    progress_dialog.update_progress(100, "Complete")
-                    QTimer.singleShot(300, progress_dialog.accept)
-                
-                self.status_bar_widget.log_action(
-                    f"Imported {path.name}",
-                    details={
-                        'filename': path.name,
-                        'filepath': str(path),
-                        'rows': rows,
-                        'columns': cols,
-                        'file_size_kb': round(file_size_kb, 2),
-                        'file_type': path.suffix,
-                        'operation': 'import_file'
-                    },
-                    level="SUCCESS"
-                )
-            except Exception as e:
-                if progress_dialog:
-                    progress_dialog.accept()
-                self.status_bar_widget.log(f"Import failed: {str(e)}", "ERROR")
-                QMessageBox.critical(self, "Error", f"Failed to import file: {str(e)}")
     
     def import_google_sheets(self):
         """Import from Google Sheets"""

@@ -1,9 +1,9 @@
 # ui/main_window.py
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton)
-from PyQt6.QtCore import Qt
-from glm import project
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
+from PyQt6.QtCore import Qt, QRunnable, QThreadPool, QObject, pyqtSignal, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt6.QtGui import QIcon
+from pathlib import Path
 
 from core import subset_manager
 from core.subset_manager import SubsetManager
@@ -13,7 +13,44 @@ from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.animated_widgets import AnimatedTabWidget
+from ui.dialogs import ProgressDialog
 
+class WorkerSignals(QObject):
+    """
+    Defines the signal from a running worker thread
+    signals are:
+
+    finished
+        object: data (pd.DataFrame)
+    error
+        Exception: The exception object
+    log
+        str: A message to log
+    """
+    finished = pyqtSignal(object)
+    error = pyqtSignal(Exception)
+    log = pyqtSignal(str)
+    progress = pyqtSignal(int, str)
+
+class FileImportWorker(QRunnable):
+    """The worker thread for importing files"""
+
+    def __init__(self, data_handler: DataHandler, filepath: str):
+        super().__init__()
+        self.data_handler = data_handler
+        self.filepath = filepath
+        self.signals = WorkerSignals()
+    
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Reading file...")
+            self.data_handler.import_file(self.filepath)
+
+            self.signals.progress.emit(70, "Processing data...")
+            self.signals.finished.emit(self.data_handler.df)
+        except Exception as run_error:
+            self.signals.error.emit(run_error)
 
 class MainWindow(QWidget):
     """Main application window widget"""
@@ -26,6 +63,13 @@ class MainWindow(QWidget):
         self.status_bar = status_bar
 
         self.subset_manager = SubsetManager()
+
+        self.threadpool = QThreadPool()
+        print(f"DEBUG: Initialized thread pool with max {self.threadpool.maxThreadCount()} threads")
+
+        self.progress_dialog: ProgressDialog | None = None
+        self._temp_import_filepath: str | None = None
+        self._temp_import_filesize: float = 0.0
         
         self.init_ui()
         self._connect_subset_managers()
@@ -72,18 +116,97 @@ class MainWindow(QWidget):
 
     def import_file(self) -> None:
         """Import a data file"""
-        file_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json);;All Files (*)"
+        geospatial_filter = "Geospatial Files (*.geojson *.shp *gpkg)"
+        data_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json);;All Files (*)"
+        all_files_filter = "All Files (*)"
+
+        file_filter = f"{geospatial_filter};;{data_filter};;{all_files_filter}"
         filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
         
         if filepath:
-            try:
-                self.data_handler.import_file(filepath)
-                self.data_tab.refresh_data_view()
-                self.plot_tab.update_column_combo()
-                self.status_bar.log(f"Imported: {filepath}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to import file: {str(e)}")
-                self.status_bar.log(f"Import failed: {str(e)}")
+            path = Path(filepath)
+            file_size_kb = path.stat().st_size / 1024
+            show_progress = file_size_kb > 500
+
+            self._temp_import_filepath = filepath
+            self._temp_import_filesize = file_size_kb
+
+            self.progress_dialog = None
+            if show_progress:
+                self.progress_dialog = ProgressDialog(
+                    title="Importing data",
+                    message=f"Loading {path.name} ({file_size_kb:.1f} KB)",
+                    parent=self
+                )
+                self.progress_dialog.show()
+                self.progress_dialog.update_progress(10, "Reading file")
+                QApplication.processEvents()
+            else:
+                self.status_bar.log(f"Importing: {filepath}...")
+            
+            worker = FileImportWorker(self.data_handler, filepath)
+            worker.signals.finished.connect(self._on_import_finished)
+            worker.signals.error.connect(self._on_import_error)
+            worker.signals.progress.connect(self._on_import_progress)
+
+            self.threadpool.start(worker)
+    
+    @pyqtSlot(int, str)
+    def _on_import_progress(self, percentage: int, message: str):
+        if self.progress_dialog:
+            self.progress_dialog.update_progress(percentage, message)
+            QApplication.processEvents()
+    
+    @pyqtSlot(object)
+    def _on_import_finished(self, loaded_dataframe):
+        if self.progress_dialog:
+            self.progress_dialog.update_progress(90, "Updating Interface")
+            QApplication.processEvents()
+        
+        self.data_tab.refresh_data_view()
+        self.plot_tab.update_column_combo()
+
+        if self.progress_dialog:
+            self.progress_dialog.update_progress(100, "Complete")
+            QTimer.singleShot(300, self.progress_dialog.accept)
+            self.progress_dialog = None
+
+        ##log
+        try:
+            path = Path(self._temp_import_filepath)
+            rows, cols = loaded_dataframe.shape
+
+            self.status_bar.log_action(
+                f"Imported {path.name}",
+                details={
+                    "filename": path.name,
+                    "filepath": str(path),
+                    "rows": rows,
+                    "columns": cols,
+                    "file_size_kb": round(self._temp_import_filesize),
+                    "file_type": path.suffix,
+                    "operation": "import_file"
+                },
+                level="SUCCESS"
+            )
+        except Exception as log_e:
+            self.status_bar.log(f"Failed to log operation to log file: {log_e}", "ERROR")
+        
+        self._temp_import_filepath = None
+        self._temp_import_filesize = 0.0
+    
+    @pyqtSlot(Exception)
+    def _on_import_error(self, error: Exception):
+        if self.progress_dialog:
+            self.progress_dialog.accept()
+            self.progress_dialog = None
+            
+        QMessageBox.critical(self, "Error", f"Failed to import file: {str(e)}")
+        self.status_bar.log(f"Import failed: {str(e)}", "ERROR")
+        
+        # Clear temp variables
+        self._temp_import_filepath = None
+        self._temp_import_filesize = 0.0
     
     def import_google_sheets(self):
         """Import from Google Sheets"""
