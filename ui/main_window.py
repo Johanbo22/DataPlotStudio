@@ -12,6 +12,7 @@ from ui.plot_tab import PlotTab
 from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
+from ui.animated_widgets import AnimatedTabWidget
 
 
 class MainWindow(QWidget):
@@ -34,14 +35,14 @@ class MainWindow(QWidget):
         layout = QVBoxLayout(self)
         
         # Create tab widget
-        self.tabs = QTabWidget()
+        self.tabs = AnimatedTabWidget()
         
-        # Data Tab - for viewing and cleaning data
+        # Data Tab: for viewing and cleaning data
         data_icon = QIcon("icons/data_explorer.png")
         self.data_tab = DataTab(self.data_handler, self.status_bar, self.subset_manager)
         self.tabs.addTab(self.data_tab, data_icon, "Data Explorer")
         
-        # Plot Tab - for plotting
+        # Plot Tab :for plotting
         plot_icon = QIcon("icons/plot.png")
         self.plot_tab = PlotTab(self.data_handler, self.status_bar)
         self.tabs.addTab(self.plot_tab, plot_icon, "Plot Studio")
