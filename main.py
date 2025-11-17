@@ -2,6 +2,7 @@
 import sys, os
 import json
 from pathlib import Path
+from tkinter import E
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QSplitter, QTabWidget, QMessageBox, QFileDialog
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QIcon, QGuiApplication
@@ -115,6 +116,7 @@ class DataPlotStudio(QMainWindow):
                 level="SUCCESS"
             )
         except Exception as e:
+            traceback.print_exc()
             self.status_bar_widget.log(f"Save failed: {str(e)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(e)}")
     

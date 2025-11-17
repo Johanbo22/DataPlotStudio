@@ -224,9 +224,9 @@ class MainWindow(QWidget):
     
     def load_project(self, project_data: dict) -> None:
         """Load a project"""
-        if 'dataframe' in project_data and project_data['dataframe'] is not None:
-            self.data_handler.df = project_data['dataframe']
-            self.data_handler.original_df = project_data['dataframe'].copy()
+        if 'data' in project_data and project_data['data'] is not None:
+            self.data_handler.df = project_data['data']
+            self.data_handler.original_df = project_data['data'].copy()
             self.data_tab.refresh_data_view()
         
         if 'plot_config' in project_data:
@@ -242,7 +242,7 @@ class MainWindow(QWidget):
         """Get all project data for saving"""
         subset_manager = self.subset_manager
         return {
-            'dataframe': self.data_handler.df,
+            'data': self.data_handler.df,
             'plot_config': self.plot_tab.get_config(),
             "subsets": subset_manager.export_subsets(),
             'metadata': {
