@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QFont, QIcon
 
 from core import subset_manager
+from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
@@ -902,126 +903,62 @@ class DataTab(QWidget):
         try:
             info = self.data_handler.get_data_info()
             df = self.data_handler.df
-        except Exception as e:
+        except Exception as data_error:
             self.stats_text.setHtml(f"<p style='color: red;'>Error loading data info: {str(e)}</p>")
             return
+        
+        try:
+            css_file_path = Path("resources/statistics_style.css")
+            html_path = Path("resources/template.html")
 
-        # html
-        html = """
-        <html>
-        <head>
-            <style>
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    padding: 15px;
-                    background-color: #f5f5f5;
-                }
-                h2 {
-                    color: #2c3e50;
-                    border-bottom: 3px solid #3498db;
-                    padding-bottom: 8px;
-                    margin-top: 25px;
-                    margin-botom: 15px;
-                }
-                h3 {
-                    color: #34495e;
-                    margin-top: 20px;
-                    margin-bottom: 10px;
-                    font-size: 16px;
-                }
-                table {
-                    border-collapse: collapse;
-                    width: 100%;
-                    margin-botom: 20px;
-                    background-color: white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                th {
-                    background-color: #3498db;
-                    color: white;
-                    padding: 12px;
-                    text-align: left;
-                    font-weight: bold;
-                    border: 1px solid #2980b9;
-                }
-                td {
-                    padding: 10px 12px;
-                    border: 1px solid #ddd;
-                }
-                tr:nth-child(even) {
-                    background-color: #f9f9f9;
-                }
-                tr:hover {
-                    background-color: #e8f4f8;
-                }
-                .info-box {
-                    background-color: #ecf0f1;
-                    border-left: 4px solid #3498db;
-                    padding: 15px;
-                    margin-bottom: 20px;
-                    border-radius: 4px;
-                }
-                .info-item {
-                    margin: 8px 0;
-                    font-size: 14px;
-                }
-                .info-label {
-                    font-weight: bold;
-                    color: #2c3e50;
-                    display: inline-block;
-                    width: 150px;
-                }
-                .info-value {
-                    color: #34495e;
-                }
-                .warning {
-                    background-color: #fff3cd;
-                    border-left: 4px solid #ffc107;
-                    padding: 10px;
-                    margin: 10px 0;
-                    border-radius: 4px;
-                }
-                .numeric_col {
-                    text-align: right;
-                }
-            </style>
-        </head>
-        <body>    
-        """
+            if not css_file_path:
+                raise FileNotFoundError(f"Missing CSS resource file: {css_file_path.resolve()}")
+            css_content = css_file_path.read_text(encoding="UTF-8")
 
-        #dataset overview
-        html += "<h2>Dataset Overview</h2>"
-        html += "<div class='info-box'>"
-        html += f"<div class='info-item'><span class='info-label'>Total Rows:</span> <span class='info-value'>{info.get('shape', [0])[0]:,}</span></div>"
-        html += f"<div class='info-item'><span class='info-label'>Total Columns:</span> <span class='info-value'>{len(info.get('columns', []))}</span></div>"
+            if not html_path:
+                raise FileNotFoundError(f"Missing HTML resource file: {html_path.resolve()}")
+            html_template = html_path.read_text(encoding="UTF-8")
 
-        #memory 
+        except Exception as e:
+            error_msg = f"Failed to load CSS/HTML templates: {str(e)}"
+            self.stats_text.setHtml(f"<p style='color: red;'>{error_msg}</p>")
+            self.status_bar.log(error_msg, "ERROR")
+            traceback.print_exc()
+            return
+        
+        body_html = ""
+
+        body_html += "<h2>Dataset Overview</h2>"
+        body_html += "<div class='info-box'>"
+        body_html += f"<div class='info-item'><span class='info-label'>Total Rows:</span> <span class='info-value'>{info.get('shape', [0])[0]:,}</span></div>"
+        body_html += f"<div class='info-item'><span class='info-label'>Total Columns:</span> <span class='info-value'>{len(info.get('columns', []))}</span></div>"
+
+        #memory
         try:
             total_memory_bytes = df.memory_usage(deep=True).sum()
-            total_memory = total_memory_bytes / 1024  # Convert to KB
-        
+            total_memory = total_memory_bytes / 1024
+
             if total_memory > 1024:
                 memory_str = f"{total_memory/1024:.2f} MB"
             else:
                 memory_str = f"{total_memory:.2f} KB"
-        except Exception as e:
+        except Exception:
             memory_str = "N/A"
         
-        html += f"<div class='info-item'><span class='info-label'>Memory Usage:</span> <span class='info-value'>{memory_str}</span></div>"
+        body_html += f"<div class='info-item'><span class='info-label'>Memory Usage:</span> <span class='info-value'>{memory_str}</span></div>"
 
-        #missing values
         try:
-            total_missing = sum(info.get('missing_values', {}).values())
+            total_missing = sum(info.get("missing_values", {}).values())
         except:
             total_missing = 0
-        html += f"<div class='info-item'><span class='info-label'>Total Missing Values:</span> <span class='info-value'>{total_missing:,}</span></div>"
-        html += "</div>"
-
-        #column info
-        html += "<h2>Column Information</h2>"
-        html += "<table>"
-        html += "<tr><th>Column Name</th><th>Data Type</th><th>Non-Null Count</th><th>Missing Values</th><th>Missing %</th></tr>"
+        body_html += f"<div class='info-item'><span class='info-label'>Total Missing Values:</span> <span class='info-value'>{total_missing:,}</span></div>"
+        body_html += "</div>"
         
+        #colinfo
+        body_html += "<h2>Column Information</h2>"
+        body_html += "<table>"
+        body_html += "<tr><th>Column Name</th><th>Data Type</th><th>Non-Null Count</th><th>Missing Values</th><th>Missing %</th></tr>"
+
         total_rows = info.get("shape", [0])[0]
         for col in info.get("columns", []):
             try:
@@ -1030,50 +967,47 @@ class DataTab(QWidget):
                 non_null = total_rows - missing
                 missing_pct = (missing / total_rows * 100) if total_rows > 0 else 0
 
-                # color coding based on missing pct
                 row_class = ""
                 if missing_pct > 50:
                     row_class = "style='background-color: #ffebee;'"
                 elif missing_pct > 20:
                     row_class = "style='background-color: #fff9c4;'"
                 
-                html += f"<tr {row_class}>"
-                html += f"<td><strong>{col}</strong></td>"
-                html += f"<td>{dtype}</td>"
-                html += f"<td class='numeric-col'>{non_null:,}</td>"
-                html += f"<td class='numeric-col'>{missing:,}</td>"
-                html += f"<td class='numeric-col'>{missing_pct:.1f}%</td>"
-                html += "</tr>"
-            except Exception as e:
-                # Skip problematic columns
+                body_html += f"<tr {row_class}>"
+                body_html += f"<td><strong>{col}</strong></td>"
+                body_html += f"<td>{dtype}</td>"
+                body_html += f"<td class='numeric-col'>{non_null:,}</td>"
+                body_html += f"<td class='numeric-col'>{missing:,}</td>"
+                body_html += f"<td class='numeric-col'>{missing_pct:.1f}%</td>"
+                body_html += "</tr>"
+            except Exception:
                 continue
         
-        html += "</table>"
-
-        # warning for many missing values
+        body_html += "</table>"
+        
+        #wwarning fr misisng values
         if total_missing > 0:
             high_missing_cols = [col for col, missing in info.get("missing_values", {}).items() if missing > 0]
-
+            
             if high_missing_cols:
-                html += "<div class='warning'>"
-                html += f"<strong>Warning:</strong> {len(high_missing_cols)} column(s) contain missing values. "
-                html += "Consider using data cleaning operations."
-                html += "</div>"
+                body_html += "<div class='warning'>"
+                body_html += f"<strong>Warning:</strong> {len(high_missing_cols)} column(s) contain missing values. "
+                body_html += "Consider using data cleaning operations."
+                body_html += "</div>"
         
-        # numerical stats - with error handling for list columns
         try:
             numeric_df = df.select_dtypes(include=["int64", "int32", "float64", "float32"])
 
             if len(numeric_df.columns) > 0:
-                html += "<h2>Descriptive Statistics (Numeric Columns)</h2>"
+                body_html += "<h2>Descriptive Statistics (Numeric Columns)</h2>"
 
                 df_describe = numeric_df.describe()
 
-                html += "<table>"
-                html += "<tr><th>Statistics</th>"
+                body_html += "<table>"
+                body_html += "<tr><th>Statistics</th>"
                 for col in df_describe.columns:
-                    html += f"<th>{col}</th>"
-                html += "</tr>"
+                    body_html += f"<th>{col}</th>"
+                body_html += "</tr>"
 
                 stats_labels = {
                     "count": "Count",
@@ -1087,35 +1021,35 @@ class DataTab(QWidget):
                 }
 
                 for stat in df_describe.index:
-                    html += f"<tr><td><strong>{stats_labels.get(stat, stat)}</strong></td>"
+                    body_html += f"<tr><td><strong>{stats_labels.get(stat, stat)}</strong></td>"
                     for col in df_describe.columns:
                         value = df_describe.loc[stat, col]
                         if stat == "count":
-                            html += f"<td class='numeric-col'>{int(value):,}</td>"
+                            body_html += f"<td class='numeric-col'>{int(value):,}</td>"
                         else:
-                            html += f"<td class='numeric-col'>{value:.4f}</td>"
-                    html += "</tr>"
-                
-                html += "</table>"
-        except Exception as e:
-            html += f"<div class='warning'>Unable to calculate numeric statistics: {str(e)}</div>"
+                            body_html += f"<td class='numeric-col'>{value:.4f}</td>"
+                    body_html += "</tr>"
 
-        # corr matrix 
+                body_html += "</table>"
+        except Exception as e:
+            body_html += f"<div class='warning'>Unable to calculate numeric statistics: {str(e)}</div>"
+        
+        #correlation matrix
         try:
             numeric_df = df.select_dtypes(include=["int64", "int32", "float64", "float32"])
             
             if len(numeric_df.columns) > 1:
-                html += "<h2>Correlation Matrix</h2>"
+                body_html += "<h2>Correlation Matrix</h2>"
                 corr = numeric_df.corr()
 
-                html += "<table>"
-                html += "<tr><th></th>"
+                body_html += "<table>"
+                body_html += "<tr><th></th>"
                 for col in corr.columns:
-                    html += f"<th>{col}</th>"
-                html += "</tr>"
+                    body_html += f"<th>{col}</th>"
+                body_html += "</tr>"
 
                 for idx in corr.index:
-                    html += f"<tr><td><strong>{idx}</strong></td>"
+                    body_html += f"<tr><td><strong>{idx}</strong></td>"
                     for col in corr.columns:
                         value = corr.loc[idx, col]
 
@@ -1129,27 +1063,27 @@ class DataTab(QWidget):
                         else:
                             cell_style = ""
                         
-                        html += f"<td class='numeric-col' style='{cell_style}'>{value:.3f}</td>"
-                    html += "</tr>"
+                        body_html += f"<td class='numeric-col' style='{cell_style}'>{value:.3f}</td>"
+                    body_html += "</tr>"
                 
-                html += "</table>"
+                body_html += "</table>"
 
-                html += "<div class='info-box'>"
-                html += "<strong>Legend:</strong> "
-                html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
-                html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
-                html += "</div>"
+                body_html += "<div class='info-box'>"
+                body_html += "<strong>Legend:</strong> "
+                body_html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
+                body_html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
+                body_html += "</div>"
         except Exception as e:
-            html += f"<div class='warning'>Unable to calculate correlation matrix: {str(e)}</div>"
+            body_html += f"<div class='warning'>Unable to calculate correlation matrix: {str(e)}</div>"
         
         # categorical stats
         try:
             categorical_df = df.select_dtypes(include=["object", "category"])
 
             if len(categorical_df.columns) > 0:
-                html += "<h2>Categorical Column Statistics</h2>"
-                html += "<table>"
-                html += "<tr><th>Column</th><th>Unique Values</th><th>Most Common</th><th>Frequency</th></tr>"
+                body_html += "<h2>Categorical Column Statistics</h2>"
+                body_html += "<table>"
+                body_html += "<tr><th>Column</th><th>Unique Values</th><th>Most Common</th><th>Frequency</th></tr>"
 
                 for col in categorical_df.columns:
                     try:
@@ -1160,28 +1094,26 @@ class DataTab(QWidget):
                             most_common = str(value_counts.index[0])
                             most_common_freq = value_counts.iloc[0]
 
-                            html += "<tr>"
-                            html += f"<td><strong>{col}</strong></td>"
-                            html += f"<td class='numeric-col'>{unique_count}</td>"
-                            html += f"<td>{most_common}</td>"
-                            html += f"<td class='numeric-col'>{most_common_freq:,}</td>"
-                            html += "</tr>"
+                            body_html += "<tr>"
+                            body_html += f"<td><strong>{col}</strong></td>"
+                            body_html += f"<td class='numeric-col'>{unique_count}</td>"
+                            body_html += f"<td>{most_common}</td>"
+                            body_html += f"<td class='numeric-col'>{most_common_freq:,}</td>"
+                            body_html += "</tr>"
                     except:
                         #
                         continue
                 
-                html += "</table>"
+                body_html += "</table>"
         except Exception as e:
-            html += f"<div class='warning'>Unable to calculate categorical statistics: {str(e)}</div>"
+            body_html += f"<div class='warning'>Unable to calculate categorical statistics: {str(e)}</div>"
         
-        html += """
-        </body>
-        </html>
-        """
+        final_html = html_template.format(
+            css_content=css_content,
+            body_content=body_html
+        )
+        self.stats_text.setHtml(final_html)
 
-        self.stats_text.setHtml(html)
-
-    
     def remove_duplicates(self) -> None:
         """Remove duplicate rows"""
         try:

@@ -1,0 +1,73 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 15px;
+    background-color: #f5f5f5;
+}
+h2 {
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 8px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+h3 {
+    color: #34495e;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+th {
+    background-color: #3498db;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+    border: 1px solid #2980b9;
+}
+td {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+}
+tr:nth-child {
+    background-color: #f9f9f9;
+}
+tr:hover {
+    background-color: #e8f4f8;
+}
+.info-box {
+    background-color: #ecf0f1;
+    border-left: 4px solid #3498db;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+.info-item {
+    margin: 8 px 0;
+    font-size: 14px;
+}
+.info-label {
+    font-weight: bold;
+    color: #2c3e50;
+    display: inline-block;
+    width: 150px;
+}
+.info-value {
+    color: #34495e;
+}
+.warning {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+.numeric_col {
+    text-align: right;
+}
