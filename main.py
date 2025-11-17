@@ -116,7 +116,6 @@ class DataPlotStudio(QMainWindow):
                 level="SUCCESS"
             )
         except Exception as e:
-            traceback.print_exc()
             self.status_bar_widget.log(f"Save failed: {str(e)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(e)}")
     

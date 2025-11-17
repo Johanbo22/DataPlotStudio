@@ -120,7 +120,7 @@ class DataTab(QWidget):
         # Create tabbed operations interface
         ops_tabs = AnimatedTabWidget()
         
-        # === TAB 1: CLEANING ===
+        # TAB 1: CLEANING 
         cleaning_tab = QWidget()
         cleaning_layout = QVBoxLayout(cleaning_tab)
 
@@ -168,7 +168,7 @@ class DataTab(QWidget):
         ops_tabs.addTab(cleaning_tab, data_clean_icon, "Cleaning")
 
 
-        # === TAB 2: FILTERING ===
+        #  TAB 2: FILTERING 
         filter_tab = QWidget()
         filter_layout = QVBoxLayout(filter_tab)
 
@@ -231,7 +231,7 @@ class DataTab(QWidget):
         filter_icon = QIcon("icons/data_operations/filter.png")
         ops_tabs.addTab(filter_tab, filter_icon, "Filter Data")
         
-        # === TAB 3: COLUMNS ===
+        #  TAB 3: COLUMNS 
         column_tab = QWidget()
         column_layout = QVBoxLayout(column_tab)
 
@@ -403,10 +403,15 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         #manage buttons
+        manage_subsets_layout = QHBoxLayout()
         manage_subsets_btn = AnimatedButton("Manage Subsets", parent=self)
         #manage_subsets_btn.setIcon(QIcon("icons/data_operations/subset.png")) # ICON NEEDED!!!!!
         manage_subsets_btn.clicked.connect(self.open_subset_manager)
-        subset_layout.addWidget(manage_subsets_btn)
+        self.subset_help = HelpIcon("manage_subsets")
+        self.subset_help.clicked.connect(self.show_help_dialog)
+        manage_subsets_layout.addWidget(manage_subsets_btn)
+        manage_subsets_layout.addWidget(self.subset_help)
+        subset_layout.addLayout(manage_subsets_layout)
 
         subset_layout.addSpacing(10)
 
@@ -418,10 +423,15 @@ class DataTab(QWidget):
         self.subset_column_combo = AnimatedComboBox()
         quick_subset_layout.addWidget(self.subset_column_combo)
 
+        quick_create_subset_layout = QHBoxLayout()
         quick_create_btn = AnimatedButton("Auto-Create Subsets", parent=self)
         #quick_create_btn.setIcon(QIcon("icons/data_operations/auto_subset.png")) #ICON NEEDDED!!!!!
         quick_create_btn.clicked.connect(self.quick_create_subsets)
-        quick_subset_layout.addWidget(quick_create_btn)
+        self.quick_subset_help = HelpIcon("auto_create_subsets")
+        self.quick_subset_help.clicked.connect(self.show_help_dialog)
+        quick_create_subset_layout.addWidget(quick_create_btn)
+        quick_create_subset_layout.addWidget(self.quick_subset_help)
+        quick_subset_layout.addLayout(quick_create_subset_layout)
 
         quick_subset_group.setLayout(quick_subset_layout)
         subset_layout.addWidget(quick_subset_group)
