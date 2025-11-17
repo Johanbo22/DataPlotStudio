@@ -3,7 +3,7 @@ import numpy as np
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 
 class DataTableModel(QAbstractTableModel):
-    """New performance table for the data Table"""
+    """ table for the data Table"""
 
     def __init__(self, data: pd.DataFrame, parent=None):
         super().__init__(parent)
