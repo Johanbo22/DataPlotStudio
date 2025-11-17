@@ -1755,59 +1755,113 @@ class PlotEngine:
     def strategy_triplot(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         return self._strategy_triangulation(plot_tab, "Triplot", x_col, y_cols, general_kwargs)
 
-    def plot_geospatial(self, gdf, column=None, ax=None, title=None, **kwargs) -> None:
+    def plot_geospatial(self, gdf: "gpd.GeoDataFrame", column: Optional[str] = None, **kwargs) -> None:
         """Create a geospatial plot"""
-        if ax is None:
-            ax = self.current_ax
+
+        if gpd is None:
+            self.current_ax.text(0.5, 0.5, "GeoPandas is required for this plot.\nPlease install it first: pip install geopandas", ha="center", va="center", fontsize=12, color="red")
+            return
+        
+        if not isinstance(gdf, gpd.GeoDataFrame):
+            self.current_ax.text(0.5, 0.5, "Data is not a GeoDataFrame.\nEnsure a 'geometry' column is present.",ha="center", va="center", fontsize=12, color="red")
+            return
+        
+        title = kwargs.pop("title", None)
+        xlabel = kwargs.pop("xlabel", None)
+        ylabel = kwargs.pop("ylabel", None)
+        legend = kwargs.pop("legend", False)
+        orientation = kwargs.pop("orientation", None)
+        legend_kwds = kwargs.pop("legend_kwds", {})
 
         use_divider = kwargs.pop("use_divider", False)
         cax_enabled = kwargs.pop("cax_enabled", False)
         axis_off = kwargs.pop("axis_off", False)
 
         cax = None
-        if use_divider and column:
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.1)
-            kwargs["cax"] = cax
-            kwargs["legend"] = True
+        if use_divider and column and legend:
+            divider = make_axes_locatable(self.current_ax)
+            if orientation == "horizontal":
+                cax = divider.append_axes("bottom", size="5%", pad=0.1)
+            else:
+                cax = divider.append_axes("right", size="5%", pad=0.1)
+            legend_kwds["cax"] = cax
         elif cax_enabled and column:
             pass
 
-        gdf.plot(column=column, ax=ax, **kwargs)
 
+        is_categorical = False
+        if column and column in gdf:
+            col_dtype = gdf[column].dtype
+            if pd.api.types.is_categorical_dtype(col_dtype) or pd.api.types.is_object_dtype(col_dtype):
+                is_categorical = True
+            if "categorical" in kwargs and kwargs["categorical"]:
+                is_categorical = True
+            if "scheme" in kwargs and kwargs["scheme"] is not None and kwargs["scheme"] != "None":
+                is_categorical = False
+        
+        if legend:
+            if orientation and not is_categorical:
+                legend_kwds["orientation"] = orientation
+            if cax:
+                legend_kwds["cax"] = cax
+        
+        if "cmap" not in kwargs and not is_categorical:
+            kwargs["cmap"] = "viridis"
+
+        if column and column in gdf:
+            gdf.plot(column=column, ax=self.current_ax, legend=legend, legend_kwds=legend_kwds, **kwargs)
+        else:
+            kwargs.pop("cmap", None)
+            gdf.plot(ax=self.current_ax, **kwargs)
+        
         if title:
-            ax.set_title(title, fontsize=14, fontweight="bold")
+            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
+        if xlabel:
+            self.current_ax.set_xlabel(xlabel, fontsize=12)
+        if ylabel:
+            self.current_ax.set_ylabel(ylabel, fontsize=12)
         
         if axis_off:
-            ax.set_axis_off()
+            self.current_ax.set_axis_off()
         
         self.current_figure.tight_layout()
     
     def strategy_geospatial(self, plot_tab: "PlotTab", x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """GeoSpatial plotting strategy"""
         if gpd is None:
-            return "GeoPandas is not installed. Geospatial plotting is not available"
-
-        gdf = plot_tab.data_handler.df
-        if not isinstance(plot_tab.data_handler.df, gpd.GeoDataFrame):
-            return "Current dataset is not a GeoDataFrame"
+            return "GeoPandas library not found. Please install it first: (`pip install geopandas`) to use geospatial plotting functions"
         
-        geo_col_name = gdf.geometry.name
+        df = plot_tab.data_handler.df
 
-        column_to_plot = None
-        if general_kwargs.get("hue"):
-            column_to_plot = general_kwargs.get("hue")
-        elif y_cols:
-            if y_cols[0] != geo_col_name:
-                column_to_plot = y_cols[0]
+        if "geometry" not in df.columns:
+            return "DataFrame does not contain a 'geometry' column needed to create a geospatial plot."
         
-        title = general_kwargs.pop("title", None)
+        try:
+            gdf = gpd.GeoDataFrame(df, geometry="geometry")
+        except Exception as e:
+            return f"Failed to create GeoDataFrame: {str(e)}"
+        
+        plot_col = y_cols[0] if y_cols else None
 
-        self.plot_geospatial(
-            plot_tab.data_handler.df,
-            column=column_to_plot,
-            ax=self.current_ax,
-            title=title,
-            **plot_kwargs
-        )
+        if plot_col:
+            general_kwargs["column"] = plot_col
+        
+        general_kwargs["orientation"] = plot_tab.geo_legend_loc_combo.currentText()
+        general_kwargs["use_divider"] = plot_tab.geo_use_divider_check.isChecked()
+        general_kwargs["cax_enabled"] = plot_tab.geo_cax_check.isChecked()
+        general_kwargs["axis_off"] = plot_tab.geo_axis_off_check.isChecked()
+        
+        scheme = plot_tab.geo_scheme_combo.currentText()
+        if plot_col and scheme != "None":
+            general_kwargs["scheme"] = scheme
+            general_kwargs["k"] = plot_tab.geo_k_spin.value()
+
+        general_kwargs["edgecolor"] = plot_tab.geo_edge_color
+        general_kwargs["linewidth"] = plot_tab.geo_linewidth_spin.value()
+        if plot_tab.geo_boundary_check.isChecked():
+            general_kwargs["facecolor"] = "none"
+        
+        plot_method = getattr(self, self.AVAILABLE_PLOTS["GeoSpatial"])
+        plot_method(gdf, **general_kwargs)
+
         return None

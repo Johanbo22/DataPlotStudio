@@ -1169,10 +1169,7 @@ class PlotTab(PlotTabUI):
                 self.data_handler.df = active_df
                 try:
                     #
-                    # === THIS IS THE MODIFIED PART ===
-                    #
                     strategy_func = self.plot_strategies[plot_type]
-                    # Pass `self` (the PlotTab instance) to the strategy method
                     error_message = strategy_func(
                         self, 
                         x_col, 
@@ -1188,12 +1185,9 @@ class PlotTab(PlotTabUI):
                         QMessageBox.warning(self, "Warning", error_message)
                         if progress_dialog:
                             progress_dialog.accept()
-                        return # Stop plot generation
-                    #
-                    # === END OF MODIFIED PART ===
-                    #
+                        return
+        
                 finally:
-                    #restore original dataframe
                     self.data_handler.df = original_df
             else:
                 raise ValueError(f"Unknown plot type: {plot_type}")
@@ -1228,7 +1222,6 @@ class PlotTab(PlotTabUI):
                     return
             
             #legend
-            # Only apply legend if it wasn't disabled by general_kwargs
             if general_kwargs.get("legend", True):
                 self._apply_legend(font_family)
             elif self.plot_engine.current_ax.get_legend():
@@ -1268,7 +1261,6 @@ class PlotTab(PlotTabUI):
                 if self.tight_layout_check.isChecked():
                     self.plot_engine.current_figure.tight_layout()
             except Exception as e:
-                # Can fail, e.g., with pie charts
                 self.status_bar.log(f"Tight layout failed: {e}", "WARNING")
 
             
