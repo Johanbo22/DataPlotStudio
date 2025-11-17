@@ -1,7 +1,7 @@
 # ui/data_tab.py
 from tkinter import NO
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QFont, QIcon
 
@@ -15,6 +15,7 @@ from core.subset_manager import SubsetManager
 from pathlib import Path
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon, AnimatedTabWidget
 from core.help_manager import HelpManager
+from ui.data_table_model import DataTableModel
 
 
 class DataTab(QWidget):
@@ -87,9 +88,13 @@ class DataTab(QWidget):
         self.data_tabs = AnimatedTabWidget()
         
         # Data Table Tab
-        self.data_table = QTableWidget()
-        self.data_table.setColumnCount(0)
-        self.data_table.setRowCount(0)
+        self.data_table = QTableView()
+        self.data_table.setAlternatingRowColors(True)
+        self.data_table.setSortingEnabled(True)
+        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+
         data_table_icon = QIcon("icons/data_table.png")
         self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
         
@@ -646,14 +651,9 @@ class DataTab(QWidget):
         df = self.data_handler.df
         
         # Update table
-        self.data_table.setRowCount(len(df))
-        self.data_table.setColumnCount(len(df.columns))
-        self.data_table.setHorizontalHeaderLabels(df.columns)
-        
-        for row in range(len(df)):
-            for col in range(len(df.columns)):
-                item = QTableWidgetItem(str(df.iloc[row, col]))
-                self.data_table.setItem(row, col, item)
+        self.model = DataTableModel(df)
+        self.data_table.setModel(self.model)
+        self.data_table.setSortingEnabled(True)
         
         # Update column selectors
         columns = list(df.columns)
@@ -1879,8 +1879,7 @@ class DataTab(QWidget):
 
     def clear(self):
         """Clear the data tab"""
-        self.data_table.setRowCount(0)
-        self.data_table.setColumnCount(0)
+        self.data_table.setModel(None)
         self.stats_text.clear()
 
         if hasattr(self, "data_source_container"):
