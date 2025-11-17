@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget
 
 
 class PlotTabUI(QWidget):
@@ -168,8 +168,8 @@ class PlotTabUI(QWidget):
         data_layout.addWidget(self.y_column)
 
         # multiple ycols list
-        self.y_columns_list = QListWidget()
-        self.y_columns_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self.y_columns_list = AnimatedListWidget()
+        self.y_columns_list.setSelectionMode(AnimatedListWidget.SelectionMode.MultiSelection)
         self.y_columns_list.setMaximumHeight(150)
         self.y_columns_list.setVisible(False)
         data_layout.addWidget(self.y_columns_list)
@@ -1756,7 +1756,7 @@ class PlotTabUI(QWidget):
         annotation_list_group = AnimatedGroupBox("Annotations List")
         annotation_list_layout = QVBoxLayout()
         
-        self.annotations_list = QListWidget()
+        self.annotations_list = AnimatedListWidget()
         annotation_list_layout.addWidget(self.annotations_list)
         
         self.clear_annotations_button = AnimatedButton("Clear All Annotations", parent=self)

@@ -14,7 +14,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon, AnimatedTabWidget
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon, AnimatedTabWidget, AnimatedListWidget
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
 
@@ -349,7 +349,7 @@ class DataTab(QWidget):
         saved_agg_layout.addWidget(saved_agg_info)
 
         #list of saved aggs
-        self.saved_agg_list = QListWidget()
+        self.saved_agg_list = AnimatedListWidget()
         self.saved_agg_list.setMaximumHeight(150)
         self.saved_agg_list.itemClicked.connect(self.on_saved_agg_selected)
         saved_agg_layout.addWidget(self.saved_agg_list)
@@ -442,7 +442,7 @@ class DataTab(QWidget):
         subset_list_group = AnimatedGroupBox("Active Subsets")
         subset_list_layout = QVBoxLayout()
 
-        self.active_subsets_list = QListWidget()
+        self.active_subsets_list = AnimatedListWidget()
         self.active_subsets_list.setMaximumHeight(150)
         self.active_subsets_list.itemDoubleClicked.connect(self.view_subset_quick)
         subset_list_layout.addWidget(self.active_subsets_list)
