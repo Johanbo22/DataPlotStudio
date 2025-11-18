@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Set
 from datetime import datetime
 from pathlib import Path
 import re
+from arrow import get
 import pandas as pd
 
 class CodeExporter:
@@ -872,3 +873,47 @@ class CodeExporter:
         ]))
         
         return full_script
+
+    def get_plot_script_only(self, df: pd.DataFrame, plot_config: Dict[str, Any]) -> str:
+        """get the create_plot script for the script editor"""
+        
+        imports = [
+            "import pandas as pd",
+            "import numpy as np",
+            "import matplotlib.pyplot as plt",
+            "import seaborn as sns",
+            "from matplotlib.ticker import MaxNLocator"
+        ]
+
+        if plot_config.get("axes", {}).get("datetime", {}).get("enabled"):
+            imports.append("import matplotlib.dates as mdates")
+        
+        #scipy checks
+        scatter_analysis = plot_config.get("advanced", {}).get("scatter", {})
+        if scatter_analysis.get("show_regression") or \
+        scatter_analysis.get("show_ci") or \
+        scatter_analysis.get("show_r2") or \
+        scatter_analysis.get("show_rmse") or \
+        scatter_analysis.get("show_equation") or \
+        scatter_analysis.get("error_bars", "None") != "None":
+            imports.append("from scipy import stats")
+            if scatter_analysis.get("show_ci"):
+                imports.append("from scipy.stats import t as t_dist")
+        
+        hist_analysis = plot_config.get("advanced", {}).get("histogram", {})
+        if hist_analysis.get("show_normal"):
+            imports.append("from scipy.stats import norm")
+        if hist_analysis.get("show_kde") or plot_config.get("plot_type") == "KDE":
+            imports.append("from scipy.stats import gaussian_kde")
+
+        import_block = "\n".join(imports)
+
+        plot_func = self._generate_plot_code(df, plot_config)
+
+        runner_comment = (
+            "\n\n# --- Internal Runner ---\n"
+            "# This function is called automatically when you click 'Run Script'.\n"
+            "# It expects 'df' to be available in the local scope.\n"
+        )
+
+        return f"{import_block}\n\n{plot_func}{runner_comment}"

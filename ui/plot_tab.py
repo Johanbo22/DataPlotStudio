@@ -10,9 +10,13 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from core.plot_engine import PlotEngine
 from core.data_handler import DataHandler
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog
+from core.code_exporter import CodeExporter
+from ui.dialogs import ProgressDialog, ScriptEditorDialog
 from ui.plot_tab_ui import PlotTabUI 
 import pandas as pd
+import numpy as np
+from scipy import stats
+from scipy.stats import t as t_dist
 import matplotlib.dates as mdates
 from matplotlib.ticker import MaxNLocator, FuncFormatter
 import seaborn as sns
@@ -33,6 +37,8 @@ class PlotTab(PlotTabUI):
         self.subset_manager = None
         self.plot_engine = PlotEngine()
         self.current_config = {}
+        self.code_exporter = CodeExporter()
+        self.script_editor = None
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -120,7 +126,12 @@ class PlotTab(PlotTabUI):
         
         # --- Main Buttons ---
         self.plot_button.clicked.connect(self.generate_plot)
+        self.editor_button.clicked.connect(self.open_script_editor)
         self.clear_button.clicked.connect(self.clear_plot)
+
+        #editor sync
+        self.plot_type.currentTextChanged.connect(self._sync_script_if_open)
+        self.x_column.currentTextChanged.connect(self._sync_script_if_open)
         
         # --- Tab 1: Basic ----
         self.plot_type.currentTextChanged.connect(self.on_plot_type_changed)
@@ -1267,6 +1278,8 @@ class PlotTab(PlotTabUI):
             #refresh
             self.canvas.draw()
 
+            self._sync_script_if_open()
+
             if show_progress:
                 progress_dialog.update_progress(100, "Complete")
                 QTimer.singleShot(300, progress_dialog.accept)
@@ -2173,3 +2186,146 @@ class PlotTab(PlotTabUI):
         self.title_input.clear()
         self.xlabel_input.clear()
         self.ylabel_input.clear()
+    
+    def open_script_editor(self):
+        """Open the Python Script Editor"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first before opening the editor")
+            return
+        
+        #Start by generating the initialcode
+        config = self.get_config()
+        df = self.get_active_dataframe()
+        if df is None: return
+
+        code = self.code_exporter.get_plot_script_only(df, config)
+
+        #open dialog
+        if self.script_editor is None or not self.script_editor.isVisible():
+            self.script_editor = ScriptEditorDialog(code, parent=self)
+            self.script_editor.run_script_signal.connect(self.run_custom_script)
+            self.script_editor.show()
+        else:
+            self.script_editor.raise_()
+            self.script_editor.activateWindow()
+            self._sync_script_if_open()
+    
+    def _sync_script_if_open(self):
+        """Regenerate the script and update the editor if it is open and autosync is enabled"""
+        if self.script_editor and self.script_editor.isVisible():
+            config = self.get_config()
+            df = self.get_active_dataframe()
+            if df is not None:
+                code = self.code_exporter.get_plot_script_only(df, config)
+                self.script_editor.update_code(code)
+    
+    def run_custom_script(self, script_content: str):
+        """
+        Execute the script from the editor
+        Overrides the standard plot generatiom
+        """
+        self.status_bar.log("Running custom script...", "INFO")
+
+        try:
+            def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+                allowed_modules = {
+                    "pandas", "numpy", "matplotlib", "seaborn", "scipy", "math", "datetime", "random", "re", "io", "typing", "collectons" "itertools", "functools"
+                }
+
+                base_name = name.split(".")[0]
+                if base_name not in allowed_modules:
+                    raise ImportError(f"Security: Import of module: '{name}' is restricted.")
+                
+                return __import__(name, globals, locals, fromlist, level)
+
+            safe_globals = {
+                "__builtins__": {
+                    "__import__": safe_import,
+                    "print": print,
+                    "range": range,
+                    "len": len,
+                    "list": list,
+                    "dict": dict,
+                    "set": set,
+                    "str": str,
+                    "int": int,
+                    "float": float,
+                    "bool": bool,
+                    "zip": zip,
+                    "enumerate": enumerate,
+                    "min": min,
+                    "max": max,
+                    "sum": sum,
+                    "abs": abs,
+                    "sorted": sorted,
+                    "tuple": tuple,
+                    "None": None,
+                    "True": True,
+                    "False": False,
+                    "hasattr": hasattr,
+                    "getattr": getattr,
+                    "isinstance": isinstance
+                },
+                "pd": pd,
+                "np": np,
+                "plt": plt,
+                "sns": sns,
+                "mdates": mdates,
+                "stats": stats,
+                "t_dist": t_dist,
+                "MaxNLocator": MaxNLocator
+            }
+
+            df_active = self.get_active_dataframe().copy()
+            local_vars = {"df": df_active}
+
+            exec(script_content, safe_globals, local_vars)
+
+            if "create_plot" not in local_vars:
+                raise ValueError("Script must define a function name 'create_plot' that returns (fix, ax).")
+            
+            create_plot_func = local_vars["create_plot"]
+
+            self.plot_engine.clear_plot()
+
+            fig_result, ax_result = create_plot_func(df_active)
+
+            old_fig = self.plot_engine.current_figure
+            self.plot_engine.current_figure = fig_result
+            self.plot_engine.current_ax = ax_result
+
+            self.canvas.figure = fig_result
+            fig_result.set_canvas(self.canvas)
+            self.canvas.draw()
+
+            self._sync_gui_from_ax(ax_result)
+
+            self.status_bar.log("Script executed", "SUCCESS")
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Script Error", f"An error occurred while running the script:\n{str(e)}")
+            self.status_bar.log(f"Script execution failed: {str(e)}", "ERROR")
+            traceback.print_exc()
+    
+    def _sync_gui_from_ax(self, ax):
+        """
+        Attempt to update basic GUI fields from the resulting plot
+        """
+        try:
+            title = ax.get_title()
+            if title:
+                self.title_input.setText(title)
+                self.title_check.setChecked(True)
+            
+            xlabel = ax.get_xlabel()
+            if xlabel:
+                self.xlabel_input.setText(xlabel)
+                self.xlabel_check.setChecked(True)
+            
+            ylabel = ax.get_ylabel()
+            if ylabel:
+                self.ylabel_input.setText(ylabel)
+                self.ylabel_check.setChecked(True)
+            
+        except Exception as e:
+            print(f"Warning: Could not sync GUI from plot: {e}")

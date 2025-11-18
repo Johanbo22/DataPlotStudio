@@ -110,6 +110,19 @@ class PlotTabUI(QWidget):
         self.clear_button.setMinimumHeight(40)
         button_layout.addWidget(self.clear_button)
         
+        self.editor_button = AnimatedButton(
+            "Open Python Editor",
+            parent=self,
+            base_color_hex="#2196F3",
+            hover_color_hex="#42A5F5",
+            pressed_color_hex="#1e88e5",
+            text_color_hex="#ffffff",
+            border_style="none"
+        )
+        self.editor_button.setMinimumHeight(40)
+        self.editor_button.setToolTip("Write Custom python code to adjust the plot")
+        button_layout.addWidget(self.editor_button)
+        
         right_layout.addLayout(button_layout)
         
         # Set layouts

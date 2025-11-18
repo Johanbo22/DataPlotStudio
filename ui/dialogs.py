@@ -1,11 +1,12 @@
 # ui/dialogs.py
+import keyword
 from logging import warning
 from re import I, T
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QPushButton, QMessageBox, QInputDialog, QComboBox,QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QFormLayout, QFileDialog, QProgressBar, QApplication, QListWidget, QSplitter, QWidget, QTextEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QDialogButtonBox, QFrame, QScrollArea)
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QFont, QIcon, QPixmap
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QSyntaxHighlighter, QTextCharFormat, QColor
 from pathlib import Path
-import sys, os
+import sys, os, re
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox, AnimatedCheckBox, AnimatedRadioButton
 
 class GoogleSheetsDialog(QDialog):
@@ -1892,3 +1893,148 @@ class HelpDialog(QDialog):
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
+
+class ScriptEditorDialog(QDialog):
+    """A dialog for editing and running custo python plotting scripts"""
+
+    run_script_signal = pyqtSignal(str)
+
+    def __init__(self, initial_code="", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Python Console")
+        self.resize(800, 600)
+        self.setModal(False)
+
+        self.init_ui(initial_code)
+        self.is_code_modified = False
+    
+    def init_ui(self, code):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        #header and information
+        info_layout = QHBoxLayout()
+        info_label = QLabel("<b>Custom Plot Script</b><br>Edit the <code>create_plot(df)</code> function below. Click 'Run' to update the plot")
+        info_label.setStyleSheet("color: #333;")
+        info_layout.addWidget(info_label)
+        layout.addLayout(info_layout)
+
+        #security
+        security_label = QLabel("Security: Restricted Environment: System calls are blocked in this editor.")
+        security_label.setStyleSheet("color: #d32f2f; font-size: 9pt; font-style: italic;")
+        layout.addWidget(security_label)
+
+        #tools
+        toolbar = QHBoxLayout()
+        self.auto_sync_check = AnimatedCheckBox("Auto-update from GUI (This will overwrite changes)")
+        self.auto_sync_check.setChecked(True)
+        self.auto_sync_check.setToolTip("If checked, changing settings from the GUI will overwrite the code here")
+        toolbar.addWidget(self.auto_sync_check)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
+
+        #editor
+        self.editor = QTextEdit()
+        self.editor.setPlainText(code if code else "")
+        self.editor.setFont(QFont("Consolas", 10))
+        self.editor.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.editor.setStyleSheet("""
+            QTextEdit {
+                background-color: #2b2b2b; 
+                color: #f8f8f2; 
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        self.editor.textChanged.connect(self.on_text_changed)
+
+        #add python syntax highlighnign
+        self.highlighter = PythonHighlighter(self.editor.document())
+        layout.addWidget(self.editor, 1)
+
+        #buttons
+        button_layout = QHBoxLayout()
+        self.run_button = AnimatedButton("Run Script", parent=self, base_color_hex="#4caf50", text_color_hex="white", padding="6px")
+        self.run_button.clicked.connect(self.on_run_clicked)
+        button_layout.addWidget(self.run_button)
+
+        self.close_button = AnimatedButton("Close", parent=self)
+        self.close_button.clicked.connect(self.close)
+        button_layout.addWidget(self.close_button)
+
+        layout.addLayout(button_layout)
+        
+    def on_text_changed(self):
+        """Tracker to to see if user modified code to prevent unwanted changes"""
+        self.is_code_modified = True
+        # set the autosync to off so the user does not lose data
+        if self.auto_sync_check.isChecked() and self.editor.hasFocus():
+            self.auto_sync_check.setChecked(False)
+    
+    def update_code(self, new_code):
+        """Update the code from the GUI"""
+        if self.auto_sync_check.isChecked():
+            self.editor.blockSignals(True)
+            self.editor.setPlainText(new_code)
+            self.editor.blockSignals(False)
+            self.is_code_modified = False
+    
+    def on_run_clicked(self):
+        """Validate and emit code"""
+        code = self.editor.toPlainText()
+
+        dangerous_keywords = [
+            "import os", "from os", "import sys", "from sys", "subprocess", "eval(", "exec(", "__import__", "shutil", "pathlib", "socket", "requests"
+        ]
+
+        found_threats = [kw for kw in dangerous_keywords if kw in code]
+
+        if found_threats:
+            QMessageBox.critical(self, "Security Alert", f"Unintended keywords detected!\Blocked keywords: {', '.join(found_threats)}\n\n"
+            "Please remove these to run the script")
+            return
+        
+        self.run_script_signal.emit(code)
+    
+class PythonHighlighter(QSyntaxHighlighter):
+    """Simple syntax highligher for Python code"""
+
+    def __init__(self, document):
+        super().__init__(document)
+        self.highlighting_rules = []
+
+        #keywords
+        keyword_format = QTextCharFormat()
+        keyword_format.setForeground(QColor("#ff79c6"))
+        keyword_format.setFontWeight(QFont.Weight.Bold)
+        keywords = ["def", "class", "if", "else", "elif", "while", "for", "in", "return", "try", "except", "import", "from", "as", "True", "False", "None", "and", "or", "not", "break", "continue", "pass"]
+        for word in keywords:
+            pattern = re.compile(f"\\b{word}\\b")
+            self.highlighting_rules.append((pattern, keyword_format))
+        
+        #strings
+        string_format = QTextCharFormat()
+        string_format.setForeground(QColor("#f1fa8c"))
+        self.highlighting_rules.append((re.compile("\".*\""), string_format))
+        self.highlighting_rules.append((re.compile("\'.*\'"), string_format))
+        self.highlighting_rules.append((re.compile("\"\"\".*\"\"\"", re.DOTALL), string_format))
+
+        #comment
+        comment_format = QTextCharFormat()
+        comment_format.setForeground(QColor("#6272a4"))
+        self.highlighting_rules.append((re.compile("#[^\n]*"), comment_format))
+
+        #functions
+        func_format = QTextCharFormat()
+        func_format.setForeground(QColor("#50fa7b"))
+        self.highlighting_rules.append((re.compile("\\b[A-Za-z0-9_]+(?=\\()"), func_format))
+    
+    def highlightBlock(self, text):
+        for pattern, format in self.highlighting_rules:
+            expression = pattern.search(text)
+            while expression:
+                index = expression.start()
+                length = expression.end() - index
+                self.setFormat(index, length, format)
+                expression = pattern.search(text, index + length)
