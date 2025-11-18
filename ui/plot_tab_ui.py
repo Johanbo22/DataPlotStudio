@@ -95,6 +95,7 @@ class PlotTabUI(QWidget):
             border_style="none"
         )
         self.plot_button.setMinimumHeight(40)
+        self.plot_button.setIcon(QIcon("icons/generate_plot.png"))
         self.plot_button.setShortcut("Ctrl+Return")
         button_layout.addWidget(self.plot_button)
         
@@ -108,6 +109,7 @@ class PlotTabUI(QWidget):
             border_style="1px solid #c9c9c9"
         )
         self.clear_button.setMinimumHeight(40)
+        self.clear_button.setIcon(QIcon("icons/clean.png"))
         button_layout.addWidget(self.clear_button)
         
         self.editor_button = AnimatedButton(
@@ -120,7 +122,8 @@ class PlotTabUI(QWidget):
             border_style="none"
         )
         self.editor_button.setMinimumHeight(40)
-        self.editor_button.setToolTip("Write Custom python code to adjust the plot")
+        self.editor_button.setIcon(QIcon("icons/code_edit.png"))
+        self.editor_button.setToolTip("Open the code editor to write python code for the plot.")
         button_layout.addWidget(self.editor_button)
         
         right_layout.addLayout(button_layout)
