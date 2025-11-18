@@ -4,7 +4,7 @@ from logging import warning
 from re import I, T
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QPushButton, QMessageBox, QInputDialog, QComboBox,QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QFormLayout, QFileDialog, QProgressBar, QApplication, QListWidget, QSplitter, QWidget, QTextEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QDialogButtonBox, QFrame, QScrollArea)
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QSyntaxHighlighter, QTextCharFormat, QColor
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QSyntaxHighlighter, QTextCharFormat, QColor, QTextCursor
 from pathlib import Path
 import sys, os, re
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox, AnimatedCheckBox, AnimatedRadioButton
@@ -1914,14 +1914,14 @@ class ScriptEditorDialog(QDialog):
 
         #header and information
         info_layout = QHBoxLayout()
-        info_label = QLabel("<b>Custom Plot Script</b><br>Edit the <code>create_plot(df)</code> function below. Click 'Run' to update the plot")
+        info_label = QLabel("<b>Script</b><br>Edit the <code>create_plot(df)</code> function below. Click the 'Run' button to update the plot.")
         info_label.setStyleSheet("color: #333;")
         info_layout.addWidget(info_label)
         layout.addLayout(info_layout)
 
         #security
-        security_label = QLabel("Security: Restricted Environment: System calls are blocked in this editor.")
-        security_label.setStyleSheet("color: #d32f2f; font-size: 9pt; font-style: italic;")
+        security_label = QLabel("Restricted Environment: System calls are blocked in this editor.")
+        security_label.setStyleSheet("color: #d32f2f; font-size: 11pt; font-style: italic;")
         layout.addWidget(security_label)
 
         #tools
@@ -1934,10 +1934,9 @@ class ScriptEditorDialog(QDialog):
         layout.addLayout(toolbar)
 
         #editor
-        self.editor = QTextEdit()
+        self.editor = CodeEditor()
         self.editor.setPlainText(code if code else "")
-        self.editor.setFont(QFont("Consolas", 10))
-        self.editor.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.editor.setMinimumHeight(400)
         self.editor.setStyleSheet("""
             QTextEdit {
                 background-color: #2b2b2b; 
@@ -1956,10 +1955,16 @@ class ScriptEditorDialog(QDialog):
         #buttons
         button_layout = QHBoxLayout()
         self.run_button = AnimatedButton("Run Script", parent=self, base_color_hex="#4caf50", text_color_hex="white", padding="6px")
+        self.run_button.setMinimumHeight(40)
+        self.run_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.run_button.setShortcut("Ctrl+Shift+Return")
+        self.run_button.setToolTip("Click to run the script and update the plot\nShortcut 'Ctrl+Shift+Enter'")
         self.run_button.clicked.connect(self.on_run_clicked)
         button_layout.addWidget(self.run_button)
 
         self.close_button = AnimatedButton("Close", parent=self)
+        self.close_button.setMinimumHeight(40)
+        self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_button.clicked.connect(self.close)
         button_layout.addWidget(self.close_button)
 
@@ -1976,9 +1981,12 @@ class ScriptEditorDialog(QDialog):
         """Update the code from the GUI"""
         if self.auto_sync_check.isChecked():
             self.editor.blockSignals(True)
+            cursor = self.editor.textCursor()
+            scroll = self.editor.verticalScrollBar().value()
             self.editor.setPlainText(new_code)
+            self.editor.setTextCursor(cursor)
+            self.editor.verticalScrollBar().setValue(scroll)
             self.editor.blockSignals(False)
-            self.is_code_modified = False
     
     def on_run_clicked(self):
         """Validate and emit code"""
@@ -1996,6 +2004,93 @@ class ScriptEditorDialog(QDialog):
             return
         
         self.run_script_signal.emit(code)
+
+class CodeEditor(QTextEdit):
+    """Custom texedit widget"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        font = QFont("Consolas", 12)
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        self.setFont(font)
+        self.setTabStopDistance(4 * self.fontMetrics().horizontalAdvance(' '))
+    
+    def keyPressEvent(self, event):
+        cursor = self.textCursor()
+        text = event.text()
+
+        #map closing patterns for quotes etc
+        pairs = {'(': ')', '[': ']', '{': '}', '"': '"', "'": "'"}
+        closing_chars = {')', ']', '}', '"', "'"}
+
+        #handle backspace so it dleetes both chars
+        if event.key() == Qt.Key.Key_Backspace:
+            pos = cursor.position()
+            doc = self.document()
+            if pos > 0 and pos < doc.characterCount() - 1:
+                cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor)
+                char_before = cursor.selectedText()
+                cursor.clearSelection()
+
+                cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
+                char_after = cursor.selectedText()
+                cursor.clearSelection()
+
+                cursor.setPosition(pos)
+
+                if char_before in pairs and pairs[char_before] == char_after:
+                    cursor.deleteChar()
+            
+            super().keyPressEvent(event)
+            return
+        
+        #handle type-over ops
+        if text in closing_chars:
+            pos = cursor.position()
+            doc = self.document()
+            if pos < doc.characterCount() - 1:
+                cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
+                char_after = cursor.selectedText()
+                if char_after == text:
+                    new_cursor = self.textCursor()
+                    new_cursor.movePosition(QTextCursor.MoveOperation.Right)
+                    self.setTextCursor(new_cursor)
+                    return
+        
+        #handle clsoing
+        if text in pairs:
+            super().keyPressEvent(event)
+            self.insertPlainText(pairs[text])
+            self.moveCursor(QTextCursor.MoveOperation.Left)
+            return
+
+        #handle enter
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            pos = cursor.position()
+            doc = self.document()
+            if pos > 0 and pos < doc.characterCount() -1:
+                cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor)
+                char_before = cursor.selectedText()
+                cursor.movePosition(QTextCursor.MoveOperation.Right)
+                cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
+                char_after = cursor.selectedText()
+
+                if char_before in {'{', '[', '('} and char_after in {'}', ']', ')'}:
+                    # User hit enter between {}  create indented block
+                    # Output:
+                    # {
+                    #     |
+                    # }
+                    super().keyPressEvent(event)
+                    self.insertPlainText("    ")
+                    new_pos = self.textCursor().position()
+                    self.insertPlainText("\n")
+
+                    final_cursor = self.textCursor()
+                    final_cursor.setPosition(new_pos)
+                    self.setTextCursor(final_cursor)
+                    return
+        
+        super().keyPressEvent(event)
     
 class PythonHighlighter(QSyntaxHighlighter):
     """Simple syntax highligher for Python code"""
@@ -2008,27 +2103,64 @@ class PythonHighlighter(QSyntaxHighlighter):
         keyword_format = QTextCharFormat()
         keyword_format.setForeground(QColor("#ff79c6"))
         keyword_format.setFontWeight(QFont.Weight.Bold)
-        keywords = ["def", "class", "if", "else", "elif", "while", "for", "in", "return", "try", "except", "import", "from", "as", "True", "False", "None", "and", "or", "not", "break", "continue", "pass"]
+        keywords = ["def", "class", "if", "else", "elif", "while", "for", "in", 
+            "return", "try", "except", "import", "from", "as", "True", 
+            "False", "None", "and", "or", "not", "break", "continue", 
+            "pass", "lambda", "with", "is", "global", "raise", "yield"]
         for word in keywords:
             pattern = re.compile(f"\\b{word}\\b")
             self.highlighting_rules.append((pattern, keyword_format))
         
+        #builin funcs
+        builtin_format = QTextCharFormat()
+        builtin_format.setForeground(QColor("#8be9fd"))
+        builtins = [
+            "print", "range", "len", "list", "dict", "set", "str", "int", 
+            "float", "bool", "zip", "enumerate", "min", "max", "sum", 
+            "abs", "sorted", "tuple", "super", "isinstance", "open", "type"
+        ]
+        for word in builtins:
+            pattern = re.compile(f"\\b{word}\\b")
+            self.highlighting_rules.append((pattern, builtin_format))
+        
+        #self and cls
+        self_format = QTextCharFormat()
+        self_format.setForeground(QColor("#ffb86c"))
+        self_format.setFontItalic(True)
+        self.highlighting_rules.append((re.compile(f"\\bself\\b"), self_format))
+        self.highlighting_rules.append((re.compile(f"\\bcls\\b"), self_format))
+
+        #decorators
+        decorator_format = QTextCharFormat()
+        decorator_format.setForeground(QColor("#ffb86c"))
+        self.highlighting_rules.append((re.compile("@[A-Za-z0-9_]+"), decorator_format))
+
+        #
+        
         #strings
         string_format = QTextCharFormat()
         string_format.setForeground(QColor("#f1fa8c"))
-        self.highlighting_rules.append((re.compile("\".*\""), string_format))
-        self.highlighting_rules.append((re.compile("\'.*\'"), string_format))
-        self.highlighting_rules.append((re.compile("\"\"\".*\"\"\"", re.DOTALL), string_format))
+        self.highlighting_rules.append((re.compile("\"\"\".*?\"\"\"", re.DOTALL), string_format)) 
+        self.highlighting_rules.append((re.compile("\'\'\'.*?\'\'\'", re.DOTALL), string_format))
+        self.highlighting_rules.append((re.compile("\".*?\""), string_format))
+        self.highlighting_rules.append((re.compile("\'.*?\'"), string_format))
 
-        #comment
-        comment_format = QTextCharFormat()
-        comment_format.setForeground(QColor("#6272a4"))
-        self.highlighting_rules.append((re.compile("#[^\n]*"), comment_format))
+        #numbers
+        number_format = QTextCharFormat()
+        number_format.setForeground(QColor("#bd93f9"))
+        self.highlighting_rules.append((re.compile(r"\b[0-9]+\b"), number_format))
+        self.highlighting_rules.append((re.compile(r"\b0x[0-9A-Fa-f]+\b"), number_format))
+        self.highlighting_rules.append((re.compile(r"\b[0-9]*\.[0-9]+\b"), number_format))
 
         #functions
         func_format = QTextCharFormat()
         func_format.setForeground(QColor("#50fa7b"))
         self.highlighting_rules.append((re.compile("\\b[A-Za-z0-9_]+(?=\\()"), func_format))
+
+        #comment
+        comment_format = QTextCharFormat()
+        comment_format.setForeground(QColor("#6272a4"))
+        self.highlighting_rules.append((re.compile("#[^\n]*"), comment_format))
     
     def highlightBlock(self, text):
         for pattern, format in self.highlighting_rules:
