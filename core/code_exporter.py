@@ -457,7 +457,7 @@ class CodeExporter:
             lines.append(f"    if {hue_str} and len({y_cols_str}) == 1:")
             lines.append("        # Single Y with Hue (uses seaborn)")
             lines.append(f"        sns.barplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, orient={orient}, {g_adv_kwargs}, width=g_bar_width)")
-            lines.append("    elif len({y_cols_str}) > 1:")
+            lines.append(f"    elif len({y_cols_str}) > 1:")
             lines.append("        # Grouped bar chart (matplotlib)")
             lines.append(f"        x_labels = df[{x_col}].unique()")
             lines.append("        x_pos = np.arange(len(x_labels))")
@@ -606,7 +606,6 @@ class CodeExporter:
 
         # --- 6. Customize Appearance (Titles/Labels) ---
         lines.append("\n    # --- 6. Customize Appearance (Titles/Labels) ---")
-        # --- FIX: Use column name as default if text field is empty ---
         xlabel_text_cfg = get_cfg('appearance.xlabel.text')
         xlabel_to_set = xlabel_text_cfg if xlabel_text_cfg else x_col_raw
         ylabel_text_cfg = get_cfg('appearance.ylabel.text')

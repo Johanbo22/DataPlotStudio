@@ -2201,9 +2201,12 @@ class PlotTab(PlotTabUI):
         code = self.code_exporter.get_plot_script_only(df, config)
 
         #open dialog
-        if self.script_editor is None or not self.script_editor.isVisible():
+        if self.script_editor is None:
             self.script_editor = ScriptEditorDialog(code, parent=self)
             self.script_editor.run_script_signal.connect(self.run_custom_script)
+        
+        if not self.script_editor.isVisible():
+            self.script_editor.update_code(code)
             self.script_editor.show()
         else:
             self.script_editor.raise_()
