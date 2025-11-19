@@ -894,7 +894,7 @@ class PlotTab(PlotTabUI):
 
 
         #plots with multiple ycols
-        multi_y_supported = ["Line", "Bar", "Area", "Box", "Stackplot", "Eventplot", "Contour", "Contourf"]
+        multi_y_supported = ["Line", "Bar", "Area", "Box", "Stackplot", "Eventplot", "Contour", "Contourf", "Barbs", "Quiver", "Streamplot", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"]
 
         #enabled based on plottype
         if plot_type in multi_y_supported:
