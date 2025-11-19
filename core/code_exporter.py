@@ -551,6 +551,115 @@ class CodeExporter:
 
         elif plot_type == "2D Density":
             lines.append(f"    sns.kdeplot({g_plot_kwargs}, x={x_col}, y={y_col_str}, fill=True, {g_adv_kwargs}, cmap={palette})")
+        
+        elif plot_type == "Heatmap":
+            lines.append(f"    # Heatmap (Correlation)")
+            lines.append(f"    numeric_df = df.select_dtypes(include=[np.number])")
+            lines.append(f"    sns.heatmap(numeric_df.corr(), annot=True, ax=ax, cmap={palette}, {g_adv_kwargs})")
+            lines.append(f"    ax.set_title({self._clean_value(get_cfg('appearance.title.text', 'Correlation Heatmap'))})")
+        
+        elif plot_type == "Stem":
+            lines.append(f"    # Stem Plot")
+            lines.append(f"    ax.stem(df[{x_col}], df[{y_col_str}], {g_adv_kwargs})")
+        
+        elif plot_type == "Stackplot":
+            lines.append(f"    # Stackplot (requires sorting by X)")
+            lines.append(f"    df_sorted = df.sort_values(by={x_col})")
+            lines.append(f"    y_data = [df_sorted[col] for col in {y_cols_str}]")
+            lines.append(f"    ax.stackplot(df_sorted[{x_col}], *y_data, labels={y_cols_str}, {g_adv_kwargs})")
+            lines.append(f"    ax.legend()")
+        
+        elif plot_type == "Stairs":
+            lines.append(f"    # Stairs Plot")
+            lines.append(f"    df_sorted = df.sort_values(by={x_col})")
+            lines.append(f"    ax.stairs(df_sorted[{x_col}], df_sorted[{y_col_str}], {g_adv_kwargs})")
+
+        elif plot_type == "Eventplot":
+            lines.append(f"    # Eventplot")
+            lines.append(f"    data_to_plot = [df[col].dropna().values for col in {y_cols_str}]")
+            lines.append(f"    ax.eventplot(data_to_plot, {g_adv_kwargs})")
+            lines.append(f"    if len({y_cols_str}) > 1:")
+            lines.append(f"        ax.set_yticks(range(len({y_cols_str})))")
+            lines.append(f"        ax.set_yticklabels({y_cols_str})")
+        
+        elif plot_type == "ECDF":
+            lines.append(f"    # ECDF Plot")
+            lines.append(f"    ax.ecdf(df[{y_col_str}], {g_adv_kwargs})")
+            lines.append(f"    ax.set_ylabel('ECDF')")
+
+        elif plot_type == "2D Histogram":
+            lines.append(f"    # 2D Histogram")
+            lines.append(f"    h = ax.hist2d(df[{x_col}], df[{y_col_str}], {g_adv_kwargs}, cmap={palette})")
+            lines.append(f"    fig.colorbar(h[3], ax=ax, label='Counts')")
+
+        elif plot_type in ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]:
+            z_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
+            lines.append(f"    # {plot_type} (Requires Gridded Data)")
+            lines.append(f"    try:")
+            lines.append(f"        # Prepare Grid")
+            lines.append(f"        if df[[{x_col}, {y_col_str}]].duplicated().any():")
+            lines.append(f"            df_agg = df.groupby([{x_col}, {y_col_str}])[{z_col}].mean().reset_index()")
+            lines.append(f"        else:")
+            lines.append(f"            df_agg = df")
+            lines.append(f"        pivot_df = df_agg.pivot(index={y_col_str}, columns={x_col}, values={z_col}).sort_index(axis=0).sort_index(axis=1)")
+            lines.append(f"        X_grid = pivot_df.columns.values")
+            lines.append(f"        Y_grid = pivot_df.index.values")
+            lines.append(f"        Z_grid = pivot_df.values")
+            lines.append(f"        if np.isnan(Z_grid).any(): Z_grid = np.nan_to_num(Z_grid)")
+        
+            if plot_type == "Image Show (imshow)":
+                lines.append(f"        img = ax.imshow(Z_grid, extent=[X_grid.min(), X_grid.max(), Y_grid.min(), Y_grid.max()], origin='lower', aspect='auto', {g_adv_kwargs}, cmap={palette})")
+                lines.append(f"        fig.colorbar(img, ax=ax, label={z_col})")
+            elif plot_type == "pcolormesh":
+                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
+                lines.append(f"        mesh = ax.pcolormesh(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
+                lines.append(f"        fig.colorbar(mesh, ax=ax, label={z_col})")
+            elif plot_type == "Contour":
+                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
+                lines.append(f"        cont = ax.contour(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
+                lines.append(f"        ax.clabel(cont, inline=True, fontsize=8)")
+            elif plot_type == "Contourf":
+                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
+                lines.append(f"        contf = ax.contourf(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
+                lines.append(f"        fig.colorbar(contf, ax=ax, label={z_col})")
+            lines.append(f"    except Exception as e: print(f'Error generating {plot_type}: {{e}}')")
+        
+        elif plot_type in ["Barbs", "Quiver", "Streamplot"]:
+            u_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
+            v_col = self._clean_value(y_cols_raw[2] if len(y_cols_raw) > 2 else None)
+            lines.append(f"    # Vector Plot: {plot_type}")
+
+            if plot_type == "Streamplot":
+                lines.append(f"    try:")
+                lines.append(f"        # Streamplot requires gridded U, V")
+                lines.append(f"        def get_grid(val_col):")
+                lines.append(f"             df_agg = df.groupby([{x_col}, {y_col_str}])[val_col].mean().reset_index()")
+                lines.append(f"             piv = df_agg.pivot(index={y_col_str}, columns={x_col}, values=val_col).sort_indexaxis=0).sort_index(axis=1)")
+                lines.append(f"             return piv.columns.values, piv.index.values, piv.values")
+                lines.append(f"        X_u, Y_u, U_g = get_grid({u_col})")
+                lines.append(f"        _, _, V_g = get_grid({v_col})")
+                lines.append(f"        XX, YY = np.meshgrid(X_u, Y_u)")
+                lines.append(f"        strm = ax.streamplot(XX, YY, U_g, V_g, cmap={palette}, {g_adv_kwargs})")
+                lines.append(f"    except Exception as e: print(f'Error generating streamplot: {{e}}')")
+            else:
+                cmd = "barbs" if plot_type == "Barbs" else "quiver"
+                lines.append(f"    ax.{cmd}(df[{x_col}], df[{y_col_str}], df[{u_col}], df[{v_col}], {g_adv_kwargs})")
+        
+        elif plot_type in ["Tricontour", "Tricontourf", "Tripcolor", "Triplot"]:
+            z_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
+            lines.append(f"    # Triangulation Plot: {plot_type}")
+            if plot_type == "Triplot":
+                lines.append(f"    ax.triplot(df[{x_col}], df[{y_col_str}], {g_adv_kwargs})")
+            else:
+                if plot_type == "Tricontour":
+                    lines.append(f"    cont = ax.tricontour(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
+                    lines.append(f"    ax.clabel(cont, inline=True, fontsize=8)")
+                elif plot_type == "Tricontourf":
+                    lines.append(f"    contf = ax.tricontourf(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
+                    lines.append(f"    fig.colorbar(contf, ax=ax, label={z_col})")
+                elif plot_type == "Tripcolor":
+                    lines.append(f"    trip = ax.tripcolor(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
+                    lines.append(f"    fig.colorbar(trip, ax=ax, label={z_col})")
 
         else:
             lines.append(f"    # Plot type {plot_type} not supported by exporter, using scatter.")
