@@ -6,6 +6,7 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QSyntaxHighlighter, QTextCharForm
 from pathlib import Path
 import sys, os, re
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox, AnimatedCheckBox, AnimatedRadioButton
+from datetime import datetime
 
 class GoogleSheetsDialog(QDialog):
     """Dialog for importing data from Google Sheets"""
@@ -1903,8 +1904,10 @@ class ScriptEditorDialog(QDialog):
         self.resize(800, 600)
         self.setModal(False)
 
+        self.script_history = []
+        self.run_counter = 0
+
         self.init_ui(initial_code)
-        self.is_code_modified = False
     
     def init_ui(self, code):
         layout = QVBoxLayout()
@@ -1928,6 +1931,15 @@ class ScriptEditorDialog(QDialog):
         self.auto_sync_check.setChecked(True)
         self.auto_sync_check.setToolTip("If checked, changing settings from the GUI will overwrite the code here")
         toolbar.addWidget(self.auto_sync_check)
+
+        toolbar.addSpacing(20)
+        toolbar.addWidget(QLabel("History:"))
+        self.history_combo = AnimatedComboBox()
+        self.history_combo.setMinimumWidth(400)
+        self.history_combo.addItem("Select to restore...")
+        self.history_combo.activated.connect(self.on_history_selected)
+        toolbar.addWidget(self.history_combo)
+
         toolbar.addStretch()
         layout.addLayout(toolbar)
 
@@ -1997,11 +2009,60 @@ class ScriptEditorDialog(QDialog):
         found_threats = [kw for kw in dangerous_keywords if kw in code]
 
         if found_threats:
-            QMessageBox.critical(self, "Security Alert", f"Unintended keywords detected!\Blocked keywords: {', '.join(found_threats)}\n\n"
+            QMessageBox.critical(self, "Security Alert", f"Unintended keywords detected!\nBlocked keywords: {', '.join(found_threats)}\n\n"
             "Please remove these to run the script")
             return
         
+        self.save_to_history(code)
+        
         self.run_script_signal.emit(code)
+
+    def save_to_history(self, code):
+        """Save the current code to a list, cannot go more than 5, """
+        #no saving dups
+        if self.script_history and self.script_history[-1]["code"] == code:
+            return
+        
+        self.run_counter = 1
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        label = f"Edition: #{self.run_counter} - {timestamp}"
+
+        self.script_history.append({'code': code, 'label': label})
+
+        #max 5 copyes
+        if len(self.script_history) > 5:
+            self.script_history.pop(0)
+        
+        self.update_history_combo()
+    
+    def update_history_combo(self):
+        """update the box of code history"""
+        self.history_combo.blockSignals(True)
+        self.history_combo.clear()
+        self.history_combo.addItem(f"Select to restore ({len(self.script_history)} available editions)...")
+
+        #reverse order neweest first
+        for item in reversed(self.script_history):
+            self.history_combo.addItem(item["label"], item["code"])
+        
+        self.history_combo.blockSignals(False)
+    
+    def on_history_selected(self, index):
+        """Restore the selected edition"""
+        if index == 0: return
+
+        code = self.history_combo.currentData()
+        if code:
+            reply = QMessageBox.question(
+                self, "Restore Version",
+                "Do you want to restore this version?\nCurrent code in the editor will be replaced.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.editor.setPlainText(code)
+                self.auto_sync_check.setChecked(False)
+                self.history_combo.setCurrentIndex(0)
+
 
 class LineNumberArea(QWidget):
     """widget to draw line numbers in editor"""
@@ -2258,13 +2319,25 @@ class PythonHighlighter(QSyntaxHighlighter):
         #comment
         comment_format = QTextCharFormat()
         comment_format.setForeground(QColor("#6272a4"))
-        self.highlighting_rules.append((re.compile("#[^\n]*"), comment_format))
+        self.highlighting_rules.append((re.compile(r"(^|\s+)#[^\n]*"), comment_format))
     
     def highlightBlock(self, text):
         for pattern, format in self.highlighting_rules:
-            expression = pattern.search(text)
-            while expression:
-                index = expression.start()
-                length = expression.end() - index
-                self.setFormat(index, length, format)
-                expression = pattern.search(text, index + length)
+            if pattern.pattern.startswith("(^|\\s+)#"):
+                match = pattern.search(text)
+                while match:
+                    start_index = match.start(0)
+                    if match.group(1).strip() == "":
+                        hash_index = text.find('#', start_index)
+                        if hash_index != 1:
+                            self.setFormat(hash_index, len(text) - hash_index, format)
+                    else:
+                        pass
+                    match = pattern.search(text, match.end(0))
+            else:
+                expression = pattern.search(text)
+                while expression:
+                    index = expression.start()
+                    length = expression.end() - index
+                    self.setFormat(index, length, format)
+                    expression = pattern.search(text, index + length)
