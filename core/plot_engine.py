@@ -778,6 +778,25 @@ class PlotEngine:
         if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
         if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
         self.current_figure.tight_layout()
+
+    def add_table(self, df: pd.DataFrame, loc='bottom', auto_font_size=False, fontsize=10, scale_factor=1.2, **kwargs) -> None:
+        """Addin tables to the plot area"""
+        if df is None or df.empty:
+            return
+        
+        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ["xlabel", "ylabel", "title", "legend"]}
+
+        table_object = pd.plotting.table(
+            self.current_ax,
+            df,
+            loc=loc,
+            **clean_kwargs
+        )
+
+        table_object.auto_set_font_size(auto_font_size)
+        if not auto_font_size:
+            table_object.set_fontsize(fontsize)
+        table_object.scale(scale_factor, scale_factor)
     
     def _apply_common_formatting(self, kwargs: Dict[str, Any]) -> None:
         """Apply common formatting to plots\n

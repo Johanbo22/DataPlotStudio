@@ -889,6 +889,54 @@ class CodeExporter:
             lines.append(f"    ax.text({x_pos}, {y_pos}, {self._clean_value(tb_cfg['content'])}, transform=ax.transAxes,")
             lines.append(f"            fontsize=11, verticalalignment='{va}', horizontalalignment='{ha}',")
             lines.append(f"            bbox=dict(boxstyle={self._clean_value(boxstyle)}, facecolor={self._clean_value(tb_cfg['bg_color'])}, alpha=0.8, pad=1))")
+        
+        # --- 12. Add Data Table ---
+        if get_cfg("annotations.table.enabled", False):
+            lines.append("\n    # --- 12. Add Data Table ---")
+            lines.append("    try:")
+            table_type = get_cfg("annotations.table.type", "First 5 Rows")
+            table_loc = self._clean_value(get_cfg("annotations.table.location", "bottom"))
+            
+            lines.append(f"        # Determine columns for table ({table_type})")
+            lines.append("        table_cols = []")
+            
+            if x_col_raw:
+                lines.append(f"        if {x_col} in df.columns: table_cols.append({x_col})")
+            
+            lines.append(f"        for c in {y_cols_str}:")
+            lines.append("            if c in df.columns: table_cols.append(c)")
+            
+            lines.append("        if table_cols:")
+            lines.append("            table_df = df[table_cols]")
+            lines.append("        else:")
+            lines.append("            table_df = df.select_dtypes(include=[np.number])")
+
+            lines.append(f"        # Transform data")
+            if table_type == "Summary Stats":
+                lines.append("        table_data = table_df.describe().round(2)")
+            elif table_type == "First 5 Rows":
+                lines.append("        table_data = table_df.head(5)")
+            elif table_type == "Last 5 Rows":
+                lines.append("        table_data = table_df.tail(5)")
+            elif table_type == "Correlation Matrix":
+                lines.append("        table_data = table_df.corr().round(2)")
+            else:
+                lines.append("        table_data = table_df.head(5)")
+
+            lines.append(f"        # Add table to plot")
+            lines.append(f"        the_table = pd.plotting.table(ax, table_data, loc={table_loc})")
+            auto_font = get_cfg("annotations.table.auto_font_size", False)
+            fontsize = get_cfg("annotations.table.fontsize", 10)
+            scale = get_cfg("annotations.table.scale", 1.2)
+
+            lines.append(f"        the_table.auto_set_font_size({auto_font})")
+            if not auto_font:
+                lines.append(f"        the_table.set_fontsize({fontsize})")
+            
+            lines.append(f"        the_table.scale({scale}, {scale})")
+
+            lines.append("    except Exception as e:")
+            lines.append("        print(f'Warning: Failed to add data table: {e}')")
 
 
         # --- 12. Final Touches ---

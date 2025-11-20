@@ -199,6 +199,8 @@ class PlotTab(PlotTabUI):
         self.textbox_bg_button.clicked.connect(self.choose_textbox_bg_color)
         self.annotations_list.itemClicked.connect(self.on_annotation_selected)
         self.clear_annotations_button.clicked.connect(self.clear_annotations)
+        self.table_enable_check.stateChanged.connect(self.toggle_table_controls)
+        self.table_auto_font_size_check.stateChanged.connect(self.toggle_table_font_controls)
 
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
@@ -858,7 +860,77 @@ class PlotTab(PlotTabUI):
         self.hue_column.blockSignals(False)
         self.y_columns_list.blockSignals(False)
         self.auto_annotate_col_combo.blockSignals(False)
+    
+    def toggle_table_controls(self):
+        """Enable and disable table controls for the user"""
+        enabled = self.table_enable_check.isChecked()
+        self.table_type_combo.setEnabled(enabled)
+        self.table_type_combo.setVisible(enabled)
+        self.table_location_combo.setEnabled(enabled)
+        self.table_location_combo.setVisible(enabled)
 
+        self.table_auto_font_size_check.setEnabled(enabled)
+        self.table_scale_spin.setEnabled(enabled)
+        self.table_scale_spin.setVisible(enabled)
+
+        self.table_font_size_spin.setEnabled(enabled and not self.table_auto_font_size_check.isChecked())
+        self.table_font_size_spin.setVisible(enabled and not self.table_auto_font_size_check.isChecked())
+    
+    def toggle_table_font_controls(self):
+        self.table_font_size_spin.setEnabled(not self.table_auto_font_size_check.isChecked())
+        self.table_font_size_spin.setVisible(not self.table_auto_font_size_check.isChecked())
+
+    def _apply_table(self):
+        """Generate the table and add it to the plot"""
+        if not self.table_enable_check.isChecked():
+            return
+        
+        df = self.get_active_dataframe()
+        if df is None:
+            return
+        
+        try:
+            table_type = self.table_type_combo.currentText()
+            x_col = self.x_column.currentText()
+            y_cols = self.get_selected_y_columns()
+
+            cols_to_use = []
+            if x_col: cols_to_use.append(x_col)
+            cols_to_use.extend(y_cols)
+
+            if cols_to_use and all(column in df.columns for column in cols_to_use):
+                target_df = df[cols_to_use]
+            else:
+                target_df = df.select_dtypes(include=[np.number])
+            
+            match table_type:
+                case "Summary Stats":
+                    data = target_df.describe().round(2)
+                case "First 5 Rows":
+                    data = target_df.head(5)
+                case "Last 5 Rows":
+                    data = target_df.tail(5)
+                case "Correlation Matrix":
+                    data = target_df.corr().round(2)
+                case _:
+                    data = target_df.head()
+            
+            loc = self.table_location_combo.currentText()
+            auto_font = self.table_auto_font_size_check.isChecked()
+            fontsize = self.table_font_size_spin.value()
+            scale = self.table_scale_spin.value()
+
+            self.plot_engine.add_table(
+                data,
+                loc=loc,
+                auto_font_size=auto_font,
+                fontsize=fontsize,
+                scale_factor=scale
+            )
+    
+        
+        except Exception as table_error:
+            self.status_bar.log(f"Failed to add table to plot: {str(table_error)}", "WARNING")
     
     def on_plot_type_changed(self, plot_type: str):
         """Handle plot type change"""
@@ -1263,7 +1335,11 @@ class PlotTab(PlotTabUI):
             self._apply_textbox()
 
             if show_progress:
-                progress_dialog.update_progress(95, "Finalizing")
+                progress_dialog.update_progress(95, "Adding data table")
+            self._apply_table()
+
+            if show_progress:
+                progress_dialog.update_progress(98, "Finalizing")
                 if progress_dialog.is_cancelled():
                     return
             
@@ -2187,6 +2263,14 @@ class PlotTab(PlotTabUI):
                 "position": self.textbox_position_combo.currentText(),
                 "style": self.textbox_style_combo.currentText(),
                 "bg_color": self.textbox_bg_color,
+            },
+            "table": {
+                "enabled": self.table_enable_check.isChecked(),
+                "type": self.table_type_combo.currentText(),
+                "location": self.table_location_combo.currentText(),
+                "auto_font_size": self.table_auto_font_size_check.isChecked(),
+                "fontsize": self.table_font_size_spin.value(),
+                "scael": self.table_scale_spin.value()
             }
         }
 

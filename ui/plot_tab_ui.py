@@ -1769,7 +1769,61 @@ class PlotTabUI(QWidget):
         scroll_layout.addWidget(text_box_group)
         
         scroll_layout.addSpacing(15)
+
+        #datatable
+        table_group = AnimatedGroupBox("Data Table")
+        table_layout = QVBoxLayout()
+
+        self.table_enable_check = AnimatedCheckBox("Show Data Table on plot")
+        self.table_enable_check.setChecked(False)
+        table_layout.addWidget(self.table_enable_check)
+
+        table_controls_layout = QHBoxLayout()
+        table_controls_layout.addWidget(QLabel("Type:"))
+        self.table_type_combo = AnimatedComboBox()
+        self.table_type_combo.addItems(["Summary Stats", "First 5 Rows", "Last 5 Rows", "Correlation Matrix"])
+        self.table_type_combo.setEnabled(False)
+        self.table_type_combo.setVisible(False)
+        table_controls_layout.addWidget(self.table_type_combo)
+
+        table_controls_layout.addWidget(QLabel("Placement:"))
+        self.table_location_combo = AnimatedComboBox()
+        self.table_location_combo.addItems(["bottom", "top", "right", "left", "center"])
+        self.table_location_combo.setEnabled(False)
+        self.table_location_combo.setVisible(False)
+        table_controls_layout.addWidget(self.table_location_combo)
+
+        table_layout.addLayout(table_controls_layout)
+
+        table_settings_layout = QHBoxLayout()
+        self.table_auto_font_size_check = AnimatedCheckBox("Auto Font-Size")
+        self.table_auto_font_size_check.setChecked(False)
+        self.table_auto_font_size_check.setEnabled(False)
+        table_settings_layout.addWidget(self.table_auto_font_size_check)
+
+        table_settings_layout.addWidget(QLabel("Font Size:"))
+        self.table_font_size_spin = AnimatedSpinBox()
+        self.table_font_size_spin.setRange(4, 40)
+        self.table_font_size_spin.setValue(10)
+        self.table_font_size_spin.setEnabled(False)
+        self.table_font_size_spin.setVisible(False)
+        table_settings_layout.addWidget(self.table_font_size_spin)
+
+        table_settings_layout.addWidget(QLabel("Scale:"))
+        self.table_scale_spin = AnimatedDoubleSpinBox()
+        self.table_scale_spin.setRange(0.5, 5.0)
+        self.table_scale_spin.setValue(1.2)
+        self.table_scale_spin.setSingleStep(0.1)
+        self.table_scale_spin.setEnabled(False)
+        self.table_scale_spin.setVisible(False)
+        table_settings_layout.addWidget(self.table_scale_spin)
+
+        table_layout.addLayout(table_settings_layout)
+
+        table_group.setLayout(table_layout)
+        scroll_layout.addWidget(table_group)
         
+        scroll_layout.addSpacing(15)
         #  ANNOTATIONS LIST 
         annotation_list_group = AnimatedGroupBox("Annotations List")
         annotation_list_layout = QVBoxLayout()
