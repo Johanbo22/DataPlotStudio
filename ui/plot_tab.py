@@ -1726,6 +1726,15 @@ class PlotTab(PlotTabUI):
             which="major"
         )
 
+        #xaxis position
+        if self.x_top_axis_check.isChecked():
+            self.plot_engine.current_ax.xaxis.tick_top()
+            self.plot_engine.current_ax.xaxis.set_label_position("top")
+        else:
+            self.plot_engine.current_ax.xaxis.tick_bottom()
+            self.plot_engine.current_ax.xaxis.set_label_position("bottom")
+
+
         #minor tickmarks
         if self.x_show_minor_ticks_check.isChecked():
             self.plot_engine.current_ax.minorticks_on()
@@ -2020,6 +2029,7 @@ class PlotTab(PlotTabUI):
             "x_axis": {
                 "auto_limits": self.x_auto_check.isChecked(),
                 "invert": self.x_invert_axis_check.isChecked(),
+                "top_axis": self.x_top_axis_check.isChecked(),
                 "min": self.x_min_spin.value(),
                 "max": self.x_max_spin.value(),
                 "tick_label_size": self.xtick_label_size_spin.value(),

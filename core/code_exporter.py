@@ -352,8 +352,8 @@ class CodeExporter:
         lines.append(f"        figsize=({get_cfg('appearance.figure.width', 10)}, {get_cfg('appearance.figure.height', 6)}),")
         lines.append(f"        dpi={get_cfg('appearance.figure.dpi', 100)}")
         lines.append("    )")
-        lines.append(f"    fig.set_facecolor({self._clean_value(get_cfg('appearance.figure.bg_color', 'white'))})")
-        lines.append(f"    ax.set_facecolor({self._clean_value(get_cfg('appearance.figure.face_color', 'white'))})")
+        lines.append(f"    fig.set_facecolor({self._clean_value(get_cfg('appearance.figure.bg_color', 'white'))})") 
+        lines.append(f"    ax.set_facecolor({self._clean_value(get_cfg('appearance.figure.face_color', 'white'))})") 
         lines.append(f"    font_family = {self._clean_value(get_cfg('appearance.font_family', 'Arial'))}")
         lines.append("    plt.rcParams['font.family'] = font_family")
         
@@ -767,6 +767,13 @@ class CodeExporter:
         
         if get_cfg("axes.x_axis.invert", False): lines.append("    ax.invert_xaxis()")
         if get_cfg("axes.y_axis.invert", False): lines.append("    ax.invert_yaxis()")
+
+        if get_cfg("axes.x_axis.top_axis", False):
+            lines.append("    ax.xaxis.tick_top()")
+            lines.append("    ax.xaxis.set_label_position('top')")
+        else:
+            lines.append("    ax.xaxis.tick_bottom()")
+            lines.append("    ax.xaxis.set_label_position('bottom')")
             
         lines.append(f"    ax.set_xscale({self._clean_value(get_cfg('axes.x_axis.scale', 'linear'))})")
         lines.append(f"    ax.set_yscale({self._clean_value(get_cfg('axes.y_axis.scale', 'linear'))})")

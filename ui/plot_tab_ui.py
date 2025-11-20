@@ -19,10 +19,7 @@ from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboB
 
 class PlotTabUI(QWidget):
     """
-    UI Base Class for the Plotting Tab.
-    
-    This class creates all widgets and layouts but does not connect
-    any signals to slots (logic).
+    UI Base class for the Plotting Tab.
     """
     
     def __init__(self) -> None:
@@ -635,6 +632,11 @@ class PlotTabUI(QWidget):
         self.x_invert_axis_check.setChecked(False)
         self.x_invert_axis_check.setToolTip("Reverses the direction of data on the x-axis")
         xaxis_limit_layout.addWidget(self.x_invert_axis_check)
+
+        self.x_top_axis_check = AnimatedCheckBox("Move X-axis to top")
+        self.x_top_axis_check.setChecked(False)
+        self.x_top_axis_check.setToolTip("Moves the x-axis ticks and labels to the top of the plot")
+        xaxis_limit_layout.addWidget(self.x_top_axis_check)
         
         xaxis_limit_layout.addWidget(QLabel("X Min:"))
         self.x_min_spin = AnimatedDoubleSpinBox()
