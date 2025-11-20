@@ -7,7 +7,7 @@ from core.logger import Logger
 
 
 class StatusBar(QStatusBar):
-    """Custom status bar with terminal output and logging"""
+    """Custom status bar with terminal output"""
     
     def __init__(self) -> None:
         super().__init__()

@@ -39,13 +39,12 @@ class PlotTabUI(QWidget):
         left_layout.addWidget(self.toolbar)
         left_layout.addWidget(self.canvas, 1)
         
-        # Right side: Control panel with tabs (30% width)
         right_layout = QVBoxLayout()
         
-        # Create tabbed customization interface
+        
         custom_tabs = AnimatedTabWidget()
         
-        #  TAB 1: BASIC 
+        #TAB 1: BASIC 
         basic_tab = self._create_basic_tab()
         basic_tab_icon = QIcon("icons/plot_tab/customization_tabs/general.png")
         custom_tabs.addTab(basic_tab, basic_tab_icon, "General")
@@ -60,12 +59,12 @@ class PlotTabUI(QWidget):
         axes_tab_icon = QIcon("icons/plot_tab/customization_tabs/axis.png")
         custom_tabs.addTab(axes_tab, axes_tab_icon, "Axes")
         
-        # TAB 4: LEGEND & GRID 
+        # TAB 4: LEGENDand GRID 
         legend_tab = self._create_legend_tab()
         legend_tab_icon = QIcon("icons/plot_tab/customization_tabs/gridlines.png")
         custom_tabs.addTab(legend_tab, legend_tab_icon, "Legend and Grid")
         
-        # TAB 5: ADVANCED 
+        # TAB 5: ADVANCED (customi)
         advanced_tab = self._create_advanced_tab()
         custom_tabs.addTab(advanced_tab, "Advanced") # need an icon here
         
@@ -73,6 +72,7 @@ class PlotTabUI(QWidget):
         annotations_tab = self._create_annotations_tab()
         custom_tabs.addTab(annotations_tab, "Annotations") #forgor icon
 
+        # TAB 7. GEO
         geospatial_tab = self._create_geospatial_tab()
         geospatial_tab_icon = QIcon("icons/plot_tab/customization_tabs/geospatial.png")
         custom_tabs.addTab(geospatial_tab, geospatial_tab_icon, "GeoSpatial")
@@ -120,7 +120,7 @@ class PlotTabUI(QWidget):
         )
         self.editor_button.setMinimumHeight(40)
         self.editor_button.setIcon(QIcon("icons/code_edit.png"))
-        self.editor_button.setToolTip("Open the code editor to write python code for the plot.")
+        self.editor_button.setToolTip("Open the code editor to view/write python code for the plot.")
         button_layout.addWidget(self.editor_button)
         
         right_layout.addLayout(button_layout)

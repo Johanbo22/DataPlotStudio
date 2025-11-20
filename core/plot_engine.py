@@ -682,6 +682,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
 
         self.current_ax.barbs(df[x], df[y], df[u], df[v], **kwargs)
 
@@ -695,6 +696,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
         
         self.current_ax.quiver(df[x], df[y], df[u], df[v], **kwargs) # type: ignore
         
@@ -708,6 +710,8 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
+
 
         
         try:
