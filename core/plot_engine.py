@@ -110,14 +110,40 @@ class PlotEngine:
     def __init__(self):
         self.current_figure: Optional[Figure] = None
         self.current_ax = None
+        self.axes_flat = []
         self.current_plot_type: Optional[str] = None
         self.plot_config: Dict[str, Any] = {}
     
     def create_figure(self, figsize=(10, 6), dpi=100) -> Figure:
         """Create a new matplotlib figure"""
         self.current_figure = Figure(figsize=figsize, dpi=dpi)
-        self.current_ax = self.current_figure.add_subplot(111)
+        self.setup_layout(1, 1)
         return self.current_figure
+
+    def setup_layout(self, rows: int = 1, cols: int = 1):
+        """Subplot layout grid"""
+        if self.current_figure is None:
+            return
+        
+        self.current_figure.clear()
+        axes = self.current_figure.subplots(rows, cols)
+        if isinstance(axes, np.ndarray):
+            self.axes_flat = axes.flatten().tolist()
+        else:
+            self.axes_flat = [axes]
+        
+        self.current_ax = self.axes_flat[0]
+        self.current_figure.tight_layout()
+
+    def set_active_subplot(self, index: int):
+        """Set the active subplot"""
+        if 0 <= index < len(self.axes_flat):
+            self.current_ax = self.axes_flat[index]
+        
+    def clear_current_axis(self):
+        """Clear the active subplot"""
+        if self.current_ax:
+            self.current_ax.clear()
     
     def plot_line(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create a line plot"""
@@ -810,8 +836,7 @@ class PlotEngine:
     def clear_plot(self) -> None:
         """Clear the current plot"""
         if self.current_figure:
-            self.current_figure.clear()
-            self.current_ax = self.current_figure.add_subplot(111)
+            self.setup_layout(1, 1)
     
     def get_figure(self) -> Figure:
         """Return the current figure"""

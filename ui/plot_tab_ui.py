@@ -153,6 +153,51 @@ class PlotTabUI(QWidget):
         self.plot_type_group.setLayout(plot_type_layout)
         layout.addWidget(self.plot_type_group)
 
+        #subplots
+        subplot_group = AnimatedGroupBox("Subplot Configeration")
+        subplot_layout = QVBoxLayout()
+        subplot_info = QLabel("This tool allows you to control how many subplots you wish to add to the current canvas\nThe rows adjust the number of horizontal plots added and the columns control the number of vertical plots added. Together they make up a array of plots.")
+        subplot_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        subplot_info.setWordWrap(True)
+        subplot_layout.addWidget(subplot_info)
+
+        #grids
+        grid_config_layout = QHBoxLayout()
+        grid_config_layout.addWidget(QLabel("Rows:"))
+        self.subplot_rows_spin = AnimatedSpinBox()
+        self.subplot_rows_spin.setToolTip("Adds specified numbers of horizontal subplots")
+        self.subplot_rows_spin.setRange(1, 5)
+        self.subplot_rows_spin.setValue(1)
+        grid_config_layout.addWidget(self.subplot_rows_spin)
+
+        grid_config_layout.addWidget(QLabel("Columns:"))
+        self.subplot_cols_spin = AnimatedSpinBox()
+        self.subplot_cols_spin.setToolTip("Adds specified numbers of vertical subplots")
+        self.subplot_cols_spin.setRange(1, 5)
+        self.subplot_cols_spin.setValue(1)
+        grid_config_layout.addWidget(self.subplot_cols_spin)
+
+        subplot_layout.addLayout(grid_config_layout)
+
+        #apply subplotlayout button
+        self.apply_subplot_layout_button = AnimatedButton("Update Subplot Layout", parent=self)
+        self.apply_subplot_layout_button.setToolTip("Warning: This will clear the entire figure")
+        subplot_layout.addWidget(self.apply_subplot_layout_button)
+
+        #select an active subplot
+        active_subplot_layout = QHBoxLayout()
+        active_subplot_layout.addWidget(QLabel("Active Subplot:"))
+        self.active_subplot_combo = AnimatedComboBox()
+        self.active_subplot_combo.setToolTip("This will set the specified plot to be the active subplot.")
+        self.active_subplot_combo.addItem("Plot 1")
+        active_subplot_layout.addWidget(self.active_subplot_combo, 1)
+        subplot_layout.addLayout(active_subplot_layout)
+
+        subplot_group.setLayout(subplot_layout)
+        layout.addWidget(subplot_group)
+
+        layout.addSpacing(10)
+
         # data selection
         data_group = AnimatedGroupBox("Data")
         data_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
@@ -200,7 +245,7 @@ class PlotTabUI(QWidget):
         
         #info for multiplaye
         self.multi_y_info = QLabel("Tip: Hold Ctrl/Cmd to select multiple columns")
-        self.multi_y_info.setStyleSheet("color: #7f8c8d; font-size: 95p; font-style: italic;")
+        self.multi_y_info.setStyleSheet("color: #7f8c8d; font-size: 9.5pt; font-style: italic;")
         self.multi_y_info.setVisible(False)
         data_layout.addWidget(self.multi_y_info)
 
@@ -216,7 +261,7 @@ class PlotTabUI(QWidget):
         hue_group.setLayout(hue_layout)
         layout.addWidget(hue_group)
 
-        # === SUBSET SELECTION ===
+        #  SUBSEts
         subset_group = AnimatedGroupBox("Data Subset (Optional)")
         subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         subset_layout = QVBoxLayout()
@@ -545,7 +590,7 @@ class PlotTabUI(QWidget):
         figure_size_layout.addWidget(QLabel("Figure Width:"))
         self.width_spin = AnimatedSpinBox()
         self.width_spin.setRange(4, 20)
-        self.width_spin.setValue(13)
+        self.width_spin.setValue(12)
         figure_size_layout.addWidget(self.width_spin)
         figure_size_group.setLayout(figure_size_layout)
         

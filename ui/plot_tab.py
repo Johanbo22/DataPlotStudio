@@ -4,7 +4,6 @@ from re import M
 from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon, QColor
-from flask.cli import F
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -139,6 +138,8 @@ class PlotTab(PlotTabUI):
         self.select_all_y_btn.clicked.connect(self.select_all_y_columns)
         self.clear_all_y_btn.clicked.connect(self.clear_all_y_columns)
         self.hue_column.currentTextChanged.connect(self.on_data_changed)
+        self.apply_subplot_layout_button.clicked.connect(self.apply_subplot_layout)
+        self.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         
         # --- Tab 2:- Appearance ---
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
@@ -205,6 +206,38 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+    
+    def apply_subplot_layout(self):
+        """Apply new grid layout to subplot context"""
+        rows = self.subplot_rows_spin.value()
+        cols = self.subplot_cols_spin.value()
+
+        confirmation = QMessageBox.question(
+            self, "Update Layout",
+            "Updating subplot layout will clear all existing plots on the canvas.\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if confirmation == QMessageBox.StandardButton.Yes:
+            self.plot_engine.setup_layout(rows, cols)
+
+            max_plots = rows * cols
+            self.active_subplot_combo.blockSignals(True)
+            self.active_subplot_combo.clear()
+            for i in range(max_plots):
+                self.active_subplot_combo.addItem(f"Plot {i + 1}")
+            self.active_subplot_combo.blockSignals(False)
+
+            self.canvas.draw()
+            self.status_bar.log(f"Layout updated to {rows}x{cols}", "INFO")
+    
+    def on_active_subplot_changed(self, index):
+        """Change index for active subplot"""
+        if index >= 0:
+            self.plot_engine.set_active_subplot(index)
+            self.status_bar.log(f"Active subplot set to: {index + 1}", "INFO")
+
+
     
     def choose_geo_missing_color(self):
         color = QColorDialog.getColor()
@@ -1207,7 +1240,7 @@ class PlotTab(PlotTabUI):
                 if progress_dialog.is_cancelled():
                     return
                 
-            self.plot_engine.clear_plot()
+            self.plot_engine.clear_current_axis()
             # Reset figure-level properties
             self.plot_engine.current_figure.set_size_inches(self.width_spin.value(), self.height_spin.value())
             self.plot_engine.current_figure.set_dpi(self.dpi_spin.value())
@@ -1216,7 +1249,6 @@ class PlotTab(PlotTabUI):
             # Apply style
             try:
                 plt.style.use(self.style_combo.currentText())
-                # Re-apply facecolor after style, as style might override it
                 self.plot_engine.current_figure.set_facecolor(self.bg_color)
                 self.plot_engine.current_ax.set_facecolor(self.face_color)
             except Exception as e:
@@ -1998,17 +2030,30 @@ class PlotTab(PlotTabUI):
     def clear_plot(self) -> None:
         """Clear the plot"""
         self.plot_engine.clear_plot()
+
+        self.subplot_rows_spin.blockSignals(True)
+        self.subplot_cols_spin.blockSignals(True)
+        self.active_subplot_combo.blockSignals(True)
+
+        self.subplot_rows_spin.setValue(1)
+        self.subplot_cols_spin.setValue(1)
+        self.active_subplot_combo.clear()
+        self.active_subplot_combo.addItem("Plot 1")
+
+        self.subplot_rows_spin.blockSignals(False)
+        self.subplot_cols_spin.blockSignals(False)
+        self.active_subplot_combo.blockSignals(False)
+
         self.canvas.draw()
-        
-        # Clear customizations
+
         self.line_customizations.clear()
         self.bar_customizations.clear()
         self.annotations.clear()
         self.annotations_list.clear()
-        
+
         self.status_bar.log_action(
             "Plot cleared",
-            details={'operation': 'clear_plot'},
+            details={"operation": "clear_plot"},
             level="INFO"
         )
     
