@@ -457,6 +457,36 @@ class DataHandler:
         except Exception as e:
             raise Exception(f"Error aggregating data: {str(e)}")
     
+    def melt_data(self, id_vars: List[str], value_vars: List[str], var_name: str, value_name: str) -> pd.DataFrame:
+        """Use melt to unpivot a dataframe"""
+        if self.df is None:
+            raise ValueError("No data loaded")
+        
+        try:
+            self._save_state()
+
+            v_vars = value_vars if value_vars else None
+
+            self.df = pd.melt(
+                self.df,
+                id_vars=id_vars,
+                value_vars=v_vars,
+                var_name=var_name,
+                value_name=value_name
+            )
+
+            self.operation_log.append({
+                "type": "melt",
+                "id_vars": id_vars,
+                "value_vars": value_vars,
+                "var_name": var_name,
+                "value_name": value_name
+            })
+
+            return self.df
+        except Exception as melt_error:
+            raise Exception(f"Error melting data: {str(melt_error)}")
+    
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
         if self.df is None:

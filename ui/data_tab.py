@@ -10,7 +10,7 @@ from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog, HelpDialog
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog, HelpDialog, MeltDialog
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
@@ -336,6 +336,17 @@ class DataTab(QWidget):
         agg_layout.addWidget(agg_button)
         agg_layout.addWidget(self.agg_help)
         transform_layout.addLayout(agg_layout)
+
+        melt_layout = QHBoxLayout()
+        melt_button = AnimatedButton("Melt/Unpivot Data", parent=self)
+        # melt_button.setIcon(QIcon(""))
+        melt_button.clicked.connect(self.open_melt_dialog)
+        self.melt_help = HelpIcon("melt_data")
+        self.melt_help.clicked.connect(self.show_help_dialog)
+        melt_layout.addWidget(melt_button)
+        melt_layout.addWidget(self.melt_help)
+        transform_layout.addLayout(melt_layout)
+
 
         transform_layout.addSpacing(10)
 
@@ -1818,6 +1829,55 @@ class DataTab(QWidget):
                 "• Sheet is still shared publicly\n"
                 "• Sheet name has not changed"
             )
+    
+    def open_melt_dialog(self):
+        """Opens the melt data dialog"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
+        columns = list(self.data_handler.df.columns)
+        dialog = MeltDialog(columns, self)
+
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                reply = reply = QMessageBox.question(
+                    self,
+                    "Confirm Melt",
+                    "Melting will restructure your entire dataset.\n\n"
+                    "Are you sure you want to proceed?\n"
+                    "(You can Undo this operation later)",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    before_shape = self.data_handler.df.shape
+
+                    self.data_handler.melt_data(
+                        id_vars=config['id_vars'],
+                        value_vars=config['value_vars'],
+                        var_name=config['var_name'],
+                        value_name=config['value_name']
+                    )
+
+                    after_shape = self.data_handler.df.shape
+                    self.refresh_data_view()
+
+                    self.status_bar.log_action(
+                        f"Melted data: {before_shape} -> {after_shape}",
+                        details={
+                            "id_vars": config['id_vars'],
+                            "value_vars": config['value_vars'],
+                            "shape_before": before_shape,
+                            "shape_after": after_shape,
+                            "operation": "melt"
+                        },
+                        level="SUCCESS"
+                    )
+            
+            except Exception as melt_error:
+                QMessageBox.critical(self, "Error", f"Failed to melt data:\n{str(melt_error)}")
+                self.status_bar.log(f"Melt failed: {str(melt_error)}", "ERROR")
 
     def clear(self):
         """Clear the data tab"""
