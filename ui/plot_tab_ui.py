@@ -144,17 +144,22 @@ class PlotTabUI(QWidget):
         
         # plot type
         self.plot_type_group = AnimatedGroupBox("Plot Type")
-        #self.plot_type_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         plot_type_layout = QVBoxLayout()
         self.plot_type = AnimatedComboBox()
         # bith plot type is in the plotTab.py
-        
         plot_type_layout.addWidget(self.plot_type)
+
+        #checkbox for addings ubplots
+        self.add_subplots_check = AnimatedCheckBox("Add subplots")
+        self.add_subplots_check.setChecked(False)
+        plot_type_layout.addWidget(self.add_subplots_check)
+        
         self.plot_type_group.setLayout(plot_type_layout)
         layout.addWidget(self.plot_type_group)
 
         #subplots
-        subplot_group = AnimatedGroupBox("Subplot Configeration")
+        self.subplot_group = AnimatedGroupBox("Subplot Configeration")
+        self.subplot_group.setVisible(False)
         subplot_layout = QVBoxLayout()
         subplot_info = QLabel("This tool allows you to control how many subplots you wish to add to the current canvas\nThe rows adjust the number of horizontal plots added and the columns control the number of vertical plots added. Together they make up a array of plots.")
         subplot_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
@@ -193,8 +198,8 @@ class PlotTabUI(QWidget):
         active_subplot_layout.addWidget(self.active_subplot_combo, 1)
         subplot_layout.addLayout(active_subplot_layout)
 
-        subplot_group.setLayout(subplot_layout)
-        layout.addWidget(subplot_group)
+        self.subplot_group.setLayout(subplot_layout)
+        layout.addWidget(self.subplot_group)
 
         layout.addSpacing(10)
 

@@ -140,6 +140,7 @@ class PlotTab(PlotTabUI):
         self.hue_column.currentTextChanged.connect(self.on_data_changed)
         self.apply_subplot_layout_button.clicked.connect(self.apply_subplot_layout)
         self.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
+        self.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         
         # --- Tab 2:- Appearance ---
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
@@ -206,6 +207,12 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+    
+    def on_subplot_active(self):
+        """Activate subplot group for visibility"""
+        subplots_enabled = self.add_subplots_check.isChecked()
+
+        self.subplot_group.setVisible(subplots_enabled)
     
     def apply_subplot_layout(self):
         """Apply new grid layout to subplot context"""
