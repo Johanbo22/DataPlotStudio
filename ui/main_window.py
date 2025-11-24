@@ -117,10 +117,10 @@ class MainWindow(QWidget):
     def import_file(self) -> None:
         """Import a data file"""
         geospatial_filter = "Geospatial Files (*.geojson *.shp *gpkg)"
-        data_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json);;All Files (*)"
+        data_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json)"
         all_files_filter = "All Files (*)"
 
-        file_filter = f"{geospatial_filter};;{data_filter};;{all_files_filter}"
+        file_filter = f"{data_filter};;{geospatial_filter};;{all_files_filter}"
         filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
         
         if filepath:
