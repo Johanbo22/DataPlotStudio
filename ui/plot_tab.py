@@ -1,9 +1,9 @@
 # ui/plot_tab.py
 
 from re import M
-from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QIcon, QColor
+from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QMessageBox, QFrame, QGraphicsOpacityEffect
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QIcon, QColor, QPalette, QPen, QPainter
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -23,6 +23,62 @@ import matplotlib.pyplot as plt
 import traceback
 from matplotlib.colors import to_hex
 from typing import Dict, List, Any
+
+
+class SubplotOverlay(QWidget):
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.hide()
+
+        self.v_layout = QVBoxLayout(self)
+        self.v_layout.setContentsMargins(0, 0, 0, 0)
+        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.label_widget = QLabel()
+        self.label_widget.setStyleSheet(
+            """
+            QLabel {
+                background-color: rgba(33, 150, 243, 0.8);
+                color: white;
+                font-weight: bold;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+        """
+        )
+        self.v_layout.addWidget(self.label_widget)
+
+        self.opacity_effect = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self.opacity_effect)
+        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.fade_animation.setDuration(1500)
+        self.fade_animation.setStartValue(1.0)
+        self.fade_animation.setEndValue(0.0)
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.InQuad)
+        self.fade_animation.finished.connect(self.hide)
+
+    def update_info(self, text, geometry):
+        """Updater for text and geometry"""
+        self.label_widget.setText(text)
+        self.setGeometry(*geometry)
+        self.show()
+        self.opacity_effect.setOpacity(1.0)
+        self.fade_animation.stop()
+        self.fade_animation.start()
+    
+    def paintEvent(self, event):
+        """Draw a blue border around the subplot for the user to see"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        #the draw duude
+        pen = QPen(QColor("#2196F3"))
+        pen.setWidth(4)
+        painter.setPen(pen)
+        painter.drawRect(0, 0, self.width(), self.height())
 
 
 class PlotTab(PlotTabUI):
@@ -114,6 +170,9 @@ class PlotTab(PlotTabUI):
         
         # Connect all signals to their logic methods
         self._connect_signals()
+
+        self.selection_overlay = SubplotOverlay(self.canvas)
+        self.canvas.mpl_connect("resize_event", self.on_canvas_resize)
         
         # Load initial data
         self.update_column_combo()
@@ -231,21 +290,37 @@ class PlotTab(PlotTabUI):
             max_plots = rows * cols
             self.active_subplot_combo.blockSignals(True)
             self.active_subplot_combo.clear()
+
             for i in range(max_plots):
                 self.active_subplot_combo.addItem(f"Plot {i + 1}")
             self.active_subplot_combo.blockSignals(False)
 
             self.canvas.draw()
+
+            #trigger overlay
+            self.on_active_subplot_changed(0)
+
             self.status_bar.log(f"Layout updated to {rows}x{cols}", "INFO")
     
     def on_active_subplot_changed(self, index):
         """Change index for active subplot"""
         if index >= 0:
             self.plot_engine.set_active_subplot(index)
+            self._update_overlay()
             self.status_bar.log(f"Active subplot set to: {index + 1}", "INFO")
-
-
     
+    def _update_overlay(self):
+        """Recalculate geometry and overlay widgets"""
+        geometry = self.plot_engine.get_active_axis_geometry()
+
+        if geometry:
+            x, y, w, h = geometry
+            current_text = self.active_subplot_combo.currentText()
+            self.selection_overlay.update_info(current_text, (x, y, w, h))
+    
+    def on_canvas_resize(self, event):
+        self._update_overlay()
+
     def choose_geo_missing_color(self):
         color = QColorDialog.getColor()
         if color.isValid():
@@ -2052,6 +2127,7 @@ class PlotTab(PlotTabUI):
         self.active_subplot_combo.blockSignals(False)
 
         self.canvas.draw()
+        self.selection_overlay.hide()
 
         self.line_customizations.clear()
         self.bar_customizations.clear()

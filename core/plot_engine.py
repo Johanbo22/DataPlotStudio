@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from typing import Dict, Any, Optional, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 import matplotlib.dates as mdates
 from matplotlib.ticker import MaxNLocator
 import matplotlib.ticker as ticker
@@ -144,6 +144,26 @@ class PlotEngine:
         """Clear the active subplot"""
         if self.current_ax:
             self.current_ax.clear()
+    
+    def get_active_axis_geometry(self) -> Optional[Tuple[int, int, int, int]]:
+        """Function to calculate Qt geometry for the active axis relative to the current canvas"""
+
+        if not self.current_ax or not self.current_figure:
+            return None
+        
+        bbox = self.current_ax.get_position()
+
+        width, height = self.current_figure.get_size_inches() * self.current_figure.get_dpi()
+
+        #calculate the pixels
+        x = int(bbox.x0 * width)
+        w = int(bbox.width * width)
+        h = int(bbox.height * height)
+
+        y = int(height - (bbox.y0 * height) - h)
+
+        return (x, y, w, h)
+
     
     def plot_line(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create a line plot"""
