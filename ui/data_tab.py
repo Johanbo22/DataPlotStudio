@@ -14,7 +14,7 @@ from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog,
 import pandas as pd
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, HelpIcon, AnimatedTabWidget, AnimatedListWidget
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, AnimatedSlider, HelpIcon, AnimatedTabWidget, AnimatedListWidget
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
 

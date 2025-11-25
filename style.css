@@ -164,46 +164,6 @@ QRadioButton:disabled {
     color: #a0a0a0;
 }
 
-/* --- Sliders --- */
-QSlider::groove:horizontal {
-    border: 1px solid #bbb;
-    background: white;
-    height: 8px; /* Height of the track */
-    border-radius: 4px;
-}
-
-QSlider::handle:horizontal {
-    background: #0078d7;
-    border: 1px solid #0078d7;
-    width: 16px; /* Width of the handle */
-    margin: -4px 0; /* Vertically center */
-    border-radius: 8px;
-}
-
-QSlider::handle:horizontal:hover {
-    background: #005a9e; /* Darker blue on hover */
-    border: 1px solid #005a9e;
-}
-
-QSlider::groove:vertical {
-    border: 1px solid #bbb;
-    background: white;
-    width: 8px; /* Width of the track */
-    border-radius: 4px;
-}
-
-QSlider::handle:vertical {
-    background: #0078d7;
-    border: 1px solid #0078d7;
-    height: 16px; /* Height of the handle */
-    margin: 0 -4px; /* Horizontally center */
-    border-radius: 8px;
-}
-
-QSlider::handle:vertical:hover {
-    background: #005a9e;
-    border: 1px solid #005a9e;
-}
 
 QWidget#ScrollContent {
     background-color: white;

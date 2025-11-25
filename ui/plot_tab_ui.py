@@ -14,12 +14,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider
 
 
 class PlotTabUI(QWidget):
     """
-    UI Base class for the Plotting Tab.
+    UI for the Plotting Tab.
     """
     
     def __init__(self) -> None:
@@ -29,10 +29,8 @@ class PlotTabUI(QWidget):
         """Initialize the plotting/plot customization tab UI"""
         main_layout = QHBoxLayout(self)
         
-        # Left side: Canvas (70% width)
         left_layout = QVBoxLayout()
         
-        # Canvas and Toolbar are created by the logic class and passed in
         self.canvas = canvas
         self.toolbar = toolbar
         
@@ -66,7 +64,8 @@ class PlotTabUI(QWidget):
         
         # TAB 5: ADVANCED (customi)
         advanced_tab = self._create_advanced_tab()
-        custom_tabs.addTab(advanced_tab, "Advanced") # need an icon here
+        advanced_tab_icon = QIcon("icons/plot_tab/customization_tabs/customization.png")
+        custom_tabs.addTab(advanced_tab, advanced_tab_icon, "Customization") # need an icon here
         
         #  TAB 6: ANNOTATIONS 
         annotations_tab = self._create_annotations_tab()
@@ -1153,7 +1152,7 @@ class PlotTabUI(QWidget):
         box_styling_layout.addWidget(self.legend_edge_width_spin)
         
         box_styling_layout.addWidget(QLabel("Box Alpha (Transparency):"))
-        self.legend_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.legend_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.legend_alpha_slider.setRange(10, 100)
         self.legend_alpha_slider.setValue(100)
         box_styling_layout.addWidget(self.legend_alpha_slider)
@@ -1197,7 +1196,7 @@ class PlotTabUI(QWidget):
         global_grid_layout.addWidget(self.grid_axis_combo)
 
         global_grid_layout.addWidget(QLabel("Grid Alpha (Transparency):"))
-        self.global_grid_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_grid_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.global_grid_alpha_slider.setRange(10, 100)
         self.global_grid_alpha_slider.setValue(100)
         global_grid_layout.addWidget(self.global_grid_alpha_slider)
@@ -1253,7 +1252,7 @@ class PlotTabUI(QWidget):
         x_major_layout.addLayout(x_major_color_layout)
 
         x_major_layout.addWidget(QLabel("Alpha (Transparency)"))
-        self.x_major_grid_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.x_major_grid_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.x_major_grid_alpha_slider.setRange(10, 100)
         self.x_major_grid_alpha_slider.setValue(75)
         x_major_layout.addWidget(self.x_major_grid_alpha_slider)
@@ -1302,7 +1301,7 @@ class PlotTabUI(QWidget):
 
         #alpha
         x_minor_layout.addWidget(QLabel("Alpha (Transparency):"))
-        self.x_minor_grid_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.x_minor_grid_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.x_minor_grid_alpha_slider.setRange(10, 100)
         self.x_minor_grid_alpha_slider.setValue(30)
         x_minor_layout.addWidget(self.x_minor_grid_alpha_slider)
@@ -1356,7 +1355,7 @@ class PlotTabUI(QWidget):
 
         #alpha
         y_major_layout.addWidget(QLabel("Alpha (Transparency):"))
-        self.y_major_grid_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.y_major_grid_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.y_major_grid_alpha_slider.setRange(10, 100)
         self.y_major_grid_alpha_slider.setValue(75)
         y_major_layout.addWidget(self.y_major_grid_alpha_slider)
@@ -1405,7 +1404,7 @@ class PlotTabUI(QWidget):
 
         #alha
         y_minor_layout.addWidget(QLabel("Alpha (Transparency):"))
-        self.y_minor_grid_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.y_minor_grid_alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.y_minor_grid_alpha_slider.setRange(10, 100)
         self.y_minor_grid_alpha_slider.setValue(30)
         y_minor_layout.addWidget(self.y_minor_grid_alpha_slider)
@@ -1623,7 +1622,7 @@ class PlotTabUI(QWidget):
         alpha_layout = QVBoxLayout()
         
         alpha_layout.addWidget(QLabel("Alpha/Transparency:"))
-        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider = AnimatedSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setRange(10, 100)
         self.alpha_slider.setValue(100)
         alpha_layout.addWidget(self.alpha_slider)
