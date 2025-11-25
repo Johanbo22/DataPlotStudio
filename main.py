@@ -325,13 +325,11 @@ class DataPlotStudio(QMainWindow):
         """Zoom out on plot"""
         try:
             current_tab = self.main_widget.tabs.currentIndex()
-            if current_tab == 1:  # Plot Studio tab
-                # Get current figure size
+            if current_tab == 1: 
                 fig = self.main_widget.plot_tab.plot_engine.current_figure
                 width, height = fig.get_size_inches()
-                # Decrease by 10%
-                new_width = max(width * 0.9, 4)  # Min at 4 inches
-                new_height = max(height * 0.9, 3)  # Min at 3 inches
+                new_width = max(width * 0.9, 4)
+                new_height = max(height * 0.9, 3)
                 fig.set_size_inches(new_width, new_height)
                 self.main_widget.plot_tab.canvas.draw()
                 self.status_bar_widget.log(f"Zoomed out: {new_width:.1f}x{new_height:.1f} inches")
