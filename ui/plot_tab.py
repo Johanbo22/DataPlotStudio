@@ -26,6 +26,25 @@ from typing import Dict, List, Any
 
 
 class SubplotOverlay(QWidget):
+    """A QWidget overlay for displaying subplot information with visual feedback.
+    This widget renders a semi-transparent blue label with text and a border around
+    a specified subplot area. It features a fade-out animation that automatically
+    hides the overlay after a set duration.
+    The overlay is transparent to mouse events and does not have a system background,
+    allowing interaction with underlying widgets. The label displays centered text with
+    a blue background, and a 4px blue border is drawn around the widget's boundaries.
+    Attributes:
+        v_layout (QVBoxLayout): The main layout for the overlay.
+        label_widget (QLabel): The label displaying the overlay text.
+        opacity_effect (QGraphicsOpacityEffect): Graphics effect for controlling opacity.
+        fade_animation (QPropertyAnimation): Animation for fading out the overlay.
+
+    Methods:
+        update_info(text, geometry): Updates the overlay text and position, then plays the fade animation.
+        paintEvent(event): Draws a blue border around the overlay.
+
+    ^^^lol this is copilot that added this ehehe
+    """
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -56,15 +75,21 @@ class SubplotOverlay(QWidget):
         self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.fade_animation.setDuration(1500)
         self.fade_animation.setStartValue(1.0)
-        self.fade_animation.setEndValue(0.0)
-        self.fade_animation.setEasingCurve(QEasingCurve.Type.InQuad)
-        self.fade_animation.finished.connect(self.hide)
+        self.fade_animation.setEndValue(0.2)
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.InCubic)
+        self.fade_animation.finished.connect(self._on_animation_finished)
+    
+    def _on_animation_finished(self):
+        """CAlled when the animation is finished to remove text"""
+        self.label_widget.hide()
 
     def update_info(self, text, geometry):
         """Updater for text and geometry"""
         self.label_widget.setText(text)
+        self.label_widget.show()
         self.setGeometry(*geometry)
         self.show()
+
         self.opacity_effect.setOpacity(1.0)
         self.fade_animation.stop()
         self.fade_animation.start()
@@ -78,8 +103,9 @@ class SubplotOverlay(QWidget):
         pen = QPen(QColor("#2196F3"))
         pen.setWidth(4)
         painter.setPen(pen)
-        painter.drawRect(0, 0, self.width(), self.height())
-
+        
+        rect = self.rect().adjusted(2, 2, -2, -2)
+        painter.drawRect(rect)
 
 class PlotTab(PlotTabUI):
     """Tab for creating and customizing plots"""
