@@ -411,10 +411,7 @@ class DataPlotStudio(QMainWindow):
         dialog.setWindowTitle("Export Code")
         dialog.setText("What would you like to export?")
         dialog.setInformativeText("You can export the data processing steps, or both data processing and the current plot.")
-        dialog.setStandardButtons(QMessageBox.StandardButton.Yes | 
-                                QMessageBox.StandardButton.No | 
-                                QMessageBox.StandardButton.Cancel)
-        # Use a less confusing button text scheme
+
         btn_data_only = dialog.addButton("Data Processing Only", QMessageBox.ButtonRole.YesRole)
         btn_data_plot = dialog.addButton("Data + Plot", QMessageBox.ButtonRole.NoRole)
         dialog.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
