@@ -1,11 +1,9 @@
 # main.py
 import sys, os
-import json
 from pathlib import Path
-from tkinter import E
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QSplitter, QTabWidget, QMessageBox, QFileDialog
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer
-from PyQt6.QtGui import QIcon, QGuiApplication
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QIcon
 
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
@@ -14,7 +12,7 @@ from core.project_manager import ProjectManager
 from core.data_handler import DataHandler
 from core.code_exporter import CodeExporter
 from core.logger import Logger
-from ui.dialogs import ProgressDialog, ExportDialog, GoogleSheetsDialog, DatabaseConnectionDialog
+from ui.dialogs import ProgressDialog, ExportDialog, DatabaseConnectionDialog
 import traceback
 
 

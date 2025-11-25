@@ -1,17 +1,11 @@
 # ui/plot_tab_ui.py
-"""
-Contains the UI definition for the PlotTab.
-This class (PlotTabUI) is responsible for creating and laying out all
-widgets. It does not contain any application logic or event handlers.
-"""
+
 from PyQt6.QtWidgets import (
-    QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
-    QLabel, QSpinBox, QDoubleSpinBox, QCheckBox, QLineEdit, QScrollArea,
-    QGroupBox, QListWidget, QListWidgetItem, QSlider, QFontComboBox,
-    QTabWidget, QFormLayout
+    QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
+    QFontComboBox
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QColor, QFont
+from PyQt6.QtGui import QIcon, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider
@@ -65,11 +59,12 @@ class PlotTabUI(QWidget):
         # TAB 5: ADVANCED (customi)
         advanced_tab = self._create_advanced_tab()
         advanced_tab_icon = QIcon("icons/plot_tab/customization_tabs/customization.png")
-        custom_tabs.addTab(advanced_tab, advanced_tab_icon, "Customization") # need an icon here
+        custom_tabs.addTab(advanced_tab, advanced_tab_icon, "Customization") 
         
         #  TAB 6: ANNOTATIONS 
         annotations_tab = self._create_annotations_tab()
-        custom_tabs.addTab(annotations_tab, "Annotations") #forgor icon
+        annotations_tab_icon = QIcon("icons/plot_tab/customization_tabs/annotation.png")
+        custom_tabs.addTab(annotations_tab, annotations_tab_icon, "Annotations")
 
         # TAB 7. GEO
         geospatial_tab = self._create_geospatial_tab()
@@ -160,7 +155,7 @@ class PlotTabUI(QWidget):
         self.subplot_group = AnimatedGroupBox("Subplot Configeration")
         self.subplot_group.setVisible(False)
         subplot_layout = QVBoxLayout()
-        subplot_info = QLabel("This tool allows you to control how many subplots you wish to add to the current canvas\nThe rows adjust the number of horizontal plots added and the columns control the number of vertical plots added. Together they make up a array of plots.")
+        subplot_info = QLabel("This tool allows you to control how many subplots you wish to add to the current canvas\nThe rows adjust the number of horizontal plots added and the columns control the number of vertical plots added. Together they make up a array of plots. So if you add 2 rows and 2 columns you get 4 plots.")
         subplot_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         subplot_info.setWordWrap(True)
         subplot_layout.addWidget(subplot_info)

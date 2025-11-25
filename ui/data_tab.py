@@ -1,20 +1,16 @@
 # ui/data_tab.py
-from tkinter import NO
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtGui import QIcon
 
-from core import subset_manager
-from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, ExportDialog, AggregationDialog, SubsetManagerDialog, SubsetDataViewer, FillMissingDialog, HelpDialog, MeltDialog
-import pandas as pd
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSpinBox, AnimatedCheckBox, AnimatedSlider, HelpIcon, AnimatedTabWidget, AnimatedListWidget
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, HelpIcon, AnimatedTabWidget, AnimatedListWidget
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
 
