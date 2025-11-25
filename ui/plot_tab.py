@@ -80,11 +80,11 @@ class SubplotOverlay(QWidget):
         self.fade_animation.finished.connect(self._on_animation_finished)
     
     def _on_animation_finished(self):
-        """CAlled when the animation is finished to remove text"""
+        """CAlled when the animation is finished to remove text but retain border values"""
         self.label_widget.hide()
 
     def update_info(self, text, geometry):
-        """Updater for text and geometry"""
+        """Updater for text and geometry when information is changed"""
         self.label_widget.setText(text)
         self.label_widget.show()
         self.setGeometry(*geometry)

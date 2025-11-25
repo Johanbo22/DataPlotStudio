@@ -9,7 +9,7 @@ class LogEntry:
     
     def __init__(self, level: str, message: str, timestamp: Optional[datetime] = None):
         self.timestamp = timestamp or datetime.now()
-        self.level = level  # from INFO, WARNING, ERROR, SUCCESS
+        self.level = level
         self.message = message
     
     def __str__(self) -> str:
@@ -170,20 +170,20 @@ class Logger:
     def _generate_log_report(self, detailed: bool = True) -> str:
         """Generate formatted log report"""
         report = f"""
-{'='*160}
-DataPlot Studio - Session Log Report
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-This log is automatically generated
-{'='*160}
+            {'='*160}
+            DataPlot Studio - Session Log Report
+            Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            This log is automatically generated
+            {'='*160}
 
-SUMMARY
--------
-Total Log Entries: {len(self.entries)}
-Session Duration: {self._get_session_duration()}
+            SUMMARY
+            -------
+            Total Log Entries: {len(self.entries)}
+            Session Duration: {self._get_session_duration()}
 
-LOG ENTRIES
------------
-"""
+            LOG ENTRIES
+            -----------
+            """
         
         if detailed:
             report += self.get_detailed_logs()
@@ -192,10 +192,10 @@ LOG ENTRIES
         
         report += f"""
 
-{'='*160}
-END OF LOG REPORT
-{'='*160}
-"""
+        {'='*160}
+        END OF LOG REPORT
+        {'='*160}
+        """
         return report
     
     def _get_session_duration(self) -> str:
