@@ -179,17 +179,16 @@ class PlotEngine:
             kwargs["marker"] = None
         elif marker is not None:
             kwargs["marker"] = marker
-            
 
         if hue:
             for group in df[hue].unique():
-                mask = df[hue] == group
+                mask = (df[hue] == group) & df[x].notna()
                 for col in y:
                     self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=f"{col} - {group}", **kwargs)
         else:
-            # as a sep line
             for col in y:
-                self.current_ax.plot(df[x], df[col], label=col, **kwargs)
+                mask = df[x].notna()
+                self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, **kwargs)
         
         if title:
             self.current_ax.set_title(title, fontsize=14, fontweight="bold")
@@ -212,10 +211,11 @@ class PlotEngine:
         
         if hue:
             for group in df[hue].unique():
-                mask = df[hue] == group
+                mask = (df[hue] == group) & df[x].notna() & df[y].notna()
                 self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], label=group, **kwargs)
         else:
-            self.current_ax.scatter(df[x], df[y], **kwargs)
+            mask = df[x].notna() & df[y].notna()
+            self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], **kwargs)
         
         if title:
             self.current_ax.set_title(title, fontsize=14, fontweight='bold')
@@ -230,6 +230,7 @@ class PlotEngine:
     
     def plot_bar(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a bar plot"""
+        df = df[df[x].notna()]
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
@@ -430,8 +431,8 @@ class PlotEngine:
 
         if isinstance(y, str):
             y = [y]
-    
-        df_plot = df.set_index(x)[y]
+        
+        df_plot = df[df[x].notna()].set_index(x)[y]
         df_plot.plot(kind="area", ax=self.current_ax, stacked=True, **kwargs)
         
         
@@ -500,7 +501,8 @@ class PlotEngine:
         legend = kwargs.pop('legend', True)
         gridsize = kwargs.pop('gridsize', 20)
         
-        self.current_ax.hexbin(df[x], df[y], gridsize=gridsize, **kwargs)
+        mask = df[x].notna() & df[y].notna()
+        self.current_ax.hexbin(df.loc[mask, x], df.loc[mask, y], gridsize=gridsize, **kwargs)
         
         if title:
             self.current_ax.set_title(title, fontsize=14, fontweight='bold')
@@ -526,7 +528,10 @@ class PlotEngine:
         if "thresh" not in kwargs:
             kwargs["thresh"] = 0.05
         
-        sns.kdeplot(data=df, x=x, y=y, ax=self.current_ax, fill=True, **kwargs)
+        mask = df[x].notna() & df[y].notna()
+        clean_df = df.loc[mask]
+        
+        sns.kdeplot(data=clean_df, x=x, y=y, ax=self.current_ax, fill=True, **kwargs)
         
         if title:
             self.current_ax.set_title(title, fontsize=14, fontweight='bold')
@@ -544,7 +549,8 @@ class PlotEngine:
         ylabel = kwargs.pop("ylabel", None)
         legend = kwargs.pop("legend", False)
 
-        self.current_ax.stem(df[x], df[y], **kwargs)
+        mask = df[x].notna() & df[y].notna()
+        self.current_ax.stem(df.loc[mask, x], df.loc[mask, y], **kwargs)
 
         if title: self.current_ax.set_title(title, fontsize=14, fontweight="bold")
         if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
@@ -559,7 +565,7 @@ class PlotEngine:
         ylabel = kwargs.pop("ylabel", None)
         legend = kwargs.pop("legend", True)
 
-        df_sorted = df.sort_values(by=x)
+        df_sorted = df[df[x].notna()].sort_values(by=x)
         y_data = [df_sorted[col] for col in y]
 
         self.current_ax.stackplot(df_sorted[x], *y_data, labels=y, **kwargs)
@@ -577,7 +583,7 @@ class PlotEngine:
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
 
-        df_sorted = df.sort_values(by=x)
+        df_sorted = df[df[x].notna()].sort_values(by=x)
         self.current_ax.stairs(df_sorted[x], df_sorted[y], **kwargs)
 
         if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
@@ -609,7 +615,8 @@ class PlotEngine:
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
 
-        hist = self.current_ax.hist2d(df[x], df[y], **kwargs)
+        mask = df[x].notna() & df[y].notna()
+        hist = self.current_ax.hist2d(df.loc[mask, x], df.loc[mask, y], **kwargs)
         self.current_figure.colorbar(hist[3], ax=self.current_ax, label="counts")
 
         if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')

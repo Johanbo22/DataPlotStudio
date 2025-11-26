@@ -299,7 +299,7 @@ class CodeExporter:
             lines.append("            y_pred = slope * x_data_raw + intercept")
             lines.append("            rmse = np.sqrt(np.mean((y_data_raw - y_pred)**2))")
             lines.append("            stats_text.append(f'RMSE = {rmse:.4f}')")
-        # --- END FIX ---
+        
         
         lines.append("            if stats_text:")
         lines.append("                textstr = '\\n'.join(stats_text)")
@@ -309,7 +309,7 @@ class CodeExporter:
         error_bar_type = scatter_cfg.get("error_bars", "None")
         if error_bar_type == "Standard Deviation":
             lines.append("            # (Standard Deviation error bar export is complex, skipping for now)") # Per-bin logic
-        # --- FIX: Implemented Standard Error ---
+        
         elif error_bar_type == "Standard Error":
             lines.append("            # Add Standard Error bars")
             lines.append("            y_pred_all = slope * x_data_raw + intercept")
@@ -321,7 +321,7 @@ class CodeExporter:
             lines.append("            err_args = (x_data_raw[::step], y_data_raw[::step])")
             lines.append(f"            err_kwargs = {{'yerr': se_points[::step]}} if not {flip_axes} else {{'xerr': se_points[::step]}}")
             lines.append("            ax.errorbar(*err_args, **err_kwargs, fmt='o', ecolor='gray', markersize=3, alpha=0.5, capsize=4, zorder=8, markerfacecolor='none', markeredgecolor='none', elinewidth=1, linestyle='none')")
-        # --- END FIX ---
+
 
         lines.append("    except Exception as e:")
         lines.append("        print(f'Failed to add scatter analysis: {{e}}')")
