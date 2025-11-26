@@ -1,5 +1,6 @@
 # core/data_handler.py
 from itertools import groupby
+from tkinter import N
 from duckdb import connect
 from flask.cli import F
 import pandas as pd
@@ -357,6 +358,72 @@ class DataHandler:
             self.last_db_connection_string = None
             self.last_db_query = None
             raise Exception(f"Database import failed:\n{str(e)}")
+        
+    def update_cell(self, row_index: int, column_index: int, value: Any) -> None:
+        """Update a cell in the data table"""
+        if self.df is None:
+            return
+        
+        try:
+            self._save_state()
+
+            column_name = self.df.columns[column_index]
+            column_datatype = self.df[column_name].dtype
+
+            if value is not None:
+                if pd.api.types.is_integer_dtype(column_datatype):
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        pass
+                elif pd.api.types.is_float_dtype(column_datatype):
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+                elif pd.api.types.is_bool_dtype(column_datatype):
+                    if isinstance(value, str):
+                        value = value.lower() in ("true", "1", "t", "yes", "y")
+            
+            self.df.iat[row_index, column_index] = value
+
+            self.operation_log.append({
+                "type": "update_cell",
+                "row": row_index,
+                "col": column_index,
+                "value": value
+            })
+        
+        except Exception as update_cell_error:
+            raise Exception(f"Error updating cell: {str(update_cell_error)}")
+    
+    def create_empty_dataframe(self, rows: int, columns: int, column_names: List[str] = None) -> pd.DataFrame:
+        """Creates a new empty dataframe"""
+        try:
+            self._save_state()
+
+            if not column_names:
+                column_names = [f"Column_{i + 1}" for i in range(columns)]
+
+            self.df = pd.DataFrame(index=range(rows), columns=column_names)
+
+            self.original_df = self.df.copy()
+
+            #have to clear sources 
+            self.file_path = None
+            self.is_temp_file = False
+            self.last_gsheet_id = None
+            self.last_gsheet_name = None
+            self.last_db_connection_string = None
+            self.last_db_query = None
+
+            self.undo_stack.clear()
+            self.redo_stack.clear()
+            self.operation_log.clear()
+
+            return self.df
+        except Exception as create_empty_dataframe_error:
+            raise Exception(f"Error creating DataFrame: {str(create_empty_dataframe_error)}")
 
     def get_data_info(self) -> Dict[str, Any]:
         """Get comprehensive statistics about the data"""

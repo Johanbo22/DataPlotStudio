@@ -1,6 +1,6 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QIcon
 
@@ -32,6 +32,7 @@ class DataTab(QWidget):
         self.data_tabs = None
         self.subset_view_label = None
         self.aggregation_view_label = None
+        self.is_editing = False
         
         self.init_ui()
     
@@ -43,8 +44,31 @@ class DataTab(QWidget):
         """Initialize the data tab UI"""
         main_layout = QHBoxLayout(self)
         
-        # Left side: Data table and operations (70%)
+        # Left side: Data table and operations
         left_layout = QVBoxLayout()
+
+        #data toolbar
+        toolbar_layout = QHBoxLayout()
+        toolbar_layout.setContentsMargins(0, 0, 0, 0)
+
+        #create dataset
+        self.create_new_dataset_button = AnimatedButton("Create New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
+        self.create_new_dataset_button.setIcon(QIcon("icons/menu_bar/new_project.png"))
+        self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
+        self.create_new_dataset_button.clicked.connect(self.create_new_dataset)
+        toolbar_layout.addWidget(self.create_new_dataset_button)
+
+        toolbar_layout.addStretch()
+
+        #edit current dataset toggle
+        self.edit_dataset_toggle_button = AnimatedButton("Edit Mode: OFF", parent=self, base_color_hex="#95a5a6", text_color_hex="white")
+        self.edit_dataset_toggle_button.setIcon(QIcon("icons/code_edit.png"))
+        self.edit_dataset_toggle_button.setCheckable(True)
+        self.edit_dataset_toggle_button.setToolTip("Toggle to edit data directly in the table")
+        self.edit_dataset_toggle_button.clicked.connect(self.toggle_edit_mode)
+        toolbar_layout.addWidget(self.edit_dataset_toggle_button)
+
+        left_layout.addLayout(toolbar_layout)
 
         #data source inor bar
         self.data_source_container = QWidget()
@@ -537,6 +561,48 @@ class DataTab(QWidget):
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
 
+    def create_new_dataset(self):
+        """Creates a new empty dataset"""
+        try:
+            rows, ok = QInputDialog.getInt(self, "New Dataset", "Number of Rows:", 10, 1, 1000000)
+            if not ok: return
+
+            columns, ok = QInputDialog.getInt(self, "New Dataset", "Number of Columns:", 3, 1, 1000)
+            if not ok: return
+
+            confirm = QMessageBox.question(
+                self, "Confirm Create",
+                "This will clear the current dataset and create a new empty dataset. Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if confirm == QMessageBox.StandardButton.Yes:
+                self.data_handler.create_empty_dataframe(rows, columns)
+                self.refresh_data_view()
+                self.status_bar.log(f"Created new dataset: ({rows}x{columns})", "SUCCESS")
+        
+        except Exception as create_new_dataset_error:
+            QMessageBox.critical(self, "Error", f"Failed to create dataset: {str(create_new_dataset_error)}")
+        
+    def toggle_edit_mode(self):
+        """Toggles the edit mode in the datble"""
+        self.is_editing = self.edit_dataset_toggle_button.isChecked()
+
+        if self.is_editing:
+            self.edit_dataset_toggle_button.setText("Edit Mode: ON")
+            self.edit_dataset_toggle_button.updateColors(base_color_hex="#E74C3C", hover_color_hex="#C0392B")
+            self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
+            self.status_bar.log(f"Edit Mode Enabled. You are now able to edit cells in the data table", "INFO")
+        else:
+            self.edit_dataset_toggle_button.setText("Edit Mode: OFF")
+            self.edit_dataset_toggle_button.updateColors(base_color_hex="#95A5A6", hover_color_hex="#7F8C8D")
+            self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+            self.status_bar.log(f"Edit Mode Disabled", "INFO")
+        
+        #update the flags
+        self.refresh_data_view()
+
+
     def inject_subset_to_dataframe(self):
         """Insert the selected subset into the active dataframe view.\n
             This allows the user to view their subset and do further manipulation to it, without having to export the subset first."""
@@ -669,9 +735,14 @@ class DataTab(QWidget):
         df = self.data_handler.df
         
         # Update table
-        self.model = DataTableModel(df)
+        self.model = DataTableModel(self.data_handler, editable=self.is_editing)
         self.data_table.setModel(self.model)
         self.data_table.setSortingEnabled(True)
+
+        if self.is_editing:
+            self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
+        else:
+            self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
         
         # Update column selectors
         columns = list(df.columns)
