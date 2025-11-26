@@ -145,6 +145,7 @@ class PlotTab(PlotTabUI):
         self.line_customizations = {}
         self.bar_customizations = {}
         self.annotations = []
+        self.subplot_data_configs = {}
 
         #plot dispatcher
         self.plot_strategies = {
@@ -320,6 +321,8 @@ class PlotTab(PlotTabUI):
             for i in range(max_plots):
                 self.active_subplot_combo.addItem(f"Plot {i + 1}")
             self.active_subplot_combo.blockSignals(False)
+
+            self.subplot_data_configs.clear()
 
             self.canvas.draw()
 
@@ -1181,16 +1184,46 @@ class PlotTab(PlotTabUI):
             QMessageBox.warning(self, "Warning", "No data loaded")
             return
         
-        # get active dataframe
-        active_df = self.get_active_dataframe()
+        #freeze data
+        current_subplot_index = self.active_subplot_combo.currentIndex()
+        if current_subplot_index < 0: current_subplot_index = 0
 
+        use_frozen_data = self.freeze_data_check.isChecked() and self.add_subplots_check.isChecked()
+        frozen_config = self.subplot_data_configs.get(current_subplot_index) if use_frozen_data else None
+
+        if frozen_config:
+            x_col = frozen_config.get("x_col")
+            y_cols = frozen_config.get("y_cols")
+            hue = frozen_config.get("hue")
+            subset_name = frozen_config.get("subset_name")
+
+            if subset_name:
+                try:
+                    if self.subset_manager:
+                        active_df = self.subset_manager.apply_subset(self.data_handler.df, subset_name)
+                    else:
+                        active_df = self.data_handler.df
+                        self.status_bar.log("Subset Manager missing, using full dataset", "WARNING")
+                except Exception as subset_error:
+                    self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(subset_error)}", "WARNING")
+                    active_df = self.data_handler.df
+            else:
+                active_df = self.data_handler.df
+
+            self.status_bar.log(f"Using data config for plot {current_subplot_index + 1}", "INFO")
+        else:
+            active_df = self.get_active_dataframe()
+            x_col = self.x_column.currentText()
+            y_cols = self.get_selected_y_columns()
+            hue = self.hue_column.currentText() if self.hue_column.currentText() != "None" else None
+            subset_name = self.subset_combo.currentData() if self.use_subset_check.isChecked() else None
+
+        
         if active_df is None or len(active_df) == 0:
-            QMessageBox.warning(self, "Warning", "Selected subset is empty")
+            QMessageBox.warning(self, "Warning", "Selected data is empty")
             return
         
         active_df = active_df.copy()
-        x_col = self.x_column.currentText()
-        y_cols = self.get_selected_y_columns()
 
         #sampling for better performance
         MAX_PLOT_POINTS = 500_000
@@ -1240,8 +1273,6 @@ class PlotTab(PlotTabUI):
             
             #get init params
             plot_type = self.plot_type.currentText()
-            x_col = self.x_column.currentText()
-            y_cols = self.get_selected_y_columns()
 
             # Validation ---
             plots_no_x = ["Box", "Histogram", "KDE", "Heatmap", "Pie", "ECDF", "Eventplot", "GeoSpatial"]
@@ -1271,7 +1302,6 @@ class PlotTab(PlotTabUI):
                 QMessageBox.warning(self, "Warning", f"{plot_type} requires at least one Y column (Y-position).")
                 return
 
-            hue = self.hue_column.currentText() if self.hue_column.currentText() != "None" else None
             axes_flipped = self.flip_axes_check.isChecked()
             font_family = self.font_family_combo.currentFont().family()
 
@@ -1455,7 +1485,7 @@ class PlotTab(PlotTabUI):
             if self.grid_check.isChecked():
                 self._apply_gridlines_customizations()
             else:
-                self.plot_engine.current_ax.grid(False) # Explicitly turn off
+                self.plot_engine.current_ax.grid(False)
 
             # spines
             self._apply_spines_customization()
@@ -1493,6 +1523,14 @@ class PlotTab(PlotTabUI):
             
             #refresh
             self.canvas.draw()
+
+            if self.add_subplots_check.isChecked():
+                self.subplot_data_configs[current_subplot_index] = {
+                    "x_col": x_col,
+                    "y_cols": y_cols,
+                    "hue": hue,
+                    "subset_name": subset_name
+                }
 
             self._sync_script_if_open()
 
@@ -2159,6 +2197,7 @@ class PlotTab(PlotTabUI):
         self.bar_customizations.clear()
         self.annotations.clear()
         self.annotations_list.clear()
+        self.subplot_data_configs.clear()
 
         self.status_bar.log_action(
             "Plot cleared",

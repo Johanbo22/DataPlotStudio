@@ -192,6 +192,11 @@ class PlotTabUI(QWidget):
         active_subplot_layout.addWidget(self.active_subplot_combo, 1)
         subplot_layout.addLayout(active_subplot_layout)
 
+        #DataFreeze
+        self.freeze_data_check = AnimatedCheckBox("Freeze Data Selection for Subplots")
+        self.freeze_data_check.setToolTip("If checked, the current data columns selected will be preserved for the subplots.\nUncheck to update the data for the active subplot")
+        subplot_layout.addWidget(self.freeze_data_check)
+
         self.subplot_group.setLayout(subplot_layout)
         layout.addWidget(self.subplot_group)
 
