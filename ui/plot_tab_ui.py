@@ -2,13 +2,16 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox
+    QFontComboBox, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider
+from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider, HelpIcon
+from ui.data_tab import DataTab 
+from core.help_manager import HelpManager
+from ui.dialogs import HelpDialog
 
 
 class PlotTabUI(QWidget):
@@ -18,6 +21,7 @@ class PlotTabUI(QWidget):
     
     def __init__(self) -> None:
         super().__init__()
+        self.help_manager = HelpManager()
     
     def init_ui(self, canvas: FigureCanvas, toolbar: NavigationToolbar) -> None:
         """Initialize the plotting/plot customization tab UI"""
@@ -183,9 +187,14 @@ class PlotTabUI(QWidget):
         subplot_layout.addLayout(grid_config_layout)
 
         #apply subplotlayout button
+        subplot_button_layout = QHBoxLayout()
         self.apply_subplot_layout_button = AnimatedButton("Update Subplot Layout", parent=self)
         self.apply_subplot_layout_button.setToolTip("Warning: This will clear the entire figure")
-        subplot_layout.addWidget(self.apply_subplot_layout_button)
+        self.apply_subplot_help = HelpIcon("subplots")
+        self.apply_subplot_help.clicked.connect(self.show_help_dialog)
+        subplot_button_layout.addWidget(self.apply_subplot_layout_button)
+        subplot_button_layout.addWidget(self.apply_subplot_help)
+        subplot_layout.addLayout(subplot_button_layout)
 
         #select an active subplot
         active_subplot_layout = QHBoxLayout()
@@ -2013,3 +2022,16 @@ class PlotTabUI(QWidget):
         splitter.addWidget(right)
         splitter.setSizes([700, 300])
         return splitter
+
+    def show_help_dialog(self, topic_id: str):
+        """Show the help dialog for a specific topic"""
+        try:
+            title, description, full_image_path, link = self.help_manager.get_help_topic(topic_id)
+            if title:
+                dialog = HelpDialog(title, description, full_image_path, link, self)
+                dialog.exec()
+            else:
+                QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
+        except Exception as e:
+            print(f"Error displaying help dialog: {str(e)}")
+            QMessageBox.critical(self, "Help Error", f"Could not load help content: {str(e)}")    
