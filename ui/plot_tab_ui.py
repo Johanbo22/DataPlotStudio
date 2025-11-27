@@ -147,6 +147,10 @@ class PlotTabUI(QWidget):
         self.add_subplots_check = AnimatedCheckBox("Add subplots")
         self.add_subplots_check.setChecked(False)
         plot_type_layout.addWidget(self.add_subplots_check)
+
+        self.use_subset_check = AnimatedCheckBox("Use Subset")
+        self.use_subset_check.setChecked(False)
+        plot_type_layout.addWidget(self.use_subset_check)
         
         self.plot_type_group.setLayout(plot_type_layout)
         layout.addWidget(self.plot_type_group)
@@ -256,18 +260,10 @@ class PlotTabUI(QWidget):
         data_group.setLayout(data_layout)
         layout.addWidget(data_group)
 
-        hue_group = AnimatedGroupBox("Hue/Group:")
-        hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
-        hue_layout = QVBoxLayout()
-        self.hue_column = AnimatedComboBox()
-        self.hue_column.addItem("None")
-        hue_layout.addWidget(self.hue_column)
-        hue_group.setLayout(hue_layout)
-        layout.addWidget(hue_group)
-
         #  SUBSEts
-        subset_group = AnimatedGroupBox("Data Subset (Optional)")
-        subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        self.subset_group = AnimatedGroupBox("Data Subset (Optional)")
+        self.subset_group.setVisible(False)
+        self.subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         subset_layout = QVBoxLayout()
 
         subset_info = QLabel(
@@ -278,9 +274,7 @@ class PlotTabUI(QWidget):
         subset_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         subset_layout.addWidget(subset_info)
 
-        self.use_subset_check = AnimatedCheckBox("Use Subset")
-        self.use_subset_check.setChecked(False)
-        subset_layout.addWidget(self.use_subset_check)
+        
 
         self.subset_combo = AnimatedComboBox()
         self.subset_combo.addItem("(Full Dataset)")
@@ -295,9 +289,17 @@ class PlotTabUI(QWidget):
         refresh_subsets_btn.clicked.connect(self.refresh_subset_list)
         subset_layout.addWidget(refresh_subsets_btn)
 
-        subset_group.setLayout(subset_layout)
-        layout.addWidget(subset_group)
+        self.subset_group.setLayout(subset_layout)
+        layout.addWidget(self.subset_group)
 
+        hue_group = AnimatedGroupBox("Hue/Group:")
+        hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        hue_layout = QVBoxLayout()
+        self.hue_column = AnimatedComboBox()
+        self.hue_column.addItem("None")
+        hue_layout.addWidget(self.hue_column)
+        hue_group.setLayout(hue_layout)
+        layout.addWidget(hue_group)
 
         layout.addSpacing(10)
 

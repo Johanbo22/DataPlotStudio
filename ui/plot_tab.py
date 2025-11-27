@@ -227,6 +227,7 @@ class PlotTab(PlotTabUI):
         self.apply_subplot_layout_button.clicked.connect(self.apply_subplot_layout)
         self.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         self.add_subplots_check.stateChanged.connect(self.on_subplot_active)
+        self.use_subset_check.stateChanged.connect(self.use_subset)
         
         # --- Tab 2:- Appearance ---
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
@@ -299,6 +300,12 @@ class PlotTab(PlotTabUI):
         subplots_enabled = self.add_subplots_check.isChecked()
 
         self.subplot_group.setVisible(subplots_enabled)
+    
+    def use_subset(self):
+        """Active subset on change"""
+        subset_enabled = self.use_subset_check.isChecked()
+        self.subset_group.setVisible(True)
+        
     
     def apply_subplot_layout(self):
         """Apply new grid layout to subplot context"""
