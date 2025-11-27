@@ -549,12 +549,45 @@ class PlotEngine:
         ylabel = kwargs.pop("ylabel", None)
         legend = kwargs.pop("legend", False)
 
-        mask = df[x].notna() & df[y].notna()
-        self.current_ax.stem(df.loc[mask, x], df.loc[mask, y], **kwargs)
+        line_style = kwargs.pop("linestyle", "-")
+        line_width = kwargs.pop("linewidth", 1.5)
+        marker = kwargs.pop("marker", "o")
+        marker_size = kwargs.pop("markersize", 6)
+        if "s" in kwargs:
+            marker_size = kwargs.pop("s")
+        
+        color = kwargs.pop("color", "#1f77b4")
+        if "c" in kwargs:
+            color = kwargs.pop("c")
+        
+        alpha = kwargs.pop("alpha", 1.0)
+        label = kwargs.pop("label", y)
+        orientation = kwargs.pop("orientation", "vertical")
+        bottom = kwargs.pop("bottom", 0)
+
+        if orientation == "horizontal":
+            markerline, stemlines, baseline = self.current_ax.stem(
+                df[y], df[x],
+                orientation="horizontal",
+                bottom=bottom,
+                label=label
+            )
+        else:
+            markerline, stemlines, baseline = self.current_ax.stem(
+                df[x], df[y],
+                orientation="vertical",
+                bottom=bottom,
+                label=label
+            )
+        
+        plt.setp(markerline, marker=marker, markersize=marker_size, color=color, alpha=alpha)
+        plt.setp(stemlines, linestyle=line_style, linewidth=line_width, color=color, alpha=alpha)
+        plt.setp(baseline, color="gray", linewidth=1, linestyle="-")
 
         if title: self.current_ax.set_title(title, fontsize=14, fontweight="bold")
         if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
         if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
+        if legend: self.current_ax.legend()
 
         self.current_figure.tight_layout()
     
