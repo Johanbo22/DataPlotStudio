@@ -629,6 +629,8 @@ class PlotEngine:
         """Create an eventplot"""
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
+        ylabel = kwargs.pop("ylabel", None)
+        _ = kwargs.pop("legend", None)
 
         data_to_plot = [df[col].dropna().values for col in y]
 
@@ -636,6 +638,7 @@ class PlotEngine:
 
         if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
         if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
+        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
         if len(y) > 1:
             self.current_ax.set_yticks(range(len(y)))
             self.current_ax.set_yticklabels(y)
