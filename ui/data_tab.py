@@ -1,8 +1,8 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog)
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect)
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QIcon, QFont
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -122,15 +122,17 @@ class DataTab(QWidget):
         # Statistics Tab
         self.stats_text = QTextEdit()
         self.stats_text.setReadOnly(True)
+
+        self.stats_opacity_effect = QGraphicsOpacityEffect(self.stats_text)
+        self.stats_text.setGraphicsEffect(self.stats_opacity_effect)
         stats_icon = QIcon("icons/data_stats.png")
         self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
         
         left_layout.addWidget(self.data_tabs, 1)
         
-        # Right side: Operations panel (30%) with tabs
         right_layout = QVBoxLayout()
         
-        # Reset button at the top - always visible
+        # Reset button at the to
         reset_button = AnimatedButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf")
         reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
         reset_button.clicked.connect(self.reset_data)
@@ -780,7 +782,6 @@ class DataTab(QWidget):
         else:
             self.data_source_container.setVisible(False)
         
-        # Refresh subsets (clear cache as data changed)
         try:
             if hasattr(self, 'subset_manager'):
                 self.subset_manager.clear_cache()
@@ -1201,6 +1202,13 @@ class DataTab(QWidget):
             body_content=body_html
         )
         self.stats_text.setHtml(final_html)
+
+        self.stats_animation = QPropertyAnimation(self.stats_opacity_effect, b"opacity")
+        self.stats_animation.setDuration(500)
+        self.stats_animation.setStartValue(0.0)
+        self.stats_animation.setEndValue(1.0)
+        self.stats_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self.stats_animation.start()
 
     def remove_duplicates(self) -> None:
         """Remove duplicate rows"""
