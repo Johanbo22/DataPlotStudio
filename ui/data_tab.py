@@ -515,7 +515,7 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         #thebuttn
-        self.inject_subset_tbn = AnimatedButton("Insert Selected Subset", parent=self, base_color_hex="#3409db", text_color_hex="white", font_weight="bold", padding="8px")
+        self.inject_subset_tbn = AnimatedButton("Insert Selected Subset", parent=self, base_color_hex="#3409db", hover_color_hex="#1b0085", text_color_hex="white", font_weight="bold", padding="8px")
         #self.inject_subset_tbn.setIcon(QIcon("icons/data_operations/inject.png")) ###mangler ikon
         self.inject_subset_tbn.clicked.connect(self.inject_subset_to_dataframe)
         inject_layout.addWidget(self.inject_subset_tbn)
@@ -531,7 +531,7 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         # hmm a restore btn?
-        self.restore_original_btn = AnimatedButton("Revert to Original Data View", parent=self, base_color_hex="#e74c3c", text_color_hex="white", padding="8px")
+        self.restore_original_btn = AnimatedButton("Revert to Original Data View", parent=self, base_color_hex="#e74c3c", hover_color_hex="#e91801", text_color_hex="white", padding="8px")
         #self.restore_original_btn.setIcon(QIcon("icons/data_operations/restore.png")) #Tilføj et ikon senere
         self.restore_original_btn.clicked.connect(self.restore_original_dataframe)
         self.restore_original_btn.setEnabled(False)

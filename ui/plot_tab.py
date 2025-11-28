@@ -304,7 +304,7 @@ class PlotTab(PlotTabUI):
     def use_subset(self):
         """Active subset on change"""
         subset_enabled = self.use_subset_check.isChecked()
-        self.subset_group.setVisible(True)
+        self.subset_group.setVisible(subset_enabled)
         
     
     def apply_subplot_layout(self):
