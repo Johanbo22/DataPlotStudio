@@ -1,6 +1,6 @@
 # ui/dialogs.py
 from re import I, T
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QPushButton, QMessageBox, QInputDialog, QComboBox,QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QFormLayout, QFileDialog, QProgressBar, QApplication, QListWidget, QSplitter, QWidget, QTextEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QDialogButtonBox, QFrame, QScrollArea, QPlainTextEdit)
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QPushButton, QMessageBox, QInputDialog, QComboBox,QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QFormLayout, QFileDialog, QProgressBar, QApplication, QListWidget, QSplitter, QWidget, QTextEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QDialogButtonBox, QFrame, QScrollArea, QPlainTextEdit, QTabWidget, QFontComboBox)
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRect
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QSyntaxHighlighter, QTextCharFormat, QColor, QTextCursor, QPainter, QTextFormat
 from pathlib import Path
@@ -2480,3 +2480,56 @@ class PythonHighlighter(QSyntaxHighlighter):
                     length = expression.end() - index
                     self.setFormat(index, length, format)
                     expression = pattern.search(text, index + length)
+
+class SettingsDialog(QDialog):
+    """Application settings dialog"""
+
+    def __init__(self, current_settings, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.resize(500, 400)
+        self.current_settings = current_settings
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        settings_layout = QVBoxLayout(self)
+
+        setting_tabs = QTabWidget()
+
+        appearance_tab = QWidget()
+        appearance_layout = QFormLayout()
+        appearance_layout.setSpacing(15)
+
+        self.dark_mode_check = AnimatedCheckBox("Enable Dark Mode")
+        self.dark_mode_check.setChecked(self.current_settings.get("dark_mode", False))
+        self.dark_mode_check.setToolTip("Toggle between dark and light themes")
+        appearance_layout.addRow(QLabel("Theme:"), self.dark_mode_check)
+
+        self.font_combo = QFontComboBox()
+        current_font = self.current_settings.get("font_family", "Consolas")
+        self.font_combo.setCurrentFont(QFont(current_font))
+        appearance_layout.addRow(QLabel("Font Family:"), self.font_combo)
+
+        self.font_size_spin = AnimatedSpinBox()
+        self.font_size_spin.setRange(8, 32)
+        self.font_size_spin.setValue(self.current_settings.get("font_size", 10))
+        appearance_layout.addRow(QLabel("Font Size:"), self.font_size_spin)
+
+        appearance_tab.setLayout(appearance_layout)
+        setting_tabs.addTab(appearance_tab, QIcon("icons/plot_tab/customization_tabs/appearance.png"), "Appearance")
+
+        settings_layout.addWidget(setting_tabs)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        settings_layout.addWidget(button_box)
+
+        self.setLayout(settings_layout)
+
+    def get_settings(self):# -> dict[str, Any]:
+        return {
+            "dark_mode": self.dark_mode_check.isChecked(),
+            "font_family": self.font_combo.currentFont().family(),
+            "font_size": self.font_size_spin.value()
+        }

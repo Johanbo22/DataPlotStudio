@@ -77,6 +77,12 @@ class MenuBar(QMenuBar):
         self.redo_action.setShortcut("Ctrl+Y")
         self.redo_action.setToolTip("Redo the previous action")
         edit_menu.addAction(self.redo_action)
+
+        edit_menu.addSeparator()
+        self.settings_action = QAction(QIcon("icons/plot_tab/customization_tabs/general.png"), "&Settings", parent)
+        self.settings_action.setShortcut("Ctrl+,")
+        self.settings_action.setToolTip("Configre application preferences")
+        edit_menu.addAction(self.settings_action)
         
         # View Menu
         view_menu = AnimatedMenu("&View", self)

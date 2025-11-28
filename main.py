@@ -3,7 +3,7 @@ import sys, os
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
 from PyQt6.QtCore import QTimer
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QAction, QFont
 
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
@@ -12,7 +12,7 @@ from core.project_manager import ProjectManager
 from core.data_handler import DataHandler
 from core.code_exporter import CodeExporter
 from core.logger import Logger
-from ui.dialogs import ProgressDialog, ExportDialog, DatabaseConnectionDialog
+from ui.dialogs import ProgressDialog, ExportDialog, DatabaseConnectionDialog, SettingsDialog
 import traceback
 
 
@@ -39,6 +39,14 @@ class DataPlotStudio(QMainWindow):
         
         # Log startup
         self.status_bar_widget.log("DataPlot Studio started", "INFO")
+
+        #load default settings
+        self.settings = {
+            "dark_mode": False,
+            "font_family": "Consolas",
+            "font_size": 10
+        }
+        self.apply_settings(self.settings)
         
         # Create menu bar
         self.menu_bar = MenuBar(self)
@@ -68,6 +76,7 @@ class DataPlotStudio(QMainWindow):
         # Edit menu
         self.menu_bar.undo_action.triggered.connect(self.undo_action)
         self.menu_bar.redo_action.triggered.connect(self.redo_action)
+        self.menu_bar.settings_action.triggered.connect(self.open_settings)
 
         #edport menu
         self.menu_bar.export_data_action.triggered.connect(self.export_data_dialog)
@@ -557,6 +566,162 @@ class DataPlotStudio(QMainWindow):
                     QMessageBox.information(self, "Success", f"Data exported successfully to {config['filepath']}")
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Failed to export: {str(e)}")
+    
+    def open_settings(self):
+        """open the settings """
+        dialog = SettingsDialog(self.settings, self)
+        if dialog.exec():
+            new_settings = dialog.get_settings()
+            self.settings.update(new_settings)
+            self.apply_settings(self.settings)
+            self.status_bar_widget.log("Settings updated", "INFO")
+    
+    def apply_settings(self, settings) -> None:
+        """apply settings to the main app"""
+        font = QFont(settings["font_family"], settings["font_size"])
+        QApplication.setFont(font)
+
+        if settings["dark_mode"]:
+            base_qss = self.get_dark_theme()
+        else:
+            base_qss = load_stylesheet("style.css")
+        
+        dynamic_qss = base_qss + f"""
+            QWidget {{
+                font-family: "{settings['font_family']}";
+                font-size: {settings['font_size']}pt;
+            }}
+            QGroupBox {{
+                font-weight: bold;
+                font-size: {settings['font_size'] + 2}pt; 
+            }}
+        """
+
+        QApplication.instance().setStyleSheet(dynamic_qss)
+
+    def get_dark_theme(self):
+        return """
+        QWidget {
+            background-color: #2b2b2b;
+            color: #f0f0f0;
+        }
+        QMainWindow {
+            background-color: #2b2b2b;
+        }
+        QGroupBox {
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 3px;
+            color: #ccc;
+        }
+        QPushButton {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 5px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #555;
+        }
+        QPushButton:pressed {
+            background-color: #333;
+        }
+        QPushButton:disabled {
+            background-color: #2a2a2a;
+            color: #666;
+            border: 1px solid #333;
+        }
+        QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 3px;
+        }
+        QComboBox::drop-down {
+            border: none;
+        }
+        QTabWidget::pane {
+            border: 1px solid #444;
+            background-color: #2b2b2b;
+        }
+        QTabBar::tab {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 5px 10px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected {
+            background: #444;
+            color: white;
+            border-bottom: 2px solid #0078d7;
+        }
+        QMenuBar {
+            background-color: #1e1e1e;
+            color: #eee;
+        }
+        QMenuBar::item:selected {
+            background-color: #333;
+        }
+        QMenu {
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            color: #eee;
+        }
+        QMenu::item:selected {
+            background-color: #0078d7;
+            color: white;
+        }
+        QTableWidget {
+            gridline-color: #444;
+            background-color: #2b2b2b;
+            color: #f0f0f0;
+        }
+        QHeaderView::section {
+            background-color: #333;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 4px;
+        }
+        QScrollArea {
+            border: none;
+            background-color: #2b2b2b;
+        }
+        QScrollBar:vertical, QScrollBar:horizontal {
+            background: #2b2b2b;
+            border: none;
+        }
+        QScrollBar::handle {
+            background: #555;
+            border-radius: 4px;
+        }
+        QScrollBar::handle:hover {
+            background: #666;
+        }
+        QStatusBar {
+            background-color: #1e1e1e;
+            color: #aaa;
+            border-top: 1px solid #333;
+        }
+        QToolTip {
+            background-color: #1e1e1e;
+            color: white;
+            border: 1px solid #555;
+        }
+        QWidget#PlotTab {
+            background-color: #2b2b2b;
+        }
+        """
 
 def load_stylesheet(relative_path: str) -> str:
     """Load the qss style into main"""
