@@ -55,8 +55,7 @@ class DataPlotStudio(QMainWindow):
         # Create main window widget
         self.main_widget = MainWindow(self.data_handler, self.project_manager, self.status_bar_widget)
         self.setCentralWidget(self.main_widget)
-        
-        # Connect signals
+    
         self._connect_signals()
         
         self.show()
@@ -313,11 +312,12 @@ class DataPlotStudio(QMainWindow):
         """Zoom in on plot"""
         try:
             current_tab = self.main_widget.tabs.currentIndex()
-            if current_tab == 1:  # Plot Studio tab
+            PLOT_STUDIO_TAB = 1
+            if current_tab == PLOT_STUDIO_TAB:  
                 # Get current figure size
                 fig = self.main_widget.plot_tab.plot_engine.current_figure
                 width, height = fig.get_size_inches()
-                # Increase by 10%
+                
                 new_width = min(width * 1.1, 20)  
                 new_height = min(height * 1.1, 16)  
                 fig.set_size_inches(new_width, new_height)
