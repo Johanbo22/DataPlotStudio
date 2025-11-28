@@ -186,6 +186,18 @@ class PlotTabUI(QWidget):
 
         subplot_layout.addLayout(grid_config_layout)
 
+        #shareing axes boxes
+        share_axes_layout = QHBoxLayout()
+        self.subplot_sharex_check = AnimatedCheckBox("Share X-axis")
+        self.subplot_sharex_check.setToolTip("Share X-axis limits and ticks across all subplots")
+        share_axes_layout.addWidget(self.subplot_sharex_check)
+
+        self.subplot_sharey_check = AnimatedCheckBox("Share Y-axis")
+        self.subplot_sharey_check.setToolTip("Share Y-axis limits and ticks across all subplots")
+        share_axes_layout.addWidget(self.subplot_sharey_check)
+
+        subplot_layout.addLayout(share_axes_layout)
+
         #apply subplotlayout button
         subplot_button_layout = QHBoxLayout()
         self.apply_subplot_layout_button = AnimatedButton("Update Subplot Layout", parent=self)

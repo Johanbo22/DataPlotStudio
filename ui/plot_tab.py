@@ -311,6 +311,8 @@ class PlotTab(PlotTabUI):
         """Apply new grid layout to subplot context"""
         rows = self.subplot_rows_spin.value()
         cols = self.subplot_cols_spin.value()
+        sharex = self.subplot_sharex_check.isChecked()
+        sharey = self.subplot_sharey_check.isChecked()
 
         confirmation = QMessageBox.question(
             self, "Update Layout",
@@ -319,7 +321,7 @@ class PlotTab(PlotTabUI):
         )
         
         if confirmation == QMessageBox.StandardButton.Yes:
-            self.plot_engine.setup_layout(rows, cols)
+            self.plot_engine.setup_layout(rows, cols, sharex=sharex, sharey=sharey)
 
             max_plots = rows * cols
             self.active_subplot_combo.blockSignals(True)
@@ -330,7 +332,6 @@ class PlotTab(PlotTabUI):
             self.active_subplot_combo.blockSignals(False)
 
             self.subplot_data_configs.clear()
-
             self.canvas.draw()
 
             #trigger overlay

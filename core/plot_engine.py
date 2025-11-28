@@ -120,13 +120,13 @@ class PlotEngine:
         self.setup_layout(1, 1)
         return self.current_figure
 
-    def setup_layout(self, rows: int = 1, cols: int = 1):
+    def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
         """Subplot layout grid"""
         if self.current_figure is None:
             return
         
         self.current_figure.clear()
-        axes = self.current_figure.subplots(rows, cols)
+        axes = self.current_figure.subplots(rows, cols, sharex=sharex, sharey=sharey)
         if isinstance(axes, np.ndarray):
             self.axes_flat = axes.flatten().tolist()
         else:
