@@ -728,8 +728,7 @@ class DataTab(QWidget):
     def refresh_data_view(self):
         """Refresh the data table and statistics"""
         if self.data_handler.df is None:
-            self.data_table.setRowCount(0)
-            self.data_table.setColumnCount(0)
+            self.data_table.setModel(None)
             self.stats_text.clear()
             self.data_source_container.setVisible(False)
             return
