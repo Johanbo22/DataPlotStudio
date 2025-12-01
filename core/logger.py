@@ -78,9 +78,9 @@ class Logger:
         msg = f"Dropped {count:,} row(s) with missing values"
         self.success(msg)
     
-    def missing_values_filled(self, count: int):
+    def missing_values_filled(self, count: int, method: str = "forward fill"):
         """Log missing value filling"""
-        msg = f"Filled {count:,} missing value(s) using forward fill"
+        msg = f"Filled {count:,} missing value(s) using {method}"
         self.success(msg)
     
     def column_dropped(self, column: str):
@@ -144,7 +144,43 @@ class Logger:
     def project_saved(self, filename: str):
         """Log project save"""
         self.success(f"Project saved: {filename}")
+
+    def subset_created(self, name: str, rows: int):
+        """Log subset creation"""
+        message = f"Subset created: '{name}' ({rows:,} rows)"
+        self.success(message)
     
+    def subset_inserted(self, name: str, rows: int):
+        """Log subset insertion into active """
+        message = f"Subset inserted as active data: '{name}' ({rows:,} rows)"
+        self.info(message)
+
+    def subset_deleted(self, name: str):
+        """Log deletion of subseet"""
+        message = f"Subset deleted: '{name}'"
+        self.info(message)
+    
+    def aggregation_saved(self, name: str):
+        """Log aggregation saved"""
+        message = f"Aggregation saved: '{name}'"
+        self.success(message)
+    
+    def aggregation_deleted(self, name: str):
+        """Log deletion af agg"""
+        message = f"Aggregation deleted: '{name}'"
+        self.info(message)
+    
+    def data_melted(self, id_vars: List[str], value_vars: Optional[List[str]], rows_before: int, rows_after: int):
+        """Log pivot/melt """
+        value_vars = str(value_vars) if value_vars else "All other columns"
+        message = f"Data melted: id_vars={id_vars}, value_vars={value_vars} | Rows: {rows_before:,} -> {rows_after:,}"
+        self.success(message)
+    
+    def column_data_type_changed(self, column: str, old_data_type: str, new_data_type: str):
+        """Kig data type change of column"""
+        message = f"Column type changed. '{column}' ({old_data_type} -> {new_data_type})"
+        self.success(message)
+
     def get_all_logs(self) -> str:
         """Get all logs as formatted string"""
         return "\n".join(str(entry) for entry in self.entries)

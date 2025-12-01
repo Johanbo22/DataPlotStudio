@@ -519,7 +519,6 @@ class DataPlotStudio(QMainWindow):
             dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             dialog.button(QMessageBox.StandardButton.Yes).setText("Detailed (Full Timestamps)")
             dialog.button(QMessageBox.StandardButton.No).setText("Standard (Time Only)")
-            # bug always set to: dialog.button(QMessageBox.StandardButton.Yes).setText("str")
             
             detailed = dialog.exec() == QMessageBox.StandardButton.Yes
             
