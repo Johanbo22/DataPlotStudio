@@ -475,8 +475,68 @@ class PlotTabUI(QWidget):
         spines_info = QLabel("Customize the four borders (spines) of the plotting axes")
         spines_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         spines_layout.addWidget(spines_info)
-
         spines_layout.addSpacing(10)
+
+        #QUICK presents?
+        presets_label = QLabel("Quick Presets")
+        presets_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        spines_layout.addWidget(presets_label)
+
+        presets_button_layout = QHBoxLayout()
+        
+        #all spines
+        self.all_spines_btn = AnimatedButton("All Spines", parent=self)
+        self.all_spines_btn.setToolTip("Show all four spines")
+        presets_button_layout.addWidget(self.all_spines_btn)
+
+        #box only (Lshape)
+        self.box_only_btn = AnimatedButton("Box Only", parent=self)
+        self.box_only_btn.setToolTip("Show only left and bottom spines")
+        presets_button_layout.addWidget(self.box_only_btn)
+
+        #no spines preset
+        self.no_spines_btn = AnimatedButton("No Spines", parent=self)
+        self.no_spines_btn.setToolTip("Hide all spines")
+        presets_button_layout.addWidget(self.no_spines_btn)
+
+        spines_layout.addLayout(presets_button_layout)
+        spines_layout.addSpacing(15)
+
+        #global spine settings
+        global_spines_settings_label = QLabel("Global Spine Settings")
+        global_spines_settings_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        spines_layout.addWidget(global_spines_settings_label)
+
+        global_spines_settings_layout = QHBoxLayout()
+
+        #global spine width
+        global_spines_settings_layout.addWidget(QLabel("Line Width:"))
+        self.global_spine_width_spin = AnimatedDoubleSpinBox()
+        self.global_spine_width_spin.setRange(0.1, 5.0)
+        self.global_spine_width_spin.setValue(1.0)
+        self.global_spine_width_spin.setSingleStep(0.1)
+        global_spines_settings_layout.addWidget(self.global_spine_width_spin)
+
+        #global color settings
+        global_spines_settings_layout.addWidget(QLabel("Color:"))
+        self.global_spine_color_button = AnimatedButton("Choose", parent=self)
+        self.global_spine_color_label = QLabel("Black")
+        global_spines_settings_layout.addWidget(self.global_spine_color_label)
+        global_spines_settings_layout.addWidget(self.global_spine_color_button)
+
+        spines_layout.addLayout(global_spines_settings_layout)
+        spines_layout.addSpacing(10)
+
+        #edit spines individually
+        self.individual_spines_check = AnimatedCheckBox("Customize spines individually")
+        self.individual_spines_check.setChecked(False)
+        self.individual_spines_check.setToolTip("Enabled to set visibility, width and color of the four spines individually")
+        spines_layout.addWidget(self.individual_spines_check)
+
+        self.individual_spines_container = QWidget()
+        self.individual_spines_container.setVisible(False)
+        individual_layout = QVBoxLayout(self.individual_spines_container)
+        individual_layout.setContentsMargins(0, 0, 0, 0)
 
         #top spine
         top_spine_group = AnimatedGroupBox("Top Spine")
@@ -502,7 +562,7 @@ class PlotTabUI(QWidget):
         top_spine_layout.addLayout(top_spine_color_layout)
 
         top_spine_group.setLayout(top_spine_layout)
-        spines_layout.addWidget(top_spine_group)
+        individual_layout.addWidget(top_spine_group)
 
         # Bottom Spine
         bottom_spine_group = AnimatedGroupBox("Bottom Spine")
@@ -528,7 +588,7 @@ class PlotTabUI(QWidget):
         bottom_spine_layout.addLayout(bottom_spine_color_layout)
         
         bottom_spine_group.setLayout(bottom_spine_layout)
-        spines_layout.addWidget(bottom_spine_group)
+        individual_layout.addWidget(bottom_spine_group)
         
         # Left Spine
         left_spine_group = AnimatedGroupBox("Left Spine")
@@ -554,7 +614,7 @@ class PlotTabUI(QWidget):
         left_spine_layout.addLayout(left_spine_color_layout)
         
         left_spine_group.setLayout(left_spine_layout)
-        spines_layout.addWidget(left_spine_group)
+        individual_layout.addWidget(left_spine_group)
         
         # Right Spine
         right_spine_group = AnimatedGroupBox("Right Spine")
@@ -580,32 +640,9 @@ class PlotTabUI(QWidget):
         right_spine_layout.addLayout(right_spine_color_layout)
         
         right_spine_group.setLayout(right_spine_layout)
-        spines_layout.addWidget(right_spine_group)
+        individual_layout.addWidget(right_spine_group)
 
-        #QUICK presents?
-        spines_layout.addSpacing(10)
-        presets_label = QLabel("Quick Presets")
-        presets_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        spines_layout.addWidget(presets_label)
-
-        presets_button_layout = QHBoxLayout()
-        
-        #all spines
-        self.all_spines_btn = AnimatedButton("All Spines", parent=self)
-        self.all_spines_btn.setToolTip("Show all four spines")
-        presets_button_layout.addWidget(self.all_spines_btn)
-
-        #box only (Lshape)
-        self.box_only_btn = AnimatedButton("Box Only", parent=self)
-        self.box_only_btn.setToolTip("Show only left and bottom spines")
-        presets_button_layout.addWidget(self.box_only_btn)
-
-        #no spines preset
-        self.no_spines_btn = AnimatedButton("No Spines", parent=self)
-        self.no_spines_btn.setToolTip("Hide all spines")
-        presets_button_layout.addWidget(self.no_spines_btn)
-
-        spines_layout.addLayout(presets_button_layout)
+        spines_layout.addWidget(self.individual_spines_container)
 
         spines_group.setLayout(spines_layout)
         scroll_layout.addWidget(spines_group)

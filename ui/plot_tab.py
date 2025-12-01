@@ -124,10 +124,13 @@ class PlotTab(PlotTabUI):
         # These are now defined in the UI base 
         self.bg_color = "white"
         self.face_color = "white"
+
+        self.global_spine_color = "black"
         self.top_spine_color = "black"
         self.bottom_spine_color = "black"
         self.left_spine_color = "black"
         self.right_spine_color = "black"
+
         self.line_color = None
         self.marker_color = None
         self.marker_edge_color = None
@@ -230,6 +233,8 @@ class PlotTab(PlotTabUI):
         self.use_subset_check.stateChanged.connect(self.use_subset)
         
         # --- Tab 2:- Appearance ---
+        self.individual_spines_check.stateChanged.connect(self.toggle_individual_spines)
+        self.global_spine_color_button.clicked.connect(self.choose_global_spine_color)
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
         self.bottom_spine_color_button.clicked.connect(self.choose_bottom_spine_color)
         self.left_spine_color_button.clicked.connect(self.choose_left_spine_color)
@@ -294,6 +299,19 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+    
+    def toggle_individual_spines(self):
+        """Toggles the customization of spines for each"""
+        checked  = self.individual_spines_check.isChecked()
+        self.individual_spines_container.setVisible(checked)
+    
+    def choose_global_spine_color(self):
+        """Aplly the color and open diaglo"""
+        color = QColorDialog.getColor(QColor(self.global_spine_color), self)
+        if color.isValid():
+            self.global_spine_color = color.name()
+            self.global_spine_color_label.setText(self.global_spine_color)
+            self.global_spine_color_button.updateColors(base_color_hex=self.global_spine_color)
     
     def on_subplot_active(self):
         """Activate subplot group for visibility"""
@@ -2142,43 +2160,44 @@ class PlotTab(PlotTabUI):
             return
         
         try:
-            #get the spines
             spines = self.plot_engine.current_ax.spines
+            is_individual = self.individual_spines_check.isChecked()
+            
+            # Prepare Global settings
+            global_width = self.global_spine_width_spin.value()
+            global_color = self.global_spine_color
 
-            #top spine
-            if self.top_spine_visible_check.isChecked():
-                spines["top"].set_visible(True)
-                spines["top"].set_linewidth(self.top_spine_width_spin.value())
-                spines["top"].set_edgecolor(self.top_spine_color)
-            else:
-                spines["top"].set_visible(False)
-            
-            #bottom spine
-            if self.bottom_spine_visible_check.isChecked():
-                spines["bottom"].set_visible(True)
-                spines["bottom"].set_linewidth(self.bottom_spine_width_spin.value())
-                spines["bottom"].set_edgecolor(self.bottom_spine_color)
-            else:
-                spines["bottom"].set_visible(False)
-            
-            #left spine
-            if self.left_spine_visible_check.isChecked():
-                spines["left"].set_visible(True)
-                spines["left"].set_linewidth(self.left_spine_width_spin.value())
-                spines["left"].set_edgecolor(self.left_spine_color)
-            else:
-                spines["left"].set_visible(False)
-            
-            #right spine
-            if self.right_spine_visible_check.isChecked():
-                spines["right"].set_visible(True)
-                spines["right"].set_linewidth(self.right_spine_width_spin.value())
-                spines["right"].set_edgecolor(self.right_spine_color)
-            else:
-                spines["right"].set_visible(False)
+            spine_map = [
+                ("top", self.top_spine_visible_check, self.top_spine_width_spin, "top_spine_color"),
+                ("bottom", self.bottom_spine_visible_check, self.bottom_spine_width_spin, "bottom_spine_color"),
+                ("left", self.left_spine_visible_check, self.left_spine_width_spin, "left_spine_color"),
+                ("right", self.right_spine_visible_check, self.right_spine_width_spin, "right_spine_color")
+            ]
+
+            for key, vis_check, width_spin, color_attr in spine_map:
+                if key not in spines:
+                    continue
+                
+                is_visible = vis_check.isChecked()
+                
+                if is_visible:
+                    spines[key].set_visible(True)
+                    
+                    if is_individual:
+                        width = width_spin.value()
+                        color = getattr(self, color_attr, "black")
+                    else:
+                        width = global_width
+                        color = global_color
+                    
+                    spines[key].set_linewidth(width)
+                    spines[key].set_edgecolor(color)
+                else:
+                    spines[key].set_visible(False)
         
         except Exception as e:
             self.status_bar.log(f"Failed to apply spine customization: {str(e)}", "ERROR")
+            traceback.print_exc()
 
 
     def clear_plot(self) -> None:
