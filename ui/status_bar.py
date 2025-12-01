@@ -56,7 +56,6 @@ class StatusBar(QStatusBar):
     def set_logger(self, logger) -> None:
         """Set the logger instance"""
         self.logger = logger
-        print(f"DEBUG: Logger set in StatusBar: {logger is not None}")
     
     def log(self, message: str, level: str = "INFO", action_type: str = None) -> None:
         """Log a message to the terminal"""
