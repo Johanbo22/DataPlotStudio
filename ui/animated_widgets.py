@@ -165,7 +165,7 @@ class AnimatedGroupBox(QGroupBox):
                 padding: 0 5px;
                 left: 10px;
                 background-color: white; 
-                top: -7px
+                top: 0px
             }}
         """)
 
