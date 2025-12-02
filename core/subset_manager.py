@@ -4,6 +4,8 @@ import pandas as pd
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
+import os, shutil, tempfile, atexit
+from pathlib import Path
 
 @dataclass
 class Subset:
@@ -44,7 +46,23 @@ class SubsetManager:
 
     def __init__(self):
         self.subsets: Dict[str, Subset] = {}
-        self._cached_data: Dict[str, pd.DataFrame] = {}
+        self.cached_directory = Path(tempfile.mkdtemp(prefix="dps_subset_cache_"))
+        atexit.register(self._cleanup_cache)
+        print(f"DEBUG: SubsetManager initialized with disk cache at {self.cached_directory}")
+    
+    def _cleanup_cache(self):
+        """Deletes files from the tempfile directory on exit"""
+        if self.cached_directory.exists():
+            try:
+                shutil.rmtree(self.cached_directory)
+                print(f"DEBUG: SubsetManager cache deleted: {self.cached_directory}")
+            except Exception as cache_removal_error:
+                print(f"Error deleting cache: {cache_removal_error}")
+    
+    def _get_cache_path(self, name: str) -> Path:
+        """Retrieve the path for the cache file"""
+        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)
+        return self.cached_directory / f"{safe_name}.parquet"
     
     def create_subset(self, name: str, description: str, filters: List[Dict[str, Any]], logic: str = "AND") -> Subset:
         """Create a new subset definition"""
@@ -75,8 +93,7 @@ class SubsetManager:
             subset.logic = logic
         
         #invalidate cache
-        if name in self._cached_data:
-            del self._cached_data[name]
+        self.clear_cache(name)
         
         return subset
     
@@ -84,8 +101,7 @@ class SubsetManager:
         """Delete a subset"""
         if name in self.subsets:
             del self.subsets[name]
-            if name in self._cached_data:
-                del self._cached_data[name]
+            self.clear_cache(name)
             return True
         return False
     
@@ -100,22 +116,27 @@ class SubsetManager:
     def apply_subset(self, df: pd.DataFrame, name: str, use_cache: bool = True) -> pd.DataFrame:
         """Apply subset filters to dataframe and return the filtered data"""
         if name not in self.subsets:
-            raise ValueError(f"Subset '{name}' does not exists")
+            raise ValueError(f"Subset '{name}' does not exist")
         
-        #check cache
-        if use_cache and name in self._cached_data:
-            return self._cached_data[name].copy()
+        cache_path = self._get_cache_path(name)
+        if use_cache and cache_path.exists():
+            try:
+                return pd.read_parquet(cache_path)
+            except Exception as cache_read_error:
+                print(f"WARNING: Failed to read cached data for {name}: {cache_read_error}")
         
         subset = self.subsets[name]
         filtered_df = self._apply_filters(df, subset.filters, subset.logic)
 
-        #update row count
         subset.row_count = len(filtered_df)
 
-        #cache the result
         if use_cache:
-            self._cached_data[name] = filtered_df.copy()
-
+            try:
+                self.cached_directory.mkdir(parents=True, exist_ok=True)
+                filtered_df.to_parquet(cache_path, index=False)
+            except Exception as parquet_write_error:
+                print(f"WARNING: Failed to write cache file for subset {name} to disk: {parquet_write_error}")
+            
         return filtered_df
     
     def _apply_filters(self, df: pd.DataFrame, filters: List[Dict[str, Any]], logic: str) -> pd.DataFrame:
@@ -179,10 +200,19 @@ class SubsetManager:
     def clear_cache(self, name: Optional[str] = None) -> None:
         """Clear cached subset data"""
         if name:
-            if name in self._cached_data:
-                del self._cached_data
+            cache_path = self._get_cache_path(name)
+            if cache_path.exists():
+                try:
+                    os.remove(cache_path)
+                except OSError as delete_cached_error:
+                    print(f"WARNING: Failed to deleted cached directory at {cache_path}: {delete_cached_error}")
         else:
-            self._cached_data.clear()
+            if self.cached_directory.exists():
+                for file_path in self.cached_directory.glob("*.parquet"):
+                    try:
+                        file_path.unlink()
+                    except OSError as delete_cached_directory_error:
+                        print(f"WARNING: Failed to delete {file_path}: {delete_cached_directory_error}")
     
     def get_subset_info(self, name: str) -> Dict[str, Any]:
         """Get info about a subset"""
@@ -190,6 +220,7 @@ class SubsetManager:
             raise ValueError(f"Subset '{name}' does not exist")
         
         subset = self.subsets[name]
+        cache_path = self._get_cache_path(name)
         return {
             "name": subset.name,
             "description": subset.description,
@@ -197,7 +228,7 @@ class SubsetManager:
             "logic": subset.logic,
             "created_at": subset.created_at,
             "row_count": subset.row_count,
-            "is_cached": name in self._cached_data
+            "is_cached": cache_path.exists()
         }
     
     def export_subsets(self) -> Dict[str, Any]:
@@ -210,7 +241,7 @@ class SubsetManager:
     def import_subsets(self, data: Dict[str, Any]):
         """Import subsets"""
         self.subsets.clear()
-        self._cached_data.clear()
+        self.clear_cache()
 
         for name, subset_data in data.items():
             self.subsets[name] = Subset.from_dict(subset_data)
