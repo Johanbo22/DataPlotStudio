@@ -694,3 +694,48 @@ class DataHandler:
     def has_google_sheets_import(self) -> bool:
         """Check if a Google Sheet can be refreshed"""
         return bool(self.last_gsheet_id and self.last_gsheet_name)
+    
+    def get_history_info(self) -> Dict[str, Any]:
+        """Get full history of changes for better undo/redo
+        Returns:
+            dict: {'history': List[Dict], 'current_index': int}
+        """
+        full_log = self.operation_log.copy()
+        current_index = len(full_log)
+
+        temporary_log = full_log
+        redo_operations = []
+
+        for i in range(len(self.redo_stack) - 1, -1,-1):
+            _, state_log = self.redo_stack[i]
+            if len(state_log) > len(temporary_log):
+                new_operations = state_log[len(temporary_log):]
+                redo_operations.extend(new_operations)
+                temporary_log = state_log
+        
+        return {
+            "history": full_log + redo_operations,
+            "current_index": current_index
+        }
+    
+    def jump_to_history_index(self, target_index: int) -> None:
+        """Go to a specific point in the history based on an index
+        """
+        current_index = len(self.undo_stack)
+
+        if target_index == current_index:
+            return
+        
+        print(f"DEBUG: Going from index: {current_index} to {target_index}")
+
+        if target_index < current_index:
+            steps = current_index - target_index
+            for _ in range(steps):
+                if not self.undo():
+                    break
+        
+        else:
+            steps = target_index - current_index
+            for _ in range(steps):
+                if not self.redo():
+                    break

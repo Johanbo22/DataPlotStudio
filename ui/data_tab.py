@@ -544,6 +544,28 @@ class DataTab(QWidget):
 
         subset_icon = QIcon("icons/data_operations/subset.png")  
         ops_tabs.addTab(subset_tab, subset_icon, "Subsets")
+
+        #Tah6 -history 
+        history_tab = QWidget()
+        history_layout = QVBoxLayout(history_tab)
+
+        history_info = QLabel("View and revert to a previous state of data state")
+        history_info.setWordWrap(True)
+        history_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        history_layout.addWidget(history_info)
+
+        self.history_list = AnimatedListWidget()
+        self.history_list.itemClicked.connect(self.on_history_clicked)
+        history_layout.addWidget(self.history_list)
+
+        #text for help/understanding
+        history_help = QLabel("Click on a state to go back/forwards to it.\nGray items are undone operations.")
+        history_help.setWordWrap(True)
+        history_help.setStyleSheet("color: #7f8c8d; font-size: 8pt;")
+        history_layout.addWidget(history_help)
+
+        history_icon = QIcon("icons/data_operations/view.png")
+        ops_tabs.addTab(history_tab, history_icon, "History")
         
         right_layout.addWidget(ops_tabs)
         
@@ -814,6 +836,45 @@ class DataTab(QWidget):
                 self.aggregation_view_label.setText("")
                 self.aggregation_view_label.setVisible(False)
         
+        if hasattr(self, "history_list"):
+            self.history_list.clear()
+
+            history_information = self.data_handler.get_history_info()
+            history_operations = history_information["history"]
+            current_index = history_information["current_index"]
+
+            initial_item = QListWidgetItem("0. Initial Data")
+            initial_item.setData(Qt.ItemDataRole.UserRole, 0)
+
+            if current_index == 0:
+                initial_item.setFont(QFont("Arial", 9, QFont.Weight.Bold))
+                initial_item.setForeground(Qt.GlobalColor.black)
+                initial_item.setIcon(QIcon("icons/ui_styling/checkmark.png"))
+            
+            self.history_list.addItem(initial_item)
+
+            for i, operation in enumerate(history_operations):
+                history_index = i + 1
+                operation_text = self._format_operation_text(operation)
+                item = QListWidgetItem(f"{history_index}. {operation_text}")
+                item.setData(Qt.ItemDataRole.UserRole, history_index)
+
+                if history_index == current_index:
+                    item.setFont(QFont("Arial", 9, QFont.Weight.Bold))
+                    item.setForeground(Qt.GlobalColor.black)
+                    item.setIcon(QIcon("icons/ui_styling/checkmark.png"))
+                    item.setBackground(Qt.GlobalColor.white)
+                elif history_index > current_index:
+                    item.setForeground(Qt.GlobalColor.gray)
+                    font = item.font()
+                    font.setItalic(True)
+                    item.setFont(font)
+                
+                self.history_list.addItem(item)
+
+            if self.history_list.count() > 0:
+                self.history_list.scrollToItem(self.history_list.item(current_index))
+
         self.status_bar.log(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
 
     def quick_create_subsets(self):
@@ -1974,3 +2035,48 @@ class DataTab(QWidget):
         except Exception as e:
             self.status_bar.log(f"Error displaying help dialog: {str(e)}", "ERROR")
             QMessageBox.critical(self, "Help Error", "Could not load help content. See log for details")
+
+    def on_history_clicked(self, item):
+        """Handles the click of history entry"""
+        if not item:
+            return
+        
+        target_index = item.data(Qt.ItemDataRole.UserRole)
+        try:
+            self.data_handler.jump_to_history_index(target_index)
+            self.refresh_data_view()
+
+            for i in range(self.history_list.count()):
+                list_item = self.history_list.item(i)
+                if list_item.data(Qt.ItemDataRole.UserRole) == target_index:
+                    self.history_list.setCurrentItem(list_item)
+                    break
+        
+        except Exception as history_error:
+            self.status_bar.log(F"Failed to go to state: {str(history_error)}", "ERROR")
+    
+    def _format_operation_text(self, operation: dict) -> str:
+        """Formatter for operation dict back to better text handling"""
+        operation_type = operation.get("type", "Unknown")
+
+        match operation_type:
+            case "filter":
+                return f"Filter: {operation.get('column')} {operation.get('condition')} '{operation.get('value')}'"
+            case "drop_column":
+                return f"Drop Column: {operation.get("column")}"
+            case "rename_column":
+                return f"Rename: {operation.get("old_name")} -> {operation.get("new_name")}"
+            case "change_data_type":
+                return f"Data type change: {operation.get("column")} -> {operation.get("new_type")}"
+            case "fill_missing":
+                return f"Fill missing Values: {operation.get("column")} ({operation.get("method")})"
+            case "drop_missing":
+                return f"Drop missing Values"
+            case "drop_duplicates":
+                return f"Remove Duplicate Values"
+            case "aggregate":
+                return f"Aggregation: {operation.get("agg_func")} on {len(operation.get("agg_columns", []))} columns"
+            case "melt":
+                return f"Melt/Pivot Data"
+            case _:
+                return f"{operation_type.replace("_", " ").title()}"
