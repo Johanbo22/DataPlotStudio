@@ -1329,7 +1329,7 @@ class DataTab(QWidget):
                     self.data_handler.inserted_subset_name = None
                 if hasattr(self.data_handler, "viewing_aggregation_name"):
                     self.data_handler.viewing_aggregation_name = None
-                if hasattr(self.data_handler, "pree_agg_view_df"):
+                if hasattr(self.data_handler, "pre_agg_view_df"):
                     self.data_handler.pre_agg_view_df = None
                 
                 if hasattr(self, "injection_status_label"):
@@ -1521,7 +1521,7 @@ class DataTab(QWidget):
                 self.data_handler.inserted_subset_name = None
 
             if hasattr(self.data_handler, "viewing_aggregation_name"):
-                self.data_handler.viewing_aggregtation_name = None
+                self.data_handler.viewing_aggregation_name = None
             if hasattr(self.data_handler, "pre_agg_view_df"):
                 self.data_handler.pre_agg_view_df = None
 

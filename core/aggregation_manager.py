@@ -30,7 +30,7 @@ class SavedAggregation:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SavedAggregation":
         """Create from dict"""
-        created_at = datetime.fromisoformat(data["created_at"]) if created_at in data else datetime.now()
+        created_at = datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now()
         return cls(
             name=data["name"],
             description=data.get("description", ""),

@@ -289,25 +289,6 @@ class DataHandler:
         """Check if the last import was a google sheet"""
         return self.last_gsheet_id is not None and self.last_gsheet_name is not None
     
-    def refresh_google_shets(self) -> pd.DataFrame:
-        """Re import the last google sheet with same params"""
-        if not self.has_google_sheet_import():
-            raise Exception("No Google Sheets import history found.")
-        
-        print("DEBUG data_handler.py->refresh_google_sheets: Refreshing with params:")
-        print(f"  - Sheet ID: {self.last_gsheet_id}")
-        print(f"  - Sheet Name: {self.last_gsheet_name}")
-        print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
-        print(f"  - Decimal: '{self.last_gsheet_decimal}'")
-        print(f"  - Thousands: {self.last_gsheet_thousands}")
-
-        return self.import_google_sheets(
-            sheet_id=self.last_gsheet_id,
-            sheet_name=self.last_gsheet_name,
-            delimiter=self.last_gsheet_delimiter,
-            decimal=self.last_gsheet_decimal,
-            thousands=self.last_gsheet_thousands
-        )
     
     def import_from_database(self, connection_string: str, query: str) -> pd.DataFrame:
         """Import data from a database witha connection and a query request"""

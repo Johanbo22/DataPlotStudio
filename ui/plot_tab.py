@@ -2546,7 +2546,7 @@ class PlotTab(PlotTabUI):
         try:
             def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
                 allowed_modules = {
-                    "pandas", "numpy", "matplotlib", "seaborn", "scipy", "math", "datetime", "random", "re", "io", "typing", "collectons" "itertools", "functools"
+                    "pandas", "numpy", "matplotlib", "seaborn", "scipy", "math", "datetime", "random", "re", "io", "typing", "collections", "itertools", "functools"
                 }
 
                 base_name = name.split(".")[0]

@@ -1032,7 +1032,7 @@ class PlotEngine:
 
         #first check if datetime in cols
         is_x_datetime = self._helper_is_datetime_column(plot_tab, x_data)
-        is_y_datetim = self._helper_is_datetime_column(plot_tab, y_data) if y_data is not None else False
+        is_y_datetime = self._helper_is_datetime_column(plot_tab, y_data) if y_data is not None else False
 
         use_custom_format: bool = plot_tab.custom_datetime_check.isChecked()
 
