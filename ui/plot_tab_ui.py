@@ -2,7 +2,7 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox, QMessageBox
+    QFontComboBox, QMessageBox, QStackedWidget
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QFont
@@ -12,7 +12,14 @@ from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboB
 from ui.data_tab import DataTab 
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
-
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+    WEB_ENGINE_AVAILABLE = True
+    print(WEB_ENGINE_AVAILABLE)
+except:
+    WEB_ENGINE_AVAILABLE = False
+    print(f"{WEB_ENGINE_AVAILABLE} QtWebEngineWidgets not installed")
+    from PyQt6.QtWidgets import QLabel as QWebEngineView
 
 class PlotTabUI(QWidget):
     """
@@ -33,7 +40,21 @@ class PlotTabUI(QWidget):
         self.toolbar = toolbar
         
         left_layout.addWidget(self.toolbar)
-        left_layout.addWidget(self.canvas, 1)
+
+        self.plot_stack = QStackedWidget()
+        self.plot_stack.addWidget(self.canvas)
+
+        if WEB_ENGINE_AVAILABLE:
+            self.web_view = QWebEngineView()
+            self.web_view.setHtml("<html><body><h3 style='color:gray; font-family:sans-serif; text-align:center; margin-top:20%;'>Plotly Plot Area</h3></body></html>")
+        else:
+            self.web_view = QLabel("Interactive plotting requires 'PyQt6-WebEngine'.\nPlease install it: pip install PyQt6-WebEngine")
+            self.web_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.web_view.setStyleSheet("QLabel { background-color: white; color: red; font-size: 14px; }")
+        
+        self.plot_stack.addWidget(self.web_view)
+
+        left_layout.addWidget(self.plot_stack, 1)
         
         right_layout = QVBoxLayout()
         
@@ -151,6 +172,11 @@ class PlotTabUI(QWidget):
         self.add_subplots_check = AnimatedCheckBox("Add subplots")
         self.add_subplots_check.setChecked(False)
         plot_type_layout.addWidget(self.add_subplots_check)
+
+        self.use_plotly_check = AnimatedCheckBox("Use Plotly backend")
+        self.use_plotly_check.setChecked(False)
+        self.use_plotly_check.setToolTip("Switch to the Plotly backend")
+        plot_type_layout.addWidget(self.use_plotly_check)
 
         self.use_subset_check = AnimatedCheckBox("Use Subset")
         self.use_subset_check.setChecked(False)

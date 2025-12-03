@@ -21,6 +21,13 @@ try:
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 except ImportError:
     gpd = None
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    import plotly.io as pio
+    PLOTLY_AVAILABLE = True
+except:
+    PLOTLY_AVAILABLE = False
 
 
 class PlotEngine:
@@ -119,6 +126,109 @@ class PlotEngine:
         self.current_figure = Figure(figsize=figsize, dpi=dpi)
         self.setup_layout(1, 1)
         return self.current_figure
+    
+    def generate_plotly_plot(self, df: pd.DataFrame, plot_type: str, x: str, y: List[str], **kwargs) -> str:
+        
+        if not PLOTLY_AVAILABLE:
+            return """
+            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
+            <h3 style='color:red;'>Plotly library not found</h3>
+            <p>Please install it to use interactive plotting:</p>
+            <code>pip install plotly</code>
+            </body></html>
+            """
+        
+        try:
+            fig = None
+            title = kwargs.get("title", f"{plot_type} Plot")
+            hue = kwargs.get("hue")
+
+            px_kwargs = {
+                "title": title,
+                "template": "plotly_white"
+            }
+            if hue:
+                px_kwargs["color"] = hue
+            
+            if plot_type == "Line":
+                if len(y) == 1:
+                    fig = px.line(df, x=x, y=y[0], **px_kwargs)
+                else:
+                    fig = px.line(df, x=x, y=y, **px_kwargs)
+            elif plot_type == "Bar":
+                y_col = y[0] if y else None
+                if len(y) > 1:
+                    fig = px.bar(df, x=x, y=y, barmode="group", **px_kwargs)
+                else:
+                    if kwargs.get("horizontal", False):
+                        fig = px.bar(df, x=y_col, y=x, orientation="h", **px_kwargs)
+                    else:
+                        fig = px.bar(df, x=x, y=y_col, **px_kwargs)
+
+            elif plot_type == "Histogram":
+                data_column = y[0] if y else None
+                if not data_column: data_column = x
+
+                bins = kwargs.get("bins", 30)
+                fig = px.histogram(df, x=data_column, nbins=bins, **px_kwargs)
+
+                if kwargs.get("show_kde", False):
+                    fig.update_traces(opacity=0.75)
+            
+            elif plot_type == "Box":
+                fig = px.box(df, y=y, x=x if x else None, **px_kwargs)
+            
+            elif plot_type == "Violin":
+                fig = px.violin(df, y=y[0], x=x if x else None, box=True, points="all", **px_kwargs)
+            
+            elif plot_type == "Heatmap":
+                numeric_df = df.select_dtypes(include=[np.number])
+                correlation = numeric_df.corr()
+                fig = px.imshow(correlation, text_auto=True, title=title, color_continuous_scale="RdBu_r")
+            
+            elif plot_type == "Pie":
+                y_col = y[0] if y else None
+                if x and y_col:
+                    fig = px.pie(df, names=x, values=y_col, **px_kwargs)
+                elif x:
+                    fig = px.pie(df, names=x, **px_kwargs)
+            
+            elif plot_type == "Area":
+                if len(y) == 1:
+                    fig = px.area(df, x=x, y=y[0], **px_kwargs)
+                else:
+                    fig = px.area(df, x=x, y=y, **px_kwargs)
+            
+            elif plot_type == "3D Scatter" or (plot_type == "Scatter" and len(y) > 1 and kwargs.get("3d", False)):
+                ## To Do
+                pass
+
+            if fig is None:
+                return f"""
+                <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
+                <h3 style='color:orange;'>Interactive mode not supported for '{plot_type}'</h3>
+                <p>Showing static plot instead.</p>
+                </body></html>
+                """
+            
+            fig.update_layout(
+                xaxis_title=kwargs.get("xlabel", x),
+                yaxis_title=kwargs.get("ylabel", str(y)),
+                legend_title=hue if hue else "Legend",
+                margin=dict(l=40, r=40, t=40, b=40)
+            )
+
+            return fig.to_html(include_plotlyjs="cdn", full_html=True)
+
+        except Exception as plotly_error:
+            return f"""
+            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
+            <h3 style='color:red;'>Error generating interactive plot</h3>
+            <pre>{str(plotly_error)}</pre>
+            </body></html>
+            """
+
+
 
     def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
         """Subplot layout grid"""

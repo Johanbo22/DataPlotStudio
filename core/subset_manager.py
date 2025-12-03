@@ -1,5 +1,4 @@
 #core/subset_manager
-"""Class to handle subsets of data"""
 import pandas as pd
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field

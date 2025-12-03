@@ -231,6 +231,7 @@ class PlotTab(PlotTabUI):
         self.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         self.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         self.use_subset_check.stateChanged.connect(self.use_subset)
+        self.use_plotly_check.stateChanged.connect(self.toggle_plotly_backend)
         
         # --- Tab 2:- Appearance ---
         self.individual_spines_check.stateChanged.connect(self.toggle_individual_spines)
@@ -299,6 +300,22 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+
+    def toggle_plotly_backend(self):
+
+        is_plotly = self.use_plotly_check.isChecked()
+
+        if is_plotly:
+            self.plot_stack.setCurrentIndex(1)
+            self.toolbar.setVisible(False)
+
+            self.add_subplots_check.setEnabled(False)
+            self.add_subplots_check.setChecked(False)
+        else:
+            self.plot_stack.setCurrentIndex(0)
+            self.toolbar.setVisible(True)
+            self.add_subplots_check.setEnabled(True)
+
     
     def toggle_individual_spines(self):
         """Toggles the customization of spines for each"""
@@ -1250,10 +1267,44 @@ class PlotTab(PlotTabUI):
             return
         
         active_df = active_df.copy()
+        plot_type = self.plot_type.currentText()
+
+        if self.use_plotly_check.isChecked():
+            try:
+                self.status_bar.log(f"Generating {plot_type} plot using the plotly backend...", "INFO")
+
+                kwargs = {
+                    "title": self.title_input.text() if self.title_input.text() else f"{plot_type} Plot",
+                    "xlabel": self.xlabel_input.text() or x_col,
+                    "ylabel": self.ylabel_input.text() or (y_cols[0] if y_cols else ""),
+                    "hue": hue,
+                    "show_regression": self.regression_line_check.isChecked(),
+                    "horizontal": self.flip_axes_check.isChecked()
+                }
+
+                if plot_type == "Histogram":
+                    kwargs["bins"] = self.histogram_bins_spin.value()
+                    kwargs["show_kde"] = self.histogram_show_kde_check.isChecked()
+                
+                html_content = self.plot_engine.generate_plotly_plot(
+                    active_df, plot_type, x_col, y_cols, **kwargs)
+                
+                if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
+                    self.web_view.setHtml(html_content)
+                    self.status_bar.log(f"{plot_type} plot generated with plotly")
+                else:
+                    self.status_bar.log("WebEngineView not available", "ERROR")
+
+                return
+            
+            except Exception as plot_plotly_error:
+                self.status_bar.log(f"Plotting {plot_type} using plotly backend has failed: {str(plot_plotly_error)}", "ERROR")
+                QMessageBox.critical(self, "Plotly Plotting Error", str(plot_plotly_error))
+                traceback.print_exc()
+                return
 
         #sampling for better performance
         MAX_PLOT_POINTS = 500_000
-        plot_type = self.plot_type.currentText()
         PLOTS_TO_SAMPLE = [
             "Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"
         ]
