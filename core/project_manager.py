@@ -4,7 +4,6 @@ import pickle
 from pathlib import Path
 from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
-from glm import project
 import pandas as pd
 
 class ProjectManager:
@@ -49,7 +48,7 @@ class ProjectManager:
         
         try:
             save_data: Dict[str, Any] = project_data.copy()
-            dateframe: Optional[pd.DataFrame] = None
+            dataframe: Optional[pd.DataFrame] = None
 
             #saving data to a binary file
             if "data" in save_data and isinstance(save_data["data"], pd.DataFrame):

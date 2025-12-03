@@ -201,8 +201,8 @@ class MainWindow(QWidget):
             self.progress_dialog.accept()
             self.progress_dialog = None
             
-        QMessageBox.critical(self, "Error", f"Failed to import file: {str(e)}")
-        self.status_bar.log(f"Import failed: {str(e)}", "ERROR")
+        QMessageBox.critical(self, "Error", f"Failed to import file: {str(error)}")
+        self.status_bar.log(f"Import failed: {str(error)}", "ERROR")
         
         # Clear temp variables
         self._temp_import_filepath = None

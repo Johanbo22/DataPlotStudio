@@ -422,7 +422,7 @@ class DataPlotStudio(QMainWindow):
         dialog.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
 
 
-        result = dialog.exec()
+        dialog.exec()
         
         #
         export_type = ""
@@ -430,7 +430,7 @@ class DataPlotStudio(QMainWindow):
             export_type = "Data Only"
         elif dialog.clickedButton() == btn_data_plot:
             export_type = "Data + Plot"
-            plot_config = self.main_widget.plot_tab.get_config() # Get config only if plotting
+            plot_config = self.main_widget.plot_tab.get_config()
         else: 
             return
         # 

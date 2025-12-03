@@ -71,7 +71,7 @@ class DataHandler:
             temp_dir.mkdir(exist_ok=True)
 
             #generate filename
-            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%HS")
+            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
             temp_filename = f"{source_name}_{timestamp}.csv"
             temp_path = temp_dir / temp_filename
 
