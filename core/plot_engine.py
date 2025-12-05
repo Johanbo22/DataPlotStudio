@@ -128,7 +128,7 @@ class PlotEngine:
         return self.current_figure
     
     def generate_plotly_plot(self, df: pd.DataFrame, plot_type: str, x: str, y: List[str], **kwargs) -> str:
-        
+        """"""
         if not PLOTLY_AVAILABLE:
             return """
             <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
@@ -799,11 +799,6 @@ class PlotEngine:
             Y = pivot_df.index.values
             Z = pivot_df.values
 
-            try:
-                if np.isnan(Z).any():
-                    Z = pd.DataFrame(Z).fillna(0).values
-            except TypeError:
-                pass
             
             return X, Y, Z
         except Exception as e:

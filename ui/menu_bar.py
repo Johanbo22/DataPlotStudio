@@ -102,7 +102,7 @@ class MenuBar(QMenuBar):
         export_menu = AnimatedMenu("&Export Data", self)
         self.addMenu(export_menu)
 
-        self.export_data_action = QAction(QIcon("icon/menu_bar/export.png"), "&Export Data", parent)
+        self.export_data_action = QAction(QIcon("icons/menu_bar/export.png"), "&Export Data", parent)
         self.export_data_action.setToolTip("Export the current data view into a new file")
         export_menu.addAction(self.export_data_action)
 

@@ -1,8 +1,5 @@
 # core/data_handler.py
-from itertools import groupby
-from tkinter import N
 from duckdb import connect
-from flask.cli import F
 import pandas as pd
 import numpy as np
 import json
@@ -16,7 +13,6 @@ try:
     import geopandas as gpd
 except ImportError:
     gpd = None
-
 
 
 class DataHandler:
@@ -35,14 +31,14 @@ class DataHandler:
         self.temp_csv_path: Optional[Path] = None
         self.is_temp_file: bool = False
 
-        #google sheets credentials tracking
+        #google sheets creds tracking
         self.last_gsheet_id: Optional[str] = None
         self.last_gsheet_name: Optional[str] = None
         self.last_gsheet_delimiter: Optional[str] = None
         self.last_gsheet_decimal: Optional[str] = None
         self.last_gsheet_thousands: Optional[str] = None
 
-        #Track database credentials
+        #Track database creds
         self.last_db_connection_string: Optional[str] = None
         self.last_db_query: Optional[str] = None
 
@@ -160,7 +156,6 @@ class DataHandler:
                 try:
                     self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}')").df()
                 except Exception as import_file_error:
-                    con.close()
                     print(f"DEBUG: DuckDB failed ({str(import_file_error)}), falling back to pandas")
                     self.df = pd.read_csv(filepath)
                 finally:
@@ -170,7 +165,6 @@ class DataHandler:
                 try:
                     self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\t')").df()
                 except Exception as import_file_error:
-                    con.close()
                     print(f"DEBUG: DuckDB failed: ({str(import_file_error)}), falling back to pandas")
                     self.df = pd.read_csv(filepath, sep="\t")
                 finally:
@@ -642,18 +636,21 @@ class DataHandler:
             self.df = self.original_df.copy()
             print(f"DEBUG: Data reset. Stacks cleared")
     
-    def export_data(self, filepath: str, format: str = 'csv') -> None:
+    def export_data(self, filepath: str, format: str = 'csv', include_index: bool = False) -> None:
         """Export data to file"""
         if self.df is None:
             raise ValueError("No data loaded")
         
         try:
             if format == 'csv':
-                self.df.to_csv(filepath, index=False)
+                self.df.to_csv(filepath, index=include_index)
             elif format == 'xlsx':
-                self.df.to_excel(filepath, index=False)
+                self.df.to_excel(filepath, index=include_index)
             elif format == 'json':
-                self.df.to_json(filepath)
+                if include_index:
+                    self.df.to_json(filepath, orient="columns", indent=4)
+                else:
+                    self.df.to_json(filepath, orient="records", indent=4)
         except Exception as e:
             raise Exception(f"Error exporting data: {str(e)}")
     

@@ -1,6 +1,7 @@
 # main.py
 import sys, os
 from pathlib import Path
+from xml.etree.ElementInclude import include
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QIcon, QAction, QFont
@@ -557,14 +558,15 @@ class DataPlotStudio(QMainWindow):
         dialog = ExportDialog(self)
         if dialog.exec():
             config = dialog.get_export_config()
-            if config['filepath']:
+            if config["filepath"]:
                 try:
-                    format_ext = config['format']
-                    self.data_handler.export_data(config['filepath'], format=format_ext)
-                    self.status_bar_widget.log(f"Exported data to: {config['filepath']}")
-                    QMessageBox.information(self, "Success", f"Data exported successfully to {config['filepath']}")
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Failed to export: {str(e)}")
+                    format_extension = config["format"]
+                    include_index = config.get("include_index", False)
+                    self.data_handler.export_data(config["filepath"], format=format_extension, include_index=include_index)
+                    self.status_bar_widget.log(f"Exported data to {config["filepath"]}")
+                    QMessageBox.information(self, "Success", f"Data exported successfully to {config["filepath"]}")
+                except Exception as export_error:
+                    QMessageBox.critical(self, "Error", f"Failed to export: {str(export_error)}")
     
     def open_settings(self):
         """open the settings """
@@ -585,7 +587,7 @@ class DataPlotStudio(QMainWindow):
         else:
             base_qss = load_stylesheet("style.css")
         
-        dynamic_qss = base_qss + f"""
+        different_qss = base_qss + f"""
             QWidget {{
                 font-family: "{settings['font_family']}";
                 font-size: {settings['font_size']}pt;
@@ -596,7 +598,7 @@ class DataPlotStudio(QMainWindow):
             }}
         """
 
-        QApplication.instance().setStyleSheet(dynamic_qss)
+        QApplication.instance().setStyleSheet(different_qss)
 
     def get_dark_theme(self):
         return """
