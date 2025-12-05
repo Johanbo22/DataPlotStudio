@@ -51,10 +51,10 @@ class DataHandler:
             try:
                 os.remove(self.temp_csv_path)
                 print(f"DEBUG: Cleaned up and deleted file: {self.temp_csv_path}")
-            except PermissionError as e:
-                print(f"DEBUG: Permission Denied: {str(e)}")
-            except Exception as e:
-                print(f"DEBUG: Failed to delete temp file: {str(e)}")
+            except PermissionError as CleanupTempFileError:
+                print(f"DEBUG: Permission Denied: {str(CleanupTempFileError)}")
+            except Exception as CleanupTempFileError:
+                print(f"DEBUG: Failed to delete temp file: {str(CleanupTempFileError)}")
             finally:
                 self.temp_csv_path = None
                 self.is_temp_file: bool = False
@@ -76,8 +76,8 @@ class DataHandler:
 
             print(f"DEBUG: Created temporary csv file at: {temp_path}")
             return temp_path
-        except Exception as e:
-            raise Exception(f"Failed to create a temporary csv: {str(e)}")
+        except Exception as CreateTempFileError:
+            raise Exception(f"Failed to create a temporary csv: {str(CreateTempFileError)}")
 
     
     def _save_state(self) -> None:
@@ -155,8 +155,8 @@ class DataHandler:
                 con = connect(database=':memory:', read_only=False)
                 try:
                     self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}')").df()
-                except Exception as import_file_error:
-                    print(f"DEBUG: DuckDB failed ({str(import_file_error)}), falling back to pandas")
+                except Exception as ImportFileError:
+                    print(f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas")
                     self.df = pd.read_csv(filepath)
                 finally:
                     con.close()
@@ -164,8 +164,8 @@ class DataHandler:
                 con = connect(database=":memory:", read_only=False)
                 try:
                     self.df = con.execute(f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\t')").df()
-                except Exception as import_file_error:
-                    print(f"DEBUG: DuckDB failed: ({str(import_file_error)}), falling back to pandas")
+                except Exception as ImportFileError:
+                    print(f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas")
                     self.df = pd.read_csv(filepath, sep="\t")
                 finally:
                     con.close()
@@ -193,8 +193,8 @@ class DataHandler:
             self.operation_log.clear()
             return self.df
         
-        except Exception as e:
-            raise Exception(f"Error importing file: {str(e)}")
+        except Exception as ImportFileError:
+            raise Exception(f"Error importing file: {str(ImportFileError)}")
     
     def import_google_sheets(self, sheet_id: str, sheet_name: str, delimiter: str = ",", decimal: str = ".", thousands: str = None) -> pd.DataFrame:
         """Import data from Google Sheets using sheet_id and sheet_name"""
@@ -242,8 +242,8 @@ class DataHandler:
                         
                         if df is not None and len(df) > 0:
                             break  # 
-                except Exception as e:
-                    last_error = e
+                except Exception as GoogleSheetsImportError:
+                    last_error = GoogleSheetsImportError
                     continue
             
             if df is None or len(df) == 0:
@@ -267,17 +267,17 @@ class DataHandler:
             raise Exception("Connection timeout: Google Sheets took too long to respond.\n\nTry again in a moment or check your internet connection.")
         except requests.exceptions.ConnectionError:
             raise Exception("Connection error: Unable to connect to Google Sheets.\n\nCheck your internet connection.")
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
+        except requests.exceptions.HTTPError as GoogleSheetsHTTPError:
+            if GoogleSheetsHTTPError.response.status_code == 404:
                 raise Exception("Sheet not found (404)\n\nPossible causes:\n• Sheet ID is incorrect\n• Sheet has been deleted\n• Sheet is not publicly accessible\n\nDouble-check the Sheet ID and verify sharing settings.")
-            elif e.response.status_code == 403:
+            elif GoogleSheetsHTTPError.response.status_code == 403:
                 raise Exception("Permission denied (403)\n\nThe sheet is not publicly accessible.\n\nTo fix:\n1. Open the Google Sheet\n2. Click 'Share' (top right)\n3. Select 'Anyone with the link'\n4. Choose 'Viewer' or higher\n5. Try importing again")
             else:
-                raise Exception(f"HTTP Error {e.response.status_code}: {str(e)}")
+                raise Exception(f"HTTP Error {GoogleSheetsHTTPError.response.status_code}: {str(GoogleSheetsHTTPError)}")
         except ValueError as e:
             raise Exception(f"Invalid input or empty sheet:\n{str(e)}")
-        except Exception as e:
-            error_msg = str(e)
+        except Exception as ImportGoogleSheetsError:
+            error_msg = str(ImportGoogleSheetsError)
             raise Exception(f"Error importing Google Sheet:\n{error_msg}\n\nVerification checklist:\n✓ Sheet ID is correct\n✓ Sheet name matches exactly (case-sensitive)\n✓ Sheet is shared publicly\n✓ Internet connection is active\n✓ Try with Sheet1 first")
     def has_google_sheet_import(self) -> bool:
         """Check if the last import was a google sheet"""
@@ -329,10 +329,10 @@ class DataHandler:
         
         except ImportError:
             raise Exception("SQLAlchemy or database driver is not installed.\nPlease install 'sqlalchemy' and appropriate drivers (e.g., 'psycopg2-binary').")
-        except Exception as e:
+        except Exception as ImportDatabaseError:
             self.last_db_connection_string = None
             self.last_db_query = None
-            raise Exception(f"Database import failed:\n{str(e)}")
+            raise Exception(f"Database import failed:\n{str(ImportDatabaseError)}")
         
     def update_cell(self, row_index: int, column_index: int, value: Any) -> None:
         """Update a cell in the data table"""
@@ -369,8 +369,8 @@ class DataHandler:
                 "value": value
             })
         
-        except Exception as update_cell_error:
-            raise Exception(f"Error updating cell: {str(update_cell_error)}")
+        except Exception as UpdateCellError:
+            raise Exception(f"Error updating cell: {str(UpdateCellError)}")
     
     def create_empty_dataframe(self, rows: int, columns: int, column_names: List[str] = None) -> pd.DataFrame:
         """Creates a new empty dataframe"""
@@ -397,8 +397,8 @@ class DataHandler:
             self.operation_log.clear()
 
             return self.df
-        except Exception as create_empty_dataframe_error:
-            raise Exception(f"Error creating DataFrame: {str(create_empty_dataframe_error)}")
+        except Exception as CreateEmptyDataframeError:
+            raise Exception(f"Error creating DataFrame: {str(CreateEmptyDataframeError)}")
 
     def get_data_info(self) -> Dict[str, Any]:
         """Get comprehensive statistics about the data"""
@@ -471,8 +471,8 @@ class DataHandler:
 
             return self.df
 
-        except Exception as e:
-            raise Exception(f"Error filtering data: {str(e)}")
+        except Exception as FilterDataError:
+            raise Exception(f"Error filtering data: {str(FilterDataError)}")
 
     
     def aggregate_data(self, group_by: List[str], agg_columns: List[str], agg_func: str) -> pd.DataFrame:
@@ -496,8 +496,8 @@ class DataHandler:
             })
 
             return self.df
-        except Exception as e:
-            raise Exception(f"Error aggregating data: {str(e)}")
+        except Exception as AggregateDataError:
+            raise Exception(f"Error aggregating data: {str(AggregateDataError)}")
     
     def melt_data(self, id_vars: List[str], value_vars: List[str], var_name: str, value_name: str) -> pd.DataFrame:
         """Use melt to unpivot a dataframe"""
@@ -526,8 +526,8 @@ class DataHandler:
             })
 
             return self.df
-        except Exception as melt_error:
-            raise Exception(f"Error melting data: {str(melt_error)}")
+        except Exception as MeltDataError:
+            raise Exception(f"Error melting data: {str(MeltDataError)}")
     
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
@@ -622,8 +622,8 @@ class DataHandler:
                 
             print(f"DEBUG: clean_data({action}) completed. Undo stack: {len(self.undo_stack)}")
             return self.df
-        except Exception as e:
-            raise Exception(f"Error cleaning data: {str(e)}")
+        except Exception as CleanDataError:
+            raise Exception(f"Error cleaning data: {str(CleanDataError)}")
     
     def reset_data(self) -> None:
         """Reset data to original state"""
@@ -651,8 +651,8 @@ class DataHandler:
                     self.df.to_json(filepath, orient="columns", indent=4)
                 else:
                     self.df.to_json(filepath, orient="records", indent=4)
-        except Exception as e:
-            raise Exception(f"Error exporting data: {str(e)}")
+        except Exception as ExportDataError:
+            raise Exception(f"Error exporting data: {str(ExportDataError)}")
     
     def get_data_source_info(self) -> Dict[str, Any]:
         """Get info about the data source"""

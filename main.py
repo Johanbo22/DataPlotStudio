@@ -100,8 +100,8 @@ class DataPlotStudio(QMainWindow):
                 project = self.project_manager.load_project(filepath)
                 self.main_widget.load_project(project)
                 self.status_bar_widget.log(f"Project loaded: {filepath}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to load project: {str(e)}")
+            except Exception as LoadProjectError:
+                QMessageBox.critical(self, "Error", f"Failed to load project: {str(LoadProjectError)}")
     
     def save_project(self):
         """Save current project"""
@@ -122,9 +122,9 @@ class DataPlotStudio(QMainWindow):
                 },
                 level="SUCCESS"
             )
-        except Exception as e:
-            self.status_bar_widget.log(f"Save failed: {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to save project: {str(e)}")
+        except Exception as SaveProjectError:
+            self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")
     
     def import_google_sheets(self):
         """Import from Google Sheets"""
@@ -204,10 +204,10 @@ class DataPlotStudio(QMainWindow):
                     f"Delimiter: {delimiter_name}\n"
                     f"Decimal: {decimal}")
                 
-        except Exception as e:
+        except Exception as ImportGoogleSheetsError:
             if "progress_dialog" in locals() and progress_dialog:
                 progress_dialog.accept()
-            error_msg = str(e)
+            error_msg = str(ImportGoogleSheetsError)
             self.status_bar_widget.log(f"✗ Import failed: {error_msg}")
             QMessageBox.critical(self, "Import Error", 
                             f"Failed to import Google Sheet:\n\n{error_msg}\n\n"
@@ -272,10 +272,10 @@ class DataPlotStudio(QMainWindow):
                     f"Rows: {rows:,}\n"
                     f"Columns: {cols}")
                 
-        except Exception as e:
+        except Exception as ImportDatabaseError:
             if "progress_dialog" in locals() and progress_dialog:
                 progress_dialog.accept()
-            error_msg = str(e)
+            error_msg = str(ImportDatabaseError)
             self.status_bar_widget.log(f"✗ Database import failed: {error_msg}")
             QMessageBox.critical(self, "Import Error", 
                             f"Failed to import from database:\n\n{error_msg}\n\n"
@@ -294,8 +294,8 @@ class DataPlotStudio(QMainWindow):
             else:
                 QMessageBox.information(self, "Info", "Nothing to undo")
                 self.status_bar_widget.log("Nothing to undo")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Cannot undo: {str(e)}")
+        except Exception as UndoError:
+            QMessageBox.warning(self, "Error", f"Cannot undo: {str(UndoError)}")
     
     def redo_action(self):
         """Redo last undone action"""
@@ -306,8 +306,8 @@ class DataPlotStudio(QMainWindow):
             else:
                 QMessageBox.information(self, "Info", "Nothing to redo")
                 self.status_bar_widget.log("Nothing to redo")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Cannot redo: {str(e)}")
+        except Exception as RedoError:
+            QMessageBox.warning(self, "Error", f"Cannot redo: {str(RedoError)}")
     
     def zoom_in(self):
         """Zoom in on plot"""
@@ -326,8 +326,8 @@ class DataPlotStudio(QMainWindow):
                 self.status_bar_widget.log(f"Zoomed in: {new_width:.1f}x{new_height:.1f} inches")
             else:
                 QMessageBox.information(self, "Info", "Zoom only works in Plot Studio tab")
-        except Exception as e:
-            self.status_bar_widget.log(f"Zoom in failed: {str(e)}")
+        except Exception as ZoomInError:
+            self.status_bar_widget.log(f"Zoom in failed: {str(ZoomInError)}")
     
     def zoom_out(self):
         """Zoom out on plot"""
@@ -343,8 +343,8 @@ class DataPlotStudio(QMainWindow):
                 self.status_bar_widget.log(f"Zoomed out: {new_width:.1f}x{new_height:.1f} inches")
             else:
                 QMessageBox.information(self, "Info", "Zoom only works in Plot Studio tab")
-        except Exception as e:
-            self.status_bar_widget.log(f"Zoom out failed: {str(e)}")
+        except Exception as ZoomOutError:
+            self.status_bar_widget.log(f"Zoom out failed: {str(ZoomOutError)}")
     
     def show_about(self):
         """Show about dialog"""
@@ -496,9 +496,9 @@ class DataPlotStudio(QMainWindow):
             
             QMessageBox.information(self, "Success", success_mgs)
             
-        except Exception as e:
-            self.status_bar_widget.log(f"Failed to export code: {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to export code: {str(e)}\n\n{traceback.format_exc()}")
+        except Exception as ExportCodeError:
+            self.status_bar_widget.log(f"Failed to export code: {str(ExportCodeError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to export code: {str(ExportCodeError)}\n\n{traceback.format_exc()}")
     
     def export_logs(self):
         """Export session logs to file"""
@@ -544,10 +544,10 @@ class DataPlotStudio(QMainWindow):
                 f"• WARNING: {stats['by_level'].get('WARNING', 0)}\n"
                 f"• ERROR: {stats['by_level'].get('ERROR', 0)}")
             
-        except Exception as e:
-            self.status_bar_widget.log(f"✗ Failed to export logs: {str(e)}")
+        except Exception as ExportLogError:
+            self.status_bar_widget.log(f"✗ Failed to export logs: {str(ExportLogError)}")
             # do not add secondary args to .log(), causes bug
-            QMessageBox.critical(self, "Error", f"Failed to export logs: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to export logs: {str(ExportLogError)}")
     
     def export_data_dialog(self):
         """Open export dialog"""
@@ -565,8 +565,8 @@ class DataPlotStudio(QMainWindow):
                     self.data_handler.export_data(config["filepath"], format=format_extension, include_index=include_index)
                     self.status_bar_widget.log(f"Exported data to {config["filepath"]}")
                     QMessageBox.information(self, "Success", f"Data exported successfully to {config["filepath"]}")
-                except Exception as export_error:
-                    QMessageBox.critical(self, "Error", f"Failed to export: {str(export_error)}")
+                except Exception as ExportDataError:
+                    QMessageBox.critical(self, "Error", f"Failed to export: {str(ExportDataError)}")
     
     def open_settings(self):
         """open the settings """

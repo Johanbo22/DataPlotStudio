@@ -200,8 +200,8 @@ class Logger:
                 f.write(content)
             
             return str(path)
-        except Exception as e:
-            raise Exception(f"Error exporting logs: {str(e)}")
+        except Exception as ExportLogsError:
+            raise Exception(f"Error exporting logs: {str(ExportLogsError)}")
     
     def _generate_log_report(self, detailed: bool = True) -> str:
         """Generate formatted log report"""

@@ -220,11 +220,11 @@ class PlotEngine:
 
             return fig.to_html(include_plotlyjs="cdn", full_html=True)
 
-        except Exception as plotly_error:
+        except Exception as PlotlyError:
             return f"""
             <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
             <h3 style='color:red;'>Error generating interactive plot</h3>
-            <pre>{str(plotly_error)}</pre>
+            <pre>{str(PlotlyError)}</pre>
             </body></html>
             """
 
@@ -801,8 +801,8 @@ class PlotEngine:
 
             
             return X, Y, Z
-        except Exception as e:
-            raise ValueError(f"Data could not be pivoted into a 2D grid. Is the data gridded?: Error: {str(e)}")
+        except Exception as GridDataError:
+            raise ValueError(f"Data could not be pivoted into a 2D grid. Is the data gridded?: Error: {str(GridDataError)}")
     
     def plot_imshow(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create an imshow plot"""
