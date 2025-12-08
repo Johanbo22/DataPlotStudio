@@ -2,12 +2,13 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox, QMessageBox, QStackedWidget
+    QFontComboBox, QMessageBox, QStackedWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtCore import Qt, QRect, QSize, QTimer
+from PyQt6.QtGui import QIcon, QFont, QColor, QPainter, QLinearGradient, QBrush, QPixmap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+import matplotlib.pyplot as plt
 from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider, HelpIcon
 from ui.data_tab import DataTab 
 from core.help_manager import HelpManager
@@ -20,6 +21,150 @@ except:
     WEB_ENGINE_AVAILABLE = False
     print(f"{WEB_ENGINE_AVAILABLE} QtWebEngineWidgets not installed")
     from PyQt6.QtWidgets import QLabel as QWebEngineView
+
+class ColormapDelegate(QStyledItemDelegate):
+    """Rendering for the colormap in the item popup"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pixel_cache = {}
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index):
+        if not index.isValid():
+            return
+        
+        colormap_name = index.data(Qt.ItemDataRole.DisplayRole)
+        if not colormap_name or not isinstance(colormap_name, str):
+            QStyledItemDelegate.paint(self, painter, option, index)
+            return
+        
+        widget = option.widget
+        style = widget.style() if widget else QApplication.style()
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, option, painter, widget)
+
+        
+
+        rect = option.rect
+        text_width = 120
+        if rect.width() < 250:
+            text_width = int(rect.width() * 0.6)
+
+        text_rect = QRect(rect.left() + 5, rect.top(), text_width - 10, rect.height())
+        gradient_rect = QRect(rect.left() + text_width, rect.top() + 4, rect.width() - text_width - 10, rect.height() - 8)
+
+        painter.save()
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.setPen(option.palette.highlightedText().color())
+        else:
+            painter.setPen(option.palette.text().color())
+        
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, colormap_name)
+        painter.restore()
+
+        if gradient_rect.width() > 5:
+            cache_key = f"{colormap_name}_{gradient_rect.width()}_{gradient_rect.height()}"
+            pixmap = self._get_cached_pixmap(colormap_name, gradient_rect.size(), cache_key)
+            if pixmap:
+                painter.drawPixmap(gradient_rect.topLeft(), pixmap)
+    
+    def sizeHint(self, option, index):
+        return QSize(200, 28)
+    
+    def _get_cached_pixmap(self, colormap_name, size, cache_key):
+        if cache_key in self._pixel_cache:
+            return self._pixel_cache[cache_key]
+        
+        width, height = size.width(), size.height()
+        if width <= 0 or height <= 0: return None
+
+        pixmap = QPixmap(width, height)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        try:
+            try:
+                colormap = plt.colormaps[colormap_name]
+            except (AttributeError, KeyError, TypeError):
+                colormap = plt.get_cmap(colormap_name)
+
+            gradient = QLinearGradient(0, 0, width, 0)
+
+            for i in range(21):
+                pos = i / 20.0
+                rgba = colormap(pos)
+                color = QColor.fromRgbF(rgba[0], rgba[1], rgba[3])
+                gradient.setColorAt(pos, color)
+            
+            painter.setBrush(QBrush(gradient))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(0, 0, width, height, 2, 2)
+        
+        except Exception:
+            pass
+        finally:
+            painter.end()
+
+        self._pixel_cache[cache_key] = pixmap
+        return pixmap
+
+class ColormapComboBox(AnimatedComboBox):
+    """A combobox that renders colormaps and a search fields"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.setMaxVisibleItems(15)
+        self.setStyleSheet("QComboBox { padding-right: 20px; }")
+
+        self._populate_colormaps()
+
+        self._main_delegate = ColormapDelegate(self)
+        self.setItemDelegate(self._main_delegate)
+
+        self.completer_object = QCompleter(self)
+        self.completer_object.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self.completer_object.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.completer_object.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.completer_object.setModel(self.model())
+
+        self._completer_delegate = ColormapDelegate(self)
+        self.completer_object.popup().setItemDelegate(self._completer_delegate)
+        self.setCompleter(self.completer_object)
+
+        self.completer_object.activated.connect(self._on_completer_activated)
+
+    def _populate_colormaps(self):
+
+        try:
+            maps = sorted([maps for maps in plt.colormaps() if not maps.endswith("_r")])
+        except Exception:
+            maps = []
+
+        self.addItems(maps)
+
+        if "viridis" in maps:
+            self.setCurrentText("viridis")
+        elif maps:
+            self.setCurrentIndex(0)
+    
+    def _on_completer_activated(self, text):
+        if not text:
+            return
+        
+        index = self.findText(text)
+        if index >= 0:
+            QTimer.singleShot(0, lambda: self._safe_set_index(index))
+    
+    def _safe_set_index(self, index):
+        try:
+            self.setCurrentIndex(index)
+            self.clearFocus()
+        except RuntimeError:
+            print("rip")
 
 class PlotTabUI(QWidget):
     """
@@ -719,11 +864,11 @@ class PlotTabUI(QWidget):
         
         # Color palette
         figure_size_layout.addWidget(QLabel("Color Palette:"))
-        self.palette_combo = AnimatedComboBox()
-        self.palette_combo.addItems(['viridis','deep', 'muted', 'pastel', 'bright', 'dark', 'colorblind', 'husl', 'Set2'])
+        self.palette_combo = ColormapComboBox(parent=self)
+        self.palette_combo.setToolTip("Select a colormap to add to your data. Type to search for a specific colormap")
         figure_size_layout.addWidget(self.palette_combo)
     
-        # === OTHER SETTINGS ===
+        # OTHER SETTI
         
         figure_size_layout.addWidget(QLabel("Layout:"))
         self.tight_layout_check = AnimatedCheckBox("Tight Layout")
@@ -1679,7 +1824,7 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(10)
 
-        # === Histogram Properties ===
+        #  Histogram Properties 
         self.histogram_group = AnimatedGroupBox("Histogram Properties")
         histogram_layout = QVBoxLayout()
         
@@ -1703,7 +1848,7 @@ class PlotTabUI(QWidget):
 
         scroll_layout.addSpacing(10)
         
-        # === TRANSPARENCY ===
+        #  TRANSPARENCY 
         alpha_group = AnimatedGroupBox("Transparency")
         alpha_layout = QVBoxLayout()
         
@@ -1721,7 +1866,7 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(10)
 
-        # === SCatter stats ===
+        #  SCatter stats 
         self.scatter_group = AnimatedGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
 
@@ -1757,7 +1902,7 @@ class PlotTabUI(QWidget):
 
         scroll_layout.addSpacing(10)
         
-        # === PiE CHART PROPERTIRES
+        #  PiE CHART PROPERTIRES
         self.pie_group = AnimatedGroupBox("Pie Chart Properties")
         pie_layout = QVBoxLayout()
 
