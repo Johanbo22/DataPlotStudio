@@ -2052,8 +2052,8 @@ class DataTab(QWidget):
                     self.history_list.setCurrentItem(list_item)
                     break
         
-        except Exception as history_error:
-            self.status_bar.log(F"Failed to go to state: {str(history_error)}", "ERROR")
+        except Exception as HistoryError:
+            self.status_bar.log(F"Failed to go to state: {str(HistoryError)}", "ERROR")
     
     def _format_operation_text(self, operation: dict) -> str:
         """Formatter for operation dict back to better text handling"""
