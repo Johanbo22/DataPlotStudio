@@ -605,8 +605,8 @@ class DataTab(QWidget):
                 self.refresh_data_view()
                 self.status_bar.log(f"Created new dataset: ({rows}x{columns})", "SUCCESS")
         
-        except Exception as create_new_dataset_error:
-            QMessageBox.critical(self, "Error", f"Failed to create dataset: {str(create_new_dataset_error)}")
+        except Exception as CreateNewDatasetError:
+            QMessageBox.critical(self, "Error", f"Failed to create dataset: {str(CreateNewDatasetError)}")
         
     def toggle_edit_mode(self):
         """Toggles the edit mode in the datble"""
@@ -696,9 +696,9 @@ class DataTab(QWidget):
                 f"Click 'Restore Original Data View' to return to the full dataset."
             )
         
-        except Exception as e:
-            self.status_bar.log(f"Failed to insert the subset: {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to insert subset:\n{str(e)}")
+        except Exception as InsertSubsetIntoDataFrameError:
+            self.status_bar.log(f"Failed to insert the subset: {str(InsertSubsetIntoDataFrameError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to insert subset:\n{str(InsertSubsetIntoDataFrameError)}")
             traceback.print_exc()
 
     def restore_original_dataframe(self):
@@ -742,9 +742,9 @@ class DataTab(QWidget):
                 f"Restored: {original_rows:,} rows"
             )
         
-        except Exception as e:
-            self.status_bar.log(f"Failed to restore original data: {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to restore original data:\n{str(e)}")
+        except Exception as RestoreOriginalDataFrameError:
+            self.status_bar.log(f"Failed to restore original data: {str(RestoreOriginalDataFrameError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to restore original data:\n{str(RestoreOriginalDataFrameError)}")
             traceback.print_exc()
     
     def refresh_data_view(self):
@@ -779,8 +779,8 @@ class DataTab(QWidget):
             try:
                 self.subset_column_combo.clear()
                 self.subset_column_combo.addItems(columns)
-            except Exception as e:
-                print(f"Warning: Could not update subset column combo: {e}")
+            except Exception as RefreshDataViewError:
+                print(f"Warning: Could not update subset column combo: {RefreshDataViewError}")
         
         # Update statistics
         self.update_statistics()
@@ -808,8 +808,8 @@ class DataTab(QWidget):
                 self.subset_manager.clear_cache()
             if hasattr(self, 'active_subsets_list'):
                 self.refresh_active_subsets()
-        except Exception as e:
-            print(f"Warning: Could not refresh subsets: {e}")
+        except Exception as RefreshSubsetInDataViewError:
+            print(f"Warning: Could not refresh subsets: {RefreshSubsetInDataViewError}")
 
         inserted_name = getattr(self.data_handler, "inserted_subset_name", None)
         agg_name = getattr(self.data_handler, "viewing_aggregation_name", None)
@@ -932,9 +932,9 @@ class DataTab(QWidget):
                     "Success",
                     f"Created {len(created)} subsets from column '{column}'"
                 )
-            except Exception as e:
-                self.status_bar.log(f"Failed to create subsets: {str(e)}", "ERROR")
-                QMessageBox.critical(self, "Error", str(e))
+            except Exception as QuickCreateSubsetsError:
+                self.status_bar.log(f"Failed to create subsets: {str(QuickCreateSubsetsError)}", "ERROR")
+                QMessageBox.critical(self, "Error", str(QuickCreateSubsetsError))
                 import traceback
                 traceback.print_exc()
     
@@ -952,8 +952,8 @@ class DataTab(QWidget):
                 for name in subset_manager.list_subsets():
                     try:
                         subset_manager.apply_subset(self.data_handler.df, name)
-                    except Exception as e:
-                        print(f"Warning: Could not apply subset {name}: {str(e)}")
+                    except Exception as ApplySubsetError:
+                        print(f"Warning: Could not apply subset {name}: {str(ApplySubsetError)}")
 
             for name in subset_manager.list_subsets():
                 subset = subset_manager.get_subset(name)
@@ -961,8 +961,8 @@ class DataTab(QWidget):
                 item = QListWidgetItem(f"{name} ({row_text} rows)")
                 item.setData(Qt.ItemDataRole.UserRole, name)
                 self.active_subsets_list.addItem(item)
-        except Exception as e:
-            print(f"Warning: Could not refresh subset list: {e}")
+        except Exception as RefreshSubsetListError:
+            print(f"Warning: Could not refresh subset list: {RefreshSubsetListError}")
     
     def view_subset_quick(self):
         """Quick view of selected subset"""
@@ -981,8 +981,8 @@ class DataTab(QWidget):
             subset_df = subset_manager.apply_subset(self.data_handler.df, name)
             viewer = SubsetDataViewer(subset_df, name, self)
             viewer.exec()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+        except Exception as ViewSubsetError:
+            QMessageBox.critical(self, "Error", str(ViewSubsetError))
             import traceback
             traceback.print_exc()
     
@@ -1010,9 +1010,9 @@ class DataTab(QWidget):
             # Refresh the subset list after dialog closes
             self.refresh_active_subsets()
             
-        except Exception as e:
-            print(f"ERROR open_subset_manager: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to open subset manager: {str(e)}")
+        except Exception as OpenSubsetManagerError:
+            print(f"ERROR open_subset_manager: {str(OpenSubsetManagerError)}")
+            QMessageBox.critical(self, "Error", f"Failed to open subset manager: {str(OpenSubsetManagerError)}")
             import traceback
             traceback.print_exc()
     
@@ -1032,9 +1032,9 @@ class DataTab(QWidget):
             else:
                 self.status_bar.log("Could not switch to plot tab automatically", "WARNING")
             
-        except Exception as e:
-            self.status_bar.log(f"Failed to switch to plotting tab: {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to activate the plot tab: {str(e)}")
+        except Exception as PlotRequestError:
+            self.status_bar.log(f"Failed to switch to plotting tab: {str(PlotRequestError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to activate the plot tab: {str(PlotRequestError)}")
 
     def get_subset_manager(self):
         """
@@ -1052,8 +1052,8 @@ class DataTab(QWidget):
         try:
             info = self.data_handler.get_data_info()
             df = self.data_handler.df
-        except Exception as data_error:
-            self.stats_text.setHtml(f"<p style='color: red;'>Error loading data info: {str(e)}</p>")
+        except Exception as UpdateStatisticsError:
+            self.stats_text.setHtml(f"<p style='color: red;'>Error loading data info: {str(UpdateStatisticsError)}</p>")
             return
         
         try:
@@ -1068,8 +1068,8 @@ class DataTab(QWidget):
                 raise FileNotFoundError(f"Missing HTML resource file: {html_path.resolve()}")
             html_template = html_path.read_text(encoding="UTF-8")
 
-        except Exception as e:
-            error_msg = f"Failed to load CSS/HTML templates: {str(e)}"
+        except Exception as LoadHTMLError:
+            error_msg = f"Failed to load CSS/HTML templates: {str(LoadHTMLError)}"
             self.stats_text.setHtml(f"<p style='color: red;'>{error_msg}</p>")
             self.status_bar.log(error_msg, "ERROR")
             traceback.print_exc()
@@ -1180,8 +1180,8 @@ class DataTab(QWidget):
                     body_html += "</tr>"
 
                 body_html += "</table>"
-        except Exception as e:
-            body_html += f"<div class='warning'>Unable to calculate numeric statistics: {str(e)}</div>"
+        except Exception as UpdateNumericalStatisticsError:
+            body_html += f"<div class='warning'>Unable to calculate numeric statistics: {str(UpdateNumericalStatisticsError)}</div>"
         
         #correlation matrix
         try:
@@ -1222,8 +1222,8 @@ class DataTab(QWidget):
                 body_html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
                 body_html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
                 body_html += "</div>"
-        except Exception as e:
-            body_html += f"<div class='warning'>Unable to calculate correlation matrix: {str(e)}</div>"
+        except Exception as UpdateCorrelationMatrixError:
+            body_html += f"<div class='warning'>Unable to calculate correlation matrix: {str(UpdateCorrelationMatrixError)}</div>"
         
         # categorical stats
         try:
@@ -1254,8 +1254,8 @@ class DataTab(QWidget):
                         continue
                 
                 body_html += "</table>"
-        except Exception as e:
-            body_html += f"<div class='warning'>Unable to calculate categorical statistics: {str(e)}</div>"
+        except Exception as UpdateCategoricalStatisticsError:
+            body_html += f"<div class='warning'>Unable to calculate categorical statistics: {str(UpdateCategoricalStatisticsError)}</div>"
         
         final_html = html_template.format(
             css_content=css_content,
@@ -1291,8 +1291,8 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
-        except Exception as e:
-            self.status_bar.log(f"Failed to remove duplicates: {str(e)}", "ERROR")
+        except Exception as RemoveDuplicatesError:
+            self.status_bar.log(f"Failed to remove duplicates: {str(RemoveDuplicatesError)}", "ERROR")
     
     def drop_missing(self):
         """Drop rows with missing values"""
@@ -1314,8 +1314,8 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
-        except Exception as e:
-            self.status_bar.log(f"Failed to drop missing values: {str(e)}", "ERROR")
+        except Exception as DropMissingError:
+            self.status_bar.log(f"Failed to drop missing values: {str(DropMissingError)}", "ERROR")
     
     def fill_missing(self):
         """Fill missing values"""
@@ -1361,9 +1361,9 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
-        except Exception as e:
-            self.status_bar.log(f"Failed to execute 'Fill Missing values': {str(e)}", "ERROR")
-            QMessageBox.critical(self, "Error", f"Failed to execute 'Fill Missing Values':\n{str(e)}")
+        except Exception as FillMissingValuesError:
+            self.status_bar.log(f"Failed to execute 'Fill Missing values': {str(FillMissingValuesError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to execute 'Fill Missing Values':\n{str(FillMissingValuesError)}")
     
     def apply_filter(self):
         """Apply filter to data"""
@@ -1423,8 +1423,8 @@ class DataTab(QWidget):
                 level="SUCCESS"
             )
         
-        except Exception as e:
-            self.status_bar.log(f"Failed to execute 'Filter': {str(e)}", "ERROR")
+        except Exception as ApplyFilterError:
+            self.status_bar.log(f"Failed to execute 'Filter': {str(ApplyFilterError)}", "ERROR")
 
     
     def drop_column(self):
@@ -1449,8 +1449,8 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
-        except Exception as e:
-            self.status_bar.log(f"Failed to drop column: {str(e)}", "ERROR")
+        except Exception as DropColumnFromDataFrameError:
+            self.status_bar.log(f"Failed to drop column: {str(DropColumnFromDataFrameError)}", "ERROR")
     
     def rename_column(self):
         """Rename selected column"""
@@ -1479,8 +1479,8 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
-            except Exception as e:
-                self.status_bar.log(f"Failed to rename column: {str(e)}", "ERROR")
+            except Exception as RenameColumnError:
+                self.status_bar.log(f"Failed to rename column: {str(RenameColumnError)}", "ERROR")
 
     def change_column_type(self):
         """Change the data type of the selected column"""
@@ -1546,8 +1546,8 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
-        except Exception as e:
-            error_msg = f"Failed to convert '{column}' to {target_type}: {str(e)}"
+        except Exception as ChangeColumnDataTypeError:
+            error_msg = f"Failed to convert '{column}' to {target_type}: {str(ChangeColumnDataTypeError)}"
             QMessageBox.critical(self, "Conversion Error", error_msg)
             self.status_bar.log(error_msg, "ERROR")
             self.refresh_data_view()
@@ -1611,8 +1611,8 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
-        except Exception as e:
-            self.status_bar.log(f"Failed to reset data: {str(e)}", "ERROR")
+        except Exception as ResetDataError:
+            self.status_bar.log(f"Failed to reset data: {str(ResetDataError)}", "ERROR")
     
     def open_advanced_filter(self):
         """Open advanced filter dialog"""
@@ -1687,8 +1687,8 @@ class DataTab(QWidget):
                                 mask = mask | df[column].astype(str).str.contains(str(value), na=False)
                             elif condition == 'in':
                                 mask = mask | df[column].isin([value])
-                        except Exception as e:
-                            QMessageBox.warning(self, "Warning", f"Error with filter {column} {condition} {value}: {str(e)}")
+                        except Exception as FilterError:
+                            QMessageBox.warning(self, "Warning", f"Error with filter {column} {condition} {value}: {str(FilterError)}")
                             continue
                     
                     # Apply the OR mask
@@ -1703,9 +1703,9 @@ class DataTab(QWidget):
                     f"Advanced filters ({logic}): {filter_desc} | Rows: {before:,} → {after:,} (-{removed:,})",
                     "SUCCESS"
                 )
-            except Exception as e:
-                QMessageBox.critical(self, "Error", str(e))
-                self.status_bar.log(f"Filter failed: {str(e)}", "ERROR")
+            except Exception as FilterError:
+                QMessageBox.critical(self, "Error", str( FilterError))
+                self.status_bar.log(f"Filter failed: {str( FilterError)}", "ERROR")
     
     def open_aggregation_dialog(self):
         """Open aggregation dialog"""
@@ -1762,9 +1762,9 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
-            except Exception as e:
-                QMessageBox.critical(self, "Error", str(e))
-                self.status_bar.log(f"Aggregation failed: {str(e)}", "ERROR")
+            except Exception as AggregationDialogError:
+                QMessageBox.critical(self, "Error", str(AggregationDialogError))
+                self.status_bar.log(f"Aggregation failed: {str(AggregationDialogError)}", "ERROR")
     
     def refresh_saved_agg_list(self):
         """Refreshes the list of saved aggs"""
@@ -1788,8 +1788,8 @@ class DataTab(QWidget):
                     item = QListWidgetItem(item_text)
                     item.setData(Qt.ItemDataRole.UserRole, name)
                     self.saved_agg_list.addItem(item)
-        except Exception as e:
-            print(f"Warning: Could not refresh aggregation list: {str(e)}")
+        except Exception as RefreshAggregationListError:
+            print(f"Warning: Could not refresh aggregation list: {str(RefreshAggregationListError)}")
     
     def on_saved_agg_selected(self, item):
         """Handle selection o fs saved aggs"""
@@ -1846,8 +1846,8 @@ class DataTab(QWidget):
                 f"Columns: {len(agg_df.columns)}\n\n"
                 f"Click 'Reset to Original' to return to your full dataset."
             )
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to view aggregation:\n{str(e)}")
+        except Exception as ViewAggregationError:
+            QMessageBox.critical(self, "Error", f"Failed to view aggregation:\n{str(ViewAggregationError)}")
             traceback.print_exc() 
     
     def delete_saved_aggregation(self):
@@ -1948,17 +1948,17 @@ class DataTab(QWidget):
                     f"Rows: {rows_after:,} ({diff_text})\n"
                     f"Columns: {len(self.data_handler.df.columns)}"
             )
-        except Exception as e:
-            print(f"DEBUG: Exception occurred during refresh: {type(e).__name__}")
-            print(f"DEBUG: Exception message: {str(e)}")
+        except Exception as RefreshGoogleSheetsDataError:
+            print(f"DEBUG: Exception occurred during refresh: {type(RefreshGoogleSheetsDataError).__name__}")
+            print(f"DEBUG: Exception message: {str(RefreshGoogleSheetsDataError)}")
             print(f"DEBUG: Traceback:\n{traceback.format_exc()}")
             if "progress_dialog" in locals() and progress_dialog:
                 progress_dialog.accept()
-            self.status_bar.log(f"Failed to refresh Google Sheet Data: {str(e)}", "ERROR")
+            self.status_bar.log(f"Failed to refresh Google Sheet Data: {str(RefreshGoogleSheetsDataError)}", "ERROR")
             QMessageBox.critical(
                 self,
                 "Refresh Failed",
-                f"Failed to refresh Google Sheets data:\n\n{str(e)}\n\n"
+                f"Failed to refresh Google Sheets data:\n\n{str(RefreshGoogleSheetsDataError)}\n\n"
                 "Please check:\n"
                 "• Internet connection\n"
                 "• Sheet is still shared publicly\n"
@@ -2010,9 +2010,9 @@ class DataTab(QWidget):
                         level="SUCCESS"
                     )
             
-            except Exception as melt_error:
-                QMessageBox.critical(self, "Error", f"Failed to melt data:\n{str(melt_error)}")
-                self.status_bar.log(f"Melt failed: {str(melt_error)}", "ERROR")
+            except Exception as MeltDataError:
+                QMessageBox.critical(self, "Error", f"Failed to melt data:\n{str(MeltDataError)}")
+                self.status_bar.log(f"Melt failed: {str(MeltDataError)}", "ERROR")
 
     def clear(self):
         """Clear the data tab"""
@@ -2032,8 +2032,8 @@ class DataTab(QWidget):
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
-        except Exception as e:
-            self.status_bar.log(f"Error displaying help dialog: {str(e)}", "ERROR")
+        except Exception as ShowHelpDialogError:
+            self.status_bar.log(f"Error displaying help dialog: {str(ShowHelpDialogError)}", "ERROR")
             QMessageBox.critical(self, "Help Error", "Could not load help content. See log for details")
 
     def on_history_clicked(self, item):

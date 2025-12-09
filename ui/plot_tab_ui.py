@@ -2110,6 +2110,6 @@ class PlotTabUI(QWidget):
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
-        except Exception as e:
-            print(f"Error displaying help dialog: {str(e)}")
-            QMessageBox.critical(self, "Help Error", f"Could not load help content: {str(e)}")    
+        except Exception as ShowHelpDialogError:
+            print(f"Error displaying help dialog: {str(ShowHelpDialogError)}")
+            QMessageBox.critical(self, "Help Error", f"Could not load help content: {str(ShowHelpDialogError)}")    

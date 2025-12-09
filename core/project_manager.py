@@ -77,8 +77,8 @@ class ProjectManager:
             self.current_project_path = filepath
             return str(filepath)
         
-        except Exception as save_project_error:
-            raise Exception(f"Error saving current project: {str(save_project_error)}")
+        except Exception as SaveProjectError:
+            raise Exception(f"Error saving current project: {str(SaveProjectError)}")
 
     
     def load_project(self, filepath: str) -> Dict[str, Any]:

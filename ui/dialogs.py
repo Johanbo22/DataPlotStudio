@@ -1025,12 +1025,12 @@ class SubsetManagerDialog(QDialog):
                     print(f"DEBUG apply_all_subsets: Applying subset '{name}'")
                     result_df = self.subset_manager.apply_subset(self.data_handler.df, name)
                     print(f"DEBUG apply_all_subsets: Subset '{name}' has {len(result_df)} rows")
-                except Exception as e:
-                    print(f"WARNING apply_all_subsets: Could not apply subset {name}: {str(e)}")
+                except Exception as ApplySubsetError:
+                    print(f"WARNING apply_all_subsets: Could not apply subset {name}: {str(ApplySubsetError)}")
                     continue
                     
-        except Exception as e:
-            print(f"ERROR apply_all_subsets: {str(e)}")
+        except Exception as ApplySubsetError:
+            print(f"ERROR apply_all_subsets: {str(ApplySubsetError)}")
             import traceback
             traceback.print_exc()
     
@@ -1209,8 +1209,8 @@ class SubsetManagerDialog(QDialog):
                 self.subset_list.addItem(item)
                 print(f"DEBUG refresh_subset_list: Addded: {name}")
             
-            except Exception as e:
-                print(f"ERROR adding subset {name} to list: {str(e)}")
+            except Exception as RefreshSubsetToListError:
+                print(f"ERROR adding subset {name} to list: {str(RefreshSubsetToListError)}")
                 import traceback
                 traceback.print_exc()
                 continue
@@ -1321,8 +1321,8 @@ class SubsetManagerDialog(QDialog):
                         "Success",
                         f"Created {len(created)} subsets from column '{column}'"
                     )
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", str(e))
+                except Exception as AutoCreateSubsetError:
+                    QMessageBox.critical(self, "Error", str(AutoCreateSubsetError))
     
     def view_subset_data(self):
         """View the filtered data for a selected subset"""
@@ -1337,8 +1337,8 @@ class SubsetManagerDialog(QDialog):
             #show in new dialog
             viewer = SubsetDataViewer(subset_df, name, self)
             viewer.exec()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+        except Exception as ViewSubsetDataError:
+            QMessageBox.critical(self, "Error", str(ViewSubsetDataError))
     
     def plot_subset(self):
         """Switch to plot tab with subset data active"""
@@ -1385,8 +1385,8 @@ class SubsetManagerDialog(QDialog):
                 self.refresh_subset_list()
                 self.on_subset_selected(item)
                 QMessageBox.information(self, "Success", f"Subset '{name}' updated")
-            except Exception as e:
-                QMessageBox.warning(self, "Error", str(e))
+            except Exception as EditSubsetError:
+                QMessageBox.warning(self, "Error", str(EditSubsetError))
 
     def delete_subset(self):
         """Delete the selected subset"""
@@ -1649,8 +1649,8 @@ class SubsetDataViewer(QDialog):
                     self.df.to_json(filepath)
 
                 QMessageBox.information(self, "Success", f"Subset exported to:\n{filepath}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to export: {str(e)}")
+            except Exception as ExportSubsetError:
+                QMessageBox.critical(self, "Error", f"Failed to export: {str(ExportSubsetError)}")
 
 class FillMissingDialog(QDialog):
     """Dialog for the user to manipulate their data using the fill missing tool"""
@@ -1957,8 +1957,8 @@ class DatabaseConnectionDialog(QDialog):
             }
             self.accept()
         
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to establish a proper connection string: {str(e)}")
+        except Exception as AcceptDatabaseConnectionError:
+            QMessageBox.critical(self, "Error", f"Failed to establish a proper connection string: {str(AcceptDatabaseConnectionError)}")
     
     def get_details(self):
         """Returns the connection string and query"""
@@ -2017,8 +2017,8 @@ class HelpDialog(QDialog):
                 img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 img_label.setStyleSheet("margin-top: 10px; margin-bottom: 5px;")
                 layout.addWidget(img_label)
-            except Exception as e:
-                print(f"Error loadig help image: {full_image_path}: {str(e)}")
+            except Exception as LoadHelpImageError:
+                print(f"Error loadig help image: {full_image_path}: {str(LoadHelpImageError)}")
         elif full_image_path:
             # Path was given but not found
             print(f"HelpDialog: Image file not found at {full_image_path}")

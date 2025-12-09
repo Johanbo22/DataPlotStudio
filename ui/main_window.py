@@ -49,8 +49,8 @@ class FileImportWorker(QRunnable):
 
             self.signals.progress.emit(70, "Processing data...")
             self.signals.finished.emit(self.data_handler.df)
-        except Exception as run_error:
-            self.signals.error.emit(run_error)
+        except Exception as RunError:
+            self.signals.error.emit(RunError)
 
 class MainWindow(QWidget):
     """Main application window widget"""
@@ -189,8 +189,8 @@ class MainWindow(QWidget):
                 },
                 level="SUCCESS"
             )
-        except Exception as log_e:
-            self.status_bar.log(f"Failed to log operation to log file: {log_e}", "ERROR")
+        except Exception as LogError:
+            self.status_bar.log(f"Failed to log operation to log file: {LogError}", "ERROR")
         
         self._temp_import_filepath = None
         self._temp_import_filesize = 0.0
@@ -219,8 +219,8 @@ class MainWindow(QWidget):
                 self.data_handler.import_google_sheets(sheet_id, sheet_name)
                 self.data_tab.refresh_data_view()
                 self.status_bar.log(f"Imported Google Sheet: {sheet_id}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to import Google Sheet: {str(e)}")
+            except Exception as ImportGoogleSheetError:
+                QMessageBox.critical(self, "Error", f"Failed to import Google Sheet: {str(ImportGoogleSheetError)}")
     
     def load_project(self, project_data: dict) -> None:
         """Load a project"""

@@ -55,8 +55,8 @@ class SubsetManager:
             try:
                 shutil.rmtree(self.cached_directory)
                 print(f"DEBUG: SubsetManager cache deleted: {self.cached_directory}")
-            except Exception as cache_removal_error:
-                print(f"Error deleting cache: {cache_removal_error}")
+            except Exception as CacheRemovalError:
+                print(f"Error deleting cache: {CacheRemovalError}")
     
     def _get_cache_path(self, name: str) -> Path:
         """Retrieve the path for the cache file"""
@@ -121,8 +121,8 @@ class SubsetManager:
         if use_cache and cache_path.exists():
             try:
                 return pd.read_parquet(cache_path)
-            except Exception as cache_read_error:
-                print(f"WARNING: Failed to read cached data for {name}: {cache_read_error}")
+            except Exception as CacheReadError:
+                print(f"WARNING: Failed to read cached data for {name}: {CacheReadError}")
         
         subset = self.subsets[name]
         filtered_df = self._apply_filters(df, subset.filters, subset.logic)
@@ -133,8 +133,8 @@ class SubsetManager:
             try:
                 self.cached_directory.mkdir(parents=True, exist_ok=True)
                 filtered_df.to_parquet(cache_path, index=False)
-            except Exception as parquet_write_error:
-                print(f"WARNING: Failed to write cache file for subset {name} to disk: {parquet_write_error}")
+            except Exception as ParquetWriteError:
+                print(f"WARNING: Failed to write cache file for subset {name} to disk: {ParquetWriteError}")
             
         return filtered_df
     

@@ -468,8 +468,8 @@ class PlotTab(PlotTabUI):
             subset_count = len(self.subset_manager.list_subsets())
             if subset_count > 0:
                 self.status_bar.log(f"Refreshed subset list: {subset_count} subsets available", "INFO")
-        except Exception as e:
-            print(f"Warning: Could not refresh subset list: {e}")
+        except Exception as RefreshSubsetListError:
+            print(f"Warning: Could not refresh subset list: {RefreshSubsetListError}")
     
     def get_active_dataframe(self):
         """Get the active dataframe (full dataset or selected subset)"""
@@ -496,8 +496,8 @@ class PlotTab(PlotTabUI):
             subset_df = self.subset_manager.apply_subset(self.data_handler.df, subset_name)
             self.status_bar.log(f"Using subset: {subset_name} ({len(subset_df)} rows)", "INFO")
             return subset_df
-        except Exception as e:
-            self.status_bar.log(f"Failed to apply subset, using full dataset: {str(e)}", "WARNING")
+        except Exception as ApplySubsetToActiveDataFrameError:
+            self.status_bar.log(f"Failed to apply subset, using full dataset: {str(ApplySubsetToActiveDataFrameError)}", "WARNING")
             return self.data_handler.df
         
     
@@ -1116,8 +1116,8 @@ class PlotTab(PlotTabUI):
             )
     
         
-        except Exception as table_error:
-            self.status_bar.log(f"Failed to add table to plot: {str(table_error)}", "WARNING")
+        except Exception as PlotTableError:
+            self.status_bar.log(f"Failed to add table to plot: {str(PlotTableError)}", "WARNING")
     
     def on_plot_type_changed(self, plot_type: str):
         """Handle plot type change"""
@@ -1247,8 +1247,8 @@ class PlotTab(PlotTabUI):
                     else:
                         active_df = self.data_handler.df
                         self.status_bar.log("Subset Manager missing, using full dataset", "WARNING")
-                except Exception as subset_error:
-                    self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(subset_error)}", "WARNING")
+                except Exception as RestoreSubsetError:
+                    self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(RestoreSubsetError)}", "WARNING")
                     active_df = self.data_handler.df
             else:
                 active_df = self.data_handler.df
@@ -1297,9 +1297,9 @@ class PlotTab(PlotTabUI):
 
                 return
             
-            except Exception as plot_plotly_error:
-                self.status_bar.log(f"Plotting {plot_type} using plotly backend has failed: {str(plot_plotly_error)}", "ERROR")
-                QMessageBox.critical(self, "Plotly Plotting Error", str(plot_plotly_error))
+            except Exception as PlotPlotlyError:
+                self.status_bar.log(f"Plotting {plot_type} using plotly backend has failed: {str(PlotPlotlyError)}", "ERROR")
+                QMessageBox.critical(self, "Plotly Plotting Error", str(PlotPlotlyError))
                 traceback.print_exc()
                 return
 
@@ -1327,8 +1327,8 @@ class PlotTab(PlotTabUI):
                     if not pd.api.types.is_datetime64_any_dtype(active_df[y_col]):
                         active_df[y_col] = pd.to_datetime(active_df[y_col], utc=True, errors="coerce")
                         self.status_bar.log(f"Converted column: '{y_col}' to datetime", "INFO")
-        except Exception as e:
-            self.status_bar.log(f"Warning: Could not convert datetime columns: {str(e)}", "WARNING")
+        except Exception as ConvertDateTimeError:
+            self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertDateTimeError)}", "WARNING")
         
         # check dataset size
         data_size = len(self.data_handler.df)
@@ -1466,8 +1466,8 @@ class PlotTab(PlotTabUI):
                 plt.style.use(self.style_combo.currentText())
                 self.plot_engine.current_figure.set_facecolor(self.bg_color)
                 self.plot_engine.current_ax.set_facecolor(self.face_color)
-            except Exception as e:
-                self.status_bar.log(f"Could not apply style: {e}", "WARNING")
+            except Exception as ApplyStyleToPlotError:
+                self.status_bar.log(f"Could not apply style: {ApplyStyleToPlotError}", "WARNING")
                 self.plot_engine.current_ax.set_facecolor(self.face_color)
 
 
@@ -1594,8 +1594,8 @@ class PlotTab(PlotTabUI):
             try:
                 if self.tight_layout_check.isChecked():
                     self.plot_engine.current_figure.tight_layout()
-            except Exception as e:
-                self.status_bar.log(f"Tight layout failed: {e}", "WARNING")
+            except Exception as ApplyTightLayoutError:
+                self.status_bar.log(f"Tight layout failed: {ApplyTightLayoutError}", "WARNING")
 
             
             #refresh
@@ -1647,11 +1647,11 @@ class PlotTab(PlotTabUI):
                 level="SUCCESS"
             )
         
-        except Exception as e:
+        except Exception as GeneratePlotError:
             if progress_dialog:
                 progress_dialog.accept()
-            QMessageBox.critical(self, "Error", f"Failed to generate plot: {str(e)}")
-            self.status_bar.log(f"Plot generation failed: {str(e)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to generate plot: {str(GeneratePlotError)}")
+            self.status_bar.log(f"Plot generation failed: {str(GeneratePlotError)}", "ERROR")
             traceback.print_exc()
         finally:
             if progress_dialog and progress_dialog.isVisible():
@@ -1886,8 +1886,8 @@ class PlotTab(PlotTabUI):
             
             if legend.get_title():
                 legend.get_title().set_fontfamily(font_family)
-        except Exception as e:
-            self.status_bar.log(f"Failed to apply legend: {e}", "WARNING")
+        except Exception as ApplyLegendError:
+            self.status_bar.log(f"Failed to apply legend: {ApplyLegendError}", "WARNING")
 
     
     def _apply_annotations(self, df=None, x_col=None, y_cols=None):
@@ -1949,8 +1949,8 @@ class PlotTab(PlotTabUI):
                             fontsize=font_size,
                             color=font_color if font_color else "black"
                         )
-            except Exception as e:
-                self.status_bar.log(f"Error applying annotations to data points: {str(e)}", "ERROR")
+            except Exception as ApplyAnnotationsError:
+                self.status_bar.log(f"Error applying annotations to data points: {str(ApplyAnnotationsError)}", "ERROR")
                 print(f"Auto-annotation error: {str(e)}")
 
     def _apply_gridlines_customizations(self) -> None:
@@ -2098,8 +2098,8 @@ class PlotTab(PlotTabUI):
                 y_formatter = self._create_axis_formatter(y_unit_str)
                 if y_formatter:
                     self.plot_engine.current_ax.yaxis.set_major_formatter(y_formatter)
-        except Exception as e:
-            self.status_bar.log(f"Failed to apply display units: {str(e)}", "WARNING")
+        except Exception as ApplyDisplayUnitsError:
+            self.status_bar.log(f"Failed to apply display units: {str(ApplyDisplayUnitsError)}", "WARNING")
 
         
         #rotation
@@ -2246,8 +2246,8 @@ class PlotTab(PlotTabUI):
                 else:
                     spines[key].set_visible(False)
         
-        except Exception as e:
-            self.status_bar.log(f"Failed to apply spine customization: {str(e)}", "ERROR")
+        except Exception as ApplySpineCustomizationError:
+            self.status_bar.log(f"Failed to apply spine customization: {str(ApplySpineCustomizationError)}", "ERROR")
             traceback.print_exc()
 
 
@@ -2670,9 +2670,9 @@ class PlotTab(PlotTabUI):
 
             self.status_bar.log("Script executed", "SUCCESS")
         
-        except Exception as e:
-            QMessageBox.critical(self, "Script Error", f"An error occurred while running the script:\n{str(e)}")
-            self.status_bar.log(f"Script execution failed: {str(e)}", "ERROR")
+        except Exception as ExecuteScrptError:
+            QMessageBox.critical(self, "Script Error", f"An error occurred while running the script:\n{str(ExecuteScrptError)}")
+            self.status_bar.log(f"Script execution failed: {str(ExecuteScrptError)}", "ERROR")
             traceback.print_exc()
     
     def _sync_gui_from_ax(self, ax):
@@ -2695,5 +2695,5 @@ class PlotTab(PlotTabUI):
                 self.ylabel_input.setText(ylabel)
                 self.ylabel_check.setChecked(True)
             
-        except Exception as e:
-            print(f"Warning: Could not sync GUI from plot: {e}")
+        except Exception as GUISyncError:
+            print(f"Warning: Could not sync GUI from plot: {GUISyncError}")

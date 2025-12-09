@@ -59,8 +59,8 @@ class DataTableModel(QAbstractTableModel):
                     return QVariant(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter)
                 return QVariant(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignCenter)
         
-        except Exception as data_error:
-            print(f"Error in DataTableModel.data(): {str(data_error)} for row: {row}, column: {column}, role: {role}")
+        except Exception as DataModelError:
+            print(f"Error in DataTableModel.data(): {str(DataModelError)} for row: {row}, column: {column}, role: {role}")
             return QVariant()
 
         return QVariant()
@@ -79,8 +79,8 @@ class DataTableModel(QAbstractTableModel):
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
             return True
         
-        except Exception as update_data_error:
-            print(f"Error updating data: {str(update_data_error)}")
+        except Exception as UpdateDataModelError:
+            print(f"Error updating data: {str(UpdateDataModelError)}")
             return False
     
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
@@ -131,5 +131,5 @@ class DataTableModel(QAbstractTableModel):
 
             self.layoutChanged.emit()
         
-        except Exception as sort_error:
-            print(f"Error sorting: {str(sort_error)}")
+        except Exception as SortDataError:
+            print(f"Error sorting: {str(SortDataError)}")
