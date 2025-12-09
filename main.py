@@ -3,8 +3,8 @@ import sys, os
 from pathlib import Path
 from xml.etree.ElementInclude import include
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PyQt6.QtCore import QTimer
-from PyQt6.QtGui import QIcon, QAction, QFont
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QIcon, QAction, QFont, QCloseEvent
 
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
@@ -108,6 +108,7 @@ class DataPlotStudio(QMainWindow):
         try:
             project_data = self.main_widget.get_project_data()
             filepath = self.project_manager.save_project(project_data)
+            self.main_widget.unsaved_changes = False
             from pathlib import Path
             path = Path(filepath)
 
@@ -567,6 +568,29 @@ class DataPlotStudio(QMainWindow):
                     QMessageBox.information(self, "Success", f"Data exported successfully to {config["filepath"]}")
                 except Exception as ExportDataError:
                     QMessageBox.critical(self, "Error", f"Failed to export: {str(ExportDataError)}")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Check for changes in the app state and prompt if changes are not saved"""
+        if hasattr(self.main_widget, "unsaved_changes") and self.main_widget.unsaved_changes:
+            reply = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "You have unsaved changes. Do you want to save the current project before exiting?",
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save
+            )
+
+            if reply == QMessageBox.StandardButton.Save:
+                if self.save_project():
+                    event.accept()
+                else:
+                    event.ignore()
+            elif reply == QMessageBox.StandardButton.Discard:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
     
     def open_settings(self):
         """open the settings """

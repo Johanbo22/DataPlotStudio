@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
 from PyQt6.QtCore import Qt, QRunnable, QThreadPool, QObject, pyqtSignal, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QCloseEvent
 from pathlib import Path
 
 from core import subset_manager
@@ -99,6 +99,8 @@ class MainWindow(QWidget):
         self.progress_dialog: ProgressDialog | None = None
         self._temp_import_filepath: str | None = None
         self._temp_import_filesize: float = 0.0
+
+        self.unsaved_changes = False
         
         self.init_ui()
         self._connect_subset_managers()
@@ -195,6 +197,8 @@ class MainWindow(QWidget):
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
 
+        self.unsaved_changes = True
+
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
             QTimer.singleShot(300, self.progress_dialog.accept)
@@ -276,6 +280,7 @@ class MainWindow(QWidget):
         
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
+        self.unsaved_changes = True
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
@@ -309,6 +314,28 @@ class MainWindow(QWidget):
             subset_manager.import_subsets(project_data["subsets"])
             self.data_tab.refresh_active_subsets()
             self.plot_tab.refresh_subset_list()
+        
+        self.unsaved_changes = False
+
+    def save_project(self) -> bool:
+        """Saves the current state of the instance"""
+        try:
+            project_data = self.get_project_data()
+            filepath = self.project_manager.get_current_project_path()
+
+            saved_path = self.project_manager.save_project(project_data, filepath)
+
+            if saved_path:
+                self.unsaved_changes = False
+                self.status_bar.log(f"Project saved to {saved_path}")
+                return True
+            return False
+        except Exception as SaveProjectError:
+            QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
+            self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            return False
+    
+    
     
     def get_project_data(self) -> dict:
         """Get all project data for saving"""
