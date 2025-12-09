@@ -13,7 +13,7 @@ from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.animated_widgets import AnimatedTabWidget
-from ui.dialogs import ProgressDialog
+from ui.dialogs import ProgressDialog, GoogleSheetsDialog
 
 class WorkerSignals(QObject):
     """
@@ -46,6 +46,35 @@ class FileImportWorker(QRunnable):
         try:
             self.signals.progress.emit(10, "Reading file...")
             self.data_handler.import_file(self.filepath)
+
+            self.signals.progress.emit(70, "Processing data...")
+            self.signals.finished.emit(self.data_handler.df)
+        except Exception as RunError:
+            self.signals.error.emit(RunError)
+
+class GoogleSheetsImportWorker(QRunnable):
+    """Worker thread for imports using Google Sheets"""
+    def __init__(self, data_handler: DataHandler, sheet_id: str, sheet_name: str, delimiter: str, decimal: str, thousands: str):
+        super().__init__()
+        self.data_handler = data_handler
+        self.sheet_id = sheet_id
+        self.sheet_name = sheet_name
+        self.delimiter = delimiter
+        self.decimal = decimal
+        self.thousands = thousands
+        self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Connecting to Google Sheets...")
+            self.data_handler.import_google_sheets(
+                self.sheet_id,
+                self.sheet_name,
+                delimiter=self.delimiter,
+                decimal=self.decimal,
+                thousands=self.thousands
+            )
 
             self.signals.progress.emit(70, "Processing data...")
             self.signals.finished.emit(self.data_handler.df)
@@ -210,17 +239,60 @@ class MainWindow(QWidget):
     
     def import_google_sheets(self):
         """Import from Google Sheets"""
-        # This would open a dialog for sheet_id and sheet_name input
-        from ui.dialogs import GoogleSheetsDialog
         dialog = GoogleSheetsDialog(self)
         if dialog.exec():
-            sheet_id, sheet_name = dialog.get_inputs()
-            try:
-                self.data_handler.import_google_sheets(sheet_id, sheet_name)
-                self.data_tab.refresh_data_view()
-                self.status_bar.log(f"Imported Google Sheet: {sheet_id}")
-            except Exception as ImportGoogleSheetError:
-                QMessageBox.critical(self, "Error", f"Failed to import Google Sheet: {str(ImportGoogleSheetError)}")
+            inputs = dialog.get_inputs()
+
+            if len(inputs) == 5:
+                sheet_id, sheet_name, delimiter, decimal, thousands = inputs
+            else:
+                sheet_id, sheet_name = inputs
+                delimiter, decimal, thousands = ",", ".", None
+            
+            if not sheet_id or not sheet_name:
+                QMessageBox.warning(self, "Input Error", "Sheet ID and Sheet Name cannot be empty")
+                return
+            
+            self.progress_dialog = ProgressDialog(
+                title="Importing from Google Sheets",
+                message=f"Connecting to {sheet_name}...",
+                parent=self
+            )
+            self.progress_dialog.show()
+            self.progress_dialog.update_progress(0, "Initializing...")
+
+            worker = GoogleSheetsImportWorker(self.data_handler, sheet_id, sheet_name, delimiter, decimal, thousands)
+            worker.signals.progress.connect(self._on_import_progress)
+            worker.signals.finished.connect(lambda df: self._on_google_sheet_import_finished(df, sheet_name))
+            worker.signals.error.connect(self._on_import_error)
+
+            self.threadpool.start(worker)
+    
+    @pyqtSlot(object, str)
+    def _on_google_sheet_import_finished(self, loaded_dataframe, sheet_name):
+        if self.progress_dialog:
+            self.progress_dialog.update_progress(90, "Updating Interface")
+            QApplication.processEvents()
+        
+        self.data_tab.refresh_data_view()
+        self.plot_tab.update_column_combo()
+
+        if self.progress_dialog:
+            self.progress_dialog.update_progress(100, "Complete")
+            QTimer.singleShot(300, self.progress_dialog.accept)
+            self.progress_dialog = None
+        
+        rows, columns = loaded_dataframe.shape
+        self.status_bar.log_action(
+            f"Imported Google Sheet: {sheet_name}",
+            details={
+                "sheet_name": sheet_name,
+                "rows": rows,
+                "columns": columns,
+                "operation": "import_google_sheets"
+            },
+            level="SUCCESS"
+        )
     
     def load_project(self, project_data: dict) -> None:
         """Load a project"""
