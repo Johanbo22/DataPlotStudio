@@ -1724,6 +1724,14 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(10)
 
+        self.error_bars_group = AnimatedGroupBox("Error Bars")
+        error_bars_layout = QVBoxLayout()
+        self.error_bars_combo = AnimatedComboBox()
+        self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
+        error_bars_layout.addWidget(self.error_bars_combo)
+        self.error_bars_group.setLayout(error_bars_layout)
+        scroll_layout.addWidget(self.error_bars_group)
+
         #  SCatter stats 
         self.scatter_group = AnimatedGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
@@ -1744,10 +1752,7 @@ class PlotTabUI(QWidget):
         self.show_equation_check = AnimatedCheckBox("Show Regression Equation")
         scatter_layout.addWidget(self.show_equation_check)
 
-        scatter_layout.addWidget(QLabel("Error Bars:"))
-        self.error_bars_combo = AnimatedComboBox()
-        self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
-        scatter_layout.addWidget(self.error_bars_combo)
+        
 
         scatter_layout.addWidget(QLabel("Confidence Level (%):"))
         self.confidence_level_spin = AnimatedSpinBox()

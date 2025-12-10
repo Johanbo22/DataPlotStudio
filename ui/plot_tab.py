@@ -26,25 +26,6 @@ from typing import Dict, List, Any
 
 
 class SubplotOverlay(QWidget):
-    """A QWidget overlay for displaying subplot information with visual feedback.
-    This widget renders a semi-transparent blue label with text and a border around
-    a specified subplot area. It features a fade-out animation that automatically
-    hides the overlay after a set duration.
-    The overlay is transparent to mouse events and does not have a system background,
-    allowing interaction with underlying widgets. The label displays centered text with
-    a blue background, and a 4px blue border is drawn around the widget's boundaries.
-    Attributes:
-        v_layout (QVBoxLayout): The main layout for the overlay.
-        label_widget (QLabel): The label displaying the overlay text.
-        opacity_effect (QGraphicsOpacityEffect): Graphics effect for controlling opacity.
-        fade_animation (QPropertyAnimation): Animation for fading out the overlay.
-
-    Methods:
-        update_info(text, geometry): Updates the overlay text and position, then plays the fade animation.
-        paintEvent(event): Draws a blue border around the overlay.
-
-    ^^^lol this is copilot that added this ehehe
-    """
     
     def __init__(self, parent=None):
         super().__init__(parent)
