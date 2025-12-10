@@ -3,7 +3,7 @@ import sys, os
 from pathlib import Path
 from xml.etree.ElementInclude import include
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PyQt6.QtCore import QTimer, pyqtSignal, QObject
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QTranslator, QLocale
 from PyQt6.QtGui import QIcon, QAction, QFont, QCloseEvent
 
 from ui.main_window import MainWindow
@@ -134,12 +134,6 @@ class DataPlotStudio(QMainWindow):
             dialog = GoogleSheetsDialog(self)
             if dialog.exec():
                 sheet_id, sheet_name, delimiter, decimal, thousands = dialog.get_inputs()
-
-                print(f"DEBUG: main.py->import_google_sheets")
-                print(f"DEBUG: Sheet_ID: {sheet_id}")
-                print(f"DEBUG: Sheet_Name {sheet_name}")
-                print(f"DEBUG: Delimiter {delimiter}")
-                print(f"DEBUG: Decimal {decimal}")
 
                 if not sheet_id or not sheet_name:
                     QMessageBox.warning(self, "Input Error", "Please enter both Sheet ID and Sheet Name")
@@ -758,6 +752,10 @@ def load_stylesheet(relative_path: str) -> str:
 def main():
     print("DEBUG: Application starting")
     app = QApplication(sys.argv)
+    translator = QTranslator()
+    if translator.load(QLocale.system(), "dataplotstudio", "_", "translations"):
+        app.installTranslator(translator)
+        print(f"DEBUG: Loaded translation for {QLocale.system().name()}")
     qss = load_stylesheet("style.css")
     app.setStyleSheet(qss)
     window = DataPlotStudio()
