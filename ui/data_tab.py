@@ -1742,8 +1742,8 @@ class DataTab(QWidget):
                         )
                         self.refresh_saved_agg_list()
                         self.status_bar.log(f"Saved aggregation: {agg_name}", "SUCCESS")
-                    except ValueError as e:
-                        QMessageBox.warning(self, "Error", str(e))
+                    except ValueError as OpenAggregationDialogError:
+                        QMessageBox.warning(self, "Error", str(OpenAggregationDialogError))
                 
                 self.refresh_data_view()
 

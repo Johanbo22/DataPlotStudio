@@ -54,8 +54,8 @@ class HelpManager:
             else:
                 debug(f"No topic found with topic_id: {topic_id}")
                 return None, None, None, None
-        except sqlite3.Error as e:
-            debug(f"Error fetching data for topic_id '{topic_id}: ERROR: {str(e)}'")
+        except sqlite3.Error as TopicIDFetchError:
+            debug(f"Error fetching data for topic_id '{topic_id}: ERROR: {str(TopicIDFetchError)}'")
             return None, None, None, None
     
     def close(self):

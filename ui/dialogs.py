@@ -1276,8 +1276,8 @@ class SubsetManagerDialog(QDialog):
 
                 self.refresh_subset_list()
                 QMessageBox.information(self, "Success", f"Subset '{config['name']}' created")
-            except ValueError as e:
-                QMessageBox.warning(self, "Error", {str(e)})
+            except ValueError as CreateNewSubsetError:
+                QMessageBox.warning(self, "Error", {str(CreateNewSubsetError)})
     
     def auto_create_subsets(self):
         """Auto create subsets based on unique values in a column"""

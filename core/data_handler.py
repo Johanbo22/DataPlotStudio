@@ -274,8 +274,8 @@ class DataHandler:
                 raise Exception("Permission denied (403)\n\nThe sheet is not publicly accessible.\n\nTo fix:\n1. Open the Google Sheet\n2. Click 'Share' (top right)\n3. Select 'Anyone with the link'\n4. Choose 'Viewer' or higher\n5. Try importing again")
             else:
                 raise Exception(f"HTTP Error {GoogleSheetsHTTPError.response.status_code}: {str(GoogleSheetsHTTPError)}")
-        except ValueError as e:
-            raise Exception(f"Invalid input or empty sheet:\n{str(e)}")
+        except ValueError as InvalidInputError:
+            raise Exception(f"Invalid input or empty sheet:\n{str(InvalidInputError)}")
         except Exception as ImportGoogleSheetsError:
             error_msg = str(ImportGoogleSheetsError)
             raise Exception(f"Error importing Google Sheet:\n{error_msg}\n\nVerification checklist:\n✓ Sheet ID is correct\n✓ Sheet name matches exactly (case-sensitive)\n✓ Sheet is shared publicly\n✓ Internet connection is active\n✓ Try with Sheet1 first")
