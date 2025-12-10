@@ -343,8 +343,8 @@ class DataPlotStudio(QMainWindow):
     
     def show_about(self):
         """Show about dialog"""
-        QMessageBox.information(self, "About DataPlot Studio",
-            "DataPlot Studio v0.0.1\n\n"
+        QMessageBox.information(self, f"About DataPlot Studio",
+            f"DataPlot Studio v{self.project_manager.APPLICATION_VERSION}\n\n"
             "A data analysis and visualization tool built with PyQt6.\n\n"
             "Features:\n"
             "• Import data from CSV, Excel, JSON, and Google Sheets\n"
