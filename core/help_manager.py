@@ -1,3 +1,4 @@
+from logging import debug
 import sqlite3
 import os
 
@@ -16,9 +17,8 @@ class HelpManager:
         try:
             self.connection = sqlite3.connect(self.db_path)
             self.connection.row_factory = sqlite3.Row
-            print(f"Connected to the tutorial database at {self.db_path}")
-        except sqlite3.Error as e:
-            print(f"An error occured connecting to the database: {str(e)}")
+        except sqlite3.Error as SQLError:
+            debug(f"An error occured connecting to the database: {str(SQLError)}")
             self.connection = None
 
     def get_help_topic(self, topic_id: str):
@@ -31,7 +31,7 @@ class HelpManager:
             tuple: (title, description, image, link) or (None, None, None, None) if not found
         """
         if not self.connection:
-            print(f"No Database connection")
+            debug(f"No Database connection")
             return None, None, None, None
         
         try:
@@ -52,10 +52,10 @@ class HelpManager:
 
                 return title, description, full_image_path, link
             else:
-                print(f"No topic found with topic_id: {topic_id}")
+                debug(f"No topic found with topic_id: {topic_id}")
                 return None, None, None, None
         except sqlite3.Error as e:
-            print(f"Error fetching data for topic_id '{topic_id}: ERROR: {str(e)}'")
+            debug(f"Error fetching data for topic_id '{topic_id}: ERROR: {str(e)}'")
             return None, None, None, None
     
     def close(self):

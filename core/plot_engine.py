@@ -1129,8 +1129,8 @@ class PlotEngine:
                 axis.set_major_locator(mdates.MonthLocator(interval=max(1, date_range.days // 90)))
             else:
                 axis.set_major_locator(mdates.YearLocator())
-        except Execption as e:
-            plot_tab.status_bar.log(f"Failed to set datetime locator: {str(e)}", "WARNING")
+        except Exception as DateTimeLocatorError:
+            plot_tab.status_bar.log(f"Failed to set datetime locator: {str(DateTimeLocatorError)}", "WARNING")
     
     def _helper_format_datetime_axis(self, plot_tab: "PlotTab", ax, x_data, y_data=None) -> None:
         """Format datetime axes with tick spacing"""
@@ -1723,6 +1723,7 @@ class PlotEngine:
     def strategy_heatmap(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """Heatmap plot generation"""
         # Heatmap ignores x/y, uses all numerical columns
+        general_kwargs.update(plot_kwargs)
         plot_method = getattr(self, self.AVAILABLE_PLOTS["Heatmap"])
         plot_method(plot_tab.data_handler.df, **general_kwargs)
         return None
@@ -1763,7 +1764,8 @@ class PlotEngine:
         else:
             general_kwargs["x"] = x_col
             general_kwargs["y"] = y_col
-            
+        
+        general_kwargs.update(plot_kwargs)
         plot_method = getattr(self, self.AVAILABLE_PLOTS["Hexbin"])
         plot_method(plot_tab.data_handler.df, **general_kwargs)
         return None
@@ -1800,7 +1802,8 @@ class PlotEngine:
                     plot_tab.data_handler.df[y_col]
                 )
             except: pass
-            
+        
+        general_kwargs.update(plot_kwargs)
         plot_method = getattr(self, self.AVAILABLE_PLOTS["2D Density"])
         plot_method(plot_tab.data_handler.df, **general_kwargs)
         return None
@@ -1862,6 +1865,7 @@ class PlotEngine:
             plot_tab.status_bar.log(f"2D Histogram only supports one y column. Using: {y_cols[0]}", "WARNING")
         y_col = y_cols[0]
 
+        general_kwargs.update(plot_kwargs)
         plot_method = getattr(self, self.AVAILABLE_PLOTS["2D Histogram"])
         plot_method(plot_tab.data_handler.df, x_col, y_col, **general_kwargs)
         try:
@@ -1883,7 +1887,7 @@ class PlotEngine:
         except: pass
         return None
 
-    def _strategy_gridded(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs):
+    def _strategy_gridded(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs, plot_kwargs=None):
         """Common strategy for plots requiring gridded x, y, z data."""
         if len(y_cols) < 2:
             return f"{plot_name} requires a Z column. Please select a second Y column (Z-value)."
@@ -1893,24 +1897,27 @@ class PlotEngine:
         
         general_kwargs["ylabel"] = plot_tab.ylabel_input.text() or y_col
         general_kwargs["z"] = z_col
+
+        if plot_kwargs:
+            general_kwargs.update(plot_kwargs)
         
         plot_method = getattr(self, self.AVAILABLE_PLOTS[plot_name])
         plot_method(plot_tab.data_handler.df, x_col, y_col, **general_kwargs)
         return None
     
     def strategy_imshow(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_gridded(plot_tab, "Image Show (imshow)", x_col, y_cols, general_kwargs)
+        return self._strategy_gridded(plot_tab, "Image Show (imshow)", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_pcolormesh(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_gridded(plot_tab, "pcolormesh", x_col, y_cols, general_kwargs)
+        return self._strategy_gridded(plot_tab, "pcolormesh", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_contour(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_gridded(plot_tab, "Contour", x_col, y_cols, general_kwargs)
+        return self._strategy_gridded(plot_tab, "Contour", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_contourf(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_gridded(plot_tab, "Contourf", x_col, y_cols, general_kwargs)
+        return self._strategy_gridded(plot_tab, "Contourf", x_col, y_cols, general_kwargs, plot_kwargs)
 
-    def _strategy_vector(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs):
+    def _strategy_vector(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs, plot_kwargs=None):
         """Common strategy for vector plots (barbs, quiver, streamplot)."""
         if len(y_cols) < 3:
             return f"{plot_name} requires 3 Y columns: Y-position, U (x-component), V (y-component)."
@@ -1922,21 +1929,24 @@ class PlotEngine:
         general_kwargs["ylabel"] = plot_tab.ylabel_input.text() or y_col
         general_kwargs["u"] = u_col
         general_kwargs["v"] = v_col
+
+        if plot_kwargs:
+            general_kwargs.update(plot_kwargs)
         
         plot_method = getattr(self, self.AVAILABLE_PLOTS[plot_name])
         plot_method(plot_tab.data_handler.df, x_col, y_col, **general_kwargs)
         return None
     
     def strategy_barbs(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_vector(plot_tab, "Barbs", x_col, y_cols, general_kwargs)
+        return self._strategy_vector(plot_tab, "Barbs", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_quiver(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_vector(plot_tab, "Quiver", x_col, y_cols, general_kwargs)
+        return self._strategy_vector(plot_tab, "Quiver", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_streamplot(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_vector(plot_tab, "Streamplot", x_col, y_cols, general_kwargs)
+        return self._strategy_vector(plot_tab, "Streamplot", x_col, y_cols, general_kwargs, plot_kwargs)
 
-    def _strategy_triangulation(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs):
+    def _strategy_triangulation(self, plot_tab: 'PlotTab', plot_name: str, x_col, y_cols, general_kwargs, plot_kwargs=None):
         """Common strategy for unstructured triangulation plots."""
         if len(y_cols) < 2 and plot_name != "Triplot":
             return f"{plot_name} requires a Z column. Please select a second Y column (Z-axis)."
@@ -1947,6 +1957,9 @@ class PlotEngine:
         z_col = y_cols[1] if len(y_cols) > 1 else None 
         
         general_kwargs["ylabel"] = plot_tab.ylabel_input.text() or y_col
+
+        if plot_kwargs:
+            general_kwargs.update(plot_kwargs)
         
         plot_method = getattr(self, self.AVAILABLE_PLOTS[plot_name])
 
@@ -1960,16 +1973,16 @@ class PlotEngine:
         return None
         
     def strategy_tricontour(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_triangulation(plot_tab, "Tricontour", x_col, y_cols, general_kwargs)
+        return self._strategy_triangulation(plot_tab, "Tricontour", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_tricontourf(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_triangulation(plot_tab, "Tricontourf", x_col, y_cols, general_kwargs)
+        return self._strategy_triangulation(plot_tab, "Tricontourf", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_tripcolor(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_triangulation(plot_tab, "Tripcolor", x_col, y_cols, general_kwargs)
+        return self._strategy_triangulation(plot_tab, "Tripcolor", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def strategy_triplot(self, plot_tab: 'PlotTab', x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-        return self._strategy_triangulation(plot_tab, "Triplot", x_col, y_cols, general_kwargs)
+        return self._strategy_triangulation(plot_tab, "Triplot", x_col, y_cols, general_kwargs, plot_kwargs)
 
     def plot_geospatial(self, gdf: "gpd.GeoDataFrame", column: Optional[str] = None, **kwargs) -> None:
         """Create a geospatial plot"""
