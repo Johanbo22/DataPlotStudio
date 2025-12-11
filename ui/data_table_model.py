@@ -113,23 +113,3 @@ class DataTableModel(QAbstractTableModel):
                 return QVariant()
         
         return QVariant()
-    
-    def sort(self, column: int, order: Qt.SortOrder) -> None:
-        """Sort the model by a col"""
-        if self._data is None or self._data.empty:
-            return
-        
-        try:
-            column_name = self._data.columns[column]
-            self.layoutAboutToBeChanged.emit()
-
-            ascending = order == Qt.SortOrder.AscendingOrder
-
-            self.data_handler.df = self.data_handler.df.sort_values(by=column_name, ascending=ascending)
-            self.data_handler.df = self.data_handler.df.reset_index(drop=True)
-            self._data = self.data_handler.df
-
-            self.layoutChanged.emit()
-        
-        except Exception as SortDataError:
-            print(f"Error sorting: {str(SortDataError)}")
