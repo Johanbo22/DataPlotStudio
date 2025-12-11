@@ -2,8 +2,6 @@
 from typing import Dict, Any, List, Set
 from datetime import datetime
 from pathlib import Path
-import re
-from arrow import get
 import pandas as pd
 
 class CodeExporter:
@@ -412,7 +410,6 @@ class CodeExporter:
             orient = "'h'"
 
         if plot_type == "Line":
-            lines.append("    # Matplotlib ax.plot mimics plot_engine.py")
             lines.append(f"    g_marker_shape_raw = {self._clean_value(g_marker_kwargs.get('shape', 'None'))}")
             lines.append(f"    g_marker_shape = g_marker_shape_raw if g_marker_shape_raw != 'None' else None")
             lines.append("    plot_args = {")
@@ -432,12 +429,10 @@ class CodeExporter:
             lines.append(f"            ax.plot(df[{x_col}], df[y_col], label=y_col, **plot_args)")
 
         elif plot_type == "Scatter":
-            lines.append("    # Matplotlib ax.scatter mimics plot_engine.py")
-            # --- FIX: Let ax.scatter use its default marker ('o') if UI is "None" ---
             lines.append(f"    g_marker_shape_raw = {self._clean_value(g_marker_kwargs.get('shape', 'o'))}")
             lines.append(f"    g_marker_shape = g_marker_shape_raw if g_marker_shape_raw != 'None' else 'o'")
             lines.append("    plot_args = {")
-            lines.append(f"        's': {g_marker_kwargs.get('size', 6)}**2,") # scatter uses 's'
+            lines.append(f"        's': {g_marker_kwargs.get('size', 6)}**2,")
             lines.append(f"        'marker': g_marker_shape,")
             lines.append(f"        'alpha': {alpha},")
             lines.append(f"        'edgecolors': None if {self._clean_value(g_marker_kwargs.get('edge_color'))} == 'Auto' else {self._clean_value(g_marker_kwargs.get('edge_color'))},")
@@ -537,7 +532,7 @@ class CodeExporter:
                 lines.append(f"        if explode: explode[0] = {pie_cfg.get('explode_distance', 0.1)}")
             lines.append(f"        ax.pie(pie_data, labels=pie_data.index, autopct={'%1.2f%%' if pie_cfg.get('show_percentages') else None},")
             lines.append(f"               startangle={pie_cfg.get('start_angle', 0)}, shadow={pie_cfg.get('shadow', False)}, explode=explode)")
-            lines.append("        ax.set_ylabel('')") # Clear default y-label
+            lines.append("        ax.set_ylabel('')") 
             lines.append("    except Exception as e: print(f'Could not generate pie plot: {{e}}')")
 
         elif plot_type == "Count Plot":
@@ -665,13 +660,12 @@ class CodeExporter:
             lines.append(f"    # Plot type {plot_type} not supported by exporter, using scatter.")
             lines.append(f"    sns.scatterplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, {g_adv_kwargs})")
 
-        # --- 4. Scatter Plot Analysis (if applicable) ---
-        lines.append("\n    # --- 4. Scatter Plot Analysis (if applicable) ---")
+        lines.append("\n    # --- 4. Scatter Plot Analysis---")
         if plot_type == "Scatter":
             lines.extend(self._generate_scatter_analysis(get_cfg, x_col, y_col_str, flip_axes))
 
-        # --- 5. Apply Advanced Customizations (Lines and Bars) ---
-        lines.append("\n    # --- 5. Apply Advanced Customizations (Lines and Bars) ---")
+        # 
+        lines.append("\n    # --- 5. Apply Customizations (Lines and Bars) ---")
         lines.append("    # This mimics _apply_plot_customizations from plot_tab.py")
         lines.append(f"    g_line_color = {self._clean_value(g_line_kwargs.get('color'))}")
         lines.append(f"    g_marker_color = {self._clean_value(g_marker_kwargs.get('color'))}")
@@ -683,10 +677,10 @@ class CodeExporter:
         lines.append("        for line in all_lines:")
         lines.append("            label = line.get_label()")
         lines.append("            if label in line_customs:")
-        lines.append("                line.set(**line_customs[label])") # Apply specific customization
-        lines.append("    else:") # Apply global customization
+        lines.append("                line.set(**line_customs[label])") 
+        lines.append("    else:") 
         lines.append("        for line in all_lines:")
-        lines.append("            if line.get_gid() == 'confidence_interval': continue") # Don't style CI fill
+        lines.append("            if line.get_gid() == 'confidence_interval': continue")
         lines.append(f"            if g_line_color and g_line_color != 'Auto': line.set_color(g_line_color)")
         lines.append(f"            if g_marker_color and g_marker_color != 'Auto': line.set_markerfacecolor(g_marker_color)")
         lines.append(f"            if g_marker_edge_color and g_marker_edge_color != 'Auto': line.set_markeredgecolor(g_marker_edge_color)")
@@ -700,11 +694,11 @@ class CodeExporter:
         lines.append("        legend_handles, legend_labels = ax.get_legend_handles_labels()")
         lines.append("        for i, container in enumerate(ax.containers):")
         lines.append("            label = None")
-        lines.append("            try: label = legend_labels[i]") # Try to get label from legend
+        lines.append("            try: label = legend_labels[i]") 
         lines.append("            except: label = container.get_label() or f'Bar Series {{i+1}}'")
         lines.append("            if label in bar_customs:")
         lines.append("                plt.setp(container.patches, **bar_customs[label])")
-        lines.append(f"    elif {alpha} != 1.0 or g_bar_color or g_bar_edgecolor:") # Apply global
+        lines.append(f"    elif {alpha} != 1.0 or g_bar_color or g_bar_edgecolor:") 
         lines.append("        global_bar_style = {}")
         lines.append(f"        if g_bar_color and g_bar_color != 'Auto': global_bar_style['facecolor'] = g_bar_color")
         lines.append(f"        if g_bar_edgecolor and g_bar_edgecolor != 'Auto': global_bar_style['edgecolor'] = g_bar_edgecolor")
@@ -713,7 +707,6 @@ class CodeExporter:
         lines.append("        plt.setp(ax.patches, **global_bar_style)")
 
 
-        # --- 6. Customize Appearance (Titles/Labels) ---
         lines.append("\n    # --- 6. Customize Appearance (Titles/Labels) ---")
         xlabel_text_cfg = get_cfg('appearance.xlabel.text')
         xlabel_to_set = xlabel_text_cfg if xlabel_text_cfg else x_col_raw
@@ -749,16 +742,13 @@ class CodeExporter:
             lines.append("    )")
         else:
             lines.append("    ax.set_ylabel('')")
-        # --- END FIX ---
-
-        # --- 7. Customize Spines ---
+        
         lines.append("\n    # --- 7. Customize Spines ---")
         for side in ['top', 'bottom', 'left', 'right']:
             lines.append(f"    ax.spines[{self._clean_value(side)}].set_visible({get_cfg(f'appearance.spines.{side}.visible', True)})")
             lines.append(f"    ax.spines[{self._clean_value(side)}].set_linewidth({get_cfg(f'appearance.spines.{side}.width', 1.0)})")
             lines.append(f"    ax.spines[{self._clean_value(side)}].set_color({self._clean_value(get_cfg(f'appearance.spines.{side}.color', 'black'))})")
 
-        # --- 8. Customize Axes (Limits, Ticks, Scale) ---
         lines.append("\n    # --- 8. Customize Axes (Limits, Ticks, Scale) ---")
         if not get_cfg("axes.x_axis.auto_limits", True):
             lines.append(f"    ax.set_xlim({get_cfg('axes.x_axis.min')}, {get_cfg('axes.x_axis.max')})")
@@ -836,11 +826,10 @@ class CodeExporter:
 
         # --- 10. Customize Legend ---
         lines.append("\n    # --- 10. Customize Legend ---")
-        # --- FIX: Always run legend() if checked, let matplotlib handle empty labels ---
         if get_cfg("legend.enabled", False):
             lines.append("    try:")
             lines.append("        handles, labels = ax.get_legend_handles_labels()")
-            lines.append("        if handles or labels:") # Only create legend if there's something to show
+            lines.append("        if handles or labels:")
             lines.append("            legend = ax.legend(handles=handles, labels=labels,")
             lines.append(f"                loc={self._clean_value(get_cfg('legend.location', 'best'))},")
             lines.append(f"                title={self._clean_value(get_cfg('legend.title'))},")
@@ -890,7 +879,6 @@ class CodeExporter:
             lines.append(f"            fontsize=11, verticalalignment='{va}', horizontalalignment='{ha}',")
             lines.append(f"            bbox=dict(boxstyle={self._clean_value(boxstyle)}, facecolor={self._clean_value(tb_cfg['bg_color'])}, alpha=0.8, pad=1))")
         
-        # --- 12. Add Data Table ---
         if get_cfg("annotations.table.enabled", False):
             lines.append("\n    # --- 12. Add Data Table ---")
             lines.append("    try:")
@@ -939,7 +927,6 @@ class CodeExporter:
             lines.append("        print(f'Warning: Failed to add data table: {e}')")
 
 
-        # --- 12. Final Touches ---
         lines.append("\n    # --- 12. Final Touches ---")
         if get_cfg("appearance.figure.tight_layout", True):
             lines.append("    try:")
@@ -1009,13 +996,10 @@ class CodeExporter:
                             ) -> str:
         """
         Generate complete script with both data manipulation and plotting.
-        This is the main public method.
         """
-        
-        # 1. Add imports based on config
+    
         self._add_imports(plot_config)
         
-        # 2. Generate script sections
         header = self._generate_header()
         loader_func = self._generate_data_loader(data_filepath, source_info)
         processor_func = self._generate_data_ops(data_operations)
@@ -1026,7 +1010,6 @@ class CodeExporter:
             
         main_block = self._generate_main(export_type)
         
-        # 3. Combine all sections
         full_script = "\n\n".join(filter(None, [
             header,
             loader_func,
