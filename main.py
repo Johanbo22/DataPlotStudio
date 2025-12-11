@@ -2,8 +2,8 @@
 import sys, os
 from pathlib import Path
 from xml.etree.ElementInclude import include
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QTranslator, QLocale
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QLabel
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QTranslator, QLocale, Qt
 from PyQt6.QtGui import QIcon, QAction, QFont, QCloseEvent
 
 from ui.main_window import MainWindow
@@ -343,16 +343,23 @@ class DataPlotStudio(QMainWindow):
     
     def show_about(self):
         """Show about dialog"""
-        QMessageBox.information(self, f"About DataPlot Studio",
-            f"DataPlot Studio v{self.project_manager.APPLICATION_VERSION}\n\n"
-            "A data analysis and visualization tool built with PyQt6.\n\n"
-            "Features:\n"
-            "• Import data from CSV, Excel, JSON, and Google Sheets\n"
-            "• Clean, filter, and transform data\n"
-            "• Create 13+ types of visualizations\n"
-            "• Extensive customization options\n"
-            "• Export code for reproducibility\n\n"
-            "Built with Python, pandas, matplotlib, and seaborn.")
+        link_to_github_repository = "https://github.com/Johanbo22/DataPlotStudio"
+        message = QMessageBox(self)
+        message.setWindowTitle("About DataPlot Studio")
+        message.setTextFormat(Qt.TextFormat.RichText)
+        message.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        message.setText(
+            f"""
+            <b>DataPlot Stuio v{self.project_manager.APPLICATION_VERSION}</b><br><br>
+            A data analysis and visualization tool built with Python and the PyQt6 Framework. <br><br>
+            <u>Features:</u><br>
+            • Timport data from CSV, Excel, JSON, Google Sheets and database connections<br>
+            • Tranform and explore your data<br>
+            • Create 31 types of visualizations<br>
+            • Export code for sharing and further customization<br><br>
+            <a href="{link_to_github_repository}">Link to Github Repository</a>
+        """)
+        message.exec()
     
     def export_code(self):
         """Export data manipulation and plotting code"""

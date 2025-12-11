@@ -1390,8 +1390,8 @@ class PlotEngine:
                         
                         self.current_ax.errorbar(
                             *err_args, **err_kwargs,
-                            fmt="o", markersize=3, ecolor="gray", alpha=0.5, 
-                            capsize=4, zorder=8, markerfacecolor="none", 
+                            fmt="o", markersize=3, ecolor="black", alpha=0.5, 
+                            capsize=4, zorder=10, markerfacecolor="none", 
                             markeredgecolor="gray", linestyle="none"
                         )
             
