@@ -1648,16 +1648,23 @@ class PlotTab(PlotTabUI):
 
         # title
         if self.title_check.isChecked():
+            self.plot_engine.current_ax.set_title("", loc='left')
+            self.plot_engine.current_ax.set_title("", loc='center')
+            self.plot_engine.current_ax.set_title("", loc='right')
+
             title_text = self.title_input.text() or general_kwargs.get("title", "Plot")
             self.plot_engine.current_ax.set_title(
                 title_text, 
                 fontsize=self.title_size_spin.value(), 
                 fontweight=self.title_weight_combo.currentText(), 
-                fontfamily=font_family
+                fontfamily=font_family,
+                loc=self.title_position_combo.currentText()
             )
         else:
             #clear title
             self.plot_engine.current_ax.set_title("")
+            self.plot_engine.current_ax.set_title("", loc='left')
+            self.plot_engine.current_ax.set_title("", loc='right')
         
         #xlabel
         if self.xlabel_check.isChecked():
@@ -2304,6 +2311,7 @@ class PlotTab(PlotTabUI):
                 "text": self.title_input.text(),
                 "size": self.title_size_spin.value(),
                 "weight": self.title_weight_combo.currentText(),
+                "location": self.title_position_combo.currentText(),
             },
             "xlabel": {
                 "enabled": self.xlabel_check.isChecked(),

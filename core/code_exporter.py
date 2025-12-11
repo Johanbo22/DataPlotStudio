@@ -714,11 +714,16 @@ class CodeExporter:
         ylabel_to_set = ylabel_text_cfg if ylabel_text_cfg else (y_col_raw if len(y_cols_raw)==1 else 'Value')
         
         if get_cfg("appearance.title.enabled", True):
+            lines.append(f"    ax.set_title('', loc='left')")
+            lines.append(f"    ax.set_title('', loc='center')")
+            lines.append(f"    ax.set_title('', loc='right')")
+            
             lines.append(f"    ax.set_title(")
             lines.append(f"        label={self._clean_value(get_cfg('appearance.title.text', plot_type))},")
             lines.append(f"        fontsize={get_cfg('appearance.title.size', 14)},")
             lines.append(f"        fontweight={self._clean_value(get_cfg('appearance.title.weight', 'bold'))},")
             lines.append(f"        fontfamily=font_family")
+            lines.append(f"        loc={self._clean_value(get_cfg('appearance.title.location', 'center'))}")
             lines.append("    )")
         else:
             lines.append("    ax.set_title('')")

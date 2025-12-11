@@ -427,7 +427,14 @@ class PlotTabUI(QWidget):
         self.title_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.title_weight_combo.setCurrentText("bold")
         title_layout.addWidget(self.title_weight_combo)
+
+        title_layout.addWidget(QLabel("Title Position:"))
+        self.title_position_combo = AnimatedComboBox()
+        self.title_position_combo.addItems(["center", "left", "right"])
+        self.title_position_combo.setCurrentText("center")
+        title_layout.addWidget(self.title_position_combo)
         title_group.setLayout(title_layout)
+
         
         #add all to title group
         scroll_layout.addWidget(title_group)
