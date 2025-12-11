@@ -2306,6 +2306,7 @@ class PlotTab(PlotTabUI):
         """Config for the appearance tab"""
         return {
             "font_family": self.font_family_combo.currentFont().family(),
+            "usetex": self.usetex_checkbox.isChecked(),
             "title": {
                 "enabled": self.title_check.isChecked(),
                 "text": self.title_input.text(),

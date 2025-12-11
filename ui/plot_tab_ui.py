@@ -15,6 +15,7 @@ from ui.data_tab import DataTab
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
 import traceback
+import shutil
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     WEB_ENGINE_AVAILABLE = True
@@ -391,6 +392,22 @@ class PlotTabUI(QWidget):
         self.font_family_combo = QFontComboBox()
         self.font_family_combo.setCurrentFont(QFont("Arial")) #defal
         font_layout.addWidget(self.font_family_combo)
+
+        #latex rendering
+        self.has_latex: bool = shutil.which("latex") is not None
+        self.usetex_checkbox = AnimatedCheckBox("Enable Latex Rendering")
+        self.usetex_checkbox.setChecked(False)
+
+        if not self.has_latex:
+            self.usetex_checkbox.setEnabled(False)
+            self.usetex_checkbox.setStyleSheet("color: gray;")
+            self.usetex_checkbox.setToolTip("LaTeX installation not found in system PATH.\n"
+                                        "Please install TeX Live (Linux/Windows) or MacTeX (macOS)\n"
+                                        "and ensure 'latex' is in your PATH to enable this feature.")
+        else:
+            self.usetex_checkbox.setToolTip("Render text using LaTeX for mathematical formatting.\n"
+                                        "Example: $\alpha > \beta$")
+        font_layout.addWidget(self.usetex_checkbox)
         
         font_group.setLayout(font_layout)
         scroll_layout.addWidget(font_group)

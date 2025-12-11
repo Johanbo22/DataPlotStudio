@@ -126,6 +126,26 @@ class PlotEngine:
         self.current_figure = Figure(figsize=figsize, dpi=dpi)
         self.setup_layout(1, 1)
         return self.current_figure
+
+    def _set_labels(self, title: Optional[str], xlabel: Optional[str], ylabel: Optional[str], legend: bool, **kwargs) -> None:
+        """Function that sets labels and handles latex rendering if requqested"""
+        usetex = kwargs.get("usetex", False)
+
+        plt.rcParams["text.usetex"] = usetex
+
+        default_weight = "normal" if usetex else "bold"
+        title_weight = kwargs.get("title_weight", default_weight)
+
+        if title:
+            self.current_ax.set_title(title, fontsize=14, fontweight=title_weight)
+        if xlabel:
+            self.current_ax.set_xlabel(xlabel, fontsize=12)
+        if ylabel:
+            self.current_ax.set_ylabel(ylabel, fontsize=12)
+        if legend:
+            self.current_ax.legend()
+        
+        self.current_figure.tight_layout()
     
     def generate_plotly_plot(self, df: pd.DataFrame, plot_type: str, x: str, y: List[str], **kwargs) -> str:
         """"""
@@ -300,16 +320,7 @@ class PlotEngine:
                 mask = df[x].notna()
                 self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight="bold")
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend and len(y) > 1:
-            self.current_ax.legend()
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
     
     def plot_scatter(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a scatter plot"""
@@ -327,16 +338,7 @@ class PlotEngine:
             mask = df[x].notna() & df[y].notna()
             self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend:
-            self.current_ax.legend()
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend, **kwargs)
     
     def plot_bar(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a bar plot"""
@@ -388,16 +390,7 @@ class PlotEngine:
             else:
                 sns.barplot(data=df, x=x, y=y[0], hue=hue, ax=self.current_ax, **kwargs)
 
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend and len(y) > 1:
-            self.current_ax.legend()
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
     
     def plot_histogram(self, df: pd.DataFrame, column: str, **kwargs) -> None:
         """Create a histogram"""
@@ -450,14 +443,7 @@ class PlotEngine:
             self.current_ax.text(0.75, 0.95, stats_text, transform=self.current_ax.transAxes, fontsize=10, verticalalignment="top", bbox=props, fontfamily="monospace")
 
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_box(self, df: pd.DataFrame, columns: List[str], **kwargs) -> None:
         """Create a box plot"""
@@ -471,14 +457,7 @@ class PlotEngine:
         
         df[columns].plot(kind='box', ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_violin(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a violin plot using seaborn"""
@@ -489,14 +468,7 @@ class PlotEngine:
         
         sns.violinplot(data=df, x=x, y=y, ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_heatmap(self, df: pd.DataFrame, **kwargs) -> None:
         """Create a heatmap using seaborn"""
@@ -509,10 +481,7 @@ class PlotEngine:
         numeric_df = df.select_dtypes(include=[np.number])
         sns.heatmap(numeric_df.corr(), annot=True, ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_kde(self, df: pd.DataFrame, column: str, **kwargs) -> None:
         """Create a KDE plot"""
@@ -523,14 +492,7 @@ class PlotEngine:
         
         df[column].plot(kind='kde', ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_area(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create an area plot"""
@@ -546,16 +508,7 @@ class PlotEngine:
         df_plot.plot(kind="area", ax=self.current_ax, stacked=True, **kwargs)
         
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend and len(y) > 1:
-            self.current_ax.legend()
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
     
     def plot_pie(self, df: pd.DataFrame, values: str, names: str, **kwargs) -> None:
         """Create a pie chart"""
@@ -580,10 +533,7 @@ class PlotEngine:
         self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, **kwargs)
         self.current_ax.set_ylabel('')
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, None, None, False, **kwargs)
     
     def plot_count(self, df: pd.DataFrame, column: str, **kwargs) -> None:
         """Create a count plot using seaborn"""
@@ -594,14 +544,7 @@ class PlotEngine:
         
         sns.countplot(data=df, x=column, ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_hexbin(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a hexbin plot"""
@@ -614,14 +557,7 @@ class PlotEngine:
         mask = df[x].notna() & df[y].notna()
         self.current_ax.hexbin(df.loc[mask, x], df.loc[mask, y], gridsize=gridsize, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_density_2d(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a 2D density plot"""
@@ -643,14 +579,7 @@ class PlotEngine:
         
         sns.kdeplot(data=clean_df, x=x, y=y, ax=self.current_ax, fill=True, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_stem(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a stem plot"""
@@ -694,12 +623,7 @@ class PlotEngine:
         plt.setp(stemlines, linestyle=line_style, linewidth=line_width, color=color, alpha=alpha)
         plt.setp(baseline, color="gray", linewidth=1, linestyle="-")
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight="bold")
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend: self.current_ax.legend()
-
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend, **kwargs)
     
     def plot_stackplot(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create a stackplot"""
@@ -713,12 +637,7 @@ class PlotEngine:
 
         self.current_ax.stackplot(df_sorted[x], *y_data, labels=y, **kwargs)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        if legend: self.current_ax.legend()
-
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, legend, **kwargs)
 
     def plot_stairs(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a stairs plot"""
@@ -729,11 +648,7 @@ class PlotEngine:
         df_sorted = df[df[x].notna()].sort_values(by=x)
         self.current_ax.stairs(df_sorted[x], df_sorted[y], **kwargs)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_eventplot(self, df: pd.DataFrame, y: list[str], **kwargs) -> None:
         """Create an eventplot"""
@@ -746,14 +661,11 @@ class PlotEngine:
 
         self.current_ax.eventplot(data_to_plot, **kwargs)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
         if len(y) > 1:
             self.current_ax.set_yticks(range(len(y)))
             self.current_ax.set_yticklabels(y)
         
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_hist2d(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a 2D histogram"""
@@ -765,11 +677,7 @@ class PlotEngine:
         hist = self.current_ax.hist2d(df.loc[mask, x], df.loc[mask, y], **kwargs)
         self.current_figure.colorbar(hist[3], ax=self.current_ax, label="counts")
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_ecdf(self, df: pd.DataFrame, y: str, **kwargs) -> None:
         """Create an ECDF plot"""
@@ -778,10 +686,7 @@ class PlotEngine:
 
         self.current_ax.ecdf(df[y], **kwargs)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        self.current_ax.set_ylabel("ECDF")
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, "ECDF", False, **kwargs)
 
     def _prepare_gridded_data(self, df: pd.DataFrame, x: str, y: str, z: str):
         """Helper func to pivot data for gridded plots"""
@@ -815,10 +720,7 @@ class PlotEngine:
         img = self.current_ax.imshow(Z, extent=[X.min(), X.max(), Y.min(), Y.max()], origin="lower", aspect="auto", **kwargs)
         self.current_figure.colorbar(img, ax=self.current_ax, label=z)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_pcolormesh(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a pcolormesh plot"""
@@ -832,10 +734,7 @@ class PlotEngine:
         mesh = self.current_ax.pcolormesh(X_grid, Y_grid, Z, **kwargs)
         self.current_figure.colorbar(mesh, ax=self.current_ax, label=z)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_contour(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a contour plot"""
@@ -849,10 +748,7 @@ class PlotEngine:
         cont = self.current_ax.contour(X_grid, Y_grid, Z, **kwargs)
         self.current_ax.clabel(cont, inline=True, fontsize=8)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_contourf(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a filled contour plot"""
@@ -866,10 +762,7 @@ class PlotEngine:
         contf = self.current_ax.contourf(X_grid, Y_grid, Z, **kwargs)
         self.current_figure.colorbar(contf, ax=self.current_ax, label=z)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_barbs(self, df: pd.DataFrame, x: str, y: str, u: str, v: str, **kwargs) -> None:
         """Create a barbs plot"""
@@ -880,10 +773,7 @@ class PlotEngine:
 
         self.current_ax.barbs(df[x], df[y], df[u], df[v], **kwargs)
 
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_quiver(self, df: pd.DataFrame, x: str, y: str, u: str, v: str, **kwargs) -> None:
         """Create a quiver plot"""
@@ -892,12 +782,9 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         _ = kwargs.pop("legend", None)
         
-        self.current_ax.quiver(df[x], df[y], df[u], df[v], **kwargs) # type: ignore
+        self.current_ax.quiver(df[x], df[y], df[u], df[v], **kwargs)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_streamplot(self, df: pd.DataFrame, x: str, y: str, u: str, v: str, **kwargs) -> None:
         """Create a streamplot"""
@@ -917,10 +804,7 @@ class PlotEngine:
 
         self.current_ax.streamplot(X_grid, Y_grid, U_grid, V_grid, **kwargs)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_tricontour(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a tricontour plot from unstructured x, y, z."""
@@ -931,10 +815,7 @@ class PlotEngine:
         cont = self.current_ax.tricontour(df[x], df[y], df[z], **kwargs)
         self.current_ax.clabel(cont, inline=True, fontsize=8)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_tricontourf(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a filled tricontour plot from unstructured x, y, z."""
@@ -945,10 +826,7 @@ class PlotEngine:
         contf = self.current_ax.tricontourf(df[x], df[y], df[z], **kwargs)
         self.current_figure.colorbar(contf, ax=self.current_ax, label=z)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_tripcolor(self, df: pd.DataFrame, x: str, y: str, z: str, **kwargs) -> None:
         """Create a tripcolor plot from unstructured x, y, z."""
@@ -959,10 +837,7 @@ class PlotEngine:
         trip = self.current_ax.tripcolor(df[x], df[y], df[z], **kwargs)
         self.current_figure.colorbar(trip, ax=self.current_ax, label=z)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def plot_triplot(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a triplot from unstructured x, y."""
@@ -972,10 +847,7 @@ class PlotEngine:
         
         self.current_ax.triplot(df[x], df[y], **kwargs)
         
-        if title: self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel: self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel: self.current_ax.set_ylabel(ylabel, fontsize=12)
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
     def add_table(self, df: pd.DataFrame, loc='bottom', auto_font_size=False, fontsize=10, scale_factor=1.2, **kwargs) -> None:
         """Addin tables to the plot area"""
@@ -2043,17 +1915,10 @@ class PlotEngine:
             kwargs.pop("cmap", None)
             gdf.plot(ax=self.current_ax, **kwargs)
         
-        if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight='bold')
-        if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
-        if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
-        
         if axis_off:
             self.current_ax.set_axis_off()
         
-        self.current_figure.tight_layout()
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def strategy_geospatial(self, plot_tab: "PlotTab", x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """GeoSpatial plotting strategy"""
