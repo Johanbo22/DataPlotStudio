@@ -350,7 +350,7 @@ class DataPlotStudio(QMainWindow):
         message.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         message.setText(
             f"""
-            <b>DataPlot Stuio v{self.project_manager.APPLICATION_VERSION}</b><br><br>
+            <b>DataPlot Studio v{self.project_manager.APPLICATION_VERSION}</b><br><br>
             A data analysis and visualization tool built with Python and the PyQt6 Framework. <br><br>
             <u>Features:</u><br>
             • Timport data from CSV, Excel, JSON, Google Sheets and database connections<br>
