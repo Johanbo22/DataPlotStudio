@@ -4,6 +4,7 @@ from re import M
 from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QMessageBox, QFrame, QGraphicsOpacityEffect
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QIcon, QColor, QPalette, QPen, QPainter
+from attr import frozen
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -1203,441 +1204,510 @@ class PlotTab(PlotTabUI):
     
     def generate_plot(self):
         """Generate plot based on current settings"""
-        if self.data_handler.df is None:
-            self.status_bar.log("No data loaded", "WARNING")
-            QMessageBox.warning(self, "Warning", "No data loaded")
+        if not self._validate_data_loaded():
             return
-        
-        #freeze data
-        current_subplot_index = self.active_subplot_combo.currentIndex()
-        if current_subplot_index < 0: current_subplot_index = 0
 
-        use_frozen_data = self.freeze_data_check.isChecked() and self.add_subplots_check.isChecked()
-        frozen_config = self.subplot_data_configs.get(current_subplot_index) if use_frozen_data else None
+        # Get data configuration
+        current_subplot_index, frozen_config = self._get_subplot_config()
+        active_df, x_col, y_cols, hue, subset_name = self._resolve_data_config(current_subplot_index, frozen_config)
 
-        if frozen_config:
-            x_col = frozen_config.get("x_col")
-            y_cols = frozen_config.get("y_cols")
-            hue = frozen_config.get("hue")
-            subset_name = frozen_config.get("subset_name")
-
-            if subset_name:
-                try:
-                    if self.subset_manager:
-                        active_df = self.subset_manager.apply_subset(self.data_handler.df, subset_name)
-                    else:
-                        active_df = self.data_handler.df
-                        self.status_bar.log("Subset Manager missing, using full dataset", "WARNING")
-                except Exception as RestoreSubsetError:
-                    self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(RestoreSubsetError)}", "WARNING")
-                    active_df = self.data_handler.df
-            else:
-                active_df = self.data_handler.df
-
-            self.status_bar.log(f"Using data config for plot {current_subplot_index + 1}", "INFO")
-        else:
-            active_df = self.get_active_dataframe()
-            x_col = self.x_column.currentText()
-            y_cols = self.get_selected_y_columns()
-            hue = self.hue_column.currentText() if self.hue_column.currentText() != "None" else None
-            subset_name = self.subset_combo.currentData() if self.use_subset_check.isChecked() else None
-
-        
-        if active_df is None or len(active_df) == 0:
-            QMessageBox.warning(self, "Warning", "Selected data is empty")
+        if not self._validate_active_dataframe(active_df):
             return
         
         active_df = active_df.copy()
         plot_type = self.plot_type.currentText()
 
+        # Handle the plotly backend
         if self.use_plotly_check.isChecked():
+            self._generate_plotly_plot(active_df, plot_type, x_col, y_cols, hue)
+            return
+        
+        # Sample data if needed
+        active_df = self._sample_data_if_needed(active_df, plot_type)
+        
+        #Convert datetime columns
+        self._convert_datetime_columns(active_df, x_col, y_cols)
+
+        # Generate main plot
+        self._generate_main_plot(
+            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index
+        )
+    
+    def _validate_data_loaded(self) -> bool:
+        """Check if data is loaded"""
+        if self.data_handler.df is None:
+            self.status_bar.log("No data loaded", "WARNING")
+            QMessageBox.warning(self, "Warning", "No data loaded")
+            return False
+        return True
+    
+    def _get_subplot_config(self):
+        """Get current subplot configuration"""
+        current_subplot_index = self.active_subplot_combo.currentIndex()
+        if current_subplot_index < 0:
+            current_subplot_index = 0
+
+        use_frozen_data = (self.freeze_data_check.isChecked() and self.add_subplots_check.isChecked())
+        frozen_config = (self.subplot_data_configs.get(current_subplot_index if use_frozen_data else None))
+
+        return current_subplot_index, frozen_config
+
+    def _resolve_data_config(self, current_subplot_index, frozen_config):
+        """Resovle data configeration from frozen config"""
+        if frozen_config:
+            x_col = frozen_config.get("x_col")
+            y_cols = frozen_config.get("y_cols")
+            hue = frozen_config.get("hue")
+            subset_name = frozen_config.get("subset_name")
+            active_df = self._restore_frozen_data(subset_name)
+            self.status_bar.log(f"Using data config for plot {current_subplot_index + 1}", "INFO")
+        else:
+            active_df = self.get_active_dataframe()
+            x_col = self.x_column.currentText()
+            y_cols = self.get_selected_y_columns()
+            hue = (self.hue_column.currentText() if self.hue_column.currentText() != "None" else None)
+            subset_name = (self.subset_combo.currentData() if self.use_subset_check.isChecked() else None)
+
+        return active_df, x_col, y_cols, hue, subset_name
+
+    def _restore_frozen_data(self, subset_name):
+        """Restore data from a frozen subset"""
+        if subset_name:
             try:
-                self.status_bar.log(f"Generating {plot_type} plot using the plotly backend...", "INFO")
-
-                kwargs = {
-                    "title": self.title_input.text() if self.title_input.text() else f"{plot_type} Plot",
-                    "xlabel": self.xlabel_input.text() or x_col,
-                    "ylabel": self.ylabel_input.text() or (y_cols[0] if y_cols else ""),
-                    "hue": hue,
-                    "show_regression": self.regression_line_check.isChecked(),
-                    "horizontal": self.flip_axes_check.isChecked()
-                }
-
-                if plot_type == "Histogram":
-                    kwargs["bins"] = self.histogram_bins_spin.value()
-                    kwargs["show_kde"] = self.histogram_show_kde_check.isChecked()
-                
-                html_content = self.plot_engine.generate_plotly_plot(
-                    active_df, plot_type, x_col, y_cols, **kwargs)
-                
-                if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
-                    self.web_view.setHtml(html_content)
-                    self.status_bar.log(f"{plot_type} plot generated with plotly")
+                if self.subset_manager:
+                    return self.subset_manager.apply_subset(
+                        self.data_handler.df, subset_name
+                    )
                 else:
-                    self.status_bar.log("WebEngineView not available", "ERROR")
-
-                return
-            
-            except Exception as PlotPlotlyError:
-                self.status_bar.log(f"Plotting {plot_type} using plotly backend has failed: {str(PlotPlotlyError)}", "ERROR")
-                QMessageBox.critical(self, "Plotly Plotting Error", str(PlotPlotlyError))
-                traceback.print_exc()
-                return
-
-        #sampling for better performance
-        MAX_PLOT_POINTS = 500_000
-        PLOTS_TO_SAMPLE = [
-            "Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"
-        ]
-        if len(active_df) > MAX_PLOT_POINTS and plot_type in PLOTS_TO_SAMPLE:
-            self.status_bar.log(
-                f"Dataset is too large ({len(active_df):,} rows) for '{plot_type}' plot."
-                f"Plotting a random sample of {MAX_PLOT_POINTS:,} points",
-                "WARNING"
-            )
-            active_df = active_df.sample(n=MAX_PLOT_POINTS, random_state=42)
-
+                    self.status_bar.log(f"Subset Manager not initialized, using full dataset", "WARNING")
+                    return self.data_handler.df
+            except Exception as UseSubsetError:
+                self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(UseSubsetError)}", "ERROR")
+                return self.data_handler.df
+        else:
+            return self.data_handler.df
+        
+    def _validate_active_dataframe(self, active_df) -> bool:
+        """Validates the active dataframe (check if has data or nah)"""
+        if active_df is None or len(active_df) == 0:
+            QMessageBox.warning(self, "Warning", "Selected data is empty")
+            return False
+        return True
+        
+    def _generate_plotly_plot(self, active_df, plot_type, x_col, y_cols, hue):
+        """Generate plot using the plotly backend"""
         try:
-            if x_col and self.plot_engine._helper_is_datetime_column(self, active_df[x_col]): # Use engine's helper
+            self.status_bar.log(f"Generating {plot_type} using plotly...", "INFO")
+
+            kwargs = self._build_plotly_kwargs(plot_type, x_col, y_cols, hue)
+            
+            html_content = self.plot_engine.generate_plotly_plot(
+                active_df,
+                plot_type,
+                x_col,
+                y_cols,
+                **kwargs
+            )
+
+            if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
+                self.web_view.setHtml(html_content)
+                self.status_bar.log(f"{plot_type} plot generated with plotly")
+            else:
+                self.status_bar.log(f"WebEngineView not available", "ERROR")
+        
+        except Exception as PlotlyFetchError:
+            self.status_bar.log(f"Plotting {plot_type} using plotly has failed: {str(PlotlyFetchError)}", "ERROR")
+            QMessageBox.critical(self, "Plotly Plotting Error", str(PlotlyFetchError))
+            traceback.print_exc()
+    
+    def _build_plotly_kwargs(self, plot_type, x_col, y_cols, hue):
+        """Build kwargs for plotly plot"""
+        kwargs = {
+            "title": self.title_input.text() or f"{plot_type} plot",
+            "xlabel": self.xlabel_input.text() or x_col,
+            "ylabel": self.ylabel_input.text() or (y_cols[0] if y_cols else ""),
+            "hue": hue,
+            "show_regression": self.regression_line_check.isChecked(),
+            "horizontal": self.flip_axes_check.isChecked()
+        }
+
+        if plot_type == "Histogram":
+            kwargs["bins"] = self.histogram_bins_spin.value()
+            kwargs["show_kde"] = self.histogram_show_kde_check.isChecked()
+
+        return kwargs
+
+    def _sample_data_if_needed(self, active_df, plot_type):
+        """Sample data for better performance if necessary"""
+        MAX_PLOT_POINTS = 500_000
+        PLOTS_TO_SAMPLE = ["Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"]
+
+        if len(active_df) > MAX_PLOT_POINTS and plot_type in PLOTS_TO_SAMPLE:
+            self.status_bar.log(f"Dataset is too large ({len(active_df)} rows) for '{plot_type}' "
+            f"Plotting a random sample of {MAX_PLOT_POINTS:,} points",
+            "WARNING"
+            )
+            return active_df.sample(n=MAX_PLOT_POINTS, random_state=42)
+        return active_df
+    
+    def _convert_datetime_columns(self, active_df, x_col, y_cols) -> None:
+        """Convert datetime columns if needded"""
+        try:
+            if x_col and self.plot_engine._helper_is_datetime_column(self, active_df[x_col]):
                 if not pd.api.types.is_datetime64_any_dtype(active_df[x_col]):
                     active_df[x_col] = pd.to_datetime(active_df[x_col], utc=True, errors="coerce")
                     self.status_bar.log(f"Converted column: '{x_col}' to datetime", "INFO")
-            
             for y_col in y_cols:
-                if y_col and self.plot_engine._helper_is_datetime_column(self, active_df[y_col]): # Use engine's helper
+                if y_col and self.plot_engine._helper_is_datetime_column(self, active_df[y_col]):
                     if not pd.api.types.is_datetime64_any_dtype(active_df[y_col]):
                         active_df[y_col] = pd.to_datetime(active_df[y_col], utc=True, errors="coerce")
                         self.status_bar.log(f"Converted column: '{y_col}' to datetime", "INFO")
-        except Exception as ConvertDateTimeError:
-            self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertDateTimeError)}", "WARNING")
-        
-        # check dataset size
+        except Exception as ConvertColumnToDatetimeError:
+            self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertColumnToDatetimeError)}", "ERROR")
+    
+    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index):
+        """Generate plot using matplotlib settings"""
         data_size = len(self.data_handler.df)
         show_progress = data_size > 100
-
         progress_dialog = None
 
         try:
-            #init
-            if show_progress:
-                progress_dialog = ProgressDialog(
-                    title="Generating Plot",
-                    message=f"Processing {data_size:,} data points",
-                    parent=self
-                )
-                progress_dialog.show()
-                progress_dialog.update_progress(5, "Initializing plotting engine")
-                QApplication.processEvents()
+            progress_dialog = self._init_progress_dialog(show_progress, data_size)
+
+            if not self._validate_plot_requirements(plot_type, x_col, y_cols):
+                return
             
-            #get init params
-            plot_type = self.plot_type.currentText()
+            self._update_progress(progress_dialog, 10, "Preparing data")
 
-            # Validation ---
-            plots_no_x = ["Box", "Histogram", "KDE", "Heatmap", "Pie", "ECDF", "Eventplot", "GeoSpatial"]
-            plots_no_y = ["Count Plot", "Heatmap", "GeoSpatial"]
-            plots_gridded = ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]
-            plots_vector = ["Barbs", "Quiver", "Streamplot"]
-            plots_triangulation_z = ["Tricontour", "Tricontourf", "Tripcolor"]
-            plots_triangulation_no_z = ["Triplot"]
-
-            if not x_col and plot_type not in plots_no_x:
-                QMessageBox.warning(self, "Warning", f"Please select an X column for {plot_type}.")
-                return
-            if not y_cols and plot_type not in plots_no_y:
-                QMessageBox.warning(self, "Warning", f"Please select at least one Y column for {plot_type}.")
-                return
-
-            if plot_type in plots_gridded and len(y_cols) < 2:
-                QMessageBox.warning(self, "Warning", f"{plot_type} requires 2 Y columns: (Y-position, Z-value).")
-                return
-            if plot_type in plots_vector and len(y_cols) < 3:
-                QMessageBox.warning(self, "Warning", f"{plot_type} requires 3 Y columns: (Y-position, U-component, V-component).")
-                return
-            if plot_type in plots_triangulation_z and len(y_cols) < 2:
-                QMessageBox.warning(self, "Warning", f"{plot_type} requires 2 Y columns: (Y-position, Z-value).")
-                return
-            if plot_type in plots_triangulation_no_z and len(y_cols) < 1:
-                QMessageBox.warning(self, "Warning", f"{plot_type} requires at least one Y column (Y-position).")
-                return
-
+            #Build config
             axes_flipped = self.flip_axes_check.isChecked()
             font_family = self.font_family_combo.currentFont().family()
 
-            if show_progress:
-                progress_dialog.update_progress(10, "Preparing data")
-                if progress_dialog.is_cancelled():
-                    self.status_bar.log("Plot generation cancelled", "WARNING")
-                    return
+            self._update_progress(progress_dialog, 20, "Building plot configurations")
+
+            general_kwargs = self._build_general_kwargs(plot_type, x_col, y_cols, hue)
+            plot_kwargs = self._build_plot_specific_kwargs(plot_type)
+
+            # Setup plot
+            self._update_progress(progress_dialog, 30, "Clearing previous plot")
+            self._setup_plot_figure()
+
+            self._update_progress(progress_dialog, 35, "Setting plot style")
+            self._apply_plot_style()
+            self._set_axis_limits_and_scales()
+
+            #Create
+            self._update_progress(progress_dialog, 40, f"Creating {plot_type} plot")
+
+            if not self._execute_plot_strategy(plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
+                if progress_dialog:
+                    progress_dialog.accept()
+                return
             
-            #build kwargs
-            plots_supporting_hue = ["Scatter", "Line", "Bar", "Violin", "2D Density", "Box", "Count Plot"]
-            
-            y_label_text = str(y_cols)
-            if len(y_cols) == 1:
-                y_label_text = y_cols[0]
+            # Apply formatting and customizations
+            self._apply_plot_formatting(progress_dialog, x_col, y_cols, axes_flipped, font_family, general_kwargs, active_df)
 
-            #handling specific y col plots roles
-            if plot_type in plots_gridded:
-                y_label_text = y_cols[0]
-            elif plot_type in plots_vector:
-                y_label_text = y_cols[0]
-            elif plot_type in plots_triangulation_z or plot_type in plots_triangulation_no_z:
-                y_label_text = y_cols[0]
-            elif plot_type in plots_no_x:
-                y_label_text = y_cols[0] if y_cols else "Value"
+            # Finalize
+            self._update_progress(progress_dialog, 98, "Finising up")
+            self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name)
 
-            general_kwargs = {
-                "title": self.title_input.text() if self.title_input.text() else plot_type,
-                "xlabel": self.xlabel_input.text() or x_col,
-                "ylabel": self.ylabel_input.text() or y_label_text,
-                "legend": self.legend_check.isChecked(),
-            }
-
-            if hue and plot_type in plots_supporting_hue:
-                general_kwargs["hue"] = hue
-            
-            # plot specific kwargs
-            plot_kwargs = {}
-
-            if plot_type == "GeoSpatial":
-                plot_kwargs["scheme"] = self.geo_scheme_combo.currentText() if self.geo_scheme_combo.currentText() != "None" else None
-                plot_kwargs["k"] = self.geo_k_spin.value()
-                plot_kwargs["cmap"] = self.palette_combo.currentText()
-                plot_kwargs["legend"] = self.geo_legend_check.isChecked()
-                plot_kwargs["legend_kwds"] = {
-                    "loc": "best",
-                    "orientation": self.geo_legend_loc_combo.currentText()
-                }
-                plot_kwargs["use_divider"] = self.geo_use_divider_check.isChecked()
-                plot_kwargs["cax_enabled"] = self.geo_cax_check.isChecked()
-                plot_kwargs["axis_off"] = self.geo_axis_off_check.isChecked()
-                plot_kwargs["missing_kwds"] = {
-                    "color": self.geo_missing_color,
-                    "label": self.geo_missing_label_input.text(),
-                    "hatch": self.geo_hatch_combo.currentText() if self.geo_hatch_combo.currentText() != "None" else None
-                }
-                if self.geo_boundary_check.isChecked():
-                    plot_kwargs["facecolor"] = "none"
-                
-                plot_kwargs["edgecolor"] = self.geo_edge_color
-                plot_kwargs["linewidth"] = self.geo_linewidth_spin.value()
-                
-
-
-            if show_progress:
-                progress_dialog.update_progress(20, "Building plot configurations")
-                if progress_dialog.is_cancelled():
-                    self.status_bar.log("Plot generation cancelled", "WARNING")
-                    return
-            
-            #clear and setup
-            if show_progress:
-                progress_dialog.update_progress(30, "Clearing previous plot")
-                if progress_dialog.is_cancelled():
-                    return
-                
-            self.plot_engine.clear_current_axis()
-            # Reset figure-level properties
-            self.plot_engine.current_figure.set_size_inches(self.width_spin.value(), self.height_spin.value())
-            self.plot_engine.current_figure.set_dpi(self.dpi_spin.value())
-            self.plot_engine.current_figure.set_facecolor(self.bg_color)
-            
-            # Apply style
-            try:
-                plt.style.use(self.style_combo.currentText())
-                self.plot_engine.current_figure.set_facecolor(self.bg_color)
-                self.plot_engine.current_ax.set_facecolor(self.face_color)
-            except Exception as ApplyStyleToPlotError:
-                self.status_bar.log(f"Could not apply style: {ApplyStyleToPlotError}", "WARNING")
-                self.plot_engine.current_ax.set_facecolor(self.face_color)
-
-
-            if show_progress:
-                progress_dialog.update_progress(35, "Setting plot style")
-                if progress_dialog.is_cancelled():
-                        return
-                
-            # auto set X/Y TICKs
-            if not self.x_auto_check.isChecked():
-                self.plot_engine.current_ax.set_xlim(self.x_min_spin.value(), self.x_max_spin.value())
-            if not self.y_auto_check.isChecked():
-                self.plot_engine.current_ax.set_ylim(self.y_min_spin.value(), self.y_max_spin.value())
-
-            #set axes scale to current
-            self.plot_engine.current_ax.set_xscale(self.x_scale_combo.currentText())
-            self.plot_engine.current_ax.set_yscale(self.y_scale_combo.currentText())
-
-            #dispatch to plotting strategy
-            if show_progress:
-                progress_dialog.update_progress(40, f"Creating {plot_type} plot")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            #call strategy
-            if plot_type in self.plot_strategies:
-                # use the active df
-                original_df = self.data_handler.df
-                self.data_handler.df = active_df
-                try:
-                    #
-                    strategy_func = self.plot_strategies[plot_type]
-                    error_message = strategy_func(
-                        self, 
-                        x_col, 
-                        y_cols, 
-                        axes_flipped, 
-                        font_family, 
-                        plot_kwargs, 
-                        general_kwargs
-                    )
-                    
-                    # Check if the strategy returned an error message
-                    if error_message:
-                        QMessageBox.warning(self, "Warning", error_message)
-                        if progress_dialog:
-                            progress_dialog.accept()
-                        return
-        
-                finally:
-                    self.data_handler.df = original_df
-            else:
-                raise ValueError(f"Unknown plot type: {plot_type}")
-
-            # apply tick marks
-            try:
-                self.plot_engine.current_ax.xaxis.set_major_locator(MaxNLocator(nbins=self.x_max_ticks_spin.value()))
-                self.plot_engine.current_ax.yaxis.set_major_locator(MaxNLocator(nbins=self.y_max_ticks_spin.value()))
-            except: pass
-
-            if show_progress:
-                progress_dialog.update_progress(70, "Applying formatting")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            # format
-            if not axes_flipped:
-                self._apply_plot_appearance(x_col, y_cols, font_family, general_kwargs)
-
-            
-            if show_progress:
-                progress_dialog.update_progress(75, "Applying customizations")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            # apply customization
-            self._apply_plot_customizations()
-
-            if show_progress:
-                progress_dialog.update_progress(80, "Adding legend and gridlines")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            #legend
-            if general_kwargs.get("legend", True):
-                self._apply_legend(font_family)
-            elif self.plot_engine.current_ax.get_legend():
-                self.plot_engine.current_ax.get_legend().set_visible(False)
-
-
-            #gridlines
-            if self.grid_check.isChecked():
-                self._apply_gridlines_customizations()
-            else:
-                self.plot_engine.current_ax.grid(False)
-
-            # spines
-            self._apply_spines_customization()
-            
-            if show_progress:
-                progress_dialog.update_progress(85, "Adding annotations")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            #annotations
-            self._apply_annotations(active_df, x_col, y_cols)
-
-            # tick customization
-            self._apply_tick_customization()
-
-            # text box
-            self._apply_textbox()
-
-            if show_progress:
-                progress_dialog.update_progress(95, "Adding data table")
-            self._apply_table()
-
-            if show_progress:
-                progress_dialog.update_progress(98, "Finalizing")
-                if progress_dialog.is_cancelled():
-                    return
-            
-            # tight layout
-            try:
-                if self.tight_layout_check.isChecked():
-                    self.plot_engine.current_figure.tight_layout()
-            except Exception as ApplyTightLayoutError:
-                self.status_bar.log(f"Tight layout failed: {ApplyTightLayoutError}", "WARNING")
-
-            
-            #refresh
-            self.canvas.draw()
-
-            if self.add_subplots_check.isChecked():
-                self.subplot_data_configs[current_subplot_index] = {
-                    "x_col": x_col,
-                    "y_cols": y_cols,
-                    "hue": hue,
-                    "subset_name": subset_name
-                }
-
-            self._sync_script_if_open()
-
-            if show_progress:
-                progress_dialog.update_progress(100, "Complete")
-                QTimer.singleShot(300, progress_dialog.accept)
-            
-            # logging====
-            plot_details = {
-                "plot_type": plot_type,
-                "x_column": x_col,
-                "y_column": str(y_cols),
-                "data_points": len(self.data_handler.df),
-                "annotations": len(self.annotations)
-            }
-
-            if hue:
-                plot_details["hue"] = hue
-
-            #add subset info
-            if self.use_subset_check.isChecked():
-                subset_name = self.subset_combo.currentData()
-                if subset_name:
-                    plot_details["subset"] = subset_name
-                    plot_details["subset_rows"] = len(active_df)
-                    plot_details["total_rows"] = len(self.data_handler.df)
-
-            status_msg = f"{plot_type} plot created"
-            if self.use_subset_check.isChecked() and subset_name:
-                status_msg += f" (Subset: {subset_name})"
-            if len(self.annotations) > 0:
-                status_msg += f" with {len(self.annotations)} annotations"
-            
-            self.status_bar.log_action(
-                status_msg,
-                details=plot_details,
-                level="SUCCESS"
+            # Log
+            self._log_plot_message(
+                plot_type, x_col, y_cols, hue, subset_name, active_df
             )
+
+            self._update_progress(progress_dialog, 100, "Complete")
+            if progress_dialog:
+                QTimer.singleShot(300, progress_dialog.accept)
         
-        except Exception as GeneratePlotError:
+        except Exception as CreateMainPlotError:
             if progress_dialog:
                 progress_dialog.accept()
-            QMessageBox.critical(self, "Error", f"Failed to generate plot: {str(GeneratePlotError)}")
-            self.status_bar.log(f"Plot generation failed: {str(GeneratePlotError)}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Failed to create plot: {str(CreateMainPlotError)}")
+            self.status_bar.log(f"Plot generation failed: {str(CreateMainPlotError)}", "ERROR")
             traceback.print_exc()
         finally:
             if progress_dialog and progress_dialog.isVisible():
                 progress_dialog.accept()
+    
+    def _init_progress_dialog(self, show_progress, data_size):
+        """Initizalixze the progress dialog"""
+        if show_progress:
+            progress_dialog = ProgressDialog(
+                title="Generating plot",
+                message=f"Processing {data_size:,} data points",
+                parent=self
+            )
+            progress_dialog.show()
+            progress_dialog.update_progress(5, "Initializing plotting engine")
+            QApplication.processEvents()
+            return progress_dialog
+        return None
+    
+    def _update_progress(self, progress_dialog, value, message):
+        """Update the progress dialog anc check for cancellation"""
+        if progress_dialog:
+            progress_dialog.update_progress(value, message)
+            if progress_dialog.is_cancelled():
+                self.status_bar.log("Plot generation cancelled", "WARNING")
+                raise InterruptedError("User cancelled")
+    
+    def _validate_plot_requirements(self, plot_type, x_col, y_cols) -> bool:
+        """Validate the required are data is available"""
+        plots_no_x = ["Box", "Histogram", "KDE", "Heatmap", "Pie", "ECDF", "Eventplot", "GeoSpatial"]
+
+        plots_no_y = ["Count Plot", "Heatmap", "GeoSpatial"]
+        plots_gridded = ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]
+        plots_vector = ["Barbs", "Quiver", "Streamplot"]
+        plots_triangulation_z = ["Tricontour", "Tricontourf", "Tripcolor"]
+        plots_triangulation_no_z = ["Triplot"]
+
+        if not x_col and plot_type not in plots_no_x:
+            QMessageBox.warning(self, "Warninig", f"Please select an X column for {plot_type}")
+            return False
+        
+        if not y_cols and plot_type not in plots_no_y:
+            QMessageBox.warning(self, "Warning", f"Please select at least one Y column for {plot_type}.")
+            return False
+
+        if plot_type in plots_gridded and len(y_cols) < 2:
+            QMessageBox.warning(self, "Warning", f"{plot_type} requires 2 Y columns: (Y-position, Z-value)")
+            return False
+
+        if plot_type in plots_vector and len(y_cols) < 3:
+            QMessageBox.warning(self, "Warning", f"{plot_type} requires 3 Y columns: (Y-position, U-component, V-component)")
+            return False
+        
+        if plot_type in plots_triangulation_z and len(y_cols) < 2:
+            QMessageBox.warning(self, "Warning", f"{plot_type} requires 2 Y columns: (Y-position, Z-value)")
+            return False
+
+        if plot_type in plots_triangulation_no_z and len(y_cols) < 1:
+            QMessageBox.warning(self, "Warning", f"{plot_type} requires at least one Y columns: (Y-position)")
+            return False
+        
+        return True
+
+    def _build_general_kwargs(self, plot_type, x_col, y_cols, hue):
+        """Build the general plotting kwargs"""
+        plots_supporting_hue = ["Scatter", "Line", "Bar", "Violin", "2D Density", "Box", "Count Plot"]
+
+        y_label_text = self._determine_y_label(plot_type, y_cols)
+
+        general_kwargs = {
+            "title": self.title_input.text() or plot_type,
+            "xlabel": self.xlabel_input.text() or x_col,
+            "ylabel": self.ylabel_input.text() or y_label_text,
+            "legend": self.legend_check.isChecked()
+        }
+
+        if hue and plot_type in plots_supporting_hue:
+            general_kwargs["hue"] = hue
+        
+        return general_kwargs
+
+    def _determine_y_label(self, plot_type, y_cols):
+        """Determine the correct ylabel based on type"""
+        plots_gridded = ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]
+        plots_vector = ["Barbs", "Quiver", "Streamplot"]
+        plots_triangulation = [
+            "Tricontour", "Tricontourf", "Tripcolor", "Triplot"
+        ]
+        plots_no_x = [
+            "Box", "Histogram", "KDE", "Heatmap", "Pie", 
+            "ECDF", "Eventplot", "GeoSpatial"
+        ]
+
+        if plot_type in plots_gridded or plot_type in plots_vector or plot_type in plots_triangulation:
+            return y_cols[0] if y_cols else "Value"
+        elif plot_type in plots_no_x:
+            return y_cols[0] if y_cols else "Value"
+        elif len(y_cols) == 1:
+            return y_cols[0]
+        else:
+            return str(y_cols)
+    
+    def _build_plot_specific_kwargs(self, plot_type):
+        """Build plots specific kwargs"""
+
+        plot_kwargs = {}
+        if plot_type == "GeoSpatial":
+            plot_kwargs = self._build_geospatial_kwargs()
+        
+        return plot_kwargs
+    
+    def _build_geospatial_kwargs(self):
+        """Builds kwargs specific to the Geospatial plotting routine"""
+        scheme_text = self.geo_scheme_combo.currentText()
+        hatch_text = self.geo_hatch_combo.currentText()
+
+        kwargs = {
+            "scheme": scheme_text if scheme_text != "None" else None,
+            "k": self.geo_k_spin.value(),
+            "cmap": self.palette_combo.currentText(),
+            "legend": self.geo_legend_check.isChecked(),
+            "legend_kwds": {
+                "loc": "best",
+                "orientation": self.geo_legend_loc_combo.currentText()
+            },
+            "use_divider": self.geo_use_divider_check.isChecked(),
+            "cax_enabled": self.geo_cax_check.isChecked(),
+            "axis_off": self.geo_axis_off_check.isChecked(),
+            "missing_kwds": {
+                "color": self.geo_missing_color,
+                "label": self.geo_missing_label_input.text(),
+                "hatch": hatch_text if hatch_text != "None" else None
+            },
+            "edgecolor": self.geo_edge_color,
+            "linewidth": self.geo_linewidth_spin.value()
+        }
+        if self.geo_boundary_check.isChecked():
+            kwargs["facecolor"] = "none"
+        
+        return kwargs
+    
+    def _setup_plot_figure(self):
+        """Setup plot figure with current settings"""
+        self.plot_engine.clear_current_axis()
+        self.plot_engine.current_figure.set_size_inches(self.width_spin.value(), self.height_spin.value())
+
+        self.plot_engine.current_figure.set_dpi(self.dpi_spin.value())
+        self.plot_engine.current_figure.set_facecolor(self.bg_color)
+    
+    def _apply_plot_style(self):
+        """Apply plotting style"""
+        try:
+            plt.style.use(self.style_combo.currentText())
+            self.plot_engine.current_figure.set_facecolor(self.bg_color)
+            self.plot_engine.current_ax.set_facecolor(self.face_color)
+        except Exception as ApplyPlotStyleError:
+            self.status_bar.log(f"Could not apply plotting style. {str(ApplyPlotStyleError)}", "WARNING")
+            self.plot_engine.current_ax.set_facecolor(self.face_color)
+    
+    def _set_axis_limits_and_scales(self):
+        """Set axis limits and scales"""
+        if not self.x_auto_check.isChecked():
+            self.plot_engine.current_ax.set_xlim(
+                self.x_min_spin.value(), self.x_max_spin.value()
+            )
+        if not self.y_auto_check.isChecked():
+            self.plot_engine.current_ax.set_ylim(
+                self.y_min_spin.value(), self.y_max_spin.value()
+            )
+        
+        self.plot_engine.current_ax.set_xscale(self.x_scale_combo.currentText())
+        self.plot_engine.current_ax.set_yscale(self.y_scale_combo.currentText())
+
+    def _execute_plot_strategy(self, plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
+        """Executes the correct plotting strategy"""
+        if plot_type not in self.plot_strategies:
+            raise ValueError(f"Unknown plot type: {plot_type}")
+        
+        original_df = self.data_handler.df
+        self.data_handler.df = active_df
+
+        try:
+            strategy_func = self.plot_strategies[plot_type]
+            error_message = strategy_func(
+                self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs
+            )
+
+            if error_message:
+                QMessageBox.warning(self, "Warning", error_message)
+                return False
+
+            return True
+        finally:
+            self.data_handler.df = original_df
+    
+    def _apply_plot_formatting(self, progress_dialog, x_col, y_cols, axes_flipped, font_family, general_kwargs, active_df):
+        """Apply formatting """
+        # Tick marks
+        try:
+            self.plot_engine.current_ax.xaxis.set_major_locator(MaxNLocator(nbins=self.x_max_ticks_spin.value()))
+            self.plot_engine.current_ax.yaxis.set_major_locator(MaxNLocator(nbins=self.y_max_ticks_spin.value()))
+        except:
+            pass
+
+        self._update_progress(progress_dialog, 70, "Applying formatting")
+
+        if not axes_flipped:
+            self._apply_plot_appearance(x_col, y_cols, font_family, general_kwargs)
+        
+        self._update_progress(progress_dialog, 75, "Applying customizations")
+        self._apply_plot_customizations()
+        
+        self._update_progress(progress_dialog, 80, "Adding legend and gridlines")
+        self._apply_legend_and_grid(general_kwargs, font_family)
+        self._apply_spines_customization()
+        
+        self._update_progress(progress_dialog, 85, "Adding annotations")
+        self._apply_annotations(active_df, x_col, y_cols)
+        
+        self._apply_tick_customization()
+        self._apply_textbox()
+        
+        self._update_progress(progress_dialog, 95, "Adding data table")
+        self._apply_table()
+
+    def _apply_legend_and_grid(self, general_kwargs, font_family):
+        """Apply legend and gridlines"""
+        if general_kwargs.get("legend", True):
+            self._apply_legend(font_family)
+        elif self.plot_engine.current_ax.get_legend():
+            self.plot_engine.current_ax.get_legend().set_visible(False)
+        
+        if self.grid_check.isChecked():
+            self._apply_gridlines_customizations()
+        else:
+            self.plot_engine.current_ax.grid(False)
+    
+    def _finalize_plot(self, current_subplot_index, x_col, y_cols, hue, subset_name) -> None:
+        """Finalize plot and save configs"""
+        try:
+            if self.tight_layout_check.isChecked():
+                self.plot_engine.current_figure.tight_layout()
+        except Exception as TightLayoutError:
+            self.status_bar.log(f"Tight layout not applied due to error: {str(TightLayoutError)}", "ERROR")
+        
+        self.canvas.draw()
+
+        if self.add_subplots_check.isChecked():
+            self.subplot_data_configs[current_subplot_index] = {
+            "x_col": x_col,
+            "y_cols": y_cols,
+            "hue": hue,
+            "subset_name": subset_name
+        }
             
+        self._sync_script_if_open()
+
+    def _log_plot_message(self, plot_type, x_col, y_cols, hue, subset_name, active_df):
+        """Log plot generation to log"""
+        plot_details = {
+            "plot_type": plot_type,
+            "x_column": x_col,
+            "y_column": str(y_cols),
+            "data_points": len(self.data_handler.df),
+            "annotations": len(self.annotations)
+        }
+
+        if hue:
+            plot_details["hue"] = hue
+
+        if self.use_subset_check.isChecked() and subset_name:
+            plot_details["subset"] = subset_name
+            plot_details["subset_rows"] = len(active_df)
+            plot_details["total_rows"] = len(self.data_handler.df)
+        
+        status_message = f"{plot_type} plot created"
+        if self.use_subset_check.isChecked() and subset_name:
+            status_message += f" (Subset: {subset_name})"
+        if len(self.annotations) > 0:
+            status_message += f" with {len(self.annotations)} annotations"
+        
+        self.status_bar.log_action(status_message, details=plot_details, level="SUCCESS")
+                
     def _apply_plot_appearance(self, x_col, y_cols, font_family, general_kwargs):
         """Apply title, fonts, and labels settings from the Appearance Tab"""
         # apply fonts to ticks
@@ -1939,7 +2009,7 @@ class PlotTab(PlotTabUI):
                         )
             except Exception as ApplyAnnotationsError:
                 self.status_bar.log(f"Error applying annotations to data points: {str(ApplyAnnotationsError)}", "ERROR")
-                print(f"Auto-annotation error: {str(e)}")
+                print(f"Auto-annotation error: {str(ApplyAnnotationsError)}")
 
     def _apply_gridlines_customizations(self) -> None:
         """Apply gridlines customizations"""

@@ -1604,7 +1604,7 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(10)
         
-        # === MARKER PROPERTIES ===
+        #  MARKER PROPERTIES 
         marker_group = AnimatedGroupBox("Marker Properties")
         marker_layout = QVBoxLayout()
 
@@ -1647,7 +1647,7 @@ class PlotTabUI(QWidget):
         
         scroll_layout.addSpacing(10)
         
-        # === BAR PROPERTIES ===
+        #  BAR PROPERTIES 
         self.bar_group = AnimatedGroupBox("Bar Properties")
         bar_layout = QVBoxLayout()
 
