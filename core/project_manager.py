@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
-from version import APPLICATION_VERSION
+from resources.version import APPLICATION_VERSION
 
 class ProjectManager:
     
