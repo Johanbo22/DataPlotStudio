@@ -52,7 +52,7 @@ class DataTab(QWidget):
         toolbar_layout.setContentsMargins(0, 0, 0, 0)
 
         #create dataset
-        self.create_new_dataset_button = AnimatedButton("Create New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
+        self.create_new_dataset_button = AnimatedButton("Create a New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
         self.create_new_dataset_button.setIcon(QIcon("icons/menu_bar/new_project.png"))
         self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
         self.create_new_dataset_button.clicked.connect(self.create_new_dataset)
