@@ -106,12 +106,12 @@ class AggregationManager:
             name: agg.to_dict() for name, agg in self.saved_aggregations.items()
         }
     
-    def import_aggregations(self, data: Dict[str, Any]):
+    def import_aggregations(self, data: Dict[str, Any]) -> None:
         """"Import aggregations from another project"""
         self.saved_aggregations.clear()
         for name, agg_data in data.items():
             self.saved_aggregations[name] = SavedAggregation.from_dict(agg_data)
     
-    def clear_all(self):
+    def clear_all(self) -> None:
         """Clear all saved aggregations"""
         self.saved_aggregations.clear()

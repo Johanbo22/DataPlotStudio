@@ -10,11 +10,11 @@ class CodeExporter:
     the final UI state of the DataHandler and PlotTab.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.imports: Set[str] = set()
         self.script_lines: List[str] = []
 
-    def _add_imports(self, plot_config: Dict[str, Any]):
+    def _add_imports(self, plot_config: Dict[str, Any]) -> None:
         """Dynamically add required imports based on UI config."""
         self.imports.clear()
         self.imports.add("import pandas as pd")
