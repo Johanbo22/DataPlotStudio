@@ -722,7 +722,7 @@ class CodeExporter:
             lines.append(f"        label={self._clean_value(get_cfg('appearance.title.text', plot_type))},")
             lines.append(f"        fontsize={get_cfg('appearance.title.size', 14)},")
             lines.append(f"        fontweight={self._clean_value(get_cfg('appearance.title.weight', 'bold'))},")
-            lines.append(f"        fontfamily=font_family")
+            lines.append(f"        fontfamily=font_family,")
             lines.append(f"        loc={self._clean_value(get_cfg('appearance.title.location', 'center'))}")
             lines.append("    )")
         else:
