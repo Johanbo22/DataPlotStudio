@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
-from resources.version import APPLICATION_VERSION
+from resources.version import APPLICATION_VERSION, PROJECT_EXTENSION, DATA_EXTENSION
 
 class ProjectManager:
     
-    PROJECT_EXTENSION = ".dps"
-    DATA_EXTENSION = ".dps.data"
+    PROJECT_EXTENSION = PROJECT_EXTENSION
+    DATA_EXTENSION = DATA_EXTENSION
     APPLICATION_VERSION = APPLICATION_VERSION
     
     def __init__(self) -> None:
