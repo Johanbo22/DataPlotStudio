@@ -1,12 +1,13 @@
 # ui/main_window.py
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
-from PyQt6.QtCore import Qt, QRunnable, QThreadPool, QObject, pyqtSignal, pyqtSlot, QTimer
+from PyQt6.QtCore import Qt, QThreadPool, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt6.QtGui import QIcon, QCloseEvent
 from pathlib import Path
 
 from core import subset_manager
 from core.subset_manager import SubsetManager
+from ui.workers import FileImportWorker, GoogleSheetsImportWorker
 from ui.data_tab import DataTab
 from ui.plot_tab import PlotTab
 from core.data_handler import DataHandler
@@ -14,72 +15,6 @@ from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
-
-class WorkerSignals(QObject):
-    """
-    Defines the signal from a running worker thread
-    signals are:
-
-    finished
-        object: data (pd.DataFrame)
-    error
-        Exception: The exception object
-    log
-        str: A message to log
-    """
-    finished = pyqtSignal(object)
-    error = pyqtSignal(Exception)
-    log = pyqtSignal(str)
-    progress = pyqtSignal(int, str)
-
-class FileImportWorker(QRunnable):
-    """The worker thread for importing files"""
-
-    def __init__(self, data_handler: DataHandler, filepath: str):
-        super().__init__()
-        self.data_handler = data_handler
-        self.filepath = filepath
-        self.signals = WorkerSignals()
-    
-    @pyqtSlot()
-    def run(self):
-        try:
-            self.signals.progress.emit(10, "Reading file...")
-            self.data_handler.import_file(self.filepath)
-
-            self.signals.progress.emit(70, "Processing data...")
-            self.signals.finished.emit(self.data_handler.df)
-        except Exception as RunError:
-            self.signals.error.emit(RunError)
-
-class GoogleSheetsImportWorker(QRunnable):
-    """Worker thread for imports using Google Sheets"""
-    def __init__(self, data_handler: DataHandler, sheet_id: str, sheet_name: str, delimiter: str, decimal: str, thousands: str):
-        super().__init__()
-        self.data_handler = data_handler
-        self.sheet_id = sheet_id
-        self.sheet_name = sheet_name
-        self.delimiter = delimiter
-        self.decimal = decimal
-        self.thousands = thousands
-        self.signals = WorkerSignals()
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            self.signals.progress.emit(10, "Connecting to Google Sheets...")
-            self.data_handler.import_google_sheets(
-                self.sheet_id,
-                self.sheet_name,
-                delimiter=self.delimiter,
-                decimal=self.decimal,
-                thousands=self.thousands
-            )
-
-            self.signals.progress.emit(70, "Processing data...")
-            self.signals.finished.emit(self.data_handler.df)
-        except Exception as RunError:
-            self.signals.error.emit(RunError)
 
 class MainWindow(QWidget):
     """Main application window widget"""
