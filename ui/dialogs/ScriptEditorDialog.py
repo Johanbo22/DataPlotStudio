@@ -1,4 +1,4 @@
-from ui.animated_widgets import AnimatedButton, AnimatedCheckBox, AnimatedComboBox
+from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
 from ui.dialogs import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
 
@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayo
 
 
 from datetime import datetime
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
 
 
 class ScriptEditorDialog(QDialog):

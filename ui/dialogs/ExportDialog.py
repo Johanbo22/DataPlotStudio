@@ -1,8 +1,12 @@
-from ui.animated_widgets import AnimatedButton, AnimatedCheckBox, AnimatedComboBox, AnimatedGroupBox
+from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
 
 
 class ExportDialog(QDialog):

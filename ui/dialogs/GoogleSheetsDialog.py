@@ -1,8 +1,12 @@
-from ui.animated_widgets import AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 
 
 class GoogleSheetsDialog(QDialog):

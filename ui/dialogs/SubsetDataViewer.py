@@ -1,4 +1,4 @@
-from ui.animated_widgets import AnimatedButton
+from ui.widgets.AnimatedButton import AnimatedButton
 
 
 from PyQt6.QtWidgets import QDialog, QFileDialog, QLabel, QMessageBox, QTableWidget, QTableWidgetItem, QVBoxLayout

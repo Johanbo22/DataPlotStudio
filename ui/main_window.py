@@ -12,7 +12,7 @@ from ui.plot_tab import PlotTab
 from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
-from ui.animated_widgets import AnimatedTabWidget
+from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
 
 class WorkerSignals(QObject):

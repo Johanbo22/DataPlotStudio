@@ -1,8 +1,10 @@
-from ui.animated_widgets import AnimatedCheckBox, AnimatedSpinBox
+from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
 
 
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFontComboBox, QFormLayout, QLabel, QTabWidget, QVBoxLayout, QWidget
+
+from ui.widgets.AnimatedSpinBox import AnimatedSpinBox
 
 
 class SettingsDialog(QDialog):

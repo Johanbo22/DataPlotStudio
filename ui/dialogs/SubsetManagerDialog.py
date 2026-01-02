@@ -1,4 +1,4 @@
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
 from ui.dialogs import CreateSubsetDialog, SubsetDataViewer
 
 
@@ -8,6 +8,8 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWid
 
 
 import traceback
+
+from ui.widgets.AnimatedButton import AnimatedButton
 
 
 class SubsetManagerDialog(QDialog):

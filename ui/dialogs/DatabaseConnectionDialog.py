@@ -1,4 +1,4 @@
-from ui.animated_widgets import AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
 
 
 from PyQt6.QtGui import QIcon
@@ -7,6 +7,10 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
 
 import sys
 from pathlib import Path
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 
 
 class DatabaseConnectionDialog(QDialog):

@@ -2,7 +2,7 @@
 from stat import filemode
 from PyQt6.QtWidgets import QMenuBar, QMenu
 from PyQt6.QtGui import QAction, QIcon
-from ui.animated_widgets import AnimatedMenu
+from ui.widgets.AnimatedMenu import AnimatedMenu
 
 
 class MenuBar(QMenuBar):

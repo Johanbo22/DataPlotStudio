@@ -1,7 +1,10 @@
-from ui.animated_widgets import AnimatedButton, AnimatedComboBox, AnimatedLineEdit
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
 
 
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 
 
 class FillMissingDialog(QDialog):

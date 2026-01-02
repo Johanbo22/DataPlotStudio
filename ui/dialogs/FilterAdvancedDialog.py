@@ -1,8 +1,13 @@
-from ui.animated_widgets import AnimatedButton, AnimatedCheckBox, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit
+from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 
 
 class FilterAdvancedDialog(QDialog):

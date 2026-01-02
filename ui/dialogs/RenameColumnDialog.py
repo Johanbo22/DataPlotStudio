@@ -1,7 +1,9 @@
-from ui.animated_widgets import AnimatedButton, AnimatedLineEdit
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 
 
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
+
+from ui.widgets.AnimatedButton import AnimatedButton
 
 
 class RenameColumnDialog(QDialog):

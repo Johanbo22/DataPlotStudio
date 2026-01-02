@@ -10,12 +10,24 @@ import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedLineEdit, AnimatedSpinBox, AnimatedCheckBox, AnimatedTabWidget, AnimatedListWidget, AnimatedSlider, HelpIcon, ColormapButton
+from ui.widgets.AnimatedListWidget import AnimatedListWidget
+from ui.widgets.AnimatedSlider import AnimatedSlider
+from ui.widgets.ColormapButton import ColormapButton
 from ui.data_tab import DataTab 
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
 import traceback
 import shutil
+
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedDoubleSpinBox import AnimatedDoubleSpinBox
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedSpinBox import AnimatedSpinBox
+from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
+from ui.widgets.HelpIcon import HelpIcon
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     WEB_ENGINE_AVAILABLE = True

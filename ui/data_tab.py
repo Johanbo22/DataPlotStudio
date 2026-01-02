@@ -10,9 +10,15 @@ from ui.status_bar import StatusBar
 from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.animated_widgets import AnimatedButton, AnimatedGroupBox, AnimatedLineEdit, AnimatedComboBox, HelpIcon, AnimatedTabWidget, AnimatedListWidget
+from ui.widgets.AnimatedListWidget import AnimatedListWidget
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
+from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
+from ui.widgets.HelpIcon import HelpIcon
 
 
 class DataTab(QWidget):
