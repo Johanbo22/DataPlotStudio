@@ -1,0 +1,24 @@
+import pandas as pd
+import os
+from pathlib import Path
+import tempfile
+
+def create_temp_csv_file(df: pd.DataFrame, source_name: str = "google_sheets") -> Path:
+    """Creates a temporary CSV file from the dataframe when importing from google sheets"""
+    try:
+        # Create a temporary dir if it doesnt exists
+        temp_dir = Path(tempfile.gettempdir()) / "DataPlotStudio"
+        temp_dir.mkdir(exist_ok=True)
+
+        #generate a filename
+        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+        temp_filename = f"{source_name}_{timestamp}.csv"
+        temp_path = temp_dir / temp_filename
+
+        #save it to file
+        df.to_csv(temp_path, index=False)
+
+        print(f"DEBUG: Created a temporary CSV file at: {temp_path}")
+        return temp_path
+    except Exception as CreateTempCSVFileError:
+        raise RuntimeError(f"Failed to create a temporary CSV file: {str(CreateTempCSVFileError)}")

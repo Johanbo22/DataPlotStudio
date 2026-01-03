@@ -9,6 +9,8 @@ import requests
 import os, tempfile, atexit
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
+from core.tempfilehandling.cleanup_temp_files import cleanup_temp_csv_files
+from core.tempfilehandling.create_temp_file import create_temp_csv_file
 try:
     import geopandas as gpd
 except ImportError:
@@ -47,38 +49,9 @@ class DataHandler:
 
     def cleanup_temp_files(self):
         """Delete temp csv file"""
-        if self.temp_csv_path and self.temp_csv_path.exists():
-            try:
-                os.remove(self.temp_csv_path)
-                print(f"DEBUG: Cleaned up and deleted file: {self.temp_csv_path}")
-            except PermissionError as CleanupTempFileError:
-                print(f"DEBUG: Permission Denied: {str(CleanupTempFileError)}")
-            except Exception as CleanupTempFileError:
-                print(f"DEBUG: Failed to delete temp file: {str(CleanupTempFileError)}")
-            finally:
-                self.temp_csv_path = None
-                self.is_temp_file: bool = False
-    
-    def _create_temp_csv(self, df: pd.DataFrame, source_name: str = "google_sheets") -> Path:
-        """Creates a temporary csv file from the dataframe when importing a google sheets sheet"""
-        try:
-            #create temp directory if it doesnt exists
-            temp_dir = Path(tempfile.gettempdir()) / "DataPlotStudio"
-            temp_dir.mkdir(exist_ok=True)
-
-            #generate filename
-            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-            temp_filename = f"{source_name}_{timestamp}.csv"
-            temp_path = temp_dir / temp_filename
-
-            # save the dataframe  to the file
-            df.to_csv(temp_path, index=False)
-
-            print(f"DEBUG: Created temporary csv file at: {temp_path}")
-            return temp_path
-        except Exception as CreateTempFileError:
-            raise Exception(f"Failed to create a temporary csv: {str(CreateTempFileError)}")
-
+        cleanup_temp_csv_files(self.temp_csv_path)
+        self.temp_csv_path = None
+        self.is_temp_file = False
     
     def _save_state(self) -> None:
         """Save current state to undo stack"""
@@ -176,7 +149,7 @@ class DataHandler:
                     raise ImportError("GeoPandas is not installed. Please install GeoPandas to load spatial data")
                 self.df = gpd.read_file(filepath)
             elif extension == ".shx":
-                raise ValueError("This is an shapefile index (.shx) file.\nPlease open the shapefile (.shp) fil instead.")
+                raise ValueError("This is an shapefile index (.shx) file.\nPlease open the shapefile (.shp) file instead.")
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
             
@@ -254,7 +227,7 @@ class DataHandler:
 
             #create temp csv
             safe_sheet_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in sheet_name)
-            self.temp_csv_path = self._create_temp_csv(self.df, f"gsheet_{safe_sheet_name}")
+            self.temp_csv_path = create_temp_csv_file(self.df, f"gsheet_{safe_sheet_name}")
             self.file_path = self.temp_csv_path
             self.is_temp_file = True
 
@@ -279,10 +252,10 @@ class DataHandler:
         except Exception as ImportGoogleSheetsError:
             error_msg = str(ImportGoogleSheetsError)
             raise Exception(f"Error importing Google Sheet:\n{error_msg}\n\nVerification checklist:\n✓ Sheet ID is correct\n✓ Sheet name matches exactly (case-sensitive)\n✓ Sheet is shared publicly\n✓ Internet connection is active\n✓ Try with Sheet1 first")
+        
     def has_google_sheet_import(self) -> bool:
         """Check if the last import was a google sheet"""
         return self.last_gsheet_id is not None and self.last_gsheet_name is not None
-    
     
     def import_from_database(self, connection_string: str, query: str) -> pd.DataFrame:
         """Import data from a database witha connection and a query request"""
@@ -318,7 +291,7 @@ class DataHandler:
             self.original_df = self.df.copy()
 
             #from the database data we create a temp_csv file for the storing and saving logic to better work.
-            self.temp_csv_path = self._create_temp_csv(self.df, "db_import")
+            self.temp_csv_path = create_temp_csv_file(self.df, "db_import")
             self.file_path = self.temp_csv_path
             self.is_temp_file = True
 
