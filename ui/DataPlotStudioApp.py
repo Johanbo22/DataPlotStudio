@@ -2,7 +2,7 @@ from core.code_exporter import CodeExporter
 from core.data_handler import DataHandler
 from core.logger import Logger
 from core.project_manager import ProjectManager
-from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, SettingsDialog
+from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, SettingsDialog, AboutDialog
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
@@ -345,27 +345,10 @@ class DataPlotStudio(QMainWindow):
 
     def show_about(self):
         """Show about dialog"""
-        link_to_github_repository = "https://github.com/Johanbo22/DataPlotStudio"
-        link_to_data_plot_studio_website = "https://www.data-plot-studio.com"
-        message = QMessageBox(self)
-        message.setWindowTitle("About DataPlot Studio")
-        message.setTextFormat(Qt.TextFormat.RichText)
-        message.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-        message.setText(
-            f"""
-            <b>DataPlot Studio v{self.project_manager.APPLICATION_VERSION}</b><br><br>
-            A data analysis and visualization tool built with Python and the PyQt6 Framework. <br><br>
-            <u>Features:</u><br>
-            • Import data from CSV, Excel, JSON, Google Sheets and database connections<br>
-            • Tranform and explore your data<br>
-            • Create 31 types of visualizations<br>
-            • Write custom python code in the integrated python editor to create custom plots<br>
-            • Export data after data manipulation<br>
-            • Export code for sharing and further customization<br><br>
-            <a href="{link_to_github_repository}">Link to Github Repository</a>
-            <a href="{link_to_data_plot_studio_website}">Link to website</a>
-        """)
-        message.exec()
+        AboutDialog.show_about_dialog(
+            parent=self,
+            application_version=self.project_manager.APPLICATION_VERSION
+        )
 
     def export_code(self):
         """Export data manipulation and plotting code"""

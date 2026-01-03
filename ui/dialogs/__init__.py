@@ -15,6 +15,7 @@ from .ScriptEditorDialog import ScriptEditorDialog
 from .SettingsDialog import SettingsDialog
 from .SubsetDataViewer import SubsetDataViewer
 from .SubsetManagerDialog import SubsetManagerDialog
+from .AboutDialog import AboutDialog
 
 __all__ = [
     "AggregationDialog",
@@ -34,4 +35,5 @@ __all__ = [
     "SettingsDialog",
     "SubsetDataViewer",
     "SubsetManagerDialog",
+    "AboutDialog"
 ]
