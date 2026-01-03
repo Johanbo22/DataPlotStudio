@@ -17,7 +17,7 @@ class AggregationDialog(QDialog):
         self.setWindowTitle("Aggregate Data")
         self.setModal(True)
         self.resize(600, 500)
-        self.setMaximumHeight(600)
+        self.setMaximumSize(600, 500)
         self.columns = columns
         self.init_ui()
 
