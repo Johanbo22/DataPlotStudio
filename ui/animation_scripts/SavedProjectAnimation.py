@@ -10,7 +10,7 @@ class SavedProjectAnimation(QWidget):
         self.setFixedSize(400, 400)
         
         self.lua = LuaRuntime(unpack_returned_tuples=True)
-        self.lua.execute(open("ui/animation_scripts/saved_project_tickmark.lua").read())
+        self.lua.execute(open("ui/animation_scripts/animations/saved_project_tickmark.lua").read())
         
         self.timer = QTimer(self)
         self.clock = QElapsedTimer()

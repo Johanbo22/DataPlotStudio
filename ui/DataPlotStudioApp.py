@@ -6,7 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-from ui.widgets import SavedProjectAnimation
+from ui.animation_scripts.SavedProjectAnimation import SavedProjectAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon

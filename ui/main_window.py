@@ -14,7 +14,7 @@ from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
-from ui.widgets.SavedProjectAnimation import SavedProjectAnimation
+from ui.animation_scripts.SavedProjectAnimation import SavedProjectAnimation
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
 
 class MainWindow(QWidget):
