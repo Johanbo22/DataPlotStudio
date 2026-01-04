@@ -6,7 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-
+from ui.widgets import SavedProjectAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -60,6 +60,9 @@ class DataPlotStudio(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self._connect_signals()
+        
+        self.saved_project_animation_widget = SavedProjectAnimation()
+        self.saved_project_animation_widget.setFixedSize(400, 400)
 
         self.show()
 
@@ -125,6 +128,11 @@ class DataPlotStudio(QMainWindow):
                 },
                 level="SUCCESS"
             )
+
+            self.saved_animation = SavedProjectAnimation()
+            self.saved_animation.show()
+            self.saved_animation.start_animation()
+            
         except Exception as SaveProjectError:
             self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")

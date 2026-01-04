@@ -12,6 +12,7 @@ from .AnimatedSpinBox import AnimatedSpinBox
 from .AnimatedTabWidget import AnimatedTabWidget
 from .ColormapButton import ColormapButton
 from .HelpIcon import HelpIcon
+from .SavedProjectAnimation import SavedProjectAnimation
 
 __all__ = [
     "AnimatedButton",
@@ -27,5 +28,6 @@ __all__ = [
     "AnimatedSpinBox",
     "AnimatedTabWidget",
     "ColormapButton",
-    "HelpIcon"
+    "HelpIcon",
+    "SavedProjectAnimation"
     ]
