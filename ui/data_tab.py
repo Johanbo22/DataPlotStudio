@@ -10,16 +10,13 @@ from ui.status_bar import StatusBar
 from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
-from ui.widgets.AnimatedListWidget import AnimatedListWidget
+
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
-from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
-from ui.widgets.HelpIcon import HelpIcon
-from ui.animations.ResetToOriginalStateAnimation import ResetToOriginalStateAnimation
+from ui.widgets import AnimatedListWidget, AnimatedListWidget, AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit, AnimatedTabWidget, HelpIcon
+
+
+from ui.animations import ResetToOriginalStateAnimation, FailedAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -612,6 +609,8 @@ class DataTab(QWidget):
         
         except Exception as CreateNewDatasetError:
             QMessageBox.critical(self, "Error", f"Failed to create dataset: {str(CreateNewDatasetError)}")
+            self.failed_animation = FailedAnimation("Failed to Create", parent=None)
+            self.failed_animation.start(target_widget=self)
         
     def toggle_edit_mode(self):
         """Toggles the edit mode in the datble"""
@@ -746,6 +745,9 @@ class DataTab(QWidget):
                 f"Original DataFrame has been restored.\n\n"
                 f"Restored: {original_rows:,} rows"
             )
+
+            self.restore_animation = ResetToOriginalStateAnimation("Restored to Original", parent=None)
+            self.restore_animation.start(target_widget=self)
         
         except Exception as RestoreOriginalDataFrameError:
             self.status_bar.log(f"Failed to restore original data: {str(RestoreOriginalDataFrameError)}", "ERROR")

@@ -5,6 +5,7 @@ from .ExportFileAnimation import ExportFileAnimation
 from .PlotGeneratedAnimation import PlotGeneratedAnimation
 from .PlotClearedAnimation import PlotClearedAnimation
 from .ScriptLogExportAnimation import ScriptLogExportAnimation
+from .OperationFailedAnimation import FailedAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -13,5 +14,6 @@ __all__ = [
     "ExportFileAnimation",
     "PlotGeneratedAnimation",
     "PlotClearedAnimation",
-    "ScriptLogExportAnimation"
+    "ScriptLogExportAnimation",
+    "FailedAnimation"
 ]
