@@ -14,8 +14,8 @@ from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
-from ui.animation_scripts.SavedProjectAnimation import SavedProjectAnimation
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
+from ui.animations.SavedProjectAnimation import SavedProjectAnimation
 
 class MainWindow(QWidget):
     """Main application window widget"""
@@ -261,9 +261,8 @@ class MainWindow(QWidget):
 
             saved_path = self.project_manager.save_project(project_data, filepath)
 
-            self.saved_animation = SavedProjectAnimation()
-            self.saved_animation.show()
-            self.saved_animation.start_animation()
+            self.saved_animation = SavedProjectAnimation(parent=None)
+            self.saved_animation.start()
 
             if saved_path:
                 self.unsaved_changes = False

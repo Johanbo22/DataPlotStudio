@@ -6,7 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-from ui.animation_scripts.SavedProjectAnimation import SavedProjectAnimation
+from ui.animations.SavedProjectAnimation import SavedProjectAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -61,8 +61,6 @@ class DataPlotStudio(QMainWindow):
 
         self._connect_signals()
         
-        self.saved_project_animation_widget = SavedProjectAnimation()
-        self.saved_project_animation_widget.setFixedSize(400, 400)
 
         self.show()
 
@@ -129,9 +127,8 @@ class DataPlotStudio(QMainWindow):
                 level="SUCCESS"
             )
 
-            self.saved_animation = SavedProjectAnimation()
-            self.saved_animation.show()
-            self.saved_animation.start_animation()
+            self.saved_animation = SavedProjectAnimation(parent=None)
+            self.saved_animation.start()
             
         except Exception as SaveProjectError:
             self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
@@ -627,6 +624,6 @@ class DataPlotStudio(QMainWindow):
     
     @classmethod
     def load_stylesheet(cls, relative_path: str) -> str:
-        """Load the qss style into main"""
+        """Load the qss style"""
         path = Path(__file__).parent / relative_path
         return path.read_text(encoding="utf-8")
