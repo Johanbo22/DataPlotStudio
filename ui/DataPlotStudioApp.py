@@ -128,7 +128,7 @@ class DataPlotStudio(QMainWindow):
             )
 
             self.saved_animation = SavedProjectAnimation(parent=None)
-            self.saved_animation.start()
+            self.saved_animation.start(target_widget=self)
             
         except Exception as SaveProjectError:
             self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")

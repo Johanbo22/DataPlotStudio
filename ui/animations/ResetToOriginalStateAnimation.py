@@ -14,9 +14,9 @@ class ResetToOriginalStateAnimation(OverlayAnimationEngine):
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
 
-        painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        painter.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
         painter.setPen(QColor(255, 255, 255))
-        painter.drawText(QRect(-100, -80, 200, 40), Qt.AlignmentFlag.AlignCenter, "Reset to Original")
+        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, "Reset to Original")
 
         max_angle = 320
         current_angle = self.progress * max_angle
@@ -46,7 +46,7 @@ class ResetToOriginalStateAnimation(OverlayAnimationEngine):
 
             tangent_angle = current_tip_angle + 90
             painter.rotate(-tangent_angle)
-            painter.translate(11, 0)
+            painter.translate(10, 0)
 
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(color)

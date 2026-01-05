@@ -261,7 +261,7 @@ class MainWindow(QWidget):
             saved_path = self.project_manager.save_project(project_data, filepath)
 
             self.saved_animation = SavedProjectAnimation(parent=None)
-            self.saved_animation.start()
+            self.saved_animation.start(target_widget=self)
 
             if saved_path:
                 self.unsaved_changes = False

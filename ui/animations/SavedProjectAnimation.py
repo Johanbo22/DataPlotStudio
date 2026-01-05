@@ -15,9 +15,9 @@ class SavedProjectAnimation(OverlayAnimationEngine):
         pen.setWidth(8)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
-        painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        painter.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
         painter.setPen(QColor(255, 255, 255))
-        painter.drawText(QRect(-100, -80, 200, 40), Qt.AlignmentFlag.AlignCenter, "Project Saved")
+        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, "Project Saved")
 
         radius = 45
         circle_scale = min(self.progress * 2, 1.0)

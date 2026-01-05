@@ -1,14 +1,14 @@
 from PyQt6.QtCore import (
     Qt, QTimer, QRect, QEasingCurve, QPropertyAnimation, 
-    QVariantAnimation, QAbstractAnimation
+    QVariantAnimation, QAbstractAnimation, QPoint
 )
 from PyQt6.QtWidgets import QWidget, QApplication
 from PyQt6.QtGui import QPainter, QColor, QPen
 
 class OverlayAnimationEngine(QWidget):
-    def __init__(self, parent=None, size=300):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(size, size)
+        self.setFixedSize(220, 120)
 
         # Setting the Window type and flags, wup
         self.setWindowFlags(
@@ -28,60 +28,71 @@ class OverlayAnimationEngine(QWidget):
         self.main_animation.setDuration(800)
         self.main_animation.valueChanged.connect(self._update_progress)
 
-        self.pop_animation = QPropertyAnimation(self, b"geometry")
-        self.pop_animation.setDuration(400)
-        self.pop_animation.setEasingCurve(QEasingCurve.Type.OutElastic)
+        self.slide_animation = QPropertyAnimation(self, b"pos")
+        self.slide_animation.setDuration(500)
+        self.slide_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_animation.setDuration(300)
-        self.fade_animation.setStartValue(1.0)
-        self.fade_animation.setEndValue(0.0)
-        self.fade_animation.finished.connect(self.close)
-
-        #Timer
         self.hold_timer = QTimer(self)
         self.hold_timer.setSingleShot(True)
-        self.hold_timer.timeout.connect(self.fade_animation.start)
-    
-    def start(self):
-        screen = self.screen().availableGeometry()
-        target_rect = QRect(
-            screen.center().x() - self.width() // 2,
-            screen.center().y() - self.height() // 2,
-            self.width(),
-            self.height()
-        )
+        self.hold_timer.timeout.connect(self.slide_out)
 
+    def start(self, target_widget=None):
+        if target_widget:
+            target_screen = target_widget.window().screen()
+        elif self.parent():
+            target_screen = self.parent().screen()
+        else:
+            target_screen = QApplication.primaryScreen()
+        
+        screen_geometry = target_screen.availableGeometry()
+
+        #positions
+        final_x = screen_geometry.center().x() - self.width() // 2
+        start_y = screen_geometry.top() - self.height()
+        final_y = screen_geometry.top()
+
+        self.move(final_x, start_y)
         self.setWindowOpacity(1.0)
         self.progress = 0.0
         self.show()
 
-        start_rect = QRect(target_rect)
-        start_rect.moveCenter(target_rect.center())
-        start_rect.setSize(target_rect.size() * 0.5)
-
-        self.pop_animation.setStartValue(start_rect)
-        self.pop_animation.setEndValue(target_rect)
-        self.pop_animation.start()
+        self.slide_animation.stop()
+        self.slide_animation.setStartValue(QPoint(final_x, start_y))
+        self.slide_animation.setEndValue(QPoint(final_x, final_y))
+        self.slide_animation.start()
 
         self.main_animation.start()
 
-        total_time = self.main_animation.duration() + 1000
+        total_time = self.main_animation.duration() + 1500
         self.hold_timer.start(total_time)
+
+    def slide_out(self):
+        current_position = self.pos()
+        target_y = current_position.y() - self.height() - 100
+        
+        self.slide_animation.stop()
+        self.slide_animation.setStartValue(current_position)
+        self.slide_animation.setEndValue(QPoint(current_position.x(), target_y))
+        self.slide_animation.finished.connect(self.close)
+        self.slide_animation.start()
     
     def _update_progress(self, value):
         self.progress = value
         self.update()
-    
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        painter.setBrush(QColor(30, 30, 40, 220))
+        painter.setBrush(QColor(30, 30, 40, 230))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(self.rect(), 30 , 30)
+
+        rect = self.rect().adjusted(5, 5, -5, -5)
+        painter.drawRoundedRect(rect, 20, 20)
 
         painter.translate(self.width() / 2, self.height() / 2)
+
+        painter.scale(0.6, 0.6)
 
         self.draw_content(painter)
     
