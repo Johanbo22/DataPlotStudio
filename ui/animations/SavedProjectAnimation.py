@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import QWidget, QApplication
 from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
 
 class SavedProjectAnimation(OverlayAnimationEngine):
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+        self.message = message
     def draw_content(self, painter):
 
         color = QColor(100, 255, 100)
@@ -17,7 +20,7 @@ class SavedProjectAnimation(OverlayAnimationEngine):
         painter.setPen(pen)
         painter.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
         painter.setPen(QColor(255, 255, 255))
-        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, "Project Saved")
+        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, self.message)
 
         radius = 45
         circle_scale = min(self.progress * 2, 1.0)

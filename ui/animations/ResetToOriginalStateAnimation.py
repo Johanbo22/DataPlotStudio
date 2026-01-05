@@ -4,6 +4,9 @@ from PyQt6.QtCore import Qt, QRect
 from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
 
 class ResetToOriginalStateAnimation(OverlayAnimationEngine):
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+        self.message = message
 
     def draw_content(self, painter):
         stroke_width = 8
@@ -16,7 +19,7 @@ class ResetToOriginalStateAnimation(OverlayAnimationEngine):
 
         painter.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
         painter.setPen(QColor(255, 255, 255))
-        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, "Reset to Original")
+        painter.drawText(QRect(-100, -90, 200, 40), Qt.AlignmentFlag.AlignCenter, self.message)
 
         max_angle = 320
         current_angle = self.progress * max_angle

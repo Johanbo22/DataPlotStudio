@@ -7,6 +7,7 @@ from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
 from ui.animations.SavedProjectAnimation import SavedProjectAnimation
+from ui.animations.OperationFailedAnimation import FailedAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -127,11 +128,13 @@ class DataPlotStudio(QMainWindow):
                 level="SUCCESS"
             )
 
-            self.saved_animation = SavedProjectAnimation(parent=None)
+            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
             self.saved_animation.start(target_widget=self)
             
         except Exception as SaveProjectError:
             self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
+            self.failed_operation_animation.start(target_widget=self)
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")
 
     def import_google_sheets(self):

@@ -16,6 +16,7 @@ from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
 from ui.animations.SavedProjectAnimation import SavedProjectAnimation
+from ui.animations.OperationFailedAnimation import FailedAnimation
 
 class MainWindow(QWidget):
     """Main application window widget"""
@@ -260,7 +261,7 @@ class MainWindow(QWidget):
 
             saved_path = self.project_manager.save_project(project_data, filepath)
 
-            self.saved_animation = SavedProjectAnimation(parent=None)
+            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
             self.saved_animation.start(target_widget=self)
 
             if saved_path:
@@ -269,6 +270,8 @@ class MainWindow(QWidget):
                 return True
             return False
         except Exception as SaveProjectError:
+            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
+            self.failed_operation_animation.start(target_widget=self)
             QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
             self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
             return False

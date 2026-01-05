@@ -1605,7 +1605,7 @@ class DataTab(QWidget):
 
             self.refresh_data_view()
 
-            self.reset_animation = ResetToOriginalStateAnimation(parent=None)
+            self.reset_animation = ResetToOriginalStateAnimation("Reset to Original", parent=None)
             self.reset_animation.start(target_widget=self)
 
             self.status_bar.log_action(
