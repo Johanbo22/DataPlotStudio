@@ -13,6 +13,8 @@ from ui.status_bar import StatusBar
 from core.code_exporter import CodeExporter
 from ui.dialogs import ProgressDialog, ScriptEditorDialog
 from ui.plot_tab_ui import PlotTabUI 
+from ui.animations.PlotGeneratedAnimation import PlotGeneratedAnimation
+from ui.animations.PlotClearedAnimation import PlotClearedAnimation
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -1356,6 +1358,9 @@ class PlotTab(PlotTabUI):
             self._update_progress(progress_dialog, 100, "Complete")
             if progress_dialog:
                 QTimer.singleShot(300, progress_dialog.accept)
+
+            self.plot_animation = PlotGeneratedAnimation(parent=self, message="Plot Generated")
+            self.plot_animation.start(target_widget=self)
         
         except Exception as CreateMainPlotError:
             if progress_dialog:
@@ -2271,6 +2276,9 @@ class PlotTab(PlotTabUI):
         self.annotations.clear()
         self.annotations_list.clear()
         self.subplot_data_configs.clear()
+
+        self.plot_clear_animation = PlotClearedAnimation(parent=None, message="Plot Cleared")
+        self.plot_clear_animation.start(target_widget=self)
 
         self.status_bar.log_action(
             "Plot cleared",
