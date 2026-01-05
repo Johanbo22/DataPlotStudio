@@ -8,6 +8,7 @@ from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
 from ui.animations.SavedProjectAnimation import SavedProjectAnimation
 from ui.animations.OperationFailedAnimation import FailedAnimation
+from ui.animations.ExportFileAnimation import ExportFileAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -563,6 +564,9 @@ class DataPlotStudio(QMainWindow):
                     include_index = config.get("include_index", False)
                     self.data_handler.export_data(config["filepath"], format=format_extension, include_index=include_index)
                     self.status_bar_widget.log(f"Exported data to {config["filepath"]}")
+                    self.export_animation = ExportFileAnimation(parent=self, message="Export Complete", extension=config["format"])
+                    self.export_animation.start(target_widget=self)
+
                     QMessageBox.information(self, "Success", f"Data exported successfully to {config["filepath"]}")
                 except Exception as ExportDataError:
                     QMessageBox.critical(self, "Error", f"Failed to export: {str(ExportDataError)}")
