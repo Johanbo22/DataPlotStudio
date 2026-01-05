@@ -19,6 +19,7 @@ from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
 from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
 from ui.widgets.HelpIcon import HelpIcon
+from ui.animation_scripts.ResetToOriginalStateAnimation import ResetToOriginalStateAnimation
 
 
 class DataTab(QWidget):
@@ -1605,6 +1606,10 @@ class DataTab(QWidget):
             cols_after = len(self.data_handler.df.columns) if self.data_handler.df is not None else 0
 
             self.refresh_data_view()
+
+            self.reset_animation = ResetToOriginalStateAnimation()
+            self.reset_animation.show()
+            self.reset_animation.start_animation()
 
             self.status_bar.log_action(
                 "Data reset to original state",

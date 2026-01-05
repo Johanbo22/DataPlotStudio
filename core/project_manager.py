@@ -38,7 +38,7 @@ class ProjectManager:
                 None,
                 "Save Project",
                 "",
-                f"DataPlotStudio Files (*.{self.PROJECT_EXTENSION});;All Files (*)"
+                f"DataPlotStudio Files (*{self.PROJECT_EXTENSION});;All Files (*)"
             )
             if not filepath:
                 raise Exception("Save cancelled")

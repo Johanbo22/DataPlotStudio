@@ -1,4 +1,4 @@
--- Animation that plays when the user is saving their current project.
+-- Animation that is played when the user clicks the reset to original state button in DataTab
 
 state = {
     progress = 0,
@@ -21,17 +21,19 @@ function get_frame()
     local eased = ease_out_cubic(state.progress)
     local positions = {}
 
+    -- Label
     table.insert(positions, {
         type = "text",
-        text = "Project Saved",
+        text = "Reset to Original",
         x = 0,
         y = -60
     })
 
-    if eased < 0.3 then
-        local radius = 25 * (eased / 0.3)
+    if eased < 0.35 then
+        local radius = 25
+        local arc = eased / 0.35
 
-        for i = 0, 1, 0.2 do
+        for i = 0, arc, 0.15 do
             local angle = i * 2 * math.pi
             table.insert(positions, {
                 type = "circle",
@@ -40,27 +42,35 @@ function get_frame()
             })
         end
     else
-        local t = (eased - 0.3) / 0.7
+        local t = (eased - 0.35) / 0.65
+        local radius = 25
 
-        if t > 0.3 then
-            local s1 = math.min((t - 0.3) / 0.7, 1)
+        for i = 0, math.min(t, 1), 0.1 do
+            local angle = (1 - i) * 1.5 * math.pi
             table.insert(positions, {
-                type = "line",
-                x1 = -18 * s1,
-                y1 = 5 * s1,
-                x2 = -8,
-                y2 = 18
+                type = "circle",
+                x = math.cos(angle) * radius,
+                y = math.sin(angle) * radius
             })
         end
 
-        if t > 0.7 then
-            local s2 = math.min((t - 0.6) / 0.4, 1)
+        if t > 0.6 then
+            local s = math.min((t - 0.6) / 0.4, 1)
+
             table.insert(positions, {
                 type = "line",
-                x1 = -8,
-                y1 = 18,
-                x2 = 15 * s2,
-                y2 = -10 + 5 * s2
+                x1 = -radius * 0.7,
+                y1 = -radius * 0.1,
+                x2 = -radius * 0.9 * s,
+                y2 = -radius * 0.35 * s
+            })
+
+            table.insert(positions, {
+                type = "line",
+                x1 = -radius * 0.7,
+                y1 = -radius * 0.1,
+                x2 = -radius * 0.45 * s,
+                y2 = -radius * 0.35 * s
             })
         end
     end
