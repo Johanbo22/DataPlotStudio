@@ -30,7 +30,6 @@ class MainWindow(QWidget):
         self.subset_manager = SubsetManager()
 
         self.threadpool = QThreadPool()
-        print(f"DEBUG: Initialized thread pool with max {self.threadpool.maxThreadCount()} threads")
 
         self.progress_dialog: ProgressDialog | None = None
         self._temp_import_filepath: str | None = None

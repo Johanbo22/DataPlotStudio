@@ -6,9 +6,11 @@ from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
 class ResetToOriginalStateAnimation(OverlayAnimationEngine):
 
     def draw_content(self, painter):
+        stroke_width = 8
         color = QColor(100, 255, 100)
+
         pen = QPen(color)
-        pen.setWidth(8)
+        pen.setWidth(stroke_width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
 
@@ -20,29 +22,41 @@ class ResetToOriginalStateAnimation(OverlayAnimationEngine):
         current_angle = self.progress * max_angle
 
         radius = 40
-        start_angle = 90 * 16
-        span_angle = int(current_angle * 16)
+        start_angle = 90
+        span_angle = self.progress * 300
 
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawArc(-radius, -radius, -radius*2, radius*2, start_angle, span_angle)
+        painter.drawArc(
+            int(-radius), int(-radius),
+            int(radius*2), int(radius*2),
+            int(start_angle * 16),
+            int(span_angle * 16)
+        )
 
         if self.progress > 0.05:
-            painter.save()
-            painter.rotate(-current_angle)
+            current_tip_angle = start_angle + span_angle
+            current_tip_angle_radians = math.radians(current_tip_angle)
 
-            painter.translate(0, -radius)
+            tip_x = radius * math.cos(current_tip_angle_radians)
+            tip_y = -radius * math.sin(current_tip_angle_radians)
+
+            painter.save()
+            painter.translate(tip_x, tip_y)
+
+            tangent_angle = current_tip_angle + 90
+            painter.rotate(-tangent_angle)
+            painter.translate(11, 0)
 
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(color)
 
             path = QPainterPath()
             path.moveTo(0, 0)
-            path.lineTo(-8, 12)
-            path.lineTo(8, 12)
+            path.lineTo(-12, 8)
+            path.lineTo(-8, 0)
+            path.lineTo(-12, -8)
             path.closeSubpath()
 
-            painter.rotate(180)
             painter.drawPath(path)
-
             painter.restore()
