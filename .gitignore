@@ -11,3 +11,5 @@ core/__pycache__/
 *.dps
 *.dps.data
 .vscode/
+dataplot_script.py
+dataplot_session.log
