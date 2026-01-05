@@ -11,6 +11,7 @@ from datetime import datetime
 
 from ui.widgets.AnimatedButton import AnimatedButton
 from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.animations.PlotGeneratedAnimation import PlotGeneratedAnimation
 
 
 class ScriptEditorDialog(QDialog):
@@ -122,11 +123,11 @@ class ScriptEditorDialog(QDialog):
         """Validate and emit code"""
         code = self.editor.toPlainText()
 
-        dangerous_keywords = [
+        blocked_keywords = [
             "import os", "from os", "import sys", "from sys", "subprocess", "eval(", "exec(", "__import__", "shutil", "pathlib", "socket", "requests"
         ]
 
-        found_threats = [kw for kw in dangerous_keywords if kw in code]
+        found_threats = [kw for kw in blocked_keywords if kw in code]
 
         if found_threats:
             QMessageBox.critical(self, "Security Alert", f"Unintended keywords detected!\nBlocked keywords: {', '.join(found_threats)}\n\n"
@@ -136,6 +137,10 @@ class ScriptEditorDialog(QDialog):
         self.save_to_history(code)
 
         self.run_script_signal.emit(code)
+
+        self.run_script_animation = PlotGeneratedAnimation(parent=self, message="Run Script")
+        self.run_script_animation.start(target_widget=self)
+
 
     def save_to_history(self, code):
         """Save the current code to a list, cannot go more than 5, """

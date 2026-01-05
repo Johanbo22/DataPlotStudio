@@ -4,6 +4,7 @@ from .SavedProjectAnimation import SavedProjectAnimation
 from .ExportFileAnimation import ExportFileAnimation
 from .PlotGeneratedAnimation import PlotGeneratedAnimation
 from .PlotClearedAnimation import PlotClearedAnimation
+from .ScriptLogExportAnimation import ScriptLogExportAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -11,5 +12,6 @@ __all__ = [
     "SavedProjectAnimation",
     "ExportFileAnimation",
     "PlotGeneratedAnimation",
-    "PlotClearedAnimation"
+    "PlotClearedAnimation",
+    "ScriptLogExportAnimation"
 ]

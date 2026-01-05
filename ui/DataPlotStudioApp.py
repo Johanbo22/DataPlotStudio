@@ -9,6 +9,7 @@ from ui.status_bar import StatusBar
 from ui.animations.SavedProjectAnimation import SavedProjectAnimation
 from ui.animations.OperationFailedAnimation import FailedAnimation
 from ui.animations.ExportFileAnimation import ExportFileAnimation
+from ui.animations.ScriptLogExportAnimation import ScriptLogExportAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -496,6 +497,9 @@ class DataPlotStudio(QMainWindow):
 
             QMessageBox.information(self, "Success", success_mgs)
 
+            self.python_export_animation = ScriptLogExportAnimation(parent=self, message="Python File Exported", operation_type="python")
+            self.python_export_animation.start(target_widget=self)
+
         except Exception as ExportCodeError:
             self.status_bar_widget.log(f"Failed to export code: {str(ExportCodeError)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to export code: {str(ExportCodeError)}\n\n{traceback.format_exc()}")
@@ -543,6 +547,9 @@ class DataPlotStudio(QMainWindow):
                 f"• INFO: {stats['by_level'].get('INFO', 0)}\n"
                 f"• WARNING: {stats['by_level'].get('WARNING', 0)}\n"
                 f"• ERROR: {stats['by_level'].get('ERROR', 0)}")
+            
+            self.export_log_animation = ScriptLogExportAnimation(parent=self, message="Log Exported", operation_type="log")
+            self.export_log_animation.start(target_widget=self)
 
         except Exception as ExportLogError:
             self.status_bar_widget.log(f"✗ Failed to export logs: {str(ExportLogError)}")

@@ -1,0 +1,29 @@
+
+            ================================================================================================================================================================
+            DataPlot Studio - Session Log Report
+            Generated: 2026-01-05 18:03:40
+            This log is automatically generated
+            ================================================================================================================================================================
+
+            SUMMARY
+            -------
+            Total Log Entries: 10
+            Session Duration: 0:01:01
+
+            LOG ENTRIES
+            -----------
+            [18:02:26] [INFO    ] DataPlot Studio started
+[18:02:28] [INFO    ] Plot type changed to: Line
+[18:03:17] [INFO    ] Importing: C:/Users/joha4/OneDrive/Skrivebord_LapTop/DataPlotStudio/test_data/line_plot.csv...
+[18:03:17] [INFO    ] Data loaded: 7 rows, 3 columns
+[18:03:17] [SUCCESS ] Imported line_plot.csv
+[18:03:17] [SUCCESS ] Imported line_plot.csv | filename=line_plot.csv, filepath=C:\Users\joha4\OneDrive\Skrivebord_LapTop\DataPlotStudio\test_data\line_plot.csv, rows=7, columns=3, file_size_kb=0, file_type=.csv, operation=import_file
+[18:03:22] [SUCCESS ] Line plot created
+[18:03:22] [SUCCESS ] Line plot created | plot_type=Line, x_column=Day, y_column=['Temperature(Place1)'], data_points=7, annotations=0
+[18:03:28] [SUCCESS ] Python script exported: dataplot_script.py (Data + Plot)
+[18:03:28] [SUCCESS ] Python script exported: dataplot_script.py (Data + Plot) | filename=dataplot_script.py, filepath=C:/Users/joha4/OneDrive/Skrivebord_LapTop/DataPlotStudio/dataplot_script.py, data_rows=7, data_cols=3, operation=export_code to .py file, export_type=Data + Plot, source_is_temp=False, source_path=C:\Users\joha4\OneDrive\Skrivebord_LapTop\DataPlotStudio\test_data\line_plot.csv, data_ops_count=0, plot_type=Line
+
+        ================================================================================================================================================================
+        END OF LOG REPORT
+        ================================================================================================================================================================
+        
