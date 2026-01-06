@@ -14,7 +14,7 @@ class AboutDialog:
         message.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         message.setText(
             f"""
-            <b>DataPlot Studio v{application_version}</b><br><br>
+            <b>DataPlotStudio v{application_version}</b><br><br>
             A data analysis and visualization tool built with Python and the PyQt6 Framework. <br><br>
             <u>Features:</u><br>
             • Import data from CSV, Excel, JSON, Google Sheets and database connections<br>
