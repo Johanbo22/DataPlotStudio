@@ -1,5 +1,5 @@
 import math
-from PyQt6.QtGui import QPainterPath, QFont, QColor, QPen, QBrush
+from PyQt6.QtGui import QPainterPath, QFont, QColor, QPen, QBrush, QPolygonF
 from PyQt6.QtCore import Qt, QRectF, QPointF
 
 from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
@@ -24,6 +24,7 @@ class ProjectOpenAnimation(OverlayAnimationEngine):
 
         width, height = 60, 40
         tab_height = 8
+        hinge_y = height / 2
 
         path_back = QPainterPath()
         path_back.moveTo(-width/2, -height/2)
@@ -35,63 +36,61 @@ class ProjectOpenAnimation(OverlayAnimationEngine):
         path_back.closeSubpath()
 
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(folder_inner)
+        painter.setBrush(folder_outer)
 
         painter.drawPath(path_back)
 
         #papers
-        paper_slide = 0
-        if self.progress > 0.3:
-            slide_t = (self.progress - 0.3) / 0.7
-            paper_slide = slide_t * 8
-        
+        slide_amount = 0
+        if self.progress > 0.1:
+            t = (self.progress - 0.1) / 0.9
+            slide_amount = t * 12
+
         painter.save()
-        painter.setClipRect(QRectF(-50, -100, 100, 100 + height / 2))
+        painter.setClipRect(QRectF(-width, -height*2, width*2, height*2 + hinge_y - 2))
 
-        #draw papers
+        painter.translate(0, -slide_amount)
+
         for i in range(2, -1, -1):
-            offset_y = (i * 3) - paper_slide
-            scale_x = 1.0 - (i * 0.05)
+            offset = i * 2
+            sheet_width = width - 10 -(i * 4)
+            sheet_height = height - 5
 
-            paper_width = (width - 10) * scale_x
-            paper_height = height - 5
-
-            rect = QRectF(-paper_width/2, -height/2 + 10 + offset_y, paper_width, paper_height)
+            rect = QRectF(-sheet_width/2, -sheet_height/2 + 8 + offset, sheet_width, sheet_height)
 
             painter.setBrush(paper_color)
             painter.setPen(QPen(QColor(200, 200, 200), 1))
             painter.drawRect(rect)
 
             if i == 0:
-                painter.setPen(QPen(QColor(200, 200, 200), 2))
-                painter.drawLine(int(-10), int(rect.center().y() - 5), int(10), int(rect.center().y() - 5))
-                painter.drawLine(int(-10), int(rect.center().y() + 5), int(10), int(rect.center().y() + 5))
+                painter.setPen(QPen(QColor(210, 210, 210), 2))
+                painter.drawLine(int(-10), int(rect.top() + 15), int(10), int(rect.top() + 15))
+                painter.drawLine(int(-10), int(rect.top() + 25), int(10), int(rect.top() + 25))
         
         painter.restore()
 
-        #front of fold
-        hinge_y = height / 2
+        # adding tilt to folder 
+        tilt_offset = self.progress * 15
 
-        painter.setPen(Qt.PenStyle.NoPen)
+        front_top_y = -height / 2 + tilt_offset
 
-        if self.progress < 0.4:
-            open_t = self.progress / 0.4
-            current_height = height * (1.0 - open_t)
+        #trapetz
+        poly = QPolygonF([
+            QPointF(-width/2, front_top_y),
+            QPointF(width/2, front_top_y),
+            QPointF(width/2, hinge_y),
+            QPointF(-width/2, hinge_y)
+        ])
 
-            rect = QRectF(-width/2, hinge_y - current_height, width, current_height)
-            painter.setBrush(folder_outer)
-            painter.drawRect(rect)
+        painter.setPen(QPen(QColor(210, 160, 40), 1))
+        painter.setBrush(folder_inner)
+        painter.drawPolygon(poly)
 
-            if current_height > 10:
-                label_rect = QRectF(-15, hinge_y - current_height/2 - 5, 30, 10)
-                painter.setBrush(QColor(255, 255, 255, 200))
-                painter.drawRect(label_rect)
-        
-        else:
-            open_t = (self.progress - 0.4) / 0.6
-            current_height = (height * 0.35) * open_t
+        if self.progress > 0.2:
+            shadow_height = self.progress * 4
+            shadow_rect = QRectF(-width/2, front_top_y, width, shadow_height)
 
-            rect = QRectF(-width/2, hinge_y, width, current_height)
-
-            painter.setBrush(folder_inner)
-            painter.drawRect(rect)
+            grad = QColor(0, 0, 0, 20)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(grad)
+            painter.drawRect(shadow_rect)
