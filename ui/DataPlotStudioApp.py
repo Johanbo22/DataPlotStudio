@@ -6,7 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation
+from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -278,6 +278,9 @@ class DataPlotStudio(QMainWindow):
                     f"Type: {db_type}\n"
                     f"Rows: {rows:,}\n"
                     f"Columns: {cols}")
+                
+                self.import_database_animation = DatabaseImportAnimation(parent=None, message="Import from Database", db_type=db_type)
+                self.import_database_animation.start(target_widget=self)
 
         except Exception as ImportDatabaseError:
             if "progress_dialog" in locals() and progress_dialog:

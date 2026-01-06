@@ -8,6 +8,7 @@ from .ScriptLogExportAnimation import ScriptLogExportAnimation
 from .OperationFailedAnimation import FailedAnimation
 from .FileImportAnimation import FileImportAnimation
 from .GoogleSheetsImportAnimation import GoogleSheetsImportAnimation
+from .DatabaseImportAnimation import DatabaseImportAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -19,5 +20,6 @@ __all__ = [
     "ScriptLogExportAnimation",
     "FailedAnimation",
     "FileImportAnimation",
-    "GoogleSheetsImportAnimation"
+    "GoogleSheetsImportAnimation",
+    "DatabaseImportAnimation"
 ]
