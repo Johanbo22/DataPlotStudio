@@ -16,6 +16,7 @@ from .SettingsDialog import SettingsDialog
 from .SubsetDataViewer import SubsetDataViewer
 from .SubsetManagerDialog import SubsetManagerDialog
 from .AboutDialog import AboutDialog
+from .OutlierDetectionDialog import OutlierDetectionDialog
 
 __all__ = [
     "AggregationDialog",
@@ -35,5 +36,6 @@ __all__ = [
     "SettingsDialog",
     "SubsetDataViewer",
     "SubsetManagerDialog",
-    "AboutDialog"
+    "AboutDialog",
+    "OutlierDetectionDialog"
 ]
