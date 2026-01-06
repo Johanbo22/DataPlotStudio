@@ -15,6 +15,12 @@ try:
     import geopandas as gpd
 except ImportError:
     gpd = None
+try:
+    from scipy import stats
+    from sklearn.ensemble import IsolationForest
+except ImportError:
+    stats = None
+    IsolationForest = None
 
 
 class DataHandler:
@@ -589,6 +595,11 @@ class DataHandler:
                     self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
                 else:
                     raise ValueError(f"Unsupported data type conversion: {new_type}")
+            
+            elif action == "remove_rows":
+                rows_to_remove = kwargs.get("rows")
+                if rows_to_remove:
+                    self.df = self.df.drop(index=rows_to_remove).reset_index(drop=True)
                 
             log_entry = {"type": action, **kwargs}
             self.operation_log.append(log_entry)
@@ -709,3 +720,60 @@ class DataHandler:
             for _ in range(steps):
                 if not self.redo():
                     break
+
+    def detect_outliers(self, method: str, columns: List[str], **kwargs) -> List[int]:
+        """Detect outliers in the current dataset
+
+        Args:
+            method (str): The specified method to detect outliers
+            columns (List[str]): The columns names that are being analysed
+
+        Returns:
+            List[int]: Row indices that are outliers
+        """
+
+        if self.df is None: return []
+
+        numeric_df = self.df.select_dtypes(include=[np.number])
+        if numeric_df.empty:
+            raise ValueError("No numeric data is available to do outlier detection.")
+        
+        outlier_indicies = set()
+
+        if method == "z_score":
+            threshold = kwargs.get("threshold", 3.0)
+            if not stats: raise ImportError("Scipy is not installed. Scipy is required to perform Z-score analysis")
+
+            for column in columns:
+                if column in numeric_df.columns:
+                    z_scores = np.abs(stats.zscore(self.df[column].dropna()))
+                    outliers = self.df[column].dropna().index[z_scores > threshold]
+                    outlier_indicies.update(outliers)
+        
+        elif method == "iqr":
+            multiplier = kwargs.get("multiplier", 1.5)
+            for column in columns:
+                if column in numeric_df.columns:
+                    Q1 = self.df[column].quantile(0.25)
+                    Q3 = self.df[column].quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower_bound = Q1 - multiplier * IQR
+                    upper_bound = Q3 + multiplier * IQR
+
+                    outliers = self.df[(self.df[column] < lower_bound) | (self.df[column] > upper_bound)].index.tolist()
+                    outlier_indicies.update(outliers)
+        
+        elif method == "isolation_forest":
+            contamination = kwargs.get("contamination", 0.1)
+            if not IsolationForest: raise ImportError("SciKit-learn not installed. SciKit-learn is required to perform an Isolation Forest Analysis")
+
+            data_to_fit = self.df[columns].select_dtypes(include=[np.number]).fillna(0)
+
+            if not data_to_fit.empty:
+                clf = IsolationForest(contamination=contamination, random_state=42)
+                preds = clf.fit_predict(data_to_fit)
+
+                outliers = data_to_fit.index[preds == -1].tolist()
+                outlier_indicies.update(outliers)
+        
+        return sorted(list(outlier_indicies))
