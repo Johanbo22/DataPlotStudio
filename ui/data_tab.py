@@ -16,7 +16,7 @@ from ui.data_table_model import DataTableModel
 from ui.widgets import AnimatedListWidget, AnimatedListWidget, AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit, AnimatedTabWidget, HelpIcon
 
 
-from ui.animations import ResetToOriginalStateAnimation, FailedAnimation
+from ui.animations import ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -606,6 +606,9 @@ class DataTab(QWidget):
                 self.data_handler.create_empty_dataframe(rows, columns)
                 self.refresh_data_view()
                 self.status_bar.log(f"Created new dataset: ({rows}x{columns})", "SUCCESS")
+
+                self.create_new_dataframe_animation = NewDataFrameAnimation(parent=None, message="Created New DataFrame")
+                self.create_new_dataframe_animation.start(target_widget=self)
         
         except Exception as CreateNewDatasetError:
             QMessageBox.critical(self, "Error", f"Failed to create dataset: {str(CreateNewDatasetError)}")
