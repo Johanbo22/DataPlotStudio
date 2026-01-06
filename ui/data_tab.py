@@ -7,7 +7,7 @@ from PyQt6.QtGui import QIcon, QFont
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
 
@@ -186,10 +186,48 @@ class DataTab(QWidget):
         fill_missing_layout.addWidget(fill_missing_button)
         fill_missing_layout.addWidget(self.fill_missing_help)
         cleaning_layout.addLayout(fill_missing_layout)
+
+        #Outlier Detection
+        cleaning_layout.addSpacing(10)
+        outlier_group = AnimatedGroupBox("Outlier Detection Tools")
+        outlier_layout = QVBoxLayout()
+        
+        zscore_layout = QHBoxLayout()
+        zscore_button = AnimatedButton("Z-Score", parent=self)
+        zscore_button.setToolTip("Detect outliers using Z-Score (standard Deviations from mean)")
+        zscore_button.clicked.connect(lambda: self.open_outlier_dialog("z_score"))
+        self.zscore_help = HelpIcon('zscore')
+        self.zscore_help.clicked.connect(self.show_help_dialog)
+        zscore_layout.addWidget(zscore_button)
+        zscore_layout.addWidget(self.zscore_help)
+        outlier_layout.addLayout(zscore_layout)
+
+        iqr_layout = QHBoxLayout()
+        iqr_button = AnimatedButton("Interquartile Range (IQR)", parent=self)
+        iqr_button.setToolTip("Detect outliers using the Interquartile Range method")
+        iqr_button.clicked.connect(lambda: self.open_outlier_dialog("iqr"))
+        self.iqr_help = HelpIcon('iqr')
+        self.iqr_help.clicked.connect(self.show_help_dialog)
+        iqr_layout.addWidget(iqr_button)
+        iqr_layout.addWidget(self.iqr_help)
+        outlier_layout.addLayout(iqr_layout)
+
+        isolation_layout = QHBoxLayout()
+        isolation_button = AnimatedButton("Isolation Forest", parent=self)
+        isolation_button.setToolTip("Detect outliers using Machine Learning (Isolation Forest)")
+        isolation_button.clicked.connect(lambda: self.open_outlier_dialog("isolation_forest"))
+        self.isolation_help = HelpIcon('isolation_forest')
+        self.isolation_help.clicked.connect(self.show_help_dialog)
+        isolation_layout.addWidget(isolation_button)
+        isolation_layout.addWidget(self.isolation_help)
+        outlier_layout.addLayout(isolation_layout)
+
+        outlier_group.setLayout(outlier_layout)
+        cleaning_layout.addWidget(outlier_group)
         
         cleaning_layout.addStretch()
         data_clean_icon = QIcon("icons/data_operations/data_cleaning.png")
-        ops_tabs.addTab(cleaning_tab, data_clean_icon, "Cleaning")
+        ops_tabs.addTab(cleaning_tab, data_clean_icon, "Data Cleaning")
 
 
         #  TAB 2: FILTERING 
@@ -2095,3 +2133,17 @@ class DataTab(QWidget):
                 return f"Melt/Pivot Data"
             case _:
                 return f"{operation_type.replace("_", " ").title()}"
+            
+    def open_outlier_dialog(self, method):
+        """Opens the outleier detection dialog"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
+        dialog = OutlierDetectionDialog(self.data_handler, method, self)
+        if dialog.exec():
+            rows_removed = len(dialog.outlier_indices)
+            self.refresh_data_view()
+            self.status_bar.log_action(f"Removed {rows_removed} outliers using {method}", 
+                details={"method": method, "count": rows_removed, "operation": "remove_outliers"},
+                level="SUCCESS")
