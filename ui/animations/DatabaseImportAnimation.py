@@ -28,7 +28,7 @@ class DatabaseImportAnimation(OverlayAnimationEngine):
         slide_progress = min(self.progress * 0.75, 1.0)
 
         data_start_y = -10
-        data_end_y = 30
+        data_end_y = 40
 
         current_data_y = data_start_y + (data_end_y - data_start_y) * slide_progress
 
