@@ -706,6 +706,8 @@ class DataTab(QWidget):
         except Exception as InsertSubsetIntoDataFrameError:
             self.status_bar.log(f"Failed to insert the subset: {str(InsertSubsetIntoDataFrameError)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to insert subset:\n{str(InsertSubsetIntoDataFrameError)}")
+            self.failed_animation = FailedAnimation(message="Failed to Insert Subset")
+            self.failed_animation.start(target_widget=self)
             traceback.print_exc()
 
     def restore_original_dataframe(self):
