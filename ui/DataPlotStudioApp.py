@@ -7,6 +7,7 @@ from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
 from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation
+from resources.version import LOG_FILE_NAME, SCRIPT_FILE_NAME
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -449,7 +450,7 @@ class DataPlotStudio(QMainWindow):
         filepath, _ = QFileDialog.getSaveFileName(
             self,
             "Export as Python Script",
-            "dataplot_script.py",
+            f"{SCRIPT_FILE_NAME}.py",
             "Python Files (*.py)"
         )
 
@@ -517,7 +518,7 @@ class DataPlotStudio(QMainWindow):
         filepath, _ = QFileDialog.getSaveFileName(
             self,
             "Export Session Logs",
-            "dataplot_session.log",
+            f"{LOG_FILE_NAME}.log",
             "Log Files (*.log);;Text Files (*.txt)"
         )
 
