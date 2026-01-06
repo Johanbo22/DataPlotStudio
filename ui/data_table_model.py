@@ -1,16 +1,18 @@
 import pandas as pd
 import numpy as np
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
+from PyQt6.QtGui import QColor
 from typing import Any
 
 class DataTableModel(QAbstractTableModel):
     """ table for the data Table"""
 
-    def __init__(self, data_handler, editable=False, parent=None):
+    def __init__(self, data_handler, editable=False, parent=None, highlighted_rows=None):
         super().__init__(parent)
         self.data_handler = data_handler
         self._data = self.data_handler.df
         self.editable = editable
+        self.highlighted_rows = set(highlighted_rows) if highlighted_rows else set()
 
         if self._data is not None:
             self._is_numeric = [
@@ -31,7 +33,7 @@ class DataTableModel(QAbstractTableModel):
             return 0
         return self._data.shape[1]
     
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> QVariant | int | float | bool | str:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> QVariant | int | float | bool | str | QColor:
         """Returns le data"""
         if not index.isValid() or self._data is None:
             return QVariant()
@@ -40,6 +42,10 @@ class DataTableModel(QAbstractTableModel):
         column = index.column()
 
         try:
+            if role == Qt.ItemDataRole.BackgroundRole:
+                if row in self.highlighted_rows:
+                    return QColor("#FFCCCC")
+                
             value = self._data.iloc[row, column]
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 if pd.isna(value):
