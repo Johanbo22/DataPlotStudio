@@ -2,11 +2,12 @@ from ui.widgets.AnimatedComboBox import AnimatedComboBox
 
 
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget, QStyle
 
 
 import sys
 from pathlib import Path
+import re
 
 from ui.widgets.AnimatedButton import AnimatedButton
 from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
@@ -87,9 +88,17 @@ class DatabaseConnectionDialog(QDialog):
         query_layout.addWidget(self.query_editor)
 
         #query validation
+        self.query_status_icon = QLabel()
+        self.query_status_icon.setFixedSize(16, 16)
         self.query_status_label = QLabel(" ")
         self.query_status_label.setStyleSheet("font-weight: bold;")
-        query_layout.addWidget(self.query_status_label)
+
+        status_layout = QHBoxLayout()
+        status_layout.setSpacing(6)
+        status_layout.addWidget(self.query_status_icon)
+        status_layout.addWidget(self.query_status_label)
+        status_layout.addStretch()
+        query_layout.addLayout(status_layout)
 
         query_group.setLayout(query_layout)
         main_layout.addWidget(query_group)
@@ -110,17 +119,59 @@ class DatabaseConnectionDialog(QDialog):
         query = self.query_editor.toPlainText().strip()
 
         if not query:
-            self.query_status_label.setText("✘ Query cannot be empty")
-            self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
-            self.query_status_label.setVisible(True)
-        elif query.lower().startswith("select"):
-            self.query_status_label.setText("✔ Valid Query Expression")
-            self.query_status_label.setStyleSheet("color: #388e3c; font-weight: bold;")
-            self.query_status_label.setVisible(True)
+            self._set_query_status(
+                "Query cannot be empty",
+                valid=False
+            )
+            return
+        
+        if self._is_valid_select_query(query):
+            self._set_query_status(
+                "Valid SELECT query",
+                valid=True
+            )
         else:
-            self.query_status_label.setText("✘ Invalid Query Expression (Must be SELECT)")
-            self.query_status_label.setStyleSheet("color: #d32f2f; font-weight: bold;")
-            self.query_status_label.setVisible(True)
+            self._set_query_status(
+                "Invalid query (Must be a SELECT * FROM statement)",
+                valid=False
+            )
+    
+    def _is_valid_select_query(self, query: str) -> bool:
+        """Checks if the query entered matches expression rules
+
+        Args:
+            query (str): Takes the query from te query text box
+
+        Returns:
+            bool: Returns True if the query is valid
+        """
+        query = re.sub(r"^\s*(--.*\n|/\*.*?\*/\s*)*", "", query, flags=re.S)
+
+        select_pattern = re.compile(
+            r"^select\s+.+\s+from\s+.+",
+            re.IGNORECASE | re.DOTALL
+        )
+
+        return bool(select_pattern.match(query))
+    
+    def _set_query_status(self, message: str, *, valid: bool) -> None:
+        """Sets the status icon and status label based on whether the expression is valid"""
+        style = self.style()
+
+        if valid:
+            icon = style.standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton)
+            color = "#388e3c"
+        else:
+            icon = style.standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
+            color = "#d32f2f"
+        
+        self.query_status_icon.setPixmap(icon.pixmap(16, 16))
+        self.query_status_label.setText(f"{message}")
+        self.query_status_label.setStyleSheet(
+            f"color: {color}; font-weight: bold;"
+        )
+        self.query_status_icon.setVisible(True)
+        self.query_status_label.setVisible(True)
 
     def on_db_type_changed(self, db_type) -> None:
         """Show or hide fields based on db type"""
