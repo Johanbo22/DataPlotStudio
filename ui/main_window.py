@@ -15,8 +15,7 @@ from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
-from ui.animations.SavedProjectAnimation import SavedProjectAnimation
-from ui.animations.OperationFailedAnimation import FailedAnimation
+from ui.animations import FileImportAnimation, FailedAnimation, SavedProjectAnimation
 
 class MainWindow(QWidget):
     """Main application window widget"""
@@ -115,6 +114,9 @@ class MainWindow(QWidget):
             worker.signals.finished.connect(self._on_import_finished)
             worker.signals.error.connect(self._on_import_error)
             worker.signals.progress.connect(self._on_import_progress)
+
+            self.import_file_animation = FileImportAnimation(parent=None, message="Imported File")
+            self.import_file_animation.start(target_widget=self)
 
             self.threadpool.start(worker)
     

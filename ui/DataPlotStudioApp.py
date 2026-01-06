@@ -6,10 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-from ui.animations.SavedProjectAnimation import SavedProjectAnimation
-from ui.animations.OperationFailedAnimation import FailedAnimation
-from ui.animations.ExportFileAnimation import ExportFileAnimation
-from ui.animations.ScriptLogExportAnimation import ScriptLogExportAnimation
+from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -210,6 +207,9 @@ class DataPlotStudio(QMainWindow):
                     f"Columns: {cols}\n"
                     f"Delimiter: {delimiter_name}\n"
                     f"Decimal: {decimal}")
+                
+                self.google_sheets_import_animation = GoogleSheetsImportAnimation(parent=None, message="Google Sheets Import")
+                self.google_sheets_import_animation.start(target_widget=self)
 
         except Exception as ImportGoogleSheetsError:
             if "progress_dialog" in locals() and progress_dialog:

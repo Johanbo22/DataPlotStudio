@@ -6,6 +6,8 @@ from .PlotGeneratedAnimation import PlotGeneratedAnimation
 from .PlotClearedAnimation import PlotClearedAnimation
 from .ScriptLogExportAnimation import ScriptLogExportAnimation
 from .OperationFailedAnimation import FailedAnimation
+from .FileImportAnimation import FileImportAnimation
+from .GoogleSheetsImportAnimation import GoogleSheetsImportAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -15,5 +17,7 @@ __all__ = [
     "PlotGeneratedAnimation",
     "PlotClearedAnimation",
     "ScriptLogExportAnimation",
-    "FailedAnimation"
+    "FailedAnimation",
+    "FileImportAnimation",
+    "GoogleSheetsImportAnimation"
 ]
