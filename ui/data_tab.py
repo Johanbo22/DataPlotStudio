@@ -16,7 +16,7 @@ from ui.data_table_model import DataTableModel
 from ui.widgets import AnimatedListWidget, AnimatedListWidget, AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit, AnimatedTabWidget, HelpIcon
 
 
-from ui.animations import ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
+from ui.animations import RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -154,8 +154,8 @@ class DataTab(QWidget):
         cleaning_layout.addWidget(clean_info)
         
         remove_dups_layout = QHBoxLayout()
-        clean_button = AnimatedButton("Remove Duplicates", parent=self)
-        clean_button.setToolTip("Use this to remove any instances of duplicate entries in your dataset")
+        clean_button = AnimatedButton("Remove Duplicate Rows", parent=self)
+        clean_button.setToolTip("Use this to remove any instances of duplicate row entries in your dataset")
         clean_button.setIcon(QIcon("icons/data_operations/remove_duplicates.png"))
         clean_button.clicked.connect(self.remove_duplicates)
         self.remove_duplicates_help = HelpIcon('remove_duplicates')
@@ -1330,6 +1330,9 @@ class DataTab(QWidget):
 
             self.refresh_data_view()
 
+            self.remove_rows_animation = RemoveRowAnimation(message="Removed Rows")
+            self.remove_rows_animation.start(target_widget=self)
+
             #msg
             self.status_bar.log_action(
                 f"Removed {removed:,} duplicate row(s)",
@@ -1343,6 +1346,8 @@ class DataTab(QWidget):
             )
         except Exception as RemoveDuplicatesError:
             self.status_bar.log(f"Failed to remove duplicates: {str(RemoveDuplicatesError)}", "ERROR")
+            self.failed_animation = FailedAnimation("Failed To Remove Rows")
+            self.failed_animation.start(target_widget=self)
     
     def drop_missing(self):
         """Drop rows with missing values"""

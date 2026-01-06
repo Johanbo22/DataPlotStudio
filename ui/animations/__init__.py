@@ -11,6 +11,7 @@ from .GoogleSheetsImportAnimation import GoogleSheetsImportAnimation
 from .DatabaseImportAnimation import DatabaseImportAnimation
 from .NewDataFrameAnimation import NewDataFrameAnimation
 from .ProjectOpenAnimation import ProjectOpenAnimation
+from .RemoveRowAnimation import RemoveRowAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -25,5 +26,6 @@ __all__ = [
     "GoogleSheetsImportAnimation",
     "DatabaseImportAnimation",
     "NewDataFrameAnimation",
-    "ProjectOpenAnimation"
+    "ProjectOpenAnimation",
+    "RemoveRowAnimation"
 ]
