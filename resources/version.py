@@ -1,4 +1,4 @@
 # version.py 
-APPLICATION_VERSION = "0.0.2"
+APPLICATION_VERSION = "0.0.3"
 PROJECT_EXTENSION = ".dps"
 DATA_EXTENSION = ".dps.data"
