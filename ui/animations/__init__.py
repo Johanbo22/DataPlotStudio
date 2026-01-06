@@ -10,6 +10,7 @@ from .FileImportAnimation import FileImportAnimation
 from .GoogleSheetsImportAnimation import GoogleSheetsImportAnimation
 from .DatabaseImportAnimation import DatabaseImportAnimation
 from .NewDataFrameAnimation import NewDataFrameAnimation
+from .ProjectOpenAnimation import ProjectOpenAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -23,5 +24,6 @@ __all__ = [
     "FileImportAnimation",
     "GoogleSheetsImportAnimation",
     "DatabaseImportAnimation",
-    "NewDataFrameAnimation"
+    "NewDataFrameAnimation",
+    "ProjectOpenAnimation"
 ]

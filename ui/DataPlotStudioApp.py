@@ -6,7 +6,7 @@ from ui.dialogs import DatabaseConnectionDialog, ExportDialog, ProgressDialog, S
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
-from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation
+from ui.animations import SavedProjectAnimation, FailedAnimation, ExportFileAnimation, ScriptLogExportAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
@@ -103,8 +103,13 @@ class DataPlotStudio(QMainWindow):
                 project = self.project_manager.load_project(filepath)
                 self.main_widget.load_project(project)
                 self.status_bar_widget.log(f"Project loaded: {filepath}")
+
+                self.open_project_animation = ProjectOpenAnimation(message="Project Opened")
+                self.open_project_animation.start(target_widget=self)
+
             except Exception as LoadProjectError:
                 QMessageBox.critical(self, "Error", f"Failed to load project: {str(LoadProjectError)}")
+                traceback.print_exc()
 
     def save_project(self):
         """Save current project"""
