@@ -242,6 +242,9 @@ class SubsetManager:
         self.subsets.clear()
         self.clear_cache()
 
+        if data is None:
+            return
+
         for name, subset_data in data.items():
             self.subsets[name] = Subset.from_dict(subset_data)
 

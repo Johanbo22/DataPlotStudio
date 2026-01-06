@@ -247,7 +247,7 @@ class MainWindow(QWidget):
         if 'plot_config' in project_data:
             self.plot_tab.load_config(project_data['plot_config'])
 
-        if "subsets" in project_data:
+        if "subsets" in project_data and project_data["subsets"] is not None:
             subset_manager = self.subset_manager
             subset_manager.import_subsets(project_data["subsets"])
             self.data_tab.refresh_active_subsets()
