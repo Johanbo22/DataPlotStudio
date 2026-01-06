@@ -1567,8 +1567,8 @@ class DataTab(QWidget):
             self,
             "Confirm Reset",
             "Are you sure you want to reset the data to its original state?\n\n"
-            "This will discard all changes "
-            "and restore the original dataset.",
+            "This will discard all changes, "
+            "restore the original dataset and delete all history.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
