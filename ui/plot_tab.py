@@ -1442,6 +1442,13 @@ class PlotTab(PlotTabUI):
             "ylabel": self.ylabel_input.text() or y_label_text,
             "legend": self.legend_check.isChecked()
         }
+        
+        cmap = self.palette_combo.currentText()
+        if cmap and cmap != "None":
+            if plot_type in ["Bar", "Box", "Violin", "Count Plot"]:
+                general_kwargs["palette"] = cmap
+            else:
+                general_kwargs["cmap"] = cmap
 
         if hue and plot_type in plots_supporting_hue:
             general_kwargs["hue"] = hue

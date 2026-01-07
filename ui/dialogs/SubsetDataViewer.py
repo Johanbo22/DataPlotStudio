@@ -16,7 +16,7 @@ class SubsetDataViewer(QDialog):
         layout = QVBoxLayout(self)
 
         # Info
-        info = QLabel(f"Showing {len(df):,} rows × {len(df.columns)} columns")
+        info = QLabel(f"Showing {len(df):,} rows x {len(df.columns)} columns")
         info.setStyleSheet("font-weight: bold;")
         layout.addWidget(info)
 

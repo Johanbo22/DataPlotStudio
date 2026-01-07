@@ -293,6 +293,17 @@ class PlotEngine:
         y = int(height - (bbox.y0 * height) - h)
 
         return (x, y, w, h)
+    
+    def _get_colors_from_cmap(self, cmap_name, n_colors):
+        """Generate a list of colors from a cmap"""
+        if not cmap_name:
+            return None
+        
+        try:
+            cmap = plt.get_cmap(cmap_name)
+            return [cmap(i) for i in np.linspace(0, 1, n_colors)]
+        except:
+            return None
 
     
     def plot_line(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
@@ -302,6 +313,7 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         hue = kwargs.pop("hue", None)
+        cmap_name = kwargs.pop("cmap", None)
 
         marker = kwargs.pop("marker", None)
 
@@ -311,13 +323,19 @@ class PlotEngine:
             kwargs["marker"] = marker
 
         if hue:
-            for group in df[hue].unique():
+            groups = df[hue].unique()
+            colors = self._get_colors_from_cmap(cmap_name, len(groups))
+
+            for i, group in enumerate(groups):
                 mask = (df[hue] == group) & df[x].notna()
+                if colors: kwargs["color"] = colors[i]
                 for col in y:
                     self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=f"{col} - {group}", **kwargs)
         else:
-            for col in y:
+            colors = self._get_colors_from_cmap(cmap_name, len(y))
+            for i, col in enumerate(y):
                 mask = df[x].notna()
+                if colors: kwargs["color"] = colors[i]
                 self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
@@ -329,12 +347,18 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         hue = kwargs.pop('hue', None)
+        cmap_name = kwargs.pop("cmap", None)
         
         if hue:
-            for group in df[hue].unique():
+            groups = df[hue].unique()
+            colors = self._get_colors_from_cmap(cmap_name, len(groups))
+            
+            for i, group in enumerate(groups):
                 mask = (df[hue] == group) & df[x].notna() & df[y].notna()
+                if colors: kwargs["color"] = colors[i]
                 self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], label=group, **kwargs)
         else:
+            if cmap_name: kwargs["cmap"] = cmap_name
             mask = df[x].notna() & df[y].notna()
             self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], **kwargs)
         
@@ -350,6 +374,7 @@ class PlotEngine:
         hue = kwargs.pop('hue', None)
         width = kwargs.pop("width", 0.8)
         horizontal = kwargs.pop("horizontal", False)
+        palette = kwargs.pop("palette", None)
         
         if isinstance(y, str):
             y = [y]
@@ -367,10 +392,14 @@ class PlotEngine:
             x_labels = df[x].unique()
             x_pos = np.arange(len(x_labels))
             bar_width = width / len(y)
+            
+            colors = self._get_colors_from_cmap(palette, len(y))
 
             for i, col in enumerate(y):
                 offset = (i - len(y) / 2) * bar_width + bar_width / 2
                 values = [df[df[x] == label][col].values[0] if len(df[df[x] == label]) > 0 else 0 for label in x_labels]
+                
+                if colors: kwargs["color"] = colors[i]
 
                 if horizontal:
                     self.current_ax.barh(x_pos + offset, values, height=bar_width, label=col, **kwargs)
@@ -385,6 +414,8 @@ class PlotEngine:
         elif hue:
             # Single y with hue using seaborn
             import seaborn as sns
+            if palette: kwargs["palette"] = palette
+            
             if horizontal:
                 sns.barplot(data=df, y=x, x=y[0], hue=hue, ax=self.current_ax, orient="h", **kwargs)
             else:
