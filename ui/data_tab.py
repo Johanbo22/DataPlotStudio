@@ -16,7 +16,7 @@ from ui.data_table_model import DataTableModel
 from ui.widgets import AnimatedListWidget, AnimatedListWidget, AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit, AnimatedTabWidget, HelpIcon
 
 
-from ui.animations import RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
+from ui.animations import DropMissingValueAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -1369,6 +1369,8 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
+            self.dropmissing_animation = DropMissingValueAnimation(parent=None, message="Drop Missing Values")
+            self.dropmissing_animation.start(target_widget=self)
         except Exception as DropMissingError:
             self.status_bar.log(f"Failed to drop missing values: {str(DropMissingError)}", "ERROR")
     
