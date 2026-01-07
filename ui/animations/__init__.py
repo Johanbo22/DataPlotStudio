@@ -12,6 +12,7 @@ from .DatabaseImportAnimation import DatabaseImportAnimation
 from .NewDataFrameAnimation import NewDataFrameAnimation
 from .ProjectOpenAnimation import ProjectOpenAnimation
 from .RemoveRowAnimation import RemoveRowAnimation
+from .DropMissingValueAnimation import DropMissingValueAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -27,5 +28,6 @@ __all__ = [
     "DatabaseImportAnimation",
     "NewDataFrameAnimation",
     "ProjectOpenAnimation",
-    "RemoveRowAnimation"
+    "RemoveRowAnimation",
+    "DropMissingValueAnimation"
 ]

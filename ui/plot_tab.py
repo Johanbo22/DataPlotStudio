@@ -352,7 +352,7 @@ class PlotTab(PlotTabUI):
             self.status_bar.log(f"Cannot activate subset: Subset '{subset_name}' not found", "WARNING")
 
         self.use_subset_check.setChecked(True)
-        self.subset_combo.setCurrentText(target_index)
+        self.subset_combo.setCurrentIndex(target_index)
 
         self.status_bar.log_action(
             f"Activated subset: '{subset_name}' for ploting",

@@ -47,14 +47,12 @@ class SubsetManager:
         self.subsets: Dict[str, Subset] = {}
         self.cached_directory = Path(tempfile.mkdtemp(prefix="dps_subset_cache_"))
         atexit.register(self._cleanup_cache)
-        print(f"DEBUG: SubsetManager initialized with disk cache at {self.cached_directory}")
     
     def _cleanup_cache(self):
         """Deletes files from the tempfile directory on exit"""
         if self.cached_directory.exists():
             try:
                 shutil.rmtree(self.cached_directory)
-                print(f"DEBUG: SubsetManager cache deleted: {self.cached_directory}")
             except Exception as CacheRemovalError:
                 print(f"Error deleting cache: {CacheRemovalError}")
     

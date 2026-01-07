@@ -1052,6 +1052,8 @@ class DataTab(QWidget):
             
             # Create and show dialog
             dialog = SubsetManagerDialog(subset_manager, self.data_handler, self)
+            #Request redirection to index 1
+            dialog.plot_subset_requested.connect(self.handle_plot_request)
             
             print(f"DEBUG open_subset_manager: Dialog created, executing")
             dialog.exec()
@@ -1076,11 +1078,17 @@ class DataTab(QWidget):
         try:
             self.plot_tab.activate_subset(subset_name)
 
-            parent_tab_widget = self.parentWidget()
-            if isinstance(parent_tab_widget, AnimatedTabWidget):
-                parent_tab_widget.setCurrentWidget(self.plot_tab)
-            else:
-                self.status_bar.log("Could not switch to plot tab automatically", "WARNING")
+            current_widget = self.parentWidget()
+            found_tab_widget = False
+            while current_widget:
+                if isinstance(current_widget, AnimatedTabWidget):
+                    current_widget.setCurrentWidget(self.plot_tab)
+                    found_tab_widget = True
+                    break
+                current_widget = current_widget.parentWidget()
+            
+            if not found_tab_widget:
+                self.status_bar.log("Could not switch to plot tab automatically: Tab widget not found", "WARNING")
             
         except Exception as PlotRequestError:
             self.status_bar.log(f"Failed to switch to plotting tab: {str(PlotRequestError)}", "ERROR")
@@ -1373,6 +1381,8 @@ class DataTab(QWidget):
             self.dropmissing_animation.start(target_widget=self)
         except Exception as DropMissingError:
             self.status_bar.log(f"Failed to drop missing values: {str(DropMissingError)}", "ERROR")
+            self.failed_animation = FailedAnimation("Failed to Drop Missing values")
+            self.failed_animation.start(target_widget=self)
     
     def fill_missing(self):
         """Fill missing values"""

@@ -18,7 +18,6 @@ def create_temp_csv_file(df: pd.DataFrame, source_name: str = "google_sheets") -
         #save it to file
         df.to_csv(temp_path, index=False)
 
-        print(f"DEBUG: Created a temporary CSV file at: {temp_path}")
         return temp_path
     except Exception as CreateTempCSVFileError:
         raise RuntimeError(f"Failed to create a temporary CSV file: {str(CreateTempCSVFileError)}")
