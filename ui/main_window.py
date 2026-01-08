@@ -243,6 +243,7 @@ class MainWindow(QWidget):
             self.data_handler.df = project_data['data']
             self.data_handler.original_df = project_data['data'].copy()
             self.data_tab.refresh_data_view()
+            self.plot_tab.update_column_combo()
         
         if 'plot_config' in project_data:
             self.plot_tab.load_config(project_data['plot_config'])
