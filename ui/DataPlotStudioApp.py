@@ -71,6 +71,7 @@ class DataPlotStudio(QMainWindow):
         self.menu_bar.file_new.triggered.connect(self.new_project)
         self.menu_bar.file_open.triggered.connect(self.open_project)
         self.menu_bar.file_save.triggered.connect(self.save_project)
+        self.menu_bar.file_save_as.triggered.connect(self.save_project_as)
         self.menu_bar.import_file.triggered.connect(self.main_widget.import_file)
         self.menu_bar.import_sheets.triggered.connect(self.import_google_sheets)
         self.menu_bar.import_database.triggered.connect(self.import_from_database)
@@ -116,7 +117,8 @@ class DataPlotStudio(QMainWindow):
         """Save current project"""
         try:
             project_data = self.main_widget.get_project_data()
-            filepath = self.project_manager.save_project(project_data)
+            current_path = self.project_manager.get_current_project_path()
+            filepath = self.project_manager.save_project(project_data, filepath=current_path)
             self.main_widget.unsaved_changes = False
             from pathlib import Path
             path = Path(filepath)
@@ -141,6 +143,42 @@ class DataPlotStudio(QMainWindow):
             self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
             self.failed_operation_animation.start(target_widget=self)
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")
+    
+    def save_project_as(self):
+        """Save current project to a new file"""
+        try:
+            project_data = self.main_widget.get_project_data()
+
+            filepath = self.project_manager.save_project(project_data, filepath=None)
+
+            self.main_widget.unsaved_changes = False
+            from pathlib import Path
+            path = Path(filepath)
+
+            self.status_bar_widget.log_action(
+                f"Project saved as: {path.name}",
+                details={
+                    'filename': path.name,
+                    'filepath': str(path),
+                    'data_rows': len(self.data_handler.df) if self.data_handler.df is not None else 0,
+                    'data_cols': len(self.data_handler.df.columns) if self.data_handler.df is not None else 0,
+                    'operation': 'save_project_as'
+                },
+                level="SUCCESS"
+            )
+
+            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
+            self.saved_animation.start(target_widget=self)
+            return True
+        except Exception as SaveProjectError:
+            if "cancelled" in str(SaveProjectError).lower():
+                return False
+                
+            self.status_bar_widget.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
+            self.failed_operation_animation.start(target_widget=self)
+            QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")
+            return False
 
     def import_google_sheets(self):
         """Import from Google Sheets"""

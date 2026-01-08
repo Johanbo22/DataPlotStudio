@@ -260,9 +260,9 @@ class MainWindow(QWidget):
         """Saves the current state of the instance"""
         try:
             project_data = self.get_project_data()
-            filepath = self.project_manager.get_current_project_path()
+            current_path = self.project_manager.get_current_project_path()
 
-            saved_path = self.project_manager.save_project(project_data, filepath)
+            saved_path = self.project_manager.save_project(project_data, current_path)
 
             self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
             self.saved_animation.start(target_widget=self)
@@ -279,6 +279,25 @@ class MainWindow(QWidget):
             self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
             return False
     
+    def save_project_as(self) -> bool:
+        """Saves the current state to a new file"""
+        try:
+            project_data = self.get_project_data()
+
+            saved_path = self.project_manager.save_project(project_data, filepath=None)
+            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
+            self.saved_animation.start(target_widget=self)
+            if saved_path:
+                self.unsaved_changes = False
+                self.status_bar.log(f"Project saved as {saved_path}")
+                return True
+            return False
+        except Exception as SaveProjectError:
+            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
+            self.failed_operation_animation.start(target_widget=self)
+            QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
+            self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            return False
     
     
     def get_project_data(self) -> dict:

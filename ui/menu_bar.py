@@ -29,6 +29,10 @@ class MenuBar(QMenuBar):
         self.file_save.setShortcut("Ctrl+S")
         self.file_save.setToolTip(self.tr("Save the current project"))
         file_menu.addAction(self.file_save)
+
+        self.file_save_as = QAction(QIcon("icons/menu_bar/save_project.png"), self.tr("Save Project As..."), self)
+        self.file_save_as.setShortcut("Ctrl+Shift+S")
+        file_menu.addAction(self.file_save_as)
         
         file_menu.addSeparator()
         
@@ -85,7 +89,7 @@ class MenuBar(QMenuBar):
         edit_menu.addAction(self.settings_action)
         
         # View Menu
-        view_menu = AnimatedMenu("&View", self)
+        view_menu = AnimatedMenu(self.tr("&View"), self)
         self.addMenu(view_menu)
         
         self.zoom_in_action = QAction(QIcon("icons/menu_bar/zoom_in.png"), self.tr("Zoom &In"), parent)
