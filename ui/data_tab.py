@@ -2095,16 +2095,17 @@ class DataTab(QWidget):
     @pyqtSlot(str)
     def show_help_dialog(self, topic_id: str):
         try:
-            title, description, full_image_path, link  = self.help_manager.get_help_topic(topic_id)
+            title, description, link  = self.help_manager.get_help_topic(topic_id)
 
             if title:
-                dialog = HelpDialog(title, description, full_image_path, link, self)
+                dialog = HelpDialog(self, topic_id, title, description, link)
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
         except Exception as ShowHelpDialogError:
             self.status_bar.log(f"Error displaying help dialog: {str(ShowHelpDialogError)}", "ERROR")
             QMessageBox.critical(self, "Help Error", "Could not load help content. See log for details")
+            traceback.print_exc()
 
     def on_history_clicked(self, item):
         """Handles the click of history entry"""
