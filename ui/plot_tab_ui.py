@@ -324,7 +324,7 @@ class PlotTabUI(QWidget):
         layout.addWidget(data_group)
 
         #  SUBSEts
-        self.subset_group = DataPlotStudioGroupBox("Data Subset (Optional)")
+        self.subset_group = DataPlotStudioGroupBox("Data Subset")
         self.subset_group.setVisible(False)
         self.subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         subset_layout = QVBoxLayout()
@@ -407,8 +407,13 @@ class PlotTabUI(QWidget):
 
         #latex rendering
         self.has_latex: bool = shutil.which("latex") is not None
+        latex_layout = QHBoxLayout()
         self.usetex_checkbox = DataPlotStudioCheckBox("Enable Latex Rendering")
         self.usetex_checkbox.setChecked(False)
+        self.usetext_help = HelpIcon("latex_rendering")
+        self.usetext_help.clicked.connect(self.show_help_dialog)
+        latex_layout.addWidget(self.usetex_checkbox)
+        latex_layout.addWidget(self.usetext_help)
 
         if not self.has_latex:
             self.usetex_checkbox.setEnabled(False)
@@ -419,7 +424,7 @@ class PlotTabUI(QWidget):
         else:
             self.usetex_checkbox.setToolTip("Render text using LaTeX for mathematical formatting.\n"
                                         "Example: $\alpha > \beta$")
-        font_layout.addWidget(self.usetex_checkbox)
+        font_layout.addLayout(latex_layout)
         
         font_group.setLayout(font_layout)
         scroll_layout.addWidget(font_group)
@@ -2143,14 +2148,15 @@ class PlotTabUI(QWidget):
         return splitter
 
     def show_help_dialog(self, topic_id: str):
-        """Show the help dialog for a specific topic"""
         try:
-            title, description, full_image_path, link = self.help_manager.get_help_topic(topic_id)
+            title, description, link  = self.help_manager.get_help_topic(topic_id)
+
             if title:
-                dialog = HelpDialog(title, description, full_image_path, link, self)
+                dialog = HelpDialog(self, topic_id, title, description, link)
                 dialog.exec()
             else:
                 QMessageBox.warning(self, "Help not found", f"No help topic could be found for '{topic_id}'")
         except Exception as ShowHelpDialogError:
-            print(f"Error displaying help dialog: {str(ShowHelpDialogError)}")
-            QMessageBox.critical(self, "Help Error", f"Could not load help content: {str(ShowHelpDialogError)}")    
+            self.status_bar.log(f"Error displaying help dialog: {str(ShowHelpDialogError)}", "ERROR")
+            QMessageBox.critical(self, "Help Error", "Could not load help content. See log for details")
+            traceback.print_exc()   
