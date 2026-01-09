@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect, QMenu
 
 
-class AnimatedMenu(QMenu):
+class DataPlotStudioMenu(QMenu):
     """Custom QMenu"""
 
     def __init__(self, *args, **kwargs):

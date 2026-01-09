@@ -13,7 +13,7 @@ from pathlib import Path
 
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
-from ui.widgets import AnimatedListWidget, AnimatedListWidget, AnimatedButton, AnimatedComboBox, AnimatedGroupBox, AnimatedLineEdit, AnimatedTabWidget, HelpIcon
+from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
 
 
 from ui.animations import DropMissingValueAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
@@ -55,7 +55,7 @@ class DataTab(QWidget):
         toolbar_layout.setContentsMargins(0, 0, 0, 0)
 
         #create dataset
-        self.create_new_dataset_button = AnimatedButton("Create a New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
+        self.create_new_dataset_button = DataPlotStudioButton("Create a New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
         self.create_new_dataset_button.setIcon(QIcon("icons/menu_bar/new_project.png"))
         self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
         self.create_new_dataset_button.clicked.connect(self.create_new_dataset)
@@ -64,7 +64,7 @@ class DataTab(QWidget):
         toolbar_layout.addStretch()
 
         #edit current dataset toggle
-        self.edit_dataset_toggle_button = AnimatedButton("Edit Mode: OFF", parent=self, base_color_hex="#95a5a6", text_color_hex="white")
+        self.edit_dataset_toggle_button = DataPlotStudioButton("Edit Mode: OFF", parent=self, base_color_hex="#95a5a6", text_color_hex="white")
         self.edit_dataset_toggle_button.setIcon(QIcon("icons/code_edit.png"))
         self.edit_dataset_toggle_button.setCheckable(True)
         self.edit_dataset_toggle_button.setToolTip("Toggle to edit data directly in the table")
@@ -97,7 +97,7 @@ class DataTab(QWidget):
         data_source_layout.addWidget(self.aggregation_view_label)
 
         data_source_layout.addStretch()
-        self.data_source_refresh_button = AnimatedButton("Refresh Data", parent=self, base_color_hex="#27ae60",hover_color_hex="#229954", text_color_hex="white", font_weight="bold", padding="6px 12px")
+        self.data_source_refresh_button = DataPlotStudioButton("Refresh Data", parent=self, base_color_hex="#27ae60",hover_color_hex="#229954", text_color_hex="white", font_weight="bold", padding="6px 12px")
         
         self.data_source_refresh_button.setIcon(QIcon("icons/menu_bar/google_sheet.png"))
         self.data_source_refresh_button.setToolTip("Re-import data from your Google Sheets document")
@@ -109,7 +109,7 @@ class DataTab(QWidget):
         left_layout.addWidget(self.data_source_container)
         
         # Create tabs for data and statistics
-        self.data_tabs = AnimatedTabWidget()
+        self.data_tabs = DataPlotStudioTabWidget()
         
         # Data Table Tab
         self.data_table = QTableView()
@@ -136,13 +136,13 @@ class DataTab(QWidget):
         right_layout = QVBoxLayout()
         
         # Reset button at the to
-        reset_button = AnimatedButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf")
+        reset_button = DataPlotStudioButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf")
         reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
         reset_button.clicked.connect(self.reset_data)
         right_layout.addWidget(reset_button)
         
         # Create tabbed operations interface
-        ops_tabs = AnimatedTabWidget()
+        ops_tabs = DataPlotStudioTabWidget()
         
         # TAB 1: CLEANING 
         cleaning_tab = QWidget()
@@ -154,7 +154,7 @@ class DataTab(QWidget):
         cleaning_layout.addWidget(clean_info)
         
         remove_dups_layout = QHBoxLayout()
-        clean_button = AnimatedButton("Remove Duplicate Rows", parent=self)
+        clean_button = DataPlotStudioButton("Remove Duplicate Rows", parent=self)
         clean_button.setToolTip("Use this to remove any instances of duplicate row entries in your dataset")
         clean_button.setIcon(QIcon("icons/data_operations/remove_duplicates.png"))
         clean_button.clicked.connect(self.remove_duplicates)
@@ -165,7 +165,7 @@ class DataTab(QWidget):
         cleaning_layout.addLayout(remove_dups_layout)
         
         drop_missing_layout = QHBoxLayout()
-        drop_missing_button = AnimatedButton("Drop Missing Values", parent=self)
+        drop_missing_button = DataPlotStudioButton("Drop Missing Values", parent=self)
         drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
         drop_missing_button.setIcon(QIcon("icons/data_operations/drop_missing_values.png"))
         drop_missing_button.clicked.connect(self.drop_missing)
@@ -176,7 +176,7 @@ class DataTab(QWidget):
         cleaning_layout.addLayout(drop_missing_layout)
         
         fill_missing_layout = QHBoxLayout()
-        fill_missing_button = AnimatedButton("Fill Missing Values", parent=self)
+        fill_missing_button = DataPlotStudioButton("Fill Missing Values", parent=self)
         fill_missing_button.setToolTip("Use this to fill in 'NaN' values in your dataset to something specific")
         fill_missing_button.setIcon(QIcon("icons/data_operations/fill_missing_data.png"))
         fill_missing_button.clicked.connect(self.fill_missing)
@@ -189,11 +189,11 @@ class DataTab(QWidget):
 
         #Outlier Detection
         cleaning_layout.addSpacing(10)
-        outlier_group = AnimatedGroupBox("Outlier Detection Tools")
+        outlier_group = DataPlotStudioGroupBox("Outlier Detection Tools")
         outlier_layout = QVBoxLayout()
         
         zscore_layout = QHBoxLayout()
-        zscore_button = AnimatedButton("Z-Score", parent=self)
+        zscore_button = DataPlotStudioButton("Z-Score", parent=self)
         zscore_button.setToolTip("Detect outliers using Z-Score (standard Deviations from mean)")
         zscore_button.clicked.connect(lambda: self.open_outlier_dialog("z_score"))
         self.zscore_help = HelpIcon('zscore')
@@ -203,7 +203,7 @@ class DataTab(QWidget):
         outlier_layout.addLayout(zscore_layout)
 
         iqr_layout = QHBoxLayout()
-        iqr_button = AnimatedButton("Interquartile Range (IQR)", parent=self)
+        iqr_button = DataPlotStudioButton("Interquartile Range (IQR)", parent=self)
         iqr_button.setToolTip("Detect outliers using the Interquartile Range method")
         iqr_button.clicked.connect(lambda: self.open_outlier_dialog("iqr"))
         self.iqr_help = HelpIcon('iqr')
@@ -213,7 +213,7 @@ class DataTab(QWidget):
         outlier_layout.addLayout(iqr_layout)
 
         isolation_layout = QHBoxLayout()
-        isolation_button = AnimatedButton("Isolation Forest", parent=self)
+        isolation_button = DataPlotStudioButton("Isolation Forest", parent=self)
         isolation_button.setToolTip("Detect outliers using Machine Learning (Isolation Forest)")
         isolation_button.clicked.connect(lambda: self.open_outlier_dialog("isolation_forest"))
         self.isolation_help = HelpIcon('isolation_forest')
@@ -245,7 +245,7 @@ class DataTab(QWidget):
         filter_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         filter_layout.addWidget(filter_column_info)
 
-        self.filter_column = AnimatedComboBox()
+        self.filter_column = DataPlotStudioComboBox()
         filter_layout.addWidget(self.filter_column)
         
         filter_layout.addWidget(QLabel("Condition:"))
@@ -254,7 +254,7 @@ class DataTab(QWidget):
         filter_condition_info.setWordWrap(True)
         filter_layout.addWidget(filter_condition_info)
 
-        self.filter_condition = AnimatedComboBox()
+        self.filter_condition = DataPlotStudioComboBox()
         self.filter_condition.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains'])
         filter_layout.addWidget(self.filter_condition)
         
@@ -264,11 +264,11 @@ class DataTab(QWidget):
         filter_value_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         filter_layout.addWidget(filter_value_info)
 
-        self.filter_value = AnimatedLineEdit()
+        self.filter_value = DataPlotStudioLineEdit()
         filter_layout.addWidget(self.filter_value)
         
         apply_filter_layout = QHBoxLayout()
-        apply_filter_button = AnimatedButton("Apply Filter", parent=self)
+        apply_filter_button = DataPlotStudioButton("Apply Filter", parent=self)
         apply_filter_button.setIcon(QIcon("icons/data_operations/apply_filter.png"))
         apply_filter_button.clicked.connect(self.apply_filter)
         self.apply_filter_help = HelpIcon("apply_filter")
@@ -280,7 +280,7 @@ class DataTab(QWidget):
         filter_layout.addSpacing(10)
         
         advanced_filter_layout = QHBoxLayout()
-        adv_filter_button = AnimatedButton("Advanced Filter", parent=self)
+        adv_filter_button = DataPlotStudioButton("Advanced Filter", parent=self)
         adv_filter_button.setIcon(QIcon("icons/data_operations/advanced_filter.png"))
         adv_filter_button.clicked.connect(self.open_advanced_filter)
         self.apply_filter_help = HelpIcon("apply_filter")
@@ -308,11 +308,11 @@ class DataTab(QWidget):
         column_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         column_layout.addWidget(column_column_info)
 
-        self.column_select = AnimatedComboBox()
+        self.column_select = DataPlotStudioComboBox()
         column_layout.addWidget(self.column_select)
         
         drop_column_layout = QHBoxLayout()
-        drop_column_button = AnimatedButton("Drop Column", parent=self)
+        drop_column_button = DataPlotStudioButton("Drop Column", parent=self)
         drop_column_button.setToolTip("Use this to remove the selected column from the dataset")
         drop_column_button.setIcon(QIcon("icons/data_operations/drop_column.png"))
         drop_column_button.clicked.connect(self.drop_column)
@@ -323,7 +323,7 @@ class DataTab(QWidget):
         column_layout.addLayout(drop_column_layout)
         
         rename_layout = QHBoxLayout()
-        rename_button = AnimatedButton("Rename Column", parent=self)
+        rename_button = DataPlotStudioButton("Rename Column", parent=self)
         rename_button.setToolTip("Use this to rename the selected column")
         rename_button.setIcon(QIcon("icons/data_operations/rename.png"))
         rename_button.clicked.connect(self.rename_column)
@@ -336,7 +336,7 @@ class DataTab(QWidget):
         column_layout.addSpacing(10)
 
         #datatype convers
-        type_group = AnimatedGroupBox("Change Data Type")
+        type_group = DataPlotStudioGroupBox("Change Data Type")
         type_layout = QVBoxLayout()
 
         data_type_info = QLabel("This operation allows you to change the datatype of your selected column. To see what datatype your data is; reference the statistics tab next to DataTable")
@@ -346,7 +346,7 @@ class DataTab(QWidget):
 
         type_layout.addWidget(QLabel("Change selected columns DataType to:"))
 
-        self.type_combo = AnimatedComboBox()
+        self.type_combo = DataPlotStudioComboBox()
         self.type_combo.addItems([
             "string (object)",
             "integer (numeric)",
@@ -364,7 +364,7 @@ class DataTab(QWidget):
         type_layout.addWidget(self.type_combo)
 
         datatype_layout = QHBoxLayout()
-        type_button = AnimatedButton("Apply DataType Change", parent=self)
+        type_button = DataPlotStudioButton("Apply DataType Change", parent=self)
         type_button.setIcon(QIcon("icons/data_operations/change_datatype.png"))
         type_button.clicked.connect(self.change_column_type)
         self.change_datatype_help = HelpIcon("change_datatype")
@@ -390,7 +390,7 @@ class DataTab(QWidget):
         transform_layout.addWidget(transform_info)
         
         agg_layout = QHBoxLayout()
-        agg_button = AnimatedButton("Aggregate Data", parent=self)
+        agg_button = DataPlotStudioButton("Aggregate Data", parent=self)
         agg_button.setIcon(QIcon("icons/data_operations/aggregate_data.png"))
         agg_button.clicked.connect(self.open_aggregation_dialog)
         self.agg_help = HelpIcon("aggregate_data")
@@ -400,7 +400,7 @@ class DataTab(QWidget):
         transform_layout.addLayout(agg_layout)
 
         melt_layout = QHBoxLayout()
-        melt_button = AnimatedButton("Melt/Unpivot Data", parent=self)
+        melt_button = DataPlotStudioButton("Melt/Unpivot Data", parent=self)
         # melt_button.setIcon(QIcon(""))
         melt_button.clicked.connect(self.open_melt_dialog)
         self.melt_help = HelpIcon("melt_data")
@@ -413,7 +413,7 @@ class DataTab(QWidget):
         transform_layout.addSpacing(10)
 
         ##saved agg section
-        saved_agg_group = AnimatedGroupBox("Saved Aggregations")
+        saved_agg_group = DataPlotStudioGroupBox("Saved Aggregations")
         saved_agg_layout = QVBoxLayout()
 
         saved_agg_info = QLabel("Save aggregations to switch between different views of your dataset")
@@ -422,21 +422,21 @@ class DataTab(QWidget):
         saved_agg_layout.addWidget(saved_agg_info)
 
         #list of saved aggs
-        self.saved_agg_list = AnimatedListWidget()
+        self.saved_agg_list = DataPlotStudioListWidget()
         self.saved_agg_list.setMaximumHeight(150)
         self.saved_agg_list.itemClicked.connect(self.on_saved_agg_selected)
         saved_agg_layout.addWidget(self.saved_agg_list)
 
         #buttons
         saved_agg_buttons = QHBoxLayout()
-        self.view_agg_btn = AnimatedButton("View Aggregations", parent=self)
+        self.view_agg_btn = DataPlotStudioButton("View Aggregations", parent=self)
         self.view_agg_btn.setToolTip("View the selected aggregated data in the Data Table. N.B. This replaces your current data view. Reset to the original dataset by clicking 'Reset to Original'")
         self.view_agg_btn.setIcon(QIcon("icons/data_operations/view.png"))
         self.view_agg_btn.setEnabled(False)
         self.view_agg_btn.clicked.connect(self.view_saved_aggregations)
         saved_agg_buttons.addWidget(self.view_agg_btn)
 
-        self.refresh_agg_list_btn = AnimatedButton("Refresh", parent=self)
+        self.refresh_agg_list_btn = DataPlotStudioButton("Refresh", parent=self)
         self.refresh_agg_list_btn.setToolTip("Refresh the list of saved aggregations of your data. Use this if your aggregations does not show up in the list")
         self.refresh_agg_list_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
         self.refresh_agg_list_btn.clicked.connect(self.refresh_saved_agg_list)
@@ -444,7 +444,7 @@ class DataTab(QWidget):
         saved_agg_layout.addLayout(saved_agg_buttons)
 
         #delete button
-        self.delete_agg_btn = AnimatedButton("Delete Selected Aggregtation", parent=self)
+        self.delete_agg_btn = DataPlotStudioButton("Delete Selected Aggregtation", parent=self)
         self.delete_agg_btn.setToolTip("Use this to delete the selected aggregation from the list")
         self.delete_agg_btn.setIcon(QIcon("icons/data_operations/delete.png"))
         self.delete_agg_btn.setEnabled(False)
@@ -477,7 +477,7 @@ class DataTab(QWidget):
 
         #manage buttons
         manage_subsets_layout = QHBoxLayout()
-        manage_subsets_btn = AnimatedButton("Manage Subsets", parent=self)
+        manage_subsets_btn = DataPlotStudioButton("Manage Subsets", parent=self)
         #manage_subsets_btn.setIcon(QIcon("icons/data_operations/subset.png")) # ICON NEEDED!!!!!
         manage_subsets_btn.clicked.connect(self.open_subset_manager)
         self.subset_help = HelpIcon("manage_subsets")
@@ -489,15 +489,15 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         #qucik subset createion
-        quick_subset_group = AnimatedGroupBox("Quick Subset Creation")
+        quick_subset_group = DataPlotStudioGroupBox("Quick Subset Creation")
         quick_subset_layout = QVBoxLayout()
         quick_subset_layout.addWidget(QLabel("Split data by column values:"))
 
-        self.subset_column_combo = AnimatedComboBox()
+        self.subset_column_combo = DataPlotStudioComboBox()
         quick_subset_layout.addWidget(self.subset_column_combo)
 
         quick_create_subset_layout = QHBoxLayout()
-        quick_create_btn = AnimatedButton("Auto-Create Subsets", parent=self)
+        quick_create_btn = DataPlotStudioButton("Auto-Create Subsets", parent=self)
         #quick_create_btn.setIcon(QIcon("icons/data_operations/auto_subset.png")) #ICON NEEDDED!!!!!
         quick_create_btn.clicked.connect(self.quick_create_subsets)
         self.quick_subset_help = HelpIcon("auto_create_subsets")
@@ -512,22 +512,22 @@ class DataTab(QWidget):
         subset_layout.addSpacing(10)
 
         # Current subsets list
-        subset_list_group = AnimatedGroupBox("Active Subsets")
+        subset_list_group = DataPlotStudioGroupBox("Active Subsets")
         subset_list_layout = QVBoxLayout()
 
-        self.active_subsets_list = AnimatedListWidget()
+        self.active_subsets_list = DataPlotStudioListWidget()
         self.active_subsets_list.setMaximumHeight(150)
         self.active_subsets_list.itemDoubleClicked.connect(self.view_subset_quick)
         subset_list_layout.addWidget(self.active_subsets_list)
 
         subset_list_btns = QHBoxLayout()
 
-        view_subset_btn = AnimatedButton("View", parent=self)
+        view_subset_btn = DataPlotStudioButton("View", parent=self)
         view_subset_btn.setIcon(QIcon("icons/data_operations/view.png"))
         view_subset_btn.clicked.connect(self.view_subset_quick)
         subset_list_btns.addWidget(view_subset_btn)
 
-        refresh_subsets_btn = AnimatedButton("Refresh", parent=self)
+        refresh_subsets_btn = DataPlotStudioButton("Refresh", parent=self)
         refresh_subsets_btn.setIcon(QIcon("icons/data_operations/refresh.png"))
         refresh_subsets_btn.clicked.connect(self.refresh_active_subsets)
         subset_list_btns.addWidget(refresh_subsets_btn)
@@ -541,7 +541,7 @@ class DataTab(QWidget):
 
         # subset injection tool.
         #this shulld allow the user to view their subset in the active DF
-        inject_group = AnimatedGroupBox("View Subset as Active DataFrame")
+        inject_group = DataPlotStudioGroupBox("View Subset as Active DataFrame")
         inject_layout = QVBoxLayout()
 
         inject_info = QLabel(
@@ -555,7 +555,7 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         #thebuttn
-        self.inject_subset_tbn = AnimatedButton("Insert Selected Subset", parent=self, base_color_hex="#3409db", hover_color_hex="#1b0085", text_color_hex="white", font_weight="bold", padding="8px")
+        self.inject_subset_tbn = DataPlotStudioButton("Insert Selected Subset", parent=self, base_color_hex="#3409db", hover_color_hex="#1b0085", text_color_hex="white", font_weight="bold", padding="8px")
         #self.inject_subset_tbn.setIcon(QIcon("icons/data_operations/inject.png")) ###mangler ikon
         self.inject_subset_tbn.clicked.connect(self.inject_subset_to_dataframe)
         inject_layout.addWidget(self.inject_subset_tbn)
@@ -571,7 +571,7 @@ class DataTab(QWidget):
         inject_layout.addSpacing(10)
 
         # hmm a restore btn?
-        self.restore_original_btn = AnimatedButton("Revert to Original Data View", parent=self, base_color_hex="#e74c3c", hover_color_hex="#e91801", text_color_hex="white", padding="8px")
+        self.restore_original_btn = DataPlotStudioButton("Revert to Original Data View", parent=self, base_color_hex="#e74c3c", hover_color_hex="#e91801", text_color_hex="white", padding="8px")
         #self.restore_original_btn.setIcon(QIcon("icons/data_operations/restore.png")) #Tilføj et ikon senere
         self.restore_original_btn.clicked.connect(self.restore_original_dataframe)
         self.restore_original_btn.setEnabled(False)
@@ -594,7 +594,7 @@ class DataTab(QWidget):
         history_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         history_layout.addWidget(history_info)
 
-        self.history_list = AnimatedListWidget()
+        self.history_list = DataPlotStudioListWidget()
         self.history_list.itemClicked.connect(self.on_history_clicked)
         history_layout.addWidget(self.history_list)
 
@@ -1081,7 +1081,7 @@ class DataTab(QWidget):
             current_widget = self.parentWidget()
             found_tab_widget = False
             while current_widget:
-                if isinstance(current_widget, AnimatedTabWidget):
+                if isinstance(current_widget, DataPlotStudioTabWidget):
                     current_widget.setCurrentWidget(self.plot_tab)
                     found_tab_widget = True
                     break

@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QDoubleSpinBox
 
 
-class AnimatedDoubleSpinBox(QDoubleSpinBox):
+class DataPlotStudioDoubleSpinBox(QDoubleSpinBox):
     """A QDoubleSpinBox with animated border color on hover/focus."""
     def __init__(self, parent=None):
         super().__init__(parent)

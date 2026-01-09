@@ -1,4 +1,4 @@
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
 from PyQt6.QtGui import QIcon
@@ -10,9 +10,9 @@ from pathlib import Path
 import re
 from sqlalchemy import create_engine, inspect, text
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 class DatabaseConnectionDialog(QDialog):
@@ -32,44 +32,44 @@ class DatabaseConnectionDialog(QDialog):
         #type selection
         db_type_layout = QHBoxLayout()
         db_type_layout.addWidget(QLabel("Database Type:"))
-        self.db_type_combo = AnimatedComboBox()
+        self.db_type_combo = DataPlotStudioComboBox()
         self.db_type_combo.addItems(["SQLite", "PostgreSQL", "MySQL"])
         self.db_type_combo.currentTextChanged.connect(self.on_db_type_changed)
         db_type_layout.addWidget(self.db_type_combo)
         main_layout.addLayout(db_type_layout)
 
         #connection details
-        self.connection_group = AnimatedGroupBox("Connection Details", parent=self)
+        self.connection_group = DataPlotStudioGroupBox("Connection Details", parent=self)
         self.connection_layout = QFormLayout()
 
         self.host_label = QLabel("Host:")
-        self.host_input = AnimatedLineEdit("localhost")
+        self.host_input = DataPlotStudioLineEdit("localhost")
         self.connection_layout.addRow(self.host_label, self.host_input)
 
         self.port_label = QLabel("Port:")
-        self.port_input = AnimatedLineEdit()
+        self.port_input = DataPlotStudioLineEdit()
         self.connection_layout.addRow(self.port_label, self.port_input)
 
         self.user_label = QLabel("User:")
-        self.user_input = AnimatedLineEdit("postgres")
+        self.user_input = DataPlotStudioLineEdit("postgres")
         self.connection_layout.addRow(self.user_label, self.user_input)
 
         self.password_label = QLabel("Password:")
-        self.password_input = AnimatedLineEdit()
-        self.password_input.setEchoMode(AnimatedLineEdit.EchoMode.Password)
+        self.password_input = DataPlotStudioLineEdit()
+        self.password_input.setEchoMode(DataPlotStudioLineEdit.EchoMode.Password)
         self.connection_layout.addRow(self.password_label, self.password_input)
 
         self.dbname_label = QLabel("Database:")
-        self.dbname_input = AnimatedLineEdit("postgres")
+        self.dbname_input = DataPlotStudioLineEdit("postgres")
         self.connection_layout.addRow(self.dbname_label, self.dbname_input)
 
         # SQLITE specific
         self.sqlite_layout = QHBoxLayout()
         self.sqlite_layout.setContentsMargins(0, 0, 0, 0)
         self.sqlite_label = QLabel("Database File:")
-        self.sqlite_path_input = AnimatedLineEdit()
+        self.sqlite_path_input = DataPlotStudioLineEdit()
         self.sqlite_path_input.setPlaceholderText("Click 'Browse' to select a .db, .sqlite, or .sqlite3 file")
-        self.sqlite_browse_btn = AnimatedButton("Browse", parent=self)
+        self.sqlite_browse_btn = DataPlotStudioButton("Browse", parent=self)
         self.sqlite_browse_btn.clicked.connect(self.browse_sqlite_file)
         self.sqlite_layout.addWidget(self.sqlite_path_input)
         self.sqlite_layout.addWidget(self.sqlite_browse_btn)
@@ -83,7 +83,7 @@ class DatabaseConnectionDialog(QDialog):
         # Editor Grouping to show both the query and the schema
         editors_layout = QHBoxLayout()
         #querey editor
-        query_group = AnimatedGroupBox("SQL Query", parent=self)
+        query_group = DataPlotStudioGroupBox("SQL Query", parent=self)
         query_layout = QVBoxLayout()
         instructions = (
             "Enter your SQL query below. You can select specific columns and join tables.\n\n"
@@ -116,10 +116,10 @@ class DatabaseConnectionDialog(QDialog):
         editors_layout.addWidget(query_group)
 
         # Schema viewer
-        schema_group = AnimatedGroupBox("Database Schema", parent=self)
+        schema_group = DataPlotStudioGroupBox("Database Schema", parent=self)
         schema_layout = QVBoxLayout()
 
-        self.load_schema_button = AnimatedButton("Load Tables and Columns", parent=self)
+        self.load_schema_button = DataPlotStudioButton("Load Tables and Columns", parent=self)
         self.load_schema_button.setToolTip("Connect to the database and list all tables and columns")
         self.load_schema_button.clicked.connect(self.fetch_schema)
         schema_layout.addWidget(self.load_schema_button)

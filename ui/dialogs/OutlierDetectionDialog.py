@@ -1,9 +1,9 @@
 # ui/dialogs/OutlierDetectionDialog.py
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QDoubleSpinBox, QTableView, QHeaderView, QMessageBox, QGroupBox)
 from PyQt6.QtCore import Qt
-from ui.widgets import AnimatedComboBox, AnimatedSpinBox, AnimatedDoubleSpinBox
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets import DataPlotStudioComboBox, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 from ui.data_table_model import DataTableModel
 
 class OutlierDetectionDialog(QDialog):
@@ -22,14 +22,14 @@ class OutlierDetectionDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # This is a settings panel
-        settings_group = AnimatedGroupBox("Settings")
+        settings_group = DataPlotStudioGroupBox("Settings")
         settings_layout = QHBoxLayout()
 
         #Controls to chose methods and columns
         self.numeric_columns = self.data_handler.df.select_dtypes(include=["number"]).columns.tolist()
 
         settings_layout.addWidget(QLabel("Target Column(s):"))
-        self.column_combo = AnimatedComboBox()
+        self.column_combo = DataPlotStudioComboBox()
         self.column_combo.addItems(self.numeric_columns)
 
         if self.method == "isolation_forest":
@@ -41,7 +41,7 @@ class OutlierDetectionDialog(QDialog):
 
         if self.method == "z_score":
             settings_layout.addWidget(QLabel("Threshold (Standard Deviation):"))
-            self.parameter_spin = AnimatedDoubleSpinBox()
+            self.parameter_spin = DataPlotStudioDoubleSpinBox()
             self.parameter_spin.setRange(1.0, 10.0)
             self.parameter_spin.setValue(3.0)
             self.parameter_spin.setSingleStep(0.1)
@@ -50,7 +50,7 @@ class OutlierDetectionDialog(QDialog):
         
         elif self.method == "iqr":
             settings_layout.addWidget(QLabel("IQR Multiplier:"))
-            self.parameter_spin = AnimatedDoubleSpinBox()
+            self.parameter_spin = DataPlotStudioDoubleSpinBox()
             self.parameter_spin.setRange(0.5, 5.0)
             self.parameter_spin.setValue(1.5)
             self.parameter_spin.setSingleStep(0.1)
@@ -59,14 +59,14 @@ class OutlierDetectionDialog(QDialog):
         
         elif self.method == "isolation_forest":
             settings_layout.addWidget(QLabel("Contamination:"))
-            self.parameter_spin = AnimatedDoubleSpinBox()
+            self.parameter_spin = DataPlotStudioDoubleSpinBox()
             self.parameter_spin.setRange(0.01, 0.5)
             self.parameter_spin.setValue(0.05)
             self.parameter_spin.setSingleStep(0.01)
             self.parameter_spin.valueChanged.connect(self.apply_detection)
             settings_layout.addWidget(self.parameter_spin)
         
-        refresh_button = AnimatedButton("Recalculate", base_color_hex="#3498DB")
+        refresh_button = DataPlotStudioButton("Recalculate", base_color_hex="#3498DB")
         refresh_button.clicked.connect(self.apply_detection)
         settings_layout.addWidget(refresh_button)
 
@@ -85,11 +85,11 @@ class OutlierDetectionDialog(QDialog):
         # Action buttons
         button_layout = QHBoxLayout()
 
-        self.remove_button = AnimatedButton("Remove Outliers", base_color_hex="#e74c3c", text_color_hex="white")
+        self.remove_button = DataPlotStudioButton("Remove Outliers", base_color_hex="#e74c3c", text_color_hex="white")
         self.remove_button.clicked.connect(self.remove_outliers)
         button_layout.addWidget(self.remove_button)
 
-        close_button = AnimatedButton("Close")
+        close_button = DataPlotStudioButton("Close")
         close_button.clicked.connect(self.reject)
         button_layout.addWidget(close_button)
 

@@ -1,9 +1,9 @@
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
 
-from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedButton import DataPlotStudioButton
 
 
 class RenameColumnDialog(QDialog):
@@ -25,7 +25,7 @@ class RenameColumnDialog(QDialog):
         # Old name display
         old_name_layout = QHBoxLayout()
         old_name_layout.addWidget(QLabel("Current Name:"))
-        old_name_display = AnimatedLineEdit()
+        old_name_display = DataPlotStudioLineEdit()
         old_name_display.setText(self.column_name)
         old_name_display.setReadOnly(True)
         old_name_layout.addWidget(old_name_display)
@@ -34,7 +34,7 @@ class RenameColumnDialog(QDialog):
         # New name input
         new_name_layout = QHBoxLayout()
         new_name_layout.addWidget(QLabel("New Name:"))
-        self.new_name_input = AnimatedLineEdit()
+        self.new_name_input = DataPlotStudioLineEdit()
         self.new_name_input.setPlaceholderText(f"Enter new name for '{self.column_name}'")
         self.new_name_input.setMinimumWidth(200)
         new_name_layout.addWidget(self.new_name_input)
@@ -45,12 +45,12 @@ class RenameColumnDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
 
-        ok_button = AnimatedButton("Rename", parent=self)
+        ok_button = DataPlotStudioButton("Rename", parent=self)
         ok_button.setMinimumWidth(100)
         ok_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(ok_button)
 
-        cancel_button = AnimatedButton("Cancel", parent=self)
+        cancel_button = DataPlotStudioButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)

@@ -1,13 +1,13 @@
-from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
+from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 class FilterAdvancedDialog(QDialog):
@@ -34,7 +34,7 @@ class FilterAdvancedDialog(QDialog):
         # Logical operator selection
         logic_layout = QHBoxLayout()
         logic_layout.addWidget(QLabel("Combine filters using:"))
-        self.logic_combo = AnimatedComboBox()
+        self.logic_combo = DataPlotStudioComboBox()
         self.logic_combo.addItems(["AND", "OR"])
         self.logic_combo.setToolTip("AND = All conditions must be True\nOR = Any condition can be True")
         logic_layout.addWidget(self.logic_combo)
@@ -47,28 +47,28 @@ class FilterAdvancedDialog(QDialog):
         self.filter_rows = []
         for i in range(5):
             #create group bxo ofr each filter element
-            filter_group = AnimatedGroupBox(f"Filter {i+1}", parent=self)
+            filter_group = DataPlotStudioGroupBox(f"Filter {i+1}", parent=self)
             filter_layout = QHBoxLayout()
 
             #checkbox
-            enable_check = AnimatedCheckBox("Active")
+            enable_check = DataPlotStudioCheckBox("Active")
             enable_check.setChecked(i == 0)
             filter_layout.addWidget(enable_check)
 
             # Column selector
-            column_combo = AnimatedComboBox()
+            column_combo = DataPlotStudioComboBox()
             column_combo.addItems(self.columns)
             filter_layout.addWidget(QLabel("Column:"))
             filter_layout.addWidget(column_combo, 1)
 
             # Condition selector
-            condition_combo = AnimatedComboBox()
+            condition_combo = DataPlotStudioComboBox()
             condition_combo.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains', 'in'])
             filter_layout.addWidget(QLabel("Condition:"))
             filter_layout.addWidget(condition_combo, 1)
 
             # Value input
-            value_input = AnimatedLineEdit()
+            value_input = DataPlotStudioLineEdit()
             value_input.setPlaceholderText("Enter value...")
             filter_layout.addWidget(QLabel("Value:"))
             filter_layout.addWidget(value_input, 2)
@@ -105,12 +105,12 @@ class FilterAdvancedDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
 
-        apply_button = AnimatedButton("Apply Filters", parent=self, base_color_hex="#e8f5fa")
+        apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex="#e8f5fa")
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
-        cancel_button = AnimatedButton("Cancel", parent=self, base_color_hex="#e8f5fa")
+        cancel_button = DataPlotStudioButton("Cancel", parent=self, base_color_hex="#e8f5fa")
         cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)

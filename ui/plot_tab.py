@@ -27,7 +27,7 @@ import traceback
 from matplotlib.colors import to_hex
 from typing import Dict, List, Any
 
-from ui.widgets import AnimatedButton, AnimatedCheckBox, AnimatedComboBox, AnimatedDoubleSpinBox, AnimatedSlider
+from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 
 
 class PlotTab(PlotTabUI):

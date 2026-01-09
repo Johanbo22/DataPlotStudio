@@ -1,4 +1,4 @@
-from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedButton import DataPlotStudioButton
 
 
 from PyQt6.QtCore import Qt
@@ -51,7 +51,7 @@ class ProgressDialog(QDialog):
         layout.addSpacing(10)
 
         #canel btn
-        self.cancel_button = AnimatedButton("Cancel", parent=self)
+        self.cancel_button = DataPlotStudioButton("Cancel", parent=self)
         self.cancel_button.setMaximumWidth(100)
         self.cancel_button.clicked.connect(self.reject)
         button_layout = QHBoxLayout()

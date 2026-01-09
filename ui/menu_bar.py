@@ -2,7 +2,7 @@
 from stat import filemode
 from PyQt6.QtWidgets import QMenuBar, QMenu
 from PyQt6.QtGui import QAction, QIcon
-from ui.widgets.AnimatedMenu import AnimatedMenu
+from ui.widgets.AnimatedMenu import DataPlotStudioMenu
 
 
 class MenuBar(QMenuBar):
@@ -12,7 +12,7 @@ class MenuBar(QMenuBar):
         super().__init__(parent)
         
         # File Menu
-        file_menu = AnimatedMenu(self.tr("&File"), self)
+        file_menu = DataPlotStudioMenu(self.tr("&File"), self)
         self.addMenu(file_menu)
         
         self.file_new = QAction(QIcon("icons/menu_bar/new_project.png"),self.tr("&New Project"), parent)
@@ -69,7 +69,7 @@ class MenuBar(QMenuBar):
         file_menu.addAction(exit_action)
         
         # Edit Menu
-        edit_menu = AnimatedMenu(self.tr("&Edit"), self)
+        edit_menu = DataPlotStudioMenu(self.tr("&Edit"), self)
         self.addMenu(edit_menu)
         
         self.undo_action = QAction(QIcon("icons/menu_bar/undo.png"), self.tr("&Undo"), parent)
@@ -89,7 +89,7 @@ class MenuBar(QMenuBar):
         edit_menu.addAction(self.settings_action)
         
         # View Menu
-        view_menu = AnimatedMenu(self.tr("&View"), self)
+        view_menu = DataPlotStudioMenu(self.tr("&View"), self)
         self.addMenu(view_menu)
         
         self.zoom_in_action = QAction(QIcon("icons/menu_bar/zoom_in.png"), self.tr("Zoom &In"), parent)
@@ -103,7 +103,7 @@ class MenuBar(QMenuBar):
         view_menu.addAction(self.zoom_out_action)
 
         # Export menu
-        export_menu = AnimatedMenu(self.tr("&Export Data"), self)
+        export_menu = DataPlotStudioMenu(self.tr("&Export Data"), self)
         self.addMenu(export_menu)
 
         self.export_data_action = QAction(QIcon("icons/menu_bar/export.png"), self.tr("&Export Data"), parent)
@@ -112,7 +112,7 @@ class MenuBar(QMenuBar):
 
         
         # Help Menu
-        help_menu = AnimatedMenu(self.tr("&Help"), self)
+        help_menu = DataPlotStudioMenu(self.tr("&Help"), self)
         self.addMenu(help_menu)
         
         self.about_action = QAction(QIcon("icons/menu_bar/about.png"), self.tr("&About"), parent)

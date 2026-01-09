@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QSlider
 
 
-class AnimatedSlider(QSlider):
+class DataPlotStudioSlider(QSlider):
     """New qslider"""
 
     def __init__(self, orientation=Qt.Orientation.Horizontal, parent=None):

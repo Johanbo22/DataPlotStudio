@@ -3,8 +3,8 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QPushButton
 
 
-class AnimatedButton(QPushButton):
-    """Custom QPush Button that animates on hover. This is currently testing"""
+class DataPlotStudioButton(QPushButton):
+    """Custom QPush Button that animates on hover."""
 
     def __init__(self,
                 text,

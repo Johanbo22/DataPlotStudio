@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QTabWidget
 
 
-class AnimatedTabWidget(QTabWidget):
+class DataPlotStudioTabWidget(QTabWidget):
     """A QTabWidget subclass with a new stylesheet"""
 
     def __init__(self, parent=None):

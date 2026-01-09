@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QRadioButton
 
 
-class AnimatedRadioButton(QRadioButton):
+class DataPlotStudioRadioButton(QRadioButton):
     """A QRadioButton with animated border color on hover/focus."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QCheckBox
 
 
-class AnimatedCheckBox(QCheckBox):
+class DataPlotStudioCheckBox(QCheckBox):
     """A QCheckBox with animated border color on hover/focus."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

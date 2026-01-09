@@ -65,7 +65,7 @@ class DataPlotStudio(QMainWindow):
 
         self.show()
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
         """Connect signals between components"""
         # Menu signals
         self.menu_bar.file_new.triggered.connect(self.new_project)
@@ -144,7 +144,7 @@ class DataPlotStudio(QMainWindow):
             self.failed_operation_animation.start(target_widget=self)
             QMessageBox.critical(self, "Error", f"Failed to save project: {str(SaveProjectError)}")
     
-    def save_project_as(self):
+    def save_project_as(self) -> bool:
         """Save current project to a new file"""
         try:
             project_data = self.main_widget.get_project_data()

@@ -13,7 +13,7 @@ from ui.plot_tab import PlotTab
 from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from ui.status_bar import StatusBar
-from ui.widgets.AnimatedTabWidget import AnimatedTabWidget
+from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
 from ui.dialogs import ProgressDialog, GoogleSheetsDialog
 from ui.animations import FileImportAnimation, FailedAnimation, SavedProjectAnimation
 
@@ -45,7 +45,7 @@ class MainWindow(QWidget):
         layout = QVBoxLayout(self)
         
         # Create tab widget
-        self.tabs = AnimatedTabWidget()
+        self.tabs = DataPlotStudioTabWidget()
         
         # Data Tab: for viewing and cleaning data
         data_icon = QIcon("icons/data_explorer.png")

@@ -1,12 +1,12 @@
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 class GoogleSheetsDialog(QDialog):
@@ -34,7 +34,7 @@ class GoogleSheetsDialog(QDialog):
 
         # Sheet ID input
         sheet_id_label = QLabel("Sheet ID:")
-        self.sheet_id = AnimatedLineEdit()
+        self.sheet_id = DataPlotStudioLineEdit()
         self.sheet_id.setToolTip("This is the unique sheet ID for your sheet.")
         self.sheet_id.setPlaceholderText("e.g., 1BxiMVs0XRA5nFMoon9FFBiMKo6YcK7...")
         self.sheet_id.setMinimumWidth(350)
@@ -42,7 +42,7 @@ class GoogleSheetsDialog(QDialog):
 
         # Sheet Name input
         sheet_name_label = QLabel("Sheet Name:")
-        self.sheet_name = AnimatedLineEdit()
+        self.sheet_name = DataPlotStudioLineEdit()
         self.sheet_name.setToolTip("This is the name of the sheet you want to import data from.")
         self.sheet_name.setPlaceholderText("e.g., Sheet1")
         form_layout.addRow(sheet_name_label, self.sheet_name)
@@ -52,7 +52,7 @@ class GoogleSheetsDialog(QDialog):
         layout.addSpacing(10)
 
         #delimter
-        delimiter_group = AnimatedGroupBox("CSV Delimtter Settings", parent=self)
+        delimiter_group = DataPlotStudioGroupBox("CSV Delimtter Settings", parent=self)
         delimiter_layout = QVBoxLayout()
 
         delimiter_info = QLabel("Google Sheets exports data as a CSV. Choose the delimitter used in your sheet")
@@ -64,7 +64,7 @@ class GoogleSheetsDialog(QDialog):
         delimiter_select_layout = QHBoxLayout()
         delimiter_select_layout.addWidget(QLabel("Delimiter:"))
 
-        self.delimiter_combo = AnimatedComboBox()
+        self.delimiter_combo = DataPlotStudioComboBox()
         self.delimiter_combo.addItems([
             "Comma (,) - Standard",
             "Semicolon (;) - European",
@@ -81,7 +81,7 @@ class GoogleSheetsDialog(QDialog):
         #custom
         custom_delimiter_layout = QHBoxLayout()
         custom_delimiter_layout.addWidget(QLabel("Custom Delimiter:"))
-        self.custom_delimiter_input = AnimatedLineEdit()
+        self.custom_delimiter_input = DataPlotStudioLineEdit()
         self.custom_delimiter_input.setPlaceholderText("Enter single delimiter character")
         self.custom_delimiter_input.setMaxLength(1)
         self.custom_delimiter_input.setEnabled(False)
@@ -93,7 +93,7 @@ class GoogleSheetsDialog(QDialog):
         #decimal sep
         decimal_layout = QHBoxLayout()
         decimal_layout.addWidget(QLabel("Decimal Separator:"))
-        self.decimal_combo = AnimatedComboBox()
+        self.decimal_combo = DataPlotStudioComboBox()
         self.decimal_combo.addItems([
             "Dot (.) - UK/US",
             "Comma (,) - European",
@@ -105,7 +105,7 @@ class GoogleSheetsDialog(QDialog):
         #1000sep
         thousands_layout = QHBoxLayout()
         thousands_layout.addWidget(QLabel("Thousands Separator"))
-        self.thousands_combo = AnimatedComboBox()
+        self.thousands_combo = DataPlotStudioComboBox()
         self.thousands_combo.addItems([
             "None",
             "Comma (,) - US Style",
@@ -139,12 +139,12 @@ class GoogleSheetsDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
 
-        import_button = AnimatedButton("Import", parent=self)
+        import_button = DataPlotStudioButton("Import", parent=self)
         import_button.setMinimumWidth(100)
         import_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(import_button)
 
-        cancel_button = AnimatedButton("Cancel", parent=self)
+        cancel_button = DataPlotStudioButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)

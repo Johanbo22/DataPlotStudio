@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QComboBox
 
 
-class AnimatedComboBox(QComboBox):
+class DataPlotStudioComboBox(QComboBox):
     """A Combobox with animated borders and arrow"""
     def __init__(self, parent=None):
         super().__init__(parent)

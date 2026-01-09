@@ -1,12 +1,12 @@
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QListWidget, QMessageBox, QVBoxLayout
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 class AggregationDialog(QDialog):
@@ -43,12 +43,12 @@ class AggregationDialog(QDialog):
 
         #quick select buttons
         group_buttons = QHBoxLayout()
-        select_all_group_btn = AnimatedButton("Select All", parent=self)
+        select_all_group_btn = DataPlotStudioButton("Select All", parent=self)
         select_all_group_btn.clicked.connect(lambda: self.group_by_list.selectAll())
         group_buttons.addWidget(select_all_group_btn)
 
         #clear all btn
-        clear_group_btn = AnimatedButton("Clear All", parent=self)
+        clear_group_btn = DataPlotStudioButton("Clear All", parent=self)
         clear_group_btn.clicked.connect(lambda: self.group_by_list.clearSelection())
         group_buttons.addWidget(clear_group_btn)
         layout.addLayout(group_buttons)
@@ -74,12 +74,12 @@ class AggregationDialog(QDialog):
         #quick selection buttons
         #selcet all
         agg_buttons = QHBoxLayout()
-        select_all_agg_btn = AnimatedButton("Select All", parent=self)
+        select_all_agg_btn = DataPlotStudioButton("Select All", parent=self)
         select_all_agg_btn.clicked.connect(lambda: self.agg_columns_list.selectAll())
         agg_buttons.addWidget(select_all_agg_btn)
 
         #clearbtn
-        clear_agg_btn = AnimatedButton("Clear All", parent=self)
+        clear_agg_btn = DataPlotStudioButton("Clear All", parent=self)
         clear_agg_btn.clicked.connect(lambda: self.agg_columns_list.clearSelection())
         agg_buttons.addWidget(clear_agg_btn)
         layout.addLayout(agg_buttons)
@@ -89,7 +89,7 @@ class AggregationDialog(QDialog):
         #aggregation function selection
         agg_func_layout = QHBoxLayout()
         agg_func_layout.addWidget(QLabel("Aggregation Function:"))
-        self.agg_func_combo = AnimatedComboBox()
+        self.agg_func_combo = DataPlotStudioComboBox()
         self.agg_func_combo.addItems(["mean", "sum", "median", "min", "max", "count", "std", "var", "first", "last"])
         self.agg_func_combo.setToolTip("This funciton will be applied to all selected columns")
         agg_func_layout.addWidget(self.agg_func_combo)
@@ -118,13 +118,13 @@ class AggregationDialog(QDialog):
         layout.addSpacing(20)
 
         #save aggregation
-        self.save_agg_group = AnimatedGroupBox("Save this aggregation", parent=self)
+        self.save_agg_group = DataPlotStudioGroupBox("Save this aggregation", parent=self)
         self.save_agg_group.setCheckable(True)
         self.save_agg_group.setChecked(False)
         self.save_agg_group.setToolTip("Check this box to save this aggregation")
 
         save_layout = QFormLayout()
-        self.save_name_input = AnimatedLineEdit()
+        self.save_name_input = DataPlotStudioLineEdit()
         self.save_name_input.setPlaceholderText("e.g. 'Sales by Region'")
         save_layout.addRow(QLabel("Save as:"), self.save_name_input)
 
@@ -137,13 +137,13 @@ class AggregationDialog(QDialog):
         button_layout = QHBoxLayout()
 
         #apply
-        apply_button = AnimatedButton("Apply Aggregation", parent=self, base_color_hex="#4caf50", text_color_hex="white")
+        apply_button = DataPlotStudioButton("Apply Aggregation", parent=self, base_color_hex="#4caf50", text_color_hex="white")
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
         #cancel
-        cancel_button = AnimatedButton("Cancel", parent=self)
+        cancel_button = DataPlotStudioButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)

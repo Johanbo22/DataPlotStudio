@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QListWidget
 
 
-class AnimatedListWidget(QListWidget):
+class DataPlotStudioListWidget(QListWidget):
     """New lsitwidget styling"""
 
     def __init__(self, parent=None):

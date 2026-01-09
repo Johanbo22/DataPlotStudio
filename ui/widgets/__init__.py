@@ -1,31 +1,31 @@
-from .AnimatedButton import AnimatedButton
-from .AnimatedCheckBox import AnimatedCheckBox
-from .AnimatedComboBox import AnimatedComboBox
-from .AnimatedDoubleSpinBox import AnimatedDoubleSpinBox
-from .AnimatedGroupBox import AnimatedGroupBox
-from .AnimatedLineEdit import AnimatedLineEdit
-from .AnimatedListWidget import AnimatedListWidget
-from .AnimatedMenu import AnimatedMenu
-from .AnimatedRadioButton import AnimatedRadioButton
-from .AnimatedSlider import AnimatedSlider
-from .AnimatedSpinBox import AnimatedSpinBox
-from .AnimatedTabWidget import AnimatedTabWidget
+from .AnimatedButton import DataPlotStudioButton
+from .AnimatedCheckBox import DataPlotStudioCheckBox
+from .AnimatedComboBox import DataPlotStudioComboBox
+from .AnimatedDoubleSpinBox import DataPlotStudioDoubleSpinBox
+from .AnimatedGroupBox import DataPlotStudioGroupBox
+from .AnimatedLineEdit import DataPlotStudioLineEdit
+from .AnimatedListWidget import DataPlotStudioListWidget
+from .AnimatedMenu import DataPlotStudioMenu
+from .AnimatedRadioButton import DataPlotStudioRadioButton
+from .AnimatedSlider import DataPlotStudioSlider
+from .AnimatedSpinBox import DataPlotStudioSpinBox
+from .AnimatedTabWidget import DataPlotStudioTabWidget
 from .ColormapButton import ColormapButton
 from .HelpIcon import HelpIcon
 
 __all__ = [
-    "AnimatedButton",
-    "AnimatedCheckBox",
-    "AnimatedComboBox",
-    "AnimatedDoubleSpinBox",
-    "AnimatedGroupBox",
-    "AnimatedLineEdit",
-    "AnimatedListWidget",
-    "AnimatedMenu",
-    "AnimatedRadioButton",
-    "AnimatedSlider",
-    "AnimatedSpinBox",
-    "AnimatedTabWidget",
+    "DataPlotStudioButton",
+    "DataPlotStudioCheckBox",
+    "DataPlotStudioComboBox",
+    "DataPlotStudioDoubleSpinBox",
+    "DataPlotStudioGroupBox",
+    "DataPlotStudioLineEdit",
+    "DataPlotStudioListWidget",
+    "DataPlotStudioMenu",
+    "DataPlotStudioRadioButton",
+    "DataPlotStudioSlider",
+    "DataPlotStudioSpinBox",
+    "DataPlotStudioTabWidget",
     "ColormapButton",
     "HelpIcon",
     ]

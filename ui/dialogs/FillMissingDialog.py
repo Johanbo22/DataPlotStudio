@@ -1,10 +1,10 @@
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedLineEdit import AnimatedLineEdit
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
 class FillMissingDialog(QDialog):
@@ -30,7 +30,7 @@ class FillMissingDialog(QDialog):
 
         #this is the columns selection UI
         layout.addWidget(QLabel("Target Column:"))
-        self.column_combo = AnimatedComboBox()
+        self.column_combo = DataPlotStudioComboBox()
         self.column_combo.addItem("All Columns")
         self.column_combo.addItems(self.columns)
         layout.addWidget(self.column_combo)
@@ -39,7 +39,7 @@ class FillMissingDialog(QDialog):
 
         #the user selects the method here
         layout.addWidget(QLabel("Fill Method:"))
-        self.method_combo = AnimatedComboBox()
+        self.method_combo = DataPlotStudioComboBox()
         self.method_combo.addItems([
             "Forward Fill (Previous Values)",
             "Backward Fill (Next Value)",
@@ -56,7 +56,7 @@ class FillMissingDialog(QDialog):
         value_layout = QVBoxLayout(self.value_group)
         value_layout.setContentsMargins(0,0,0,0)
         value_layout.addWidget(QLabel("Enter Value:"))
-        self.value_input = AnimatedLineEdit()
+        self.value_input = DataPlotStudioLineEdit()
         self.value_input.setPlaceholderText("e.g. 0, Unknown, 1.5")
         value_layout.addWidget(self.value_input)
         layout.addWidget(self.value_group)
@@ -66,7 +66,7 @@ class FillMissingDialog(QDialog):
 
         #btns
         button_layout = QHBoxLayout()
-        apply_btn = AnimatedButton(
+        apply_btn = DataPlotStudioButton(
             "Apply Fill",
             parent=self,
             base_color_hex="#4caf50",
@@ -75,7 +75,7 @@ class FillMissingDialog(QDialog):
         )
         apply_btn.clicked.connect(self.accept)
 
-        cancel_btn = AnimatedButton("Cancel", parent=self)
+        cancel_btn = DataPlotStudioButton("Cancel", parent=self)
         cancel_btn.clicked.connect(self.reject)
 
         button_layout.addWidget(apply_btn)

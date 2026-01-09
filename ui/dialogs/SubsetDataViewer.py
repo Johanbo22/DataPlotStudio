@@ -1,4 +1,4 @@
-from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedButton import DataPlotStudioButton
 
 
 from PyQt6.QtWidgets import QDialog, QFileDialog, QLabel, QMessageBox, QTableWidget, QTableWidgetItem, QVBoxLayout
@@ -37,12 +37,12 @@ class SubsetDataViewer(QDialog):
         layout.addWidget(table)
 
         #export btn
-        export_btn = AnimatedButton("Export this subset", parent=self)
+        export_btn = DataPlotStudioButton("Export this subset", parent=self)
         export_btn.clicked.connect(self.export_subset)
         layout.addWidget(export_btn)
 
         #close btn
-        close_btn = AnimatedButton("Close", parent=self)
+        close_btn = DataPlotStudioButton("Close", parent=self)
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 

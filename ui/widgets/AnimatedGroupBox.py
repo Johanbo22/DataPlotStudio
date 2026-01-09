@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGroupBox
 
 
-class AnimatedGroupBox(QGroupBox):
+class DataPlotStudioGroupBox(QGroupBox):
     """GroupBox animation on hover"""
 
     def __init__(self, title, parent=None):

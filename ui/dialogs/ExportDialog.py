@@ -1,12 +1,12 @@
-from ui.widgets.AnimatedCheckBox import AnimatedCheckBox
+from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout
 
-from ui.widgets.AnimatedButton import AnimatedButton
-from ui.widgets.AnimatedComboBox import AnimatedComboBox
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 
 
 class ExportDialog(QDialog):
@@ -29,17 +29,17 @@ class ExportDialog(QDialog):
         format_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         layout.addWidget(format_label)
 
-        self.format_combo = AnimatedComboBox()
+        self.format_combo = DataPlotStudioComboBox()
         self.format_combo.addItems(['CSV', 'XLSX', 'JSON'])
         layout.addWidget(self.format_combo)
 
         layout.addSpacing(10)
 
         # Options
-        options_group = AnimatedGroupBox("Options", parent=self)
+        options_group = DataPlotStudioGroupBox("Options", parent=self)
         options_layout = QVBoxLayout()
 
-        self.include_index_check = AnimatedCheckBox("Include Index")
+        self.include_index_check = DataPlotStudioCheckBox("Include Index")
         self.include_index_check.setChecked(False)
         options_layout.addWidget(self.include_index_check)
 
@@ -51,12 +51,12 @@ class ExportDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
 
-        export_button = AnimatedButton("Export", parent=self)
+        export_button = DataPlotStudioButton("Export", parent=self)
         export_button.setMinimumWidth(100)
         export_button.clicked.connect(self.on_export_clicked)
         button_layout.addWidget(export_button)
 
-        cancel_button = AnimatedButton("Cancel", parent=self)
+        cancel_button = DataPlotStudioButton("Cancel", parent=self)
         cancel_button.setMinimumWidth(100)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)

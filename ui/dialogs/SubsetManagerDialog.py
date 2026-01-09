@@ -1,4 +1,4 @@
-from ui.widgets.AnimatedGroupBox import AnimatedGroupBox
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 from ui.dialogs import CreateSubsetDialog, SubsetDataViewer
 
 
@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWid
 
 import traceback
 
-from ui.widgets.AnimatedButton import AnimatedButton
+from ui.widgets.AnimatedButton import DataPlotStudioButton
 
 
 class SubsetManagerDialog(QDialog):
@@ -103,11 +103,11 @@ class SubsetManagerDialog(QDialog):
         # buttons for the list
         list_buttons = QHBoxLayout()
 
-        self.new_btn = AnimatedButton("New Subset", parent=self)
+        self.new_btn = DataPlotStudioButton("New Subset", parent=self)
         self.new_btn.clicked.connect(self.create_new_subset)
         list_buttons.addWidget(self.new_btn)
 
-        self.auto_create_btn = AnimatedButton("Auto create subsets by column", parent=self)
+        self.auto_create_btn = DataPlotStudioButton("Auto create subsets by column", parent=self)
         self.auto_create_btn.clicked.connect(self.auto_create_subsets)
         list_buttons.addWidget(self.auto_create_btn)
 
@@ -119,7 +119,7 @@ class SubsetManagerDialog(QDialog):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
 
-        self.details_group = AnimatedGroupBox("Subset Details", parent=self)
+        self.details_group = DataPlotStudioGroupBox("Subset Details", parent=self)
         details_layout = QVBoxLayout()
 
         #name
@@ -159,22 +159,22 @@ class SubsetManagerDialog(QDialog):
         # Action buttons
         action_buttons = QHBoxLayout()
 
-        self.view_btn = AnimatedButton("View Data", parent=self)
+        self.view_btn = DataPlotStudioButton("View Data", parent=self)
         self.view_btn.clicked.connect(self.view_subset_data)
         self.view_btn.setEnabled(False)
         action_buttons.addWidget(self.view_btn)
 
-        self.plot_btn = AnimatedButton("Plot Subset", parent=self)
+        self.plot_btn = DataPlotStudioButton("Plot Subset", parent=self)
         self.plot_btn.clicked.connect(self.plot_subset)
         self.plot_btn.setEnabled(False)
         action_buttons.addWidget(self.plot_btn)
 
-        self.edit_btn = AnimatedButton("Edit", parent=self)
+        self.edit_btn = DataPlotStudioButton("Edit", parent=self)
         self.edit_btn.clicked.connect(self.edit_subset)
         self.edit_btn.setEnabled(False)
         action_buttons.addWidget(self.edit_btn)
 
-        self.delete_btn = AnimatedButton("Delete", parent=self)
+        self.delete_btn = DataPlotStudioButton("Delete", parent=self)
         self.delete_btn.clicked.connect(self.delete_subset)
         self.delete_btn.setEnabled(False)
         action_buttons.addWidget(self.delete_btn)
@@ -195,7 +195,7 @@ class SubsetManagerDialog(QDialog):
         bottom_buttons = QHBoxLayout()
         bottom_buttons.addStretch()
 
-        close_btn = AnimatedButton("Close", parent=self)
+        close_btn = DataPlotStudioButton("Close", parent=self)
         close_btn.clicked.connect(self.accept)
         bottom_buttons.addWidget(close_btn)
 

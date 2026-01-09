@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QLineEdit
 
 
-class AnimatedLineEdit(QLineEdit):
+class DataPlotStudioLineEdit(QLineEdit):
     """A QLineEdit with animations and effects"""
 
     def __init__(self, *args, **kwargs):
