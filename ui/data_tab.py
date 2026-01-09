@@ -16,7 +16,7 @@ from ui.data_table_model import DataTableModel
 from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
 
 
-from ui.animations import DropMissingValueAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
+from ui.animations import DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -1428,6 +1428,8 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
+                self.fill_missing_animation = FillMissingValuesAnimation(message="Fill Missing Values", fill_value=config["value"])
+                self.fill_missing_animation.start(target_widget=self)
         except Exception as FillMissingValuesError:
             self.status_bar.log(f"Failed to execute 'Fill Missing values': {str(FillMissingValuesError)}", "ERROR")
             QMessageBox.critical(self, "Error", f"Failed to execute 'Fill Missing Values':\n{str(FillMissingValuesError)}")
