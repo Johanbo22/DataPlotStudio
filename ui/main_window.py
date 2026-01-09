@@ -1,10 +1,16 @@
-# ui/main_window.py
+#ui/main_window.py
+from opcode import opname
+from tkinter import W
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
 from PyQt6.QtCore import Qt, QThreadPool, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt6.QtGui import QIcon, QCloseEvent
 from pathlib import Path
+import traceback
 
+from wasmtime import ExportType
+
+from resources.version import APPLICATION_VERSION, SCRIPT_FILE_NAME, LOG_FILE_NAME
 from core import subset_manager
 from core.subset_manager import SubsetManager
 from ui.workers import FileImportWorker, GoogleSheetsImportWorker
@@ -12,21 +18,26 @@ from ui.data_tab import DataTab
 from ui.plot_tab import PlotTab
 from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
+from core.code_exporter import CodeExporter
+from core.logger import Logger
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
-from ui.dialogs import ProgressDialog, GoogleSheetsDialog
-from ui.animations import FileImportAnimation, FailedAnimation, SavedProjectAnimation
+from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, 
+                        ExportDialog)
+from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 
 class MainWindow(QWidget):
-    """Main application window widget"""
-    
-    def __init__(self, data_handler: DataHandler, project_manager: ProjectManager, status_bar: StatusBar):
+    """Main widget"""
+
+    def __init__(self, data_handler: DataHandler, project_manager: ProjectManager, code_exporter: CodeExporter, logger: Logger, status_bar: StatusBar):
         super().__init__()
-        
+
         self.data_handler = data_handler
         self.project_manager = project_manager
+        self.code_exporter = code_exporter
+        self.logger = logger
         self.status_bar = status_bar
-
+        
         self.subset_manager = SubsetManager()
 
         self.threadpool = QThreadPool()
@@ -35,80 +46,183 @@ class MainWindow(QWidget):
         self._temp_import_filepath: str | None = None
         self._temp_import_filesize: float = 0.0
 
-        self.unsaved_changes = False
-        
+        self.unsaved_changes: bool = False
         self.init_ui()
+
         self._connect_subset_managers()
     
-    def init_ui(self):
-        """Initialize the UI"""
-        layout = QVBoxLayout(self)
-        
-        # Create tab widget
+    def init_ui(self) -> None:
+        """Init the main ui"""
+        layout = QVBoxLayout()
+
+        # Creation of the main Tab widget
         self.tabs = DataPlotStudioTabWidget()
-        
-        # Data Tab: for viewing and cleaning data
+
+        # Data tab
         data_icon = QIcon("icons/data_explorer.png")
+        data_explorer_name = "Data Explorer"
         self.data_tab = DataTab(self.data_handler, self.status_bar, self.subset_manager)
-        self.tabs.addTab(self.data_tab, data_icon, "Data Explorer")
-        
-        # Plot Tab :for plotting
+        self.tabs.addTab(self.data_tab, data_icon, data_explorer_name)
+
+        # Plot tab
         plot_icon = QIcon("icons/plot.png")
+        plot_tab_name = "Plot Studio"
         self.plot_tab = PlotTab(self.data_handler, self.status_bar)
-        self.tabs.addTab(self.plot_tab, plot_icon, "Plot Studio")
-        
+        self.tabs.addTab(self.plot_tab, plot_icon, plot_tab_name)
+
         layout.addWidget(self.tabs)
         layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.setLayout(layout)
     
     def _connect_subset_managers(self) -> None:
-        """Connect the subset manager used in DataTab to PlotTab"""
-        #get subset manager name from data tab
+        """Connect the subset manager used in both DataTab and PlotTab"""
         subset_manager = self.data_tab.get_subset_manager()
-
-        #set it in plot tab
         self.plot_tab.set_subset_manager(self.subset_manager)
-
         self.data_tab.set_plot_tab(self.plot_tab)
-
-        #connect tab to rf subsets in PT
         self.tabs.currentChanged.connect(self._on_tab_changed)
-    
-    def _on_tab_changed(self, index):
+
+    def _on_tab_changed(self, index) -> None:
         """Handle tab change events"""
         if index == 1:
             self.plot_tab.refresh_subset_list()
 
+    def new_project(self):
+        """Creates a new project"""
+        if self._confirm_discard_changes():
+            self.project_manager.new_project()
+            self.clear_all()
+            self.status_bar.log("New Project Created")
+    
+    def open_project(self) -> None:
+        """Open an existing project"""
+        if self._confirm_discard_changes():
+            filepath = self.project_manager.open_project_dialog()
+            if filepath:
+                try:
+                    project = self.project_manager.load_project(filepath)
+                    self.load_project(project)
+                    self.status_bar.log(f"Project loaded: {filepath}")
+
+                    self.open_project_animation = ProjectOpenAnimation(message="Project Opened")
+                    self.open_project_animation.start(target_widget=self)
+                
+                except Exception as LoadProjectError:
+                    QMessageBox.critical(self, "Error", f"Failed to load project: {str(LoadProjectError)}")
+                    traceback.print_exc()
+    
+    def load_project(self, project_data: dict) -> None:
+        """load project data into the UI"""
+        if "data" in project_data and project_data["data"] is not None:
+            self.data_handler.df = project_data["data"]
+            self.data_handler.original_df = project_data["data"].copy()
+            self.data_tab.refresh_data_view()
+            self.plot_tab.update_column_combo()
+    
+        if "plot_config" in project_data:
+            self.plot_tab.load_config(project_data["plot_config"])
+        
+        if "subsets" in project_data and project_data["subsets"] is not None:
+            self.subset_manager.import_subsets(project_data["subsets"])
+            self.data_tab.refresh_active_subsets()
+            self.plot_tab.refresh_subset_list()
+        
+        self.unsaved_changes = False
+
+    def save_project(self) -> bool:
+        """Saves the current project"""
+        return self._perform_save(force_dialog=False)
+    
+    def save_project_as(self) -> bool:
+        """Saves current project as a new file"""
+        return self._perform_save(force_dialog=True)
+    
+    def _perform_save(self, force_dialog: bool) -> bool:
+        try:
+            project_data = self.get_project_data()
+
+            filepath = None if force_dialog else self.project_manager.get_current_project_path()
+            saved_path = self.project_manager.save_project(project_data, filepath)
+
+            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
+            self.saved_animation.start(target_widget=self)
+
+            if saved_path:
+                self.unsaved_changes = False
+                op_name = "save_project_as" if force_dialog else "save_project"
+                self.status_bar.log_action(f"Project Saved: {Path(saved_path).name}",details={"filepath": saved_path, "operation": op_name}, level="SUCCESS")
+
+                return True
+            return False
+        
+        except Exception as SaveProjectError:
+            if "cancelled" in str(SaveProjectError).lower():
+                return False
+            self.failed_operation_animation = FailedAnimation("Save failed", parent=None)
+            self.failed_operation_animation.start(target_widget=self)
+            QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
+            self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
+            return False
+    
+    def get_project_data(self) -> dict:
+        """Get the project data for saving"""
+        return {
+            "data": self.data_handler.df,
+            "plot_config": self.plot_tab.get_config(),
+            "subsets": self.subset_manager.export_subsets(),
+            "metadata": {"version": APPLICATION_VERSION, "name": "DataPlotStudio Project"}
+        }
+    
+    def clear_all(self) -> None:
+        """Clear all data"""
+        self.data_handler.df = None
+        self.data_handler.original_df = None
+        self.data_tab.clear()
+        self.plot_tab.clear()
+        self.subset_manager.subsets.clear()
+        self.subset_manager.clear_cache()
+        self.data_tab.refresh_active_subsets()
+        self.plot_tab.refresh_subset_list()
+    
+    def _confirm_discard_changes(self) -> bool:
+        """Returns True if its safe to proceed, False if not"""
+        if self.unsaved_changes:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Do you want to save before proceeding?",
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save
+            )
+            if reply == QMessageBox.StandardButton.Save:
+                return self.save_project()
+            elif reply == QMessageBox.StandardButton.Cancel:
+                return False
+        
+        return True
+    
     def import_file(self) -> None:
         """Import a data file"""
         geospatial_filter = "Geospatial Files (*.geojson *.shp *gpkg)"
         data_filter = "Data Files (*.csv *.xlsx *.xls *.txt *.json)"
         all_files_filter = "All Files (*)"
-
         file_filter = f"{data_filter};;{geospatial_filter};;{all_files_filter}"
-        filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
         
+        filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
         if filepath:
             path = Path(filepath)
             file_size_kb = path.stat().st_size / 1024
-            show_progress = file_size_kb > 500
-
             self._temp_import_filepath = filepath
             self._temp_import_filesize = file_size_kb
 
             self.progress_dialog = None
-            if show_progress:
+            if file_size_kb > 500:
                 self.progress_dialog = ProgressDialog(
-                    title="Importing data",
-                    message=f"Loading {path.name} ({file_size_kb:.1f} KB)",
-                    parent=self
+                    title="Importing data", message=f"Loading {path.name}...", parent=self
                 )
                 self.progress_dialog.show()
                 self.progress_dialog.update_progress(10, "Reading file")
-                QApplication.processEvents()
             else:
-                self.status_bar.log(f"Importing: {filepath}...")
+                self.status_bar.log(f"Importing. {filepath}...")
             
             worker = FileImportWorker(self.data_handler, filepath)
             worker.signals.finished.connect(self._on_import_finished)
@@ -117,105 +231,73 @@ class MainWindow(QWidget):
 
             self.import_file_animation = FileImportAnimation(parent=None, message="Imported File")
             self.import_file_animation.start(target_widget=self)
-
             self.threadpool.start(worker)
     
     @pyqtSlot(int, str)
-    def _on_import_progress(self, percentage: int, message: str):
+    def _on_import_progress(self, percentage: int, message: str) -> None:
         if self.progress_dialog:
             self.progress_dialog.update_progress(percentage, message)
             QApplication.processEvents()
     
     @pyqtSlot(object)
-    def _on_import_finished(self, loaded_dataframe):
+    def _on_import_finished(self, loaded_dataframe) -> None:
         if self.progress_dialog:
             self.progress_dialog.update_progress(90, "Updating Interface")
-            QApplication.processEvents()
-        
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
-
         self.unsaved_changes = True
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
             QTimer.singleShot(300, self.progress_dialog.accept)
             self.progress_dialog = None
-
-        ##log
-        try:
-            path = Path(self._temp_import_filepath)
-            rows, cols = loaded_dataframe.shape
-
-            self.status_bar.log_action(
-                f"Imported {path.name}",
-                details={
-                    "filename": path.name,
-                    "filepath": str(path),
-                    "rows": rows,
-                    "columns": cols,
-                    "file_size_kb": round(self._temp_import_filesize),
-                    "file_type": path.suffix,
-                    "operation": "import_file"
-                },
-                level="SUCCESS"
-            )
-        except Exception as LogError:
-            self.status_bar.log(f"Failed to log operation to log file: {LogError}", "ERROR")
         
+        path = Path(self._temp_import_filepath)
+        self.status_bar.log_action(f"Imported {path.name}", level="SUCCESS", details={"filename": path.name, "rows": loaded_dataframe.shape[0],"columns": loaded_dataframe.shape[1]})
         self._temp_import_filepath = None
-        self._temp_import_filesize = 0.0
     
     @pyqtSlot(Exception)
-    def _on_import_error(self, error: Exception):
+    def _on_import_error(self, error: Exception) -> None:
         if self.progress_dialog:
             self.progress_dialog.accept()
             self.progress_dialog = None
-            
         QMessageBox.critical(self, "Error", f"Failed to import file: {str(error)}")
         self.status_bar.log(f"Import failed: {str(error)}", "ERROR")
-        
-        # Clear temp variables
         self._temp_import_filepath = None
-        self._temp_import_filesize = 0.0
-    
-    def import_google_sheets(self):
+
+    def import_google_sheets(self) -> None:
         """Import from Google Sheets"""
-        dialog = GoogleSheetsDialog(self)
-        if dialog.exec():
-            inputs = dialog.get_inputs()
+        try:
+            dialog = GoogleSheetsDialog(self)
+            if dialog.exec():
+                inputs = dialog.get_inputs()
+                if len(inputs) == 5:
+                    sheet_id, sheet_name, delimiter, decimal, thousands = inputs
+                else:
+                    sheet_id, sheet_name = inputs
+                    delimiter, decimal, thousands = ",", ".", None
+                
+                if not sheet_id and not sheet_name:
+                    QMessageBox.warning(self, "Input Error", "Sheet ID and Sheet Name are required")
+                    return
+                
+                self.progress_dialog = ProgressDialog(title="Importing from Google Sheets", message=f"Connecting to {sheet_name}...", parent=self)
+                self.progress_dialog.show()
 
-            if len(inputs) == 5:
-                sheet_id, sheet_name, delimiter, decimal, thousands = inputs
-            else:
-                sheet_id, sheet_name = inputs
-                delimiter, decimal, thousands = ",", ".", None
-            
-            if not sheet_id or not sheet_name:
-                QMessageBox.warning(self, "Input Error", "Sheet ID and Sheet Name cannot be empty")
-                return
-            
-            self.progress_dialog = ProgressDialog(
-                title="Importing from Google Sheets",
-                message=f"Connecting to {sheet_name}...",
-                parent=self
-            )
-            self.progress_dialog.show()
-            self.progress_dialog.update_progress(0, "Initializing...")
-
-            worker = GoogleSheetsImportWorker(self.data_handler, sheet_id, sheet_name, delimiter, decimal, thousands)
-            worker.signals.progress.connect(self._on_import_progress)
-            worker.signals.finished.connect(lambda df: self._on_google_sheet_import_finished(df, sheet_name))
-            worker.signals.error.connect(self._on_import_error)
-
-            self.threadpool.start(worker)
+                worker = GoogleSheetsImportWorker(self.data_handler, sheet_id, sheet_name, delimiter, decimal, thousands)
+                worker.signals.progress.connect(self._on_import_progress)
+                worker.signals.finished.connect(lambda df: self._on_google_sheet_import_finished(df, sheet_name))
+                worker.signals.error.connect(self._on_import_error)
+                self.threadpool.start(worker)
+        
+        except Exception as OpenGoogleSheetDialogError:
+            QMessageBox.critical(self, "Error", f"Failed to open Google Sheets Import Dialog: {str(OpenGoogleSheetDialogError)}")
+            traceback.print_exc()
     
     @pyqtSlot(object, str)
-    def _on_google_sheet_import_finished(self, loaded_dataframe, sheet_name):
+    def _on_google_sheet_import_finished(self, loaded_dataframe, sheet_name) -> None:
         if self.progress_dialog:
             self.progress_dialog.update_progress(90, "Updating Interface")
-            QApplication.processEvents()
-        
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
         self.unsaved_changes = True
@@ -225,104 +307,189 @@ class MainWindow(QWidget):
             QTimer.singleShot(300, self.progress_dialog.accept)
             self.progress_dialog = None
         
-        rows, columns = loaded_dataframe.shape
         self.status_bar.log_action(
-            f"Imported Google Sheet: {sheet_name}",
+            f"Imported Google Sheet document: {sheet_name}", level="SUCCESS",
             details={
-                "sheet_name": sheet_name,
-                "rows": rows,
-                "columns": columns,
-                "operation": "import_google_sheets"
-            },
-            level="SUCCESS"
-        )
-    
-    def load_project(self, project_data: dict) -> None:
-        """Load a project"""
-        if 'data' in project_data and project_data['data'] is not None:
-            self.data_handler.df = project_data['data']
-            self.data_handler.original_df = project_data['data'].copy()
-            self.data_tab.refresh_data_view()
-            self.plot_tab.update_column_combo()
-        
-        if 'plot_config' in project_data:
-            self.plot_tab.load_config(project_data['plot_config'])
-
-        if "subsets" in project_data and project_data["subsets"] is not None:
-            subset_manager = self.subset_manager
-            subset_manager.import_subsets(project_data["subsets"])
-            self.data_tab.refresh_active_subsets()
-            self.plot_tab.refresh_subset_list()
-        
-        self.unsaved_changes = False
-
-    def save_project(self) -> bool:
-        """Saves the current state of the instance"""
-        try:
-            project_data = self.get_project_data()
-            current_path = self.project_manager.get_current_project_path()
-
-            saved_path = self.project_manager.save_project(project_data, current_path)
-
-            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
-            self.saved_animation.start(target_widget=self)
-
-            if saved_path:
-                self.unsaved_changes = False
-                self.status_bar.log(f"Project saved to {saved_path}")
-                return True
-            return False
-        except Exception as SaveProjectError:
-            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
-            self.failed_operation_animation.start(target_widget=self)
-            QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
-            self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
-            return False
-    
-    def save_project_as(self) -> bool:
-        """Saves the current state to a new file"""
-        try:
-            project_data = self.get_project_data()
-
-            saved_path = self.project_manager.save_project(project_data, filepath=None)
-            self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
-            self.saved_animation.start(target_widget=self)
-            if saved_path:
-                self.unsaved_changes = False
-                self.status_bar.log(f"Project saved as {saved_path}")
-                return True
-            return False
-        except Exception as SaveProjectError:
-            self.failed_operation_animation = FailedAnimation("Saved failed", parent=None)
-            self.failed_operation_animation.start(target_widget=self)
-            QMessageBox.critical(self, "Save Error", f"Failed to save project: {str(SaveProjectError)}")
-            self.status_bar.log(f"Save failed: {str(SaveProjectError)}", "ERROR")
-            return False
-    
-    
-    def get_project_data(self) -> dict:
-        """Get all project data for saving"""
-        subset_manager = self.subset_manager
-        return {
-            'data': self.data_handler.df,
-            'plot_config': self.plot_tab.get_config(),
-            "subsets": subset_manager.export_subsets(),
-            'metadata': {
-                'version': '1.0',
-                'name': 'DataPlot Studio Project',
-                "subset_count": len(subset_manager.list_subsets())
+                "sheet_name": sheet_name, "rows": loaded_dataframe.shape[0], "columns": loaded_dataframe.shape[1]
             }
-        }
+        )
+        self.google_sheets_import_animation = GoogleSheetsImportAnimation(parent=None, message="Google Sheet Import")
+        self.google_sheets_import_animation.start(target_widget=self)
     
-    def clear_all(self):
-        """Clear all data"""
-        self.data_handler.df = None
-        self.data_handler.original_df = None
-        self.data_tab.clear()
-        self.plot_tab.clear()
+    def import_from_database(self) -> None:
+        """Import data from a database connection"""
+        try:
+            dialog = DatabaseConnectionDialog(self)
+            if dialog.exec():
+                db_type, connection_string, query = dialog.get_details()
+                if not connection_string or not query:
+                    QMessageBox.warning(self, "Input Error", "Invalid connection details or query")
+                    return
+                
+                self.progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message=f"Connecting...", parent=self)
+                self.progress_dialog.show()
+                self.progress_dialog.update_progress(10, "Connecting...")
+                QApplication.processEvents()
 
-        subset_manager = self.subset_manager
-        subset_manager.subsets.clear()
-        subset_manager.clear_cache()
-        self.data_tab.refresh_active_subsets()
-        self.plot_tab.refresh_subset_list()
+                self.data_handler.import_from_database(connection_string, query)
+
+                self.progress_dialog.update_progress(90, "Updating Interface")
+                self.data_tab.refresh_data_view()
+                self.plot_tab.update_column_combo()
+                self.unsaved_changes = True
+                self.progress_dialog.update_progress(100, "Complete")
+                QTimer.singleShot(300, self.progress_dialog.accept)
+                self.progress_dialog = None
+
+                self.status_bar.log_action(f"Imported from {db_type} database", level="SUCCESS", details={"db_type": db_type, "rows": self.data_handler.df.shape[0]})
+                self.import_database_animation = DatabaseImportAnimation(parent=None, message="Database Import", db_type=db_type)
+                self.import_database_animation.start(target_widget=self)
+        
+        except Exception as ImportDatabaseError:
+            if self.progress_dialog:
+                self.progress_dialog.accept()
+                self.progress_dialog = None
+            QMessageBox.critical(self, "Import Error", f"Failed to import from database:\n\n{str(ImportDatabaseError)}")
+            traceback.print_exc()
+    
+    def export_code(self) -> None:
+        """Export data manipulation and plotting code"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "No data loaded. Please load data first"
+            )
+            return
+        
+        source_info = self.data_handler.get_data_source_info()
+        data_filepath = source_info.get("file_path")
+        is_temp = source_info.get("is_temp_file", False)
+
+        if not data_filepath:
+            QMessageBox.warning(
+                self,
+                "Warning",
+                "No data source filepath found"
+            )
+            return
+        
+        if is_temp:
+            if QMessageBox.question(
+                self,
+                "Google Sheet Source",
+                "Data source is temporary. Continue?",QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
+                return
+        
+        dialog = QMessageBox()
+        dialog.setWindowTitle("Export code")
+        dialog.setText("What would you like to export?")
+        button_data = dialog.addButton("Data Only", QMessageBox.ButtonRole.YesRole)
+        button_plot = dialog.addButton("Data + Plot", QMessageBox.ButtonRole.NoRole)
+        dialog.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        dialog.exec()
+
+        plot_config = {}
+        export_type = ""
+        if dialog.clickedButton() == button_data:
+            export_type = "Data Only"
+        elif dialog.clickedButton() == button_plot:
+            export_type = "Data + Plot"
+            plot_config = self.plot_tab.get_config()
+        else:
+            return
+        
+        filepath, _ = QFileDialog.getSaveFileName(self, "Export as Python Script", f"{SCRIPT_FILE_NAME}.py", "Python Files (*.py)")
+        if filepath:
+            try:
+                script = self.code_exporter.generate_full_script(
+                    df=self.data_handler.df,
+                    data_filepath=str(data_filepath),
+                    source_info=source_info,
+                    data_operations=self.data_handler.operation_log,
+                    plot_config=plot_config,
+                    export_type=export_type
+                )
+                with open(filepath, "w", encoding="utf-8") as script_file:
+                    script_file.write(script)
+                
+                self.status_bar.log_action(f"Exported script: {Path(filepath).name}", level="SUCCESS", details={"type": export_type})
+                QMessageBox.information(self, "Success", f"Script exported to {filepath}")
+                self.python_export_animation = ScriptLogExportAnimation(parent=self, message="Script Exported", operation_type="python")
+                self.python_export_animation.start(target_widget=self)
+            except Exception as ExportPythonScriptError:
+                QMessageBox.critical(self, "Error", f"Failed to export code: {str(ExportPythonScriptError)}")
+                traceback.print_exc()
+    
+    def export_logs(self) -> None:
+        """Export session log"""
+        filepath, _ = QFileDialog.getSaveFileName(self, "Export Log", f"{LOG_FILE_NAME}.log", "Log Files (*.log);;Text Files (*.txt)")
+        if filepath:
+            try:
+                detailed = QMessageBox.question(
+                    self,
+                    "Export Log",
+                    "Include detailed timestamps?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes
+                self.logger.export_logs(filepath, detailed)
+                self.status_bar.log(f"Log exported to {filepath}")
+                self.export_log_animation = ScriptLogExportAnimation(parent=self, message="Logs Exported", operation_type="log")
+                self.export_log_animation.start(target_widget=self)
+
+            except Exception as ExportLogError:
+                QMessageBox.critical(self, "Error", f"Failed to export log: {str(ExportLogError)}")
+                traceback.print_exc()
+    
+    def export_data_dialog(self) -> None:
+        """Export the dataframe to a new file"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "Warning", "No Data to export")
+            return
+
+        dialog = ExportDialog(self)
+        if dialog.exec():
+            config = dialog.get_export_config()
+            if config["filepath"]:
+                try:
+                    self.data_handler.export_data(config["filepath"], format=config["format"], include_index=config.get("include_index", False))
+                    self.status_bar.log(f"Exported data to {config["filepath"]}")
+                    self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
+                    self.export_animation.start(target_widget=self)
+                    QMessageBox.information(self, "Success", f"Data exported to {config["filepath"]}")
+                except Exception as ExportDataError:
+                    QMessageBox.critical(self, "Error", f"Failed to export data: {str(ExportDataError)}")
+                    traceback.print_exc()
+    
+    def undo(self) -> None:
+        if self.data_handler.undo():
+            self.data_tab.refresh_data_view()
+            self.status_bar.log("Undo: Previous state restored")
+        else:
+            self.status_bar.log("Nothing to undo")
+    
+    def redo(self) -> None:
+        if self.data_handler.redo():
+            self.data_tab.refresh_data_view()
+            self.status_bar.log("Redo: Action restored")
+        else:
+            self.status_bar.log("Nothing to redo")
+    
+    def zoom_in(self) -> None:
+        if not self.tabs.currentIndex() == 1:
+            QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
+        
+        fig = self.plot_tab.plot_engine.current_figure
+        w, h = fig.get_size_inches()
+        fig.set_size_inches(min(w * 1.1, 20), min(h * 1.1, 20))
+        self.plot_tab.canvas.draw()
+        self.status_bar.log("Zoomed in")
+    
+    def zoom_out(self) -> None:
+        if not self.tabs.currentIndex() == 1:
+            QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
+        
+        fig = self.plot_tab.plot_engine.current_figure
+        w, h = fig.get_size_inches()
+        fig.set_size_inches(max(w * 0.9, 4), max(h * 0.9, 3))
+        self.plot_tab.canvas.draw()
+        self.status_bar.log("Zoomed out")
