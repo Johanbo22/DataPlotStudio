@@ -118,6 +118,7 @@ class MainWindow(QWidget):
             self.data_handler.original_df = project_data["data"].copy()
             self.data_tab.refresh_data_view()
             self.plot_tab.update_column_combo()
+            self.status_bar.update_data_stats(self.data_handler.df)
     
         if "plot_config" in project_data:
             self.plot_tab.load_config(project_data["plot_config"])
@@ -183,6 +184,7 @@ class MainWindow(QWidget):
         self.subset_manager.clear_cache()
         self.data_tab.refresh_active_subsets()
         self.plot_tab.refresh_subset_list()
+        self.status_bar.update_data_stats(None)
     
     def _confirm_discard_changes(self) -> bool:
         """Returns True if its safe to proceed, False if not"""
@@ -214,6 +216,9 @@ class MainWindow(QWidget):
             self._temp_import_filepath = filepath
             self._temp_import_filesize = file_size_kb
 
+            self.status_bar.show_progress(True)
+            self.status_bar.set_progress(0)
+
             self.progress_dialog = None
             if file_size_kb > 500:
                 self.progress_dialog = ProgressDialog(
@@ -235,17 +240,20 @@ class MainWindow(QWidget):
     
     @pyqtSlot(int, str)
     def _on_import_progress(self, percentage: int, message: str) -> None:
+        self.status_bar.set_progress(percentage)
         if self.progress_dialog:
             self.progress_dialog.update_progress(percentage, message)
             QApplication.processEvents()
     
     @pyqtSlot(object)
     def _on_import_finished(self, loaded_dataframe) -> None:
+        self.status_bar.show_progress(False)
         if self.progress_dialog:
             self.progress_dialog.update_progress(90, "Updating Interface")
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
         self.unsaved_changes = True
+        self.status_bar.update_data_stats(loaded_dataframe)
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
@@ -258,6 +266,7 @@ class MainWindow(QWidget):
     
     @pyqtSlot(Exception)
     def _on_import_error(self, error: Exception) -> None:
+        self.status_bar.show_progress(False)
         if self.progress_dialog:
             self.progress_dialog.accept()
             self.progress_dialog = None
@@ -281,6 +290,9 @@ class MainWindow(QWidget):
                     QMessageBox.warning(self, "Input Error", "Sheet ID and Sheet Name are required")
                     return
                 
+                self.status_bar.show_progress(True)
+                self.status_bar.set_progress(0)
+                
                 self.progress_dialog = ProgressDialog(title="Importing from Google Sheets", message=f"Connecting to {sheet_name}...", parent=self)
                 self.progress_dialog.show()
 
@@ -296,11 +308,14 @@ class MainWindow(QWidget):
     
     @pyqtSlot(object, str)
     def _on_google_sheet_import_finished(self, loaded_dataframe, sheet_name) -> None:
+        self.status_bar.show_progress(False)
         if self.progress_dialog:
             self.progress_dialog.update_progress(90, "Updating Interface")
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
         self.unsaved_changes = True
+
+        self.status_bar.update_data_stats(loaded_dataframe)
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
@@ -326,6 +341,9 @@ class MainWindow(QWidget):
                     QMessageBox.warning(self, "Input Error", "Invalid connection details or query")
                     return
                 
+                self.status_bar.show_progress(True)
+                self.status_bar.set_progress(0)
+                
                 self.progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message=f"Connecting...", parent=self)
                 self.progress_dialog.show()
                 self.progress_dialog.update_progress(10, "Connecting...")
@@ -337,6 +355,8 @@ class MainWindow(QWidget):
                 self.data_tab.refresh_data_view()
                 self.plot_tab.update_column_combo()
                 self.unsaved_changes = True
+                self.status_bar.update_data_stats(self.data_handler.df)
+
                 self.progress_dialog.update_progress(100, "Complete")
                 QTimer.singleShot(300, self.progress_dialog.accept)
                 self.progress_dialog = None
