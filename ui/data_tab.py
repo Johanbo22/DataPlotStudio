@@ -6,6 +6,7 @@ from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
+from ui.animations.OutlierDetectionAnimation import OutlierDetectionAnimation
 from ui.status_bar import StatusBar
 from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog, TableCustomizationDialog
 from core.subset_manager import SubsetManager
@@ -2192,6 +2193,8 @@ class DataTab(QWidget):
         
         dialog = OutlierDetectionDialog(self.data_handler, method, self)
         if dialog.exec():
+            self.outlier_animation = OutlierDetectionAnimation(method_name=method)
+            self.outlier_animation.start(target_widget=self)
             rows_removed = len(dialog.outlier_indices)
             self.refresh_data_view()
             self.status_bar.log_action(f"Removed {rows_removed} outliers using {method}", 

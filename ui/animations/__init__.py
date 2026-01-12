@@ -14,6 +14,7 @@ from .ProjectOpenAnimation import ProjectOpenAnimation
 from .RemoveRowAnimation import RemoveRowAnimation
 from .DropMissingValueAnimation import DropMissingValueAnimation
 from .FillMissingValuesAnimation import FillMissingValuesAnimation
+from .OutlierDetectionAnimation import OutlierDetectionAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
