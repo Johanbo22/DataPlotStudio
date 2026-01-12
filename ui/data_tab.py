@@ -813,9 +813,7 @@ class DataTab(QWidget):
         
         # Update table
         self.model = DataTableModel(self.data_handler, editable=self.is_editing)
-        self.data_table.setSortingEnabled(False)
         self.data_table.setModel(self.model)
-        self.data_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self.data_table.setSortingEnabled(True)
 
         if self.is_editing:
@@ -837,6 +835,9 @@ class DataTab(QWidget):
                 self.subset_column_combo.addItems(columns)
             except Exception as RefreshDataViewError:
                 print(f"Warning: Could not update subset column combo: {RefreshDataViewError}")
+        
+        if self.plot_tab:
+            self.plot_tab.update_column_combo()
         
         # Update statistics
         self.update_statistics()

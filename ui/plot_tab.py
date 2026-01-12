@@ -933,7 +933,16 @@ class PlotTab(PlotTabUI):
             return
         
         columns = list(self.data_handler.df.columns)
-        
+
+        # Preserve the current selection
+        current_x = self.x_column.currentText()
+        current_y = self.y_column.currentText()
+        current_hue = self.hue_column.currentText()
+        current_auto_annoate = self.auto_annotate_col_combo.currentText()
+        current_multi_y = []
+        if self.multi_y_check.isChecked():
+            current_multi_y = [item.text() for item in self.y_columns_list.selectedItems()]
+
         # Block signals to prevent triggering callbacks
         self.x_column.blockSignals(True)
         self.y_column.blockSignals(True)
@@ -944,25 +953,41 @@ class PlotTab(PlotTabUI):
         #update xcol
         self.x_column.clear()
         self.x_column.addItems(columns)
+        if current_x in columns:
+            self.x_column.setCurrentText(current_x)
 
         #update singleular ycol
         self.y_column.clear()
         self.y_column.addItems(columns)
+        if current_y in columns:
+            self.y_column.setCurrentText(current_y)
 
         #update more ycols
         self.y_columns_list.clear()
         for col in columns:
             self.y_columns_list.addItem(col)
+            if col in current_multi_y:
+                item = self.y_columns_list.item(self.y_columns_list.count() - 1)
+                item.setSelected(True)
         
         #update hue
         self.hue_column.clear()
         self.hue_column.addItem("None")
         self.hue_column.addItems(columns)
+        if current_hue in columns:
+            self.hue_column.setCurrentText(current_hue)
+        else:
+            self.hue_column.setCurrentIndex(0)
 
         #update auto annotations
         self.auto_annotate_col_combo.clear()
-        self.auto_annotate_col_combo.addItem("Defalt (Y-value)")
+        self.auto_annotate_col_combo.addItem("Default (Y-value)")
         self.auto_annotate_col_combo.addItems(columns)
+
+        if current_auto_annoate in columns:
+            self.auto_annotate_col_combo.setCurrentText(current_auto_annoate)
+        elif current_auto_annoate == "Default (Y-value)":
+            self.auto_annotate_col_combo.setCurrentIndex(0)
         
         # Unblock signals
         self.x_column.blockSignals(False)
