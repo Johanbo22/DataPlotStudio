@@ -1,6 +1,6 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
 
@@ -306,14 +306,15 @@ class DataTab(QWidget):
         column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         column_layout.addWidget(column_info)
         
-        column_layout.addWidget(QLabel("Select Column:"))
         column_column_info = QLabel("Select the column you wish to work with")
         column_column_info.setWordWrap(True)
         column_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
         column_layout.addWidget(column_column_info)
 
-        self.column_select = DataPlotStudioComboBox()
-        column_layout.addWidget(self.column_select)
+        self.column_list = DataPlotStudioListWidget()
+        self.column_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.column_list.setMaximumHeight(200)
+        column_layout.addWidget(self.column_list)
         
         drop_column_layout = QHBoxLayout()
         drop_column_button = DataPlotStudioButton("Drop Column", parent=self)
@@ -825,8 +826,8 @@ class DataTab(QWidget):
         columns = list(df.columns)
         self.filter_column.clear()
         self.filter_column.addItems(columns)
-        self.column_select.clear()
-        self.column_select.addItems(columns)
+        self.column_list.clear()
+        self.column_list.addItems(columns)
         
         # Update subset column combo if it exists
         if hasattr(self, 'subset_column_combo'):
@@ -1505,32 +1506,53 @@ class DataTab(QWidget):
     
     def drop_column(self):
         """Drop selected column"""
-        try:
-            column = self.column_select.currentText()
-            cols_before = len(self.data_handler.df.columns)
-            
-            self.data_handler.clean_data('drop_column', column=column)
-            
-            cols_after = len(self.data_handler.df.columns)
-            
-            self.refresh_data_view()
-            
-            self.status_bar.log_action(
-                f"Dropped column '{column}'",
-                details={
-                    'column': column,
-                    'columns_before': cols_before,
-                    'columns_after': cols_after,
-                    'operation': 'drop_column'
-                },
-                level="SUCCESS"
-            )
-        except Exception as DropColumnFromDataFrameError:
-            self.status_bar.log(f"Failed to drop column: {str(DropColumnFromDataFrameError)}", "ERROR")
-    
+        if self.data_handler.df is None:
+            return
+        
+        # Get the selected items
+        selected_items = self.column_list.selectedItems()
+        if not selected_items:
+            self.status_bar.log(f"No columns selected to drop", "WARNING")
+            QMessageBox.warning(self, "Selection Error", "Please select at least one column to drop")
+            return
+        
+        cols_to_drop = [item.text() for item in selected_items]
+        msg = f"Are you sure you want to drop {len(cols_to_drop)} column(s)?\n\n"
+        msg += ", ".join(cols_to_drop[:5])
+        if len(cols_to_drop) > 5:
+            msg += "..."
+
+        confirm = QMessageBox.question(
+            self, 
+            "Confirm Drop", 
+            msg,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if confirm == QMessageBox.StandardButton.Yes:
+            try:
+                cols_before = len(self.data_handler.df.columns)
+                self.data_handler.clean_data("drop_column", columns=cols_to_drop)
+                
+                cols_after = len(self.data_handler.df.columns)
+                self.refresh_data_view()
+                
+                self.status_bar.log_action(
+                    f"Dropped {len(cols_to_drop)} columns",
+                    details={
+                        'columns': cols_to_drop,
+                        'columns_before': cols_before,
+                        'columns_after': cols_after,
+                        'operation': 'drop_column'
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as DropColumnError:
+                self.status_bar.log(f"Failed to drop columns: {str(DropColumnError)}", "ERROR")
+                QMessageBox.critical(self, "Error", f"Failed to drop columns: {str(DropColumnError)}")
+
     def rename_column(self):
         """Rename selected column"""
-        old_name = self.column_select.currentText()
+        old_name = self.column_list.currentText()
         if not old_name:
             self.status_bar.log("No column selected", "WARNING")
             return
@@ -1564,7 +1586,7 @@ class DataTab(QWidget):
             QMessageBox.warning(self, "No data", "Please load data first")
             return
 
-        column = self.column_select.currentText()
+        column = self.column_list.currentItem()
         if not column:
             self.status_bar.log("No Column Selected", "WARNING")
             return
@@ -1626,6 +1648,7 @@ class DataTab(QWidget):
             error_msg = f"Failed to convert '{column}' to {target_type}: {str(ChangeColumnDataTypeError)}"
             QMessageBox.critical(self, "Conversion Error", error_msg)
             self.status_bar.log(error_msg, "ERROR")
+            traceback.print_exc()
             self.refresh_data_view()
 
     def reset_data(self):

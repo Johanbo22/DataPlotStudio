@@ -575,8 +575,19 @@ class DataHandler:
                     for col in target_cols:
                         self.df[col] = self.df[col].fillna(method=method)
             elif action == 'drop_column':
-                column = kwargs.get('column')
-                self.df = self.df.drop(columns=[column])
+                cols_to_drop = []
+                if "columns" in kwargs:
+                    val = kwargs["columns"]
+                    if isinstance(val, list):
+                        cols_to_drop.extend(val)
+                    else:
+                        cols_to_drop.append(val)
+                if "column" in kwargs:
+                    cols_to_drop.append(kwargs["column"])
+                    cols_to_drop = list(set(cols_to_drop))
+
+                if cols_to_drop:
+                    self.df = self.df.drop(columns=cols_to_drop)
             elif action == 'rename_column':
                 old_name = kwargs.get('old_name')
                 new_name = kwargs.get('new_name')
