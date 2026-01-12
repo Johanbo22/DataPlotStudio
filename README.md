@@ -22,4 +22,22 @@ If you wish to build the application from source, a requirements.txt is provided
 ```
 pip install -r requirements.txt
 ```
-Otherwise version 10.1 of [PyQt6](https://doc.qt.io/qtforpython-6/) is required.
+Otherwise the following packages are required:
+```
+pandas==2.2.3
+duckdb==1.1.3
+numpy==2.2.3
+requests==2.32.3
+SQLAlchemy==2.0.36
+geopandas==1.0.1
+scikit-learn==1.6.1
+scipy==1.14.1
+matplotlib==3.9.2
+seaborn==0.13.2
+plotly==5.24.1
+PyQt6==6.10.0
+PyQt6-Qt6==6.10.1
+PyQt6-WebEngine==6.10.0
+PyQt6-WebEngine-Qt6==6.10.1
+PyQt6_sip==13.10.2
+```
