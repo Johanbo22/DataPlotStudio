@@ -32,7 +32,6 @@ class DataPlotStudioCheckBox(QCheckBox):
         self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        # We define a complete style here, similar to your QRadioButton
         icon = "icons/ui_styling/checkmark.png"
         self.setStyleSheet(f"""
             QCheckBox {{

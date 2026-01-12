@@ -130,12 +130,12 @@ class PlotTab(PlotTabUI):
         # Load initial data
         self.update_column_combo()
         
-        self.on_plot_type_changed(self.plot_type.currentText())
+        self.on_plot_type_changed(self.plot_type.currentText(), log=False)
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
         
-        # --- Main Buttons ---
+        #  Main Buttons 
         self.plot_button.clicked.connect(self.generate_plot)
         self.editor_button.clicked.connect(self.open_script_editor)
         self.clear_button.clicked.connect(self.clear_plot)
@@ -144,7 +144,7 @@ class PlotTab(PlotTabUI):
         self.plot_type.currentTextChanged.connect(self._sync_script_if_open)
         self.x_column.currentTextChanged.connect(self._sync_script_if_open)
         
-        # --- Tab 1: Basic ----
+        #  Tab 1: Basic 
         self.plot_type.currentTextChanged.connect(self.on_plot_type_changed)
         self.multi_y_check.stateChanged.connect(self.toggle_multi_y)
         self.select_all_y_btn.clicked.connect(self.select_all_y_columns)
@@ -156,7 +156,7 @@ class PlotTab(PlotTabUI):
         self.use_subset_check.stateChanged.connect(self.use_subset)
         self.use_plotly_check.stateChanged.connect(self.toggle_plotly_backend)
         
-        # --- Tab 2:- Appearance ---
+        #  Tab 2:- Appearance 
         self.individual_spines_check.stateChanged.connect(self.toggle_individual_spines)
         self.global_spine_color_button.clicked.connect(self.choose_global_spine_color)
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
@@ -169,7 +169,7 @@ class PlotTab(PlotTabUI):
         self.bg_color_button.clicked.connect(self.choose_bg_color)
         self.face_color_button.clicked.connect(self.choose_face_color)
         
-        # --- Tab 3: Axes ---
+        #  Tab 3: Axes 
         self.x_auto_check.stateChanged.connect(lambda: self.x_min_spin.setEnabled(not self.x_auto_check.isChecked()))
         self.x_auto_check.stateChanged.connect(lambda: self.x_max_spin.setEnabled(not self.x_auto_check.isChecked()))
         self.y_auto_check.stateChanged.connect(lambda: self.y_min_spin.setEnabled(not self.y_auto_check.isChecked()))
@@ -178,7 +178,7 @@ class PlotTab(PlotTabUI):
         self.x_datetime_format_combo.currentTextChanged.connect(self.on_x_datetime_format_changed)
         self.y_datetime_format_combo.currentTextChanged.connect(self.on_y_datetime_format_changed)
         
-        # --- Tab 4: Legend & Grid ---
+        #  Tab 4: Legend & Grid 
         self.legend_check.stateChanged.connect(self.on_legend_toggle)
         self.legend_bg_button.clicked.connect(self.choose_legend_bg_color)
         self.legend_edge_button.clicked.connect(self.choose_legend_edge_color)
@@ -195,7 +195,7 @@ class PlotTab(PlotTabUI):
         self.y_minor_grid_color_button.clicked.connect(self.choose_y_minor_grid_color)
         self.y_minor_grid_alpha_slider.valueChanged.connect(lambda v: self.y_minor_grid_alpha_label.setText(f"{v}%"))
         
-        # --- Tab 5: Advanced ---
+        #  Tab 5: Advanced 
         self.multiline_custom_check.stateChanged.connect(self.toggle_line_selector)
         self.line_selector_combo.currentTextChanged.connect(self.on_line_selected)
         self.line_color_button.clicked.connect(self.choose_line_color)
@@ -210,7 +210,7 @@ class PlotTab(PlotTabUI):
         self.save_bar_custom_button.clicked.connect(self.save_bar_customization)
         self.alpha_slider.valueChanged.connect(lambda v: self.alpha_label.setText(f"{v}%"))
         
-        # --- Tab 6: Annotations ---
+        #  Tab 6: Annotations 
         self.annotation_color_button.clicked.connect(self.choose_annotation_color)
         self.auto_annotate_check.clicked.connect(self.toggle_auto_annotate)
         self.add_annotation_button.clicked.connect(self.add_annotation)
@@ -1042,9 +1042,10 @@ class PlotTab(PlotTabUI):
         except Exception as PlotTableError:
             self.status_bar.log(f"Failed to add table to plot: {str(PlotTableError)}", "WARNING")
     
-    def on_plot_type_changed(self, plot_type: str):
+    def on_plot_type_changed(self, plot_type: str, log: bool = True):
         """Handle plot type change"""
-        self.status_bar.log(f"Plot type changed to: {plot_type}")
+        if log:
+            self.status_bar.log(f"Plot type changed to: {plot_type}")
 
         description = self.plot_engine.PLOT_DESCRIPTIONS.get(plot_type, "")
         self.description_label.setText(description)
@@ -1972,7 +1973,7 @@ class PlotTab(PlotTabUI):
         self.plot_engine.current_ax.grid(True)
         
         if self.independent_grid_check.isChecked():
-            # --- INDEPENDENT ---
+            #  INDEPENDENT 
             
             # Helper to map text to symbol
             grid_style_map = {
@@ -2031,7 +2032,7 @@ class PlotTab(PlotTabUI):
                 self.plot_engine.current_ax.grid(visible=False, which="minor", axis="y")
         
         else:
-            # --- GLOBAL ---
+            #  GLOBAL 
             which_type = self.grid_which_type_combo.currentText()
             axis = self.grid_axis_combo.currentText()
 
