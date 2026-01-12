@@ -8,22 +8,48 @@ class LogHistoryPopup(QWidget):
 
         self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         self.setFixedSize(600, 400)
-        self.setStyleSheet("background-color: #2b2b2b; border: 1px solid #555;")
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #252526;
+                border: 1px solid #454545;
+                border-radius: 4px;
+            }
+            QTextEdit {
+                background-color: transparent;
+                color: #cccccc;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                border: none;
+                padding: 8px;
+            }
+            /* Custom Scrollbar */
+            QScrollBar:vertical {
+                background: #252526;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #424242;
+                min-height: 20px;
+                border-radius: 5px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #686868;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
 
         text_view = QTextEdit()
         text_view.setReadOnly(True)
-        text_view.setStyleSheet("""
-            QTextEdit {
-                background-color: #1e1e1e;
-                color: #d4d4d4;
-                font-family: Consolas, 'Courier New', monospace;
-                border: none;
-                padding: 5px;
-            }
-        """)
 
         if not history:
             text_view.setHtml("<i style='color: #888'>Nothing logged yet.</i>")

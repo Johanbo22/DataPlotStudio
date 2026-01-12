@@ -27,18 +27,29 @@ class StatusBar(QStatusBar):
 
         self.setStyleSheet("""
             QStatusBar {
-                background-color: #2b2b2b;
+                background-color: #1e1e1e;
                 color: #ffffff;
-                border-top: 1px solid #555;
+                border-top: 1px solid #3e3e42;
+                padding: 4px;
             }
             QStatusBar::item {
                 border: none;
+            }
+            QLabel{
+                padding: 0 5px;
             }
         """)
 
         # Adding a label of data stat
         self.stats_label = QLabel("No Data")
-        self.stats_label.setStyleSheet("color: #aaaaaa; padding: 0 10px; font-family: Consolas, monospace;")
+        self.stats_label.setStyleSheet("""
+            QLabel {
+                color: #858585;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+                padding-right: 15px;
+            }
+        """)
 
         # Adding some progress
         self.progress_bar = QProgressBar()
@@ -46,12 +57,15 @@ class StatusBar(QStatusBar):
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setStyleSheet("""
             QProgressBar {
-                border: 1px solid #444;
+                border: none;
+                background-color: #2d2d2d;
                 border-radius: 2px;
-                background-color: #1e1e1e;
+                min-height: 4px;
+                max-height: 4px;
             }
             QProgressBar::chunk {
                 background-color: #007acc;
+                border-radius: 2px;
             }
         """)
         self.progress_bar.hide()
@@ -71,7 +85,7 @@ class StatusBar(QStatusBar):
         """)
 
         # Open history button
-        self.history_button = DataPlotStudioButton("≡", base_color_hex="#333", hover_color_hex="#444", text_color_hex="#ddd")
+        self.history_button = DataPlotStudioButton("≡", base_color_hex="#333", hover_color_hex="#444", text_color_hex="#ddd", padding="4px")
         self.history_button.setToolTip("View Log History")
         self.history_button.setFixedWidth(24)
         self.history_button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -87,12 +101,12 @@ class StatusBar(QStatusBar):
         self.history_button.clicked.connect(self.show_log_history)
         
         # Status label
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel()
         self.status_label.setStyleSheet("color: #00ff00;")
         
         # Add widgets to status bar
-        self.addWidget(self.status_label, 1)
-        self.addWidget(self.terminal, 4)
+        self.addWidget(self.status_label, 0)
+        self.addWidget(self.terminal, 1)
         self.addWidget(self.history_button)
         self.addPermanentWidget(self.progress_bar)
         self.addPermanentWidget(self.stats_label)
@@ -108,27 +122,23 @@ class StatusBar(QStatusBar):
         # set col based on actionlevel
         if level == "SUCCESS":
             color = "#00ff00"
-            icon = "✓"
         elif level == "WARNING":
             color = "#ffaa00"
-            icon = "⚠"
         elif level == "ERROR":
             color = "#ff0000"
-            icon = "✗"
         else:
             color = "#00ff00"
-            icon = "•"
         
-        display_message = f"{icon} {message}"
-        log_message: str = f"[{timestamp}] {display_message}"
+        display_message = f"{message}"
+        log_message: str = f"[{timestamp}] | {display_message}"
 
         # Store the log in the history
         self.log_history.append(f'<span style="color:{color}">{log_message}</span>')
 
         self.terminal.setText(log_message)
-        self.terminal.setStyleSheet(f"QLineEdit {{background-color: #1e1e1e; color: {color}; font-family: Consolas, 'Courier New', monospace; font-size: 11px; border: 1px solid #444; padding: 4px;}}") 
-        self.status_label.setText("Updated")
-        self.status_label.setStyleSheet(f"color: {color}; font-size: 11px;")
+        self.terminal.setStyleSheet(f"QLineEdit {{background-color: transparent; color: {color}; font-family: Consolas, monospace; font-size: 11px; border: none; padding: 0 5px;}}") 
+        self.status_label.setText("Ready" if level == "SUCCESS" or "INFO" else "Warning" if level == "WARNING" else "Error")
+        self.status_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px;")
 
         #log to file logger if available
         if self.logger:
