@@ -1,6 +1,6 @@
 # ui/status_bar.py
 from PyQt6.QtWidgets import QStatusBar, QLabel, QLineEdit, QProgressBar, QPushButton, QDialog, QTextEdit, QVBoxLayout, QApplication
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 from datetime import datetime
 from core.logger import Logger
 from ui.widgets.AnimatedButton import DataPlotStudioButton
@@ -24,6 +24,13 @@ class StatusBar(QStatusBar):
         self.log_history: list[str] = []
         self.action_timeout = 2 
         self.last_action_time = None
+
+        #Timer effect for type
+        self.typewriter_timer = QTimer()
+        self.typewriter_timer.setInterval(20)
+        self.typewriter_timer.timeout.connect(self._type_next_char)
+        self.current_anim_text = ""
+        self.current_anim_index = 0
 
         self.setStyleSheet("""
             QStatusBar {
@@ -140,6 +147,8 @@ class StatusBar(QStatusBar):
         self.status_label.setText("Ready" if level == "SUCCESS" or "INFO" else "Warning" if level == "WARNING" else "Error")
         self.status_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px;")
 
+        self._start_typing(log_message)
+
         #log to file logger if available
         if self.logger:
             if level == "INFO":
@@ -152,6 +161,28 @@ class StatusBar(QStatusBar):
                 self.logger.error(message)
         else:
             print(f"Warning: logger not present. Message not logged: {message}")
+    
+    def _start_typing(self, text: str) -> None:
+        """Initialize the typewriter effect"""
+        self.typewriter_timer.stop()
+        self.current_anim_text = text
+        self.current_anim_index = 0
+        self.terminal.setText("")
+        self.typewriter_timer.start()
+    
+    def _type_next_char(self) -> None:
+        if self.current_anim_index < len(self.current_anim_text):
+            chunk_size = 1
+            if len(self.current_anim_text) > 50:
+                chunk_size = 2
+
+            end_index = min(self.current_anim_index + chunk_size, len(self.current_anim_text))
+
+            current_text = self.current_anim_text[:end_index]
+            self.terminal.setText(current_text)
+            self.current_anim_index = end_index
+        else:
+            self.typewriter_timer.stop()
     
     def log_action(self, action: str, details: dict = None, level:str = "SUCCESS") -> None:
         """log actions"""
