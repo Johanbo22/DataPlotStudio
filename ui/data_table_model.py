@@ -3,6 +3,7 @@ import numpy as np
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 from PyQt6.QtGui import QColor
 from typing import Any
+from ui.status_bar import StatusBar
 
 class DataTableModel(QAbstractTableModel):
     """ table for the data Table"""
@@ -119,3 +120,24 @@ class DataTableModel(QAbstractTableModel):
                 return QVariant()
         
         return QVariant()
+    
+    def sort(self, column: int, order: Qt.SortOrder) -> None:
+        """Sorts the dataframe based on the given column and the given order"""
+        if self._data is None:
+            return
+        
+        self.layoutAboutToBeChanged.emit()
+
+        try:
+            col_name = self._data.columns[column]
+            ascending = (order == Qt.SortOrder.AscendingOrder)
+
+            self._data = self._data.sort_values(by=col_name, ascending=ascending)
+            self.data_handler.df = self._data
+        
+        except Exception as SortError:
+            print(f"Error sorting data: {str(SortError)}")
+            self.status_bar = StatusBar()
+            self.status_bar.log(f"Error sorting data: {str(SortError)}")
+        
+        self.layoutChanged.emit()

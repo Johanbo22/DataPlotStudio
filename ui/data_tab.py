@@ -1,13 +1,13 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog, TableCustomizationDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
 
@@ -118,6 +118,10 @@ class DataTab(QWidget):
         self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+
+        # Data table context menu
+        self.data_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.data_table.customContextMenuRequested.connect(self.show_table_context_menu)
 
         data_table_icon = QIcon("icons/data_table.png")
         self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
@@ -809,7 +813,9 @@ class DataTab(QWidget):
         
         # Update table
         self.model = DataTableModel(self.data_handler, editable=self.is_editing)
+        self.data_table.setSortingEnabled(False)
         self.data_table.setModel(self.model)
+        self.data_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self.data_table.setSortingEnabled(True)
 
         if self.is_editing:
@@ -2167,3 +2173,90 @@ class DataTab(QWidget):
             self.status_bar.log_action(f"Removed {rows_removed} outliers using {method}", 
                 details={"method": method, "count": rows_removed, "operation": "remove_outliers"},
                 level="SUCCESS")
+    
+    def show_table_context_menu(self, position):
+        """Shows the context menu for the data table"""
+        if self.data_handler.df is None:
+            return
+        
+        menu = QMenu()
+
+        resize_cols_action = menu.addAction("Resize Columns to Contents")
+        resize_rows_action = menu.addAction("Resize Rows to Contents")
+        menu.addSeparator()
+        
+        grid_action = QAction("Show Grid", menu)
+        grid_action.setCheckable(True)
+        grid_action.setChecked(self.data_table.showGrid())
+        grid_action.triggered.connect(lambda: self.data_table.setShowGrid(grid_action.isChecked()))
+        menu.addAction(grid_action)
+
+        alt_rows_action = QAction("Alternating Colors", menu)
+        alt_rows_action.setCheckable(True)
+        alt_rows_action.setChecked(self.data_table.alternatingRowColors())
+        alt_rows_action.triggered.connect(lambda: self.data_table.setAlternatingRowColors(alt_rows_action.isChecked()))
+        menu.addAction(alt_rows_action)
+
+        menu.addSeparator()
+        settings_action = menu.addAction("Table Settings...")
+
+        action = menu.exec(self.data_table.viewport().mapToGlobal(position))
+
+        if action == resize_cols_action:
+            self.data_table.resizeColumnsToContents()
+        elif action == resize_rows_action:
+            self.data_table.resizeRowsToContents()
+        elif action == settings_action:
+            self.open_table_customization()
+
+    
+    def open_table_customization(self):
+        """Opens the settings dialog for the table customzation"""
+        if self.data_handler.df is None:
+            return
+        
+        # Get the current settings
+        current_font = self.data_table.font()
+        current_font_size = current_font.pointSize()
+        if current_font_size <= 0: current_font_size = 10
+
+        current_alt_color = self.data_table.palette().color(QPalette.ColorRole.AlternateBase).name()
+
+        current_settings = {
+            "alternating_rows": self.data_table.alternatingRowColors(),
+            "alt_color": current_alt_color,
+            "show_grid": self.data_table.showGrid(),
+            "show_h_headers": self.data_table.horizontalHeader().isVisible(),
+            "show_v_headers": self.data_table.verticalHeader().isVisible(),
+            "font_family": current_font.family(),
+            "font_size": current_font_size,
+            "word_wrap": self.data_table.wordWrap(),
+            "selection_behavio": self.data_table.selectionBehavior()
+        }
+
+        dialog = TableCustomizationDialog(current_settings, self)
+        if dialog.exec():
+            settings = dialog.get_settings()
+
+            self.data_table.setAlternatingRowColors(settings["alternating_rows"])
+            if settings["alternating_rows"]:
+                palette = self.data_table.palette()
+                palette.setColor(QPalette.ColorRole.AlternateBase, QColor(settings["alt_color"]))
+                self.data_table.setPalette(palette)
+            self.data_table.setShowGrid(settings["show_grid"])
+
+            self.data_table.horizontalHeader().setVisible(settings['show_h_header'])
+            self.data_table.verticalHeader().setVisible(settings['show_v_header'])
+
+            font = QFont(settings['font_family'])
+            font.setPointSize(settings['font_size'])
+            self.data_table.setFont(font)
+            
+            self.data_table.setWordWrap(settings['word_wrap'])
+            self.data_table.setSelectionBehavior(settings['selection_behavior'])
+            
+            self.data_table.resizeRowsToContents()
+            if settings['word_wrap']:
+                self.data_table.resizeColumnsToContents()
+            
+            self.status_bar.log("Table settings updated", "SUCCESS")

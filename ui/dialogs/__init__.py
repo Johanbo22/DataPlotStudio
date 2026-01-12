@@ -18,6 +18,7 @@ from .SubsetManagerDialog import SubsetManagerDialog
 from .AboutDialog import AboutDialog
 from .OutlierDetectionDialog import OutlierDetectionDialog
 from .LogHistoryPopup import LogHistoryPopup
+from .TableCustomizationDialog import TableCustomizationDialog
 
 __all__ = [
     "AggregationDialog",
@@ -39,5 +40,6 @@ __all__ = [
     "SubsetManagerDialog",
     "AboutDialog",
     "OutlierDetectionDialog",
-    "LogHistoryPopup"
+    "LogHistoryPopup",
+    "TableCustomizationDialog"
 ]

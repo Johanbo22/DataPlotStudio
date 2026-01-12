@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QPoint
 from datetime import datetime
 from core.logger import Logger
 from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.dialogs import LogHistoryPopup
+from ui.dialogs.LogHistoryPopup import LogHistoryPopup
 
 
 
