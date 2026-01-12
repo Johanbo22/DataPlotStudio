@@ -45,6 +45,7 @@ class DataHandler:
         self.last_gsheet_delimiter: Optional[str] = None
         self.last_gsheet_decimal: Optional[str] = None
         self.last_gsheet_thousands: Optional[str] = None
+        self.last_gsheet_gid: Optional[str] = None
 
         #Track database creds
         self.last_db_connection_string: Optional[str] = None
@@ -167,6 +168,7 @@ class DataHandler:
             self.last_gsheet_delimiter = None
             self.last_gsheet_decimal = None
             self.last_gsheet_thousands = None
+            self.last_gsheet_gid = None
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
@@ -175,18 +177,22 @@ class DataHandler:
         except Exception as ImportFileError:
             raise Exception(f"Error importing file: {str(ImportFileError)}")
     
-    def import_google_sheets(self, sheet_id: str, sheet_name: str, delimiter: str = ",", decimal: str = ".", thousands: str = None) -> pd.DataFrame:
+    def import_google_sheets(self, sheet_id: str, sheet_name: str, delimiter: str = ",", decimal: str = ".", thousands: str = None, gid: str = None) -> pd.DataFrame:
         """Import data from Google Sheets using sheet_id and sheet_name"""
         try:
             #delete existing tempfiles
             if self.is_temp_file:
                 self.cleanup_temp_files()
 
-            if not sheet_id or not sheet_name:
-                raise ValueError("Sheet ID and Sheet Name cannot be empty")
+            if not sheet_id:
+                raise ValueError("Sheet ID cannot be empty")
+            
+            if not sheet_name and not gid:
+                sheet_name = "Sheet1"
             
             sheet_id = sheet_id.strip()
-            sheet_name = sheet_name.strip()
+            if sheet_name: sheet_name = sheet_name.strip()
+            if gid: gid = str(gid).strip()
 
             #store params so user can refresh without adding writing it again
             self.last_gsheet_id = sheet_id
@@ -194,45 +200,49 @@ class DataHandler:
             self.last_gsheet_delimiter = delimiter
             self.last_gsheet_decimal = decimal
             self.last_gsheet_thousands = thousands
+            self.last_gsheet_gid = gid
 
             print(f"DEBUG data_handler.py->import_google_sheets: Storing parameters:")
             print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
             print(f"  - Decimal: '{self.last_gsheet_decimal}'")
             print(f"  - Thousands: {repr(self.last_gsheet_thousands)}")
+            print(f"  - GID: {self.last_gsheet_gid}")
             
             # Try multiple URL formats for better compatibility
-            urls_to_try = [
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}",
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}",
-            ]
+            base_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
+            params = {"tqx": "out:csv"}
+            
+            if gid:
+                params["gid"] = gid
+            else:
+                params["sheet"] = sheet_name
             
             df = None
             last_error = None
             
-            for url in urls_to_try:
-                try:
-                    response: requests.Response = requests.get(url, timeout=10)
-                    response.raise_for_status()
+            try:
+                response: requests.Response = requests.get(base_url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                if response.text and len(response.text) > 10:
+                    from io import StringIO
+                    df = pd.read_csv(StringIO(response.text), sep=delimiter, decimal=decimal, thousands=thousands, encoding="utf-8", on_bad_lines="skip", engine="python")
                     
-                    # Check if response is valid CSV
-                    if response.text and len(response.text) > 10:
-                        from io import StringIO
-                        df = pd.read_csv(StringIO(response.text), sep=delimiter, decimal=decimal, thousands=thousands, encoding="utf-8", on_bad_lines="skip", engine="python")
-                        
-                        if df is not None and len(df) > 0:
-                            break  # 
-                except Exception as GoogleSheetsImportError:
-                    last_error = GoogleSheetsImportError
-                    continue
+            except Exception as GoogleSheetsImportError:
+                last_error = GoogleSheetsImportError
             
             if df is None or len(df) == 0:
-                raise ValueError("The sheet appears to be empty or inaccessible. The data could not be retrieved.")
+                message = "The sheet appears to be empty or inaccessible."
+                if sheet_name and not gid:
+                    message += f"\n\nNote: Please verify the sheet name '{sheet_name}' matches exactly (case-sensitive)."
+                raise ValueError(message)
             
             self.df = df
             self.original_df = self.df.copy()
 
             #create temp csv
-            safe_sheet_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in sheet_name)
+            name_slug = gid if gid else sheet_name
+            safe_sheet_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in str(name_slug))
             self.temp_csv_path = create_temp_csv_file(self.df, f"gsheet_{safe_sheet_name}")
             self.file_path = self.temp_csv_path
             self.is_temp_file = True
@@ -669,7 +679,8 @@ class DataHandler:
             self.last_gsheet_name,
             delimiter=self.last_gsheet_delimiter,
             decimal=self.last_gsheet_decimal,
-            thousands=thousands_param
+            thousands=thousands_param,
+            gid=self.last_gsheet_gid
         )
     
     def has_google_sheets_import(self) -> bool:

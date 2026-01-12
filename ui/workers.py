@@ -44,7 +44,7 @@ class FileImportWorker(QRunnable):
 
 class GoogleSheetsImportWorker(QRunnable):
     """Worker thread for imports using Google Sheets"""
-    def __init__(self, data_handler: DataHandler, sheet_id: str, sheet_name: str, delimiter: str, decimal: str, thousands: str):
+    def __init__(self, data_handler: DataHandler, sheet_id: str, sheet_name: str, delimiter: str, decimal: str, thousands: str, gid: str = None):
         super().__init__()
         self.data_handler = data_handler
         self.sheet_id = sheet_id
@@ -52,6 +52,7 @@ class GoogleSheetsImportWorker(QRunnable):
         self.delimiter = delimiter
         self.decimal = decimal
         self.thousands = thousands
+        self.gid = gid
         self.signals = WorkerSignals()
 
     @pyqtSlot()
@@ -63,7 +64,8 @@ class GoogleSheetsImportWorker(QRunnable):
                 self.sheet_name,
                 delimiter=self.delimiter,
                 decimal=self.decimal,
-                thousands=self.thousands
+                thousands=self.thousands,
+                gid=self.gid
             )
 
             self.signals.progress.emit(70, "Processing data...")

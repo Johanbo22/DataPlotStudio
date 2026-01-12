@@ -1,5 +1,5 @@
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-
+import re
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
@@ -17,6 +17,7 @@ class GoogleSheetsDialog(QDialog):
         self.setWindowTitle("Import Google Sheets")
         self.setModal(True)
         self.resize(600, 300)
+        self.gid = None
 
         self.init_ui()
 
@@ -33,11 +34,12 @@ class GoogleSheetsDialog(QDialog):
         form_layout = QFormLayout()
 
         # Sheet ID input
-        sheet_id_label = QLabel("Sheet ID:")
+        sheet_id_label = QLabel("Google Sheet Link or Sheet ID:")
         self.sheet_id = DataPlotStudioLineEdit()
-        self.sheet_id.setToolTip("This is the unique sheet ID for your sheet.")
-        self.sheet_id.setPlaceholderText("e.g., 1BxiMVs0XRA5nFMoon9FFBiMKo6YcK7...")
+        self.sheet_id.setToolTip("Paste the full Google Sheets URL or the unique Sheet ID")
+        self.sheet_id.setPlaceholderText("Paste URL (e.g., https://docs.google.com/.../edit#gid=0) or ID")
         self.sheet_id.setMinimumWidth(350)
+        self.sheet_id.textChanged.connect(self.parse_input)
         form_layout.addRow(sheet_id_label, self.sheet_id)
 
         # Sheet Name input
@@ -158,14 +160,44 @@ class GoogleSheetsDialog(QDialog):
         """Handle delimiter selection change"""
         self.custom_delimiter_input.setEnabled(text == "Custom")
 
+    def parse_input(self, text: str) -> None:
+        """Parse the input for URL and extract sheet ID and GID"""
+        # Regex to match sheet id
+        id_match = re.search(r"/d/([a-zA-Z0-9-_]+)", text)
+
+        if id_match:
+            extracted_id = id_match.group(1)
+            if self.sheet_id.text() != extracted_id:
+                self.sheet_id.blockSignals(True)
+                self.sheet_id.setText(extracted_id)
+                self.sheet_id.blockSignals(False)
+            
+            # Look for a GID
+            gid_match = re.search(r"[#&?]gid=([0-9]+)", text)
+            if gid_match:
+                self.gid = gid_match.group(1)
+                # Disable the sheet name as input to avoid a situation where the a sheet name that doesnt match GID is given
+                self.sheet_name.setEnabled(False)
+                self.sheet_name.clear()
+                self.sheet_name.setPlaceholderText(f"Connecting to sheet with GID: {self.gid}")
+            else:
+                self.gid = None
+                self.sheet_name.setEnabled(True)
+                self.sheet_name.setPlaceholderText("e.g., Sheet1")
+        else:
+            if not text.startswith("http"):
+                self.gid = None
+                self.sheet_name.setEnabled(True)
+                self.sheet_name.setPlaceholderText("e.g., Sheet1")
+
     def validate_and_accept(self) -> None:
         """Validate inputs before accepting"""
         if not self.sheet_id.text().strip():
             QMessageBox.warning(self, "Validation Error", "Please enter a Sheet ID")
             return
 
-        if not self.sheet_name.text().strip():
-            QMessageBox.warning(self, "Validation Error", "Please enter a Sheet Name")
+        if not self.gid and not self.sheet_name.text().strip():
+            QMessageBox.warning(self, "Validation Error", "Please enter a Sheet Name or provide a URL with a 'gid'")
             return
 
         #validate custom delimiter
@@ -215,4 +247,4 @@ class GoogleSheetsDialog(QDialog):
         else:
             thousands = None
 
-        return sheet_id, sheet_name, delimiter, decimal, thousands
+        return sheet_id, sheet_name, delimiter, decimal, thousands, self.gid

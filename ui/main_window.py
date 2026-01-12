@@ -280,25 +280,34 @@ class MainWindow(QWidget):
             dialog = GoogleSheetsDialog(self)
             if dialog.exec():
                 inputs = dialog.get_inputs()
-                if len(inputs) == 5:
+                gid = None
+                if len(inputs) == 6:
+                    sheet_id, sheet_name, delimiter, decimal, thousands, gid = inputs
+                elif len(inputs) == 5:
                     sheet_id, sheet_name, delimiter, decimal, thousands = inputs
                 else:
-                    sheet_id, sheet_name = inputs
-                    delimiter, decimal, thousands = ",", ".", None
+                    if len(inputs) >= 2:
+                        sheet_id, sheet_name = inputs[0], inputs[1]
+                        delimiter, decimal, thousands = ",", ".", None
+                    else:
+                        QMessageBox.warning(self, "Error", "Invalid input from dialog")
+                        return
                 
                 if not sheet_id and not sheet_name:
-                    QMessageBox.warning(self, "Input Error", "Sheet ID and Sheet Name are required")
+                    QMessageBox.warning(self, "Input Error", "Sheet ID is required")
                     return
                 
                 self.status_bar.show_progress(True)
                 self.status_bar.set_progress(0)
+
+                display_name = sheet_name if sheet_name else f"Sheet (GID: {gid})"
                 
-                self.progress_dialog = ProgressDialog(title="Importing from Google Sheets", message=f"Connecting to {sheet_name}...", parent=self)
+                self.progress_dialog = ProgressDialog(title="Importing from Google Sheets", message=f"Connecting to {display_name}...", parent=self)
                 self.progress_dialog.show()
 
-                worker = GoogleSheetsImportWorker(self.data_handler, sheet_id, sheet_name, delimiter, decimal, thousands)
+                worker = GoogleSheetsImportWorker(self.data_handler, sheet_id, sheet_name, delimiter, decimal, thousands, gid)
                 worker.signals.progress.connect(self._on_import_progress)
-                worker.signals.finished.connect(lambda df: self._on_google_sheet_import_finished(df, sheet_name))
+                worker.signals.finished.connect(lambda df: self._on_google_sheet_import_finished(df, display_name))
                 worker.signals.error.connect(self._on_import_error)
                 self.threadpool.start(worker)
         
@@ -342,7 +351,7 @@ class MainWindow(QWidget):
                     return
                 
                 self.status_bar.show_progress(True)
-                self.status_bar.set_progress(0)
+                self.status_bar.set_progress(10)
                 
                 self.progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message=f"Connecting...", parent=self)
                 self.progress_dialog.show()
@@ -351,11 +360,16 @@ class MainWindow(QWidget):
 
                 self.data_handler.import_from_database(connection_string, query)
 
+                self.status_bar.set_progress(90)
+
                 self.progress_dialog.update_progress(90, "Updating Interface")
                 self.data_tab.refresh_data_view()
                 self.plot_tab.update_column_combo()
                 self.unsaved_changes = True
                 self.status_bar.update_data_stats(self.data_handler.df)
+
+                self.status_bar.set_progress(100)
+                self.status_bar.show_progress(False)
 
                 self.progress_dialog.update_progress(100, "Complete")
                 QTimer.singleShot(300, self.progress_dialog.accept)
