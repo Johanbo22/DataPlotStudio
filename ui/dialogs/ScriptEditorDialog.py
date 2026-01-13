@@ -85,7 +85,7 @@ class ScriptEditorDialog(QDialog):
 
         #buttons
         button_layout = QHBoxLayout()
-        self.run_button = DataPlotStudioButton("Run Script", parent=self, base_color_hex="#4caf50", text_color_hex="white", padding="6px")
+        self.run_button = DataPlotStudioButton("Run Script", parent=self, base_color_hex="#4caf50", hover_color_hex="#5cb85c", pressed_color_hex="#4a9c4d", text_color_hex="white", padding="6px", typewriter_effect=True)
         self.run_button.setMinimumHeight(40)
         self.run_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.run_button.setShortcut("Ctrl+Shift+Return")
@@ -93,7 +93,7 @@ class ScriptEditorDialog(QDialog):
         self.run_button.clicked.connect(self.on_run_clicked)
         button_layout.addWidget(self.run_button)
 
-        self.close_button = DataPlotStudioButton("Close", parent=self)
+        self.close_button = DataPlotStudioButton("Close", parent=self, typewriter_effect=True)
         self.close_button.setMinimumHeight(40)
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_button.clicked.connect(self.close)

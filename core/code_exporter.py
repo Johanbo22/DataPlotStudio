@@ -1,5 +1,4 @@
 # core/code_exporter.py
-from sysconfig import get_config_h_filename
 from typing import Dict, Any, List, Set
 from datetime import datetime
 from pathlib import Path

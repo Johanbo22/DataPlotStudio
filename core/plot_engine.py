@@ -564,6 +564,8 @@ class PlotEngine:
         
         self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, **kwargs)
         self.current_ax.set_ylabel('')
+
+        self.current_ax.axis("equal")
         
         self._set_labels(title, None, None, False, **kwargs)
     

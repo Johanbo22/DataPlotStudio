@@ -153,7 +153,7 @@ class StatusBar(QStatusBar):
 
         self.terminal.setText(log_message)
         self.terminal.setStyleSheet(f"QLineEdit {{background-color: transparent; color: {color}; font-family: Consolas, monospace; font-size: 11px; border: none; padding: 0 5px;}}") 
-        self.status_label.setText("Ready" if level == "SUCCESS" or "INFO" else "Warning" if level == "WARNING" else "Error")
+        self.status_label.setText("Ready" if level in ("SUCCESS", "INFO") else "Warning" if level == "WARNING" else "Error")
         self.status_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px;")
 
         self._start_typing(log_message)

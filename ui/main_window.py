@@ -1,6 +1,4 @@
 #ui/main_window.py
-from opcode import opname
-from tkinter import W
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
 from PyQt6.QtCore import Qt, QThreadPool, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -8,7 +6,6 @@ from PyQt6.QtGui import QIcon, QCloseEvent
 from pathlib import Path
 import traceback
 
-from wasmtime import ExportType
 
 from resources.version import APPLICATION_VERSION, SCRIPT_FILE_NAME, LOG_FILE_NAME
 from core import subset_manager
@@ -22,8 +19,7 @@ from core.code_exporter import CodeExporter
 from core.logger import Logger
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
-from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, 
-                        ExportDialog)
+from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog)
 from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 
 class MainWindow(QWidget):
@@ -486,7 +482,7 @@ class MainWindow(QWidget):
             if config["filepath"]:
                 try:
                     self.data_handler.export_data(config["filepath"], format=config["format"], include_index=config.get("include_index", False))
-                    self.status_bar.log(f"Exported data to {config["filepath"]}")
+                    self.status_bar.log(f"Exported data to {config['filepath']}")
                     self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
                     self.export_animation.start(target_widget=self)
                     QMessageBox.information(self, "Success", f"Data exported to {config["filepath"]}")

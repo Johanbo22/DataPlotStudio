@@ -38,11 +38,17 @@ class PlotTab(PlotTabUI):
         
         self.data_handler: DataHandler = data_handler
         self.status_bar: StatusBar = status_bar
-        self.subset_manager = None
+        self.subset_manager = subset_manager
+        if self.subset_manager:
+            self.refresh_subset_list()
         self.plot_engine = PlotEngine()
         self.current_config = {}
         self.code_exporter = CodeExporter()
         self.script_editor = None
+        self.script_sync_timer = QTimer()
+        self.script_sync_timer.setSingleShot(True)
+        self.script_sync_timer.setInterval(500)
+        self.script_sync_timer.timeout.connect(self._perform_script_sync)
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -2954,11 +2960,19 @@ class PlotTab(PlotTabUI):
     def _sync_script_if_open(self):
         """Regenerate the script and update the editor if it is open and autosync is enabled"""
         if self.script_editor and self.script_editor.isVisible():
+            self.script_sync_timer.start()
             config = self.get_config()
             df = self.get_active_dataframe()
             if df is not None:
                 code = self.code_exporter.get_plot_script_only(df, config)
                 self.script_editor.update_code(code)
+    
+    def _perform_script_sync(self):
+        config = self.get_config()
+        df = self.get_active_dataframe()
+        if df is not None:
+            code = self.code_exporter.get_plot_script_only(df, config)
+            self.script_editor.update_code(code)
     
     def run_custom_script(self, script_content: str):
         """
