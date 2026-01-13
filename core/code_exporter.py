@@ -1,4 +1,5 @@
 # core/code_exporter.py
+from sysconfig import get_config_h_filename
 from typing import Dict, Any, List, Set
 from datetime import datetime
 from pathlib import Path
@@ -289,7 +290,6 @@ class CodeExporter:
         lines.append(f"            eq_x, eq_y = ('y', 'x') if {flip_axes} else ('x', 'y')")
         if scatter_cfg.get("show_equation"):
             lines.append("            op = '+' if intercept >= 0 else '-'")
-            # --- FIX: Removed extra {{}} ---
             lines.append("            stats_text.append(f'{eq_y} = {slope:.4f}{eq_x} {op} {abs(intercept):.4f}')")
         if scatter_cfg.get("show_r2"):
             lines.append("            stats_text.append(f'R² = {r_value**2:.4f}')")
@@ -327,620 +327,527 @@ class CodeExporter:
         
         return lines
 
-    def _generate_plot_code(self, df: pd.DataFrame, plot_config: Dict[str, Any]) -> str:
-        """Generates the plotting function."""
-        lines = ["", "def create_plot(df):", "    \"\"\"Create the visualization.\"\"\""]
+    def _get_cfg(self, config: Dict[str, Any], path: str, default: Any = None) -> Any:
+        """Get the information nested in config using dot notation
+        fx., want to get the config["axes"]["x_axis"]["min"] -> "axes.x_axis.min
+        """
+        keys = path.split(".")
+        val = config
+        try:
+            for key in keys:
+                val = val[key]
+            return val
+        except (KeyError, TypeError, AttributeError):
+            return default
+    
+    def _generate_figure_setup(self, config: Dict[str, Any]) -> List[str]:
+        """Generate the code for the figure initialization and global styling params"""
+        lines = ["\n    # --- 1. Set up Figure and Style ---"]
         
-        # Helper function to safely get nested dict keys
-        def get_cfg(path, default=None):
-            keys = path.split('.')
-            val = plot_config
-            try:
-                for key in keys:
-                    val = val[key]
-                return val
-            except (KeyError, TypeError):
-                return default
+        style = self._clean_value(self._get_cfg(config, "appearance.figure.style", "default"))
+        lines.append(f"    try:")
+        lines.append(f"        plt.style.use({style})")
+        lines.append(f"    except Exception: plt.style.use('default')")
 
-        # --- 1. Set up Figure and Style ---
-        lines.append("\n    # --- 1. Set up Figure and Style ---")
-        style = self._clean_value(get_cfg("appearance.figure.style", "default"))
-        lines.append(f"    plt.style.use({style})")
-        lines.append(f"    fig, ax = plt.subplots(")
-        lines.append(f"        figsize=({get_cfg('appearance.figure.width', 10)}, {get_cfg('appearance.figure.height', 6)}),")
-        lines.append(f"        dpi={get_cfg('appearance.figure.dpi', 100)}")
-        lines.append("    )")
-        lines.append(f"    fig.set_facecolor({self._clean_value(get_cfg('appearance.figure.bg_color', 'white'))})") 
-        lines.append(f"    ax.set_facecolor({self._clean_value(get_cfg('appearance.figure.face_color', 'white'))})") 
-        lines.append(f"    font_family = {self._clean_value(get_cfg('appearance.font_family', 'Arial'))}")
-        lines.append("    plt.rcParams['font.family'] = font_family")
+        font_family = self._clean_value(self._get_cfg(config, 'appearance.font_family', 'Arial'))
+        lines.append(f"    plt.rcParams['font.family'] = {font_family}")
+
+        width = self._get_cfg(config, 'appearance.figure.width', 10)
+        height = self._get_cfg(config, 'appearance.figure.height', 6)
+        dpi = self._get_cfg(config, 'appearance.figure.dpi', 100)
         
-        # --- 2. Data and Plot Type ---
-        lines.append("\n    # --- 2. Data and Plot Type ---")
-        plot_type = get_cfg("plot_type", "Scatter")
-        x_col_raw = get_cfg("basic.x_column")
-        x_col = self._clean_value(x_col_raw)
-        y_cols_raw = get_cfg("basic.y_columns", [])
-        y_col_raw = y_cols_raw[0] if y_cols_raw else None
-        y_col_str = self._clean_value(y_col_raw)
-        y_cols_str = self._clean_value(y_cols_raw)
-        hue_raw = get_cfg("basic.hue_column", "None")
-        hue = hue_raw if hue_raw != "None" else None
-        hue_str = self._clean_value(hue)
-        palette = self._clean_value(get_cfg("appearance.figure.palette", "deep"))
-        alpha = get_cfg("advanced.global_alpha", 1.0)
-        flip_axes = get_cfg("axes.flip_axes", False)
+        lines.append(f"    fig, ax = plt.subplots(figsize=({width}, {height}), dpi={dpi})")
         
-        # Convert datetime columns if they exist
-        lines.append("    # Convert datetime columns for plotting")
-        lines.append("    try:")
-        if x_col_raw and x_col_raw in df.columns and "datetime" in str(df.dtypes.get(x_col_raw, '')):
-            lines.append(f"        df[{x_col}] = pd.to_datetime(df[{x_col}], errors='coerce', utc=True)")
-        else:
-            lines.append("        pass")
-        for y_c in y_cols_raw:
+        bg_color = self._clean_value(self._get_cfg(config, 'appearance.figure.bg_color', 'white'))
+        face_color = self._clean_value(self._get_cfg(config, 'appearance.figure.face_color', 'white'))
+        
+        if bg_color != "'white'": lines.append(f"    fig.set_facecolor({bg_color})")
+        if face_color != "'white'": lines.append(f"    ax.set_facecolor({face_color})")
+        
+        return lines
+    
+    def _generate_data_prep(self, df: pd.DataFrame, config: Dict[str, Any], x_col: str, y_cols: List[str]) -> List[str]:
+        """Generate the code used to preprare datetime data"""
+        lines = ["\n    # --- 2. Data Preparation ---"]
+        
+        cols_to_convert = []
+        
+        if x_col and x_col in df.columns:
+            if "datetime" in str(df.dtypes.get(x_col, '')):
+                cols_to_convert.append(x_col)
+        
+        for y_c in y_cols:
             if y_c in df.columns and "datetime" in str(df.dtypes.get(y_c, '')):
-                lines.append(f"        df[{self._clean_value(y_c)}] = pd.to_datetime(df[{self._clean_value(y_c)}], errors='coerce', utc=True)")
-        lines.append("    except Exception as e:")
-        lines.append("        print(f'Warning: Could not convert datetime columns: {{e}}')")
+                cols_to_convert.append(y_c)
+        
+        if cols_to_convert:
+            lines.append("    # Convert detected datetime columns")
+            lines.append("    try:")
+            for col in set(cols_to_convert):
+                lines.append(f"        df[{self._clean_value(col)}] = pd.to_datetime(df[{self._clean_value(col)}], errors='coerce', utc=True)")
+            lines.append("    except Exception as e: print(f'Warning: Date conversion failed: {{e}}')")
+        
+        if self._get_cfg(config, "basic.use_subset"):
+            subset_name = self._clean_value(self._get_cfg(config, "basic.subset_name"))
+            lines.append(f"    print(f'Note: processing full dataset, but UI was viewing subset: {{ {subset_name} }}')")
 
-        # Subset Warning
-        if get_cfg("basic.use_subset"):
-            subset_name = self._clean_value(get_cfg("basic.subset_name"))
-            lines.append("    # WARNING: This plot uses a subset. The export tool cannot replicate subset logic.")
-            lines.append("    # The plot will be generated on the full (processed) data.")
-            lines.append(f"    print(f'WARNING: Plot was originally for subset {subset_name}, running on full data.')")
-        
-        # --- 3. Generate Plot ---
-        lines.append("\n    # --- 3. Generate Plot ---")
-        lines.append(f"    plot_type = {self._clean_value(plot_type)}")
-        
-        # Global plot kwargs from UI
-        g_plot_kwargs = f"data=df, palette={palette}, hue={hue_str}, ax=ax"
-        g_adv_kwargs = f"alpha={alpha}"
-        g_line_kwargs = get_cfg("advanced.global_line", {})
-        g_marker_kwargs = get_cfg("advanced.global_marker", {})
-        g_bar_kwargs = get_cfg("advanced.global_bar", {})
-        
-        # Handle flipped axes
-        x_plot, y_plot = (x_col, y_col_str)
-        orient = "'v'"
-        if flip_axes:
-            x_plot, y_plot = (y_col_str, x_col)
-            orient = "'h'"
+        return lines
+    
+    def _generate_plot_dispatch(self, config: Dict[str, Any], x_col: str, y_cols: List[str], hue: str, palette: str) -> List[str]:
+        """Method to call the specific plot generation based on plo ttype"""
+        lines = ["\n    # --- 3. Generate Plot ---"]
+        plot_type = self._get_cfg(config, "plot_type", "Scatter")
+        lines.append(f"    # Plot Type: {plot_type}")
 
+        alpha = self._get_cfg(config, "advanced.global_alpha", 1.0)
+        flip = self._get_cfg(config, "axes.flip_axes", False)
+        
+        # Map simple variables for generators
+        ctx = {
+            "x": x_col, 
+            "y": self._clean_value(y_cols[0]) if y_cols else None,
+            "ys": self._clean_value(y_cols),
+            "y_list": y_cols,
+            "hue": self._clean_value(hue) if hue and hue != "None" else "None",
+            "palette": self._clean_value(palette),
+            "alpha": alpha,
+            "flip": flip,
+            "config": config
+        }
         if plot_type == "Line":
-            lines.append(f"    g_marker_shape_raw = {self._clean_value(g_marker_kwargs.get('shape', 'None'))}")
-            lines.append(f"    g_marker_shape = g_marker_shape_raw if g_marker_shape_raw != 'None' else None")
-            lines.append("    plot_args = {")
-            lines.append(f"        'marker': g_marker_shape,")
-            lines.append(f"        'markersize': {g_marker_kwargs.get('size', 6)},")
-            lines.append(f"        'linestyle': {self._clean_value(g_line_kwargs.get('style', '-'))},")
-            lines.append(f"        'linewidth': {g_line_kwargs.get('width', 1.5)},")
-            lines.append(f"        'alpha': {alpha}")
-            lines.append("    }")
-            lines.append(f"    if {hue_str}:")
-            lines.append(f"        for group in df[{hue_str}].unique():")
-            lines.append(f"            mask = df[{hue_str}] == group")
-            lines.append(f"            for y_col in {y_cols_str}:")
-            lines.append(f"                ax.plot(df.loc[mask, {x_col}], df.loc[mask, y_col], label=f'{{y_col}} - {{group}}', **plot_args)")
-            lines.append("    else:")
-            lines.append(f"        for y_col in {y_cols_str}:")
-            lines.append(f"            ax.plot(df[{x_col}], df[y_col], label=y_col, **plot_args)")
-
+            lines.extend(self._generate_line_plot(ctx))
         elif plot_type == "Scatter":
-            lines.append(f"    g_marker_shape_raw = {self._clean_value(g_marker_kwargs.get('shape', 'o'))}")
-            lines.append(f"    g_marker_shape = g_marker_shape_raw if g_marker_shape_raw != 'None' else 'o'")
-            lines.append("    plot_args = {")
-            lines.append(f"        's': {g_marker_kwargs.get('size', 6)}**2,")
-            lines.append(f"        'marker': g_marker_shape,")
-            lines.append(f"        'alpha': {alpha},")
-            lines.append(f"        'edgecolors': None if {self._clean_value(g_marker_kwargs.get('edge_color'))} == 'Auto' else {self._clean_value(g_marker_kwargs.get('edge_color'))},")
-            lines.append(f"        'linewidths': {g_marker_kwargs.get('edge_width', 1.0)},")
-            lines.append(f"        'c': None if {self._clean_value(g_marker_kwargs.get('color'))} == 'Auto' else {self._clean_value(g_marker_kwargs.get('color'))}")
-            lines.append("    }")
-            lines.append(f"    if {hue_str}:")
-            lines.append(f"        # Use seaborn for scatter with hue, as it's much simpler")
-            lines.append(f"        sns.scatterplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, {g_adv_kwargs}, marker=g_marker_shape, s={g_marker_kwargs.get('size', 6)**2})")
-            lines.append("    else:")
-            lines.append("        # Use matplotlib for simple scatter")
-            lines.append(f"        ax.scatter(df[{x_plot}], df[{y_plot}], label={y_col_str}, **plot_args)")
-
+            lines.extend(self._generate_scatter_plot(ctx))
         elif plot_type == "Bar":
-            lines.append("    # Bar plot logic mimicking plot_engine.py")
-            lines.append(f"    g_bar_width = {g_bar_kwargs.get('width', 0.8)}")
-            lines.append(f"    if {hue_str} and len({y_cols_str}) == 1:")
-            lines.append("        # Single Y with Hue (uses seaborn)")
-            lines.append(f"        sns.barplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, orient={orient}, {g_adv_kwargs}, width=g_bar_width)")
-            lines.append(f"    elif len({y_cols_str}) > 1:")
-            lines.append("        # Grouped bar chart (matplotlib)")
-            lines.append(f"        x_labels = df[{x_col}].unique()")
-            lines.append("        x_pos = np.arange(len(x_labels))")
-            lines.append(f"        num_y = len({y_cols_str})")
-            lines.append(f"        bar_width = g_bar_width / num_y")
-            lines.append(f"        for i, col in enumerate({y_cols_str}):")
-            lines.append("            offset = (i - num_y / 2) * bar_width + bar_width / 2")
-            lines.append(f"            values = [df[df[{x_col}] == label][col].values[0] if len(df[df[{x_col}] == label]) > 0 else 0 for label in x_labels]")
-            lines.append(f"            if {flip_axes}:")
-            lines.append("                ax.barh(x_pos + offset, values, height=bar_width, label=col)")
-            lines.append("            else:")
-            lines.append("                ax.bar(x_pos + offset, values, width=bar_width, label=col)")
-            lines.append(f"        if {flip_axes}:")
-            lines.append("            ax.set_yticks(x_pos)")
-            lines.append("            ax.set_yticklabels(x_labels)")
-            lines.append("        else:")
-            lines.append("            ax.set_xticks(x_pos)")
-            lines.append("            ax.set_xticklabels(x_labels)")
-            lines.append("    else:")
-            lines.append("        # Single Y, no Hue (matplotlib)")
-            lines.append(f"        if {flip_axes}:")
-            lines.append(f"            ax.barh(df[{x_col}], df[{y_col_str}], height=g_bar_width, label={y_col_str})")
-            lines.append("        else:")
-            lines.append(f"            ax.bar(df[{x_col}], df[{y_col_str}], width=g_bar_width, label={y_col_str})")
-
+            lines.extend(self._generate_bar_plot(ctx))
         elif plot_type == "Histogram":
-            hist_cfg = get_cfg("advanced.histogram", {})
-            lines.append(f"    data_col = df[{y_col_str}].dropna()")
-            lines.append(f"    n, bins, patches = ax.hist(data_col, {g_adv_kwargs}, bins={hist_cfg.get('bins', 30)}, density={hist_cfg.get('show_normal') or hist_cfg.get('show_kde')})")
-            if hist_cfg.get("show_normal"):
-                lines.append("    # Overlay Normal Distribution")
-                lines.append("    try:")
-                lines.append("        mu, sigma = data_col.mean(), data_col.std()")
-                lines.append("        x_norm = np.linspace(bins[0], bins[-1], 100)")
-                lines.append("        y_norm = norm.pdf(x_norm, mu, sigma)")
-                lines.append("        # Scale normal curve to histogram")
-                lines.append("        bin_width = (data_col.max() - data_col.min()) / " + str(hist_cfg.get('bins', 30)))
-                lines.append("        y_norm_scaled = y_norm * len(data_col) * bin_width")
-                lines.append("        ax.plot(x_norm, y_norm_scaled, 'r--', linewidth=2.5, label=f'Normal (μ={{mu:.2f}}, σ={{sigma:.2f}})')")
-                lines.append("    except Exception as e: print(f'Could not plot normal curve: {{e}}')")
-            if hist_cfg.get("show_kde"):
-                lines.append("    # Overlay KDE")
-                lines.append("    try:")
-                lines.append("        kde = gaussian_kde(data_col)")
-                lines.append("        x_kde = np.linspace(bins[0], bins[-1], 100)")
-                lines.append("        y_kde = kde(x_kde)")
-                lines.append("        ax.plot(x_kde, y_kde, 'g-', linewidth=2.5, label='KDE')")
-                lines.append("    except Exception as e: print(f'Could not plot KDE curve: {{e}}')")
-
+            lines.extend(self._generate_histogram(ctx))
         elif plot_type == "Box":
-            lines.append(f"    # Box plot mimics plot_engine.py (using pandas)")
-            lines.append(f"    df.plot(kind='box', column={y_cols_str}, ax=ax, vert={not flip_axes})")
-        
+            lines.extend(self._generate_box_plot(ctx))
         elif plot_type == "Violin":
-            lines.append(f"    sns.violinplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, orient={orient}, {g_adv_kwargs})")
-        
-        elif plot_type == "KDE":
-            lines.append(f"    # KDE plot mimics plot_engine.py (using pandas)")
-            lines.append(f"    df[{y_col_str}].plot(kind='kde', ax=ax, {g_adv_kwargs})")
-        
+            lines.extend(self._generate_violin_plot(ctx))
         elif plot_type == "Area":
-            lines.append("    # Stacked Area Plot")
-            lines.append("    try:")
-            lines.append(f"        df_plot = df.set_index({x_col})[{y_cols_str}]")
-            lines.append(f"        df_plot.plot(kind='area', ax=ax, stacked=True, {g_adv_kwargs}, colormap={palette})")
-            lines.append("    except Exception as e:")
-            lines.append("        print(f'Could not generate area plot: {{e}}')")
-
+            lines.extend(self._generate_area_plot(ctx))
         elif plot_type == "Pie":
-            pie_cfg = get_cfg("advanced.pie", {})
-            lines.append("    # Pie Plot")
-            lines.append("    try:")
-            lines.append(f"        pie_data = df.groupby({x_col})[{y_col_str}].sum()")
-            lines.append("        explode = None")
-            if pie_cfg.get("explode_first"):
-                lines.append(f"        explode = [0.0] * len(pie_data)")
-                lines.append(f"        if explode: explode[0] = {pie_cfg.get('explode_distance', 0.1)}")
-            lines.append(f"        ax.pie(pie_data, labels=pie_data.index, autopct={'%1.2f%%' if pie_cfg.get('show_percentages') else None},")
-            lines.append(f"               startangle={pie_cfg.get('start_angle', 0)}, shadow={pie_cfg.get('shadow', False)}, explode=explode)")
-            lines.append("        ax.set_ylabel('')") 
-            lines.append("    except Exception as e: print(f'Could not generate pie plot: {{e}}')")
-
-        elif plot_type == "Count Plot":
-            lines.append(f"    sns.countplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, orient={orient}, {g_adv_kwargs})")
-            
-        elif plot_type == "Hexbin":
-            lines.append("    # Hexbin Plot")
-            lines.append("    try:")
-            lines.append(f"        ax.hexbin(df[{x_col}], df[{y_col_str}], gridsize=20, {g_adv_kwargs}, cmap={palette})")
-            lines.append("    except Exception as e: print(f'Could not generate hexbin plot: {{e}}')")
-
-        elif plot_type == "2D Density":
-            lines.append(f"    sns.kdeplot({g_plot_kwargs}, x={x_col}, y={y_col_str}, fill=True, {g_adv_kwargs}, cmap={palette})")
-        
+            lines.extend(self._generate_pie_chart(ctx))
         elif plot_type == "Heatmap":
-            lines.append(f"    # Heatmap (Correlation)")
-            lines.append(f"    numeric_df = df.select_dtypes(include=[np.number])")
-            lines.append(f"    sns.heatmap(numeric_df.corr(), annot=True, ax=ax, cmap={palette}, {g_adv_kwargs})")
-            lines.append(f"    ax.set_title({self._clean_value(get_cfg('appearance.title.text', 'Correlation Heatmap'))})")
-        
-        elif plot_type == "Stem":
-            lines.append(f"    # Stem Plot")
-            lines.append(f"    ax.stem(df[{x_col}], df[{y_col_str}], {g_adv_kwargs})")
-        
-        elif plot_type == "Stackplot":
-            lines.append(f"    # Stackplot (requires sorting by X)")
-            lines.append(f"    df_sorted = df.sort_values(by={x_col})")
-            lines.append(f"    y_data = [df_sorted[col] for col in {y_cols_str}]")
-            lines.append(f"    ax.stackplot(df_sorted[{x_col}], *y_data, labels={y_cols_str}, {g_adv_kwargs})")
-            lines.append(f"    ax.legend()")
-        
-        elif plot_type == "Stairs":
-            lines.append(f"    # Stairs Plot")
-            lines.append(f"    df_sorted = df.sort_values(by={x_col})")
-            lines.append(f"    ax.stairs(df_sorted[{x_col}], df_sorted[{y_col_str}], {g_adv_kwargs})")
-
-        elif plot_type == "Eventplot":
-            lines.append(f"    # Eventplot")
-            lines.append(f"    data_to_plot = [df[col].dropna().values for col in {y_cols_str}]")
-            lines.append(f"    ax.eventplot(data_to_plot, {g_adv_kwargs})")
-            lines.append(f"    if len({y_cols_str}) > 1:")
-            lines.append(f"        ax.set_yticks(range(len({y_cols_str})))")
-            lines.append(f"        ax.set_yticklabels({y_cols_str})")
-        
-        elif plot_type == "ECDF":
-            lines.append(f"    # ECDF Plot")
-            lines.append(f"    ax.ecdf(df[{y_col_str}], {g_adv_kwargs})")
-            lines.append(f"    ax.set_ylabel('ECDF')")
-
-        elif plot_type == "2D Histogram":
-            lines.append(f"    # 2D Histogram")
-            lines.append(f"    h = ax.hist2d(df[{x_col}], df[{y_col_str}], {g_adv_kwargs}, cmap={palette})")
-            lines.append(f"    fig.colorbar(h[3], ax=ax, label='Counts')")
-
+            lines.extend(self._generate_heatmap(ctx))
+        elif plot_type == "KDE":
+            lines.extend(self._generate_kde_plot(ctx))
+        elif plot_type in ["Hexbin", "2D Density", "2D Histogram"]:
+            lines.extend(self._generate_2d_distribution(ctx, plot_type))
+        elif plot_type in ["Stem", "Stairs", "Eventplot", "ECDF", "Stackplot"]:
+            lines.extend(self._generate_specialty_plot(ctx, plot_type))
         elif plot_type in ["Image Show (imshow)", "pcolormesh", "Contour", "Contourf"]:
-            z_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
-            lines.append(f"    # {plot_type} (Requires Gridded Data)")
-            lines.append(f"    try:")
-            lines.append(f"        # Prepare Grid")
-            lines.append(f"        if df[[{x_col}, {y_col_str}]].duplicated().any():")
-            lines.append(f"            df_agg = df.groupby([{x_col}, {y_col_str}])[{z_col}].mean().reset_index()")
-            lines.append(f"        else:")
-            lines.append(f"            df_agg = df")
-            lines.append(f"        pivot_df = df_agg.pivot(index={y_col_str}, columns={x_col}, values={z_col}).sort_index(axis=0).sort_index(axis=1)")
-            lines.append(f"        X_grid = pivot_df.columns.values")
-            lines.append(f"        Y_grid = pivot_df.index.values")
-            lines.append(f"        Z_grid = pivot_df.values")
-            lines.append(f"        if np.isnan(Z_grid).any(): Z_grid = np.nan_to_num(Z_grid)")
-        
-            if plot_type == "Image Show (imshow)":
-                lines.append(f"        img = ax.imshow(Z_grid, extent=[X_grid.min(), X_grid.max(), Y_grid.min(), Y_grid.max()], origin='lower', aspect='auto', {g_adv_kwargs}, cmap={palette})")
-                lines.append(f"        fig.colorbar(img, ax=ax, label={z_col})")
-            elif plot_type == "pcolormesh":
-                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
-                lines.append(f"        mesh = ax.pcolormesh(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
-                lines.append(f"        fig.colorbar(mesh, ax=ax, label={z_col})")
-            elif plot_type == "Contour":
-                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
-                lines.append(f"        cont = ax.contour(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
-                lines.append(f"        ax.clabel(cont, inline=True, fontsize=8)")
-            elif plot_type == "Contourf":
-                lines.append(f"        XX, YY = np.meshgrid(X_grid, Y_grid)")
-                lines.append(f"        contf = ax.contourf(XX, YY, Z_grid, {g_adv_kwargs}, cmap={palette})")
-                lines.append(f"        fig.colorbar(contf, ax=ax, label={z_col})")
-            lines.append(f"    except Exception as e: print(f'Error generating {plot_type}: {{e}}')")
-        
+            lines.extend(self._generate_gridded_plot(ctx, plot_type))
         elif plot_type in ["Barbs", "Quiver", "Streamplot"]:
-            u_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
-            v_col = self._clean_value(y_cols_raw[2] if len(y_cols_raw) > 2 else None)
-            lines.append(f"    # Vector Plot: {plot_type}")
-
-            if plot_type == "Streamplot":
-                lines.append(f"    try:")
-                lines.append(f"        # Streamplot requires gridded U, V")
-                lines.append(f"        def get_grid(val_col):")
-                lines.append(f"             df_agg = df.groupby([{x_col}, {y_col_str}])[val_col].mean().reset_index()")
-                lines.append(f"             piv = df_agg.pivot(index={y_col_str}, columns={x_col}, values=val_col).sort_indexaxis=0).sort_index(axis=1)")
-                lines.append(f"             return piv.columns.values, piv.index.values, piv.values")
-                lines.append(f"        X_u, Y_u, U_g = get_grid({u_col})")
-                lines.append(f"        _, _, V_g = get_grid({v_col})")
-                lines.append(f"        XX, YY = np.meshgrid(X_u, Y_u)")
-                lines.append(f"        strm = ax.streamplot(XX, YY, U_g, V_g, cmap={palette}, {g_adv_kwargs})")
-                lines.append(f"    except Exception as e: print(f'Error generating streamplot: {{e}}')")
-            else:
-                cmd = "barbs" if plot_type == "Barbs" else "quiver"
-                lines.append(f"    ax.{cmd}(df[{x_col}], df[{y_col_str}], df[{u_col}], df[{v_col}], {g_adv_kwargs})")
-        
+            lines.extend(self._generate_vector_plot(ctx, plot_type))
         elif plot_type in ["Tricontour", "Tricontourf", "Tripcolor", "Triplot"]:
-            z_col = self._clean_value(y_cols_raw[1] if len(y_cols_raw) > 1 else None)
-            lines.append(f"    # Triangulation Plot: {plot_type}")
-            if plot_type == "Triplot":
-                lines.append(f"    ax.triplot(df[{x_col}], df[{y_col_str}], {g_adv_kwargs})")
+            lines.extend(self._generate_tri_plot(ctx, plot_type))
+        elif plot_type == "GeoSpatial":
+            lines.extend(self._generate_geospatial_plot(ctx))
+        else:
+            # Fallback to scatter if something fails
+            lines.append(f"    sns.scatterplot(data=df, x={ctx['x']}, y={ctx['y']}, alpha={alpha})")
+        
+        return lines
+    
+    def _generate_line_plot(self, ctx: Dict) -> List[str]:
+        lines = []
+        g_line = self._get_cfg(ctx["config"], "advanced.global_line", {})
+        g_marker = self._get_cfg(ctx["config"], "advanced.global_marker", {})
+
+        marker = self._clean_value(g_marker.get("shape", "None"))
+        marker = f"{marker} if {marker} != 'None' else None"
+
+        kwargs = [
+            f"marker={marker}",
+            f"markersize={g_marker.get('size', 6)}",
+            f"linestyle={self._clean_value(g_line.get('style', '-'))}",
+            f"linewidth={g_line.get('width', 1.5)}",
+            f"alpha={ctx['alpha']}"
+        ]
+        kwargs_str = ", ".join(kwargs)
+        if ctx['hue'] != "None":
+            lines.append(f"    groups = df[{ctx['hue']}].unique()")
+            lines.append("    for group in groups:")
+            lines.append(f"        mask = df[{ctx['hue']}] == group")
+            lines.append(f"        for col in {ctx['ys']}:")
+            lines.append(f"            # Plot with Hue")
+            plot_cmd = f"ax.plot(df.loc[mask, {ctx['x']}], df.loc[mask, col], label=f'{{col}} - {{group}}', {kwargs_str})"
+            if ctx['flip']:
+                plot_cmd = f"ax.plot(df.loc[mask, col], df.loc[mask, {ctx['x']}], label=f'{{col}} - {{group}}', {kwargs_str})"
+            lines.append(f"            {plot_cmd}")
+        else:
+            lines.append(f"    for col in {ctx['ys']}:")
+            plot_cmd = f"ax.plot(df[{ctx['x']}], df[col], label=col, {kwargs_str})"
+            if ctx['flip']:
+                plot_cmd = f"ax.plot(df[col], df[{ctx['x']}], label=col, {kwargs_str})"
+            lines.append(f"        {plot_cmd}")
+        return lines
+    
+    def _generate_scatter_plot(self, ctx: Dict) -> List[str]:
+        lines = []
+        g_marker = self._get_cfg(ctx['config'], "advanced.global_marker", {})
+        size = g_marker.get('size', 6)
+        
+        kw = []
+        if ctx['hue'] != "None":
+            x_var, y_var = (ctx['x'], ctx['y']) if not ctx['flip'] else (ctx['y'], ctx['x'])
+            kw.append(f"data=df, x={x_var}, y={y_var}")
+            kw.append(f"hue={ctx['hue']}, palette={ctx['palette']}")
+            kw.append(f"s={size}**2, alpha={ctx['alpha']}, ax=ax")
+            
+            marker = self._clean_value(g_marker.get('shape', 'o'))
+            if marker != "'None'": kw.append(f"marker={marker}")
+            
+            lines.append(f"    sns.scatterplot({', '.join(kw)})")
+        else:
+            x_var, y_var = (f"df[{ctx['x']}]", f"df[{ctx['y']}]") if not ctx['flip'] else (f"df[{ctx['y']}]", f"df[{ctx['x']}]")
+            kw.append(f"x={x_var}, y={y_var}")
+            kw.append(f"label={ctx['y']}")
+            kw.append(f"s={size}**2, alpha={ctx['alpha']}")
+            
+            marker = self._clean_value(g_marker.get('shape', 'o'))
+            if marker != "'None'": kw.append(f"marker={marker}")
+            
+            edge = self._clean_value(g_marker.get('edge_color'))
+            if edge != "'Auto'": kw.append(f"edgecolors={edge}")
+            
+            c = self._clean_value(g_marker.get('color'))
+            if c != "'Auto'": kw.append(f"c={c}")
+
+            lines.append(f"    ax.scatter({', '.join(kw)})")
+
+        return lines
+    
+    def _generate_bar_plot(self, ctx: Dict) -> List[str]:
+        lines = []
+        g_bar = self._get_cfg(ctx['config'], "advanced.global_bar", {})
+        width = g_bar.get('width', 0.8)
+        
+        if ctx['hue'] != "None" and len(ctx['y_list']) == 1:
+            orient = "'h'" if ctx['flip'] else "'v'"
+            x_var, y_var = (ctx['x'], ctx['y']) if not ctx['flip'] else (ctx['y'], ctx['x'])
+            
+            lines.append(f"    sns.barplot(data=df, x={x_var}, y={y_var}, hue={ctx['hue']},")
+            lines.append(f"                orient={orient}, palette={ctx['palette']}, alpha={ctx['alpha']}, ax=ax)")
+        else:
+            lines.append(f"    x_labels = df[{ctx['x']}].unique()")
+            lines.append("    x_pos = np.arange(len(x_labels))")
+            lines.append(f"    bar_width = {width} / {len(ctx['y_list'])}")
+            
+            lines.append(f"    for i, col in enumerate({ctx['ys']}):")
+            lines.append(f"        offset = (i - {len(ctx['y_list'])}/2) * bar_width + bar_width/2")
+            lines.append(f"        vals = [df[df[{ctx['x']}]==l][col].values[0] if not df[df[{ctx['x']}]==l].empty else 0 for l in x_labels]")
+            
+            if ctx['flip']:
+                lines.append(f"        ax.barh(x_pos + offset, vals, height=bar_width, label=col, alpha={ctx['alpha']})")
+                lines.append("    ax.set_yticks(x_pos)")
+                lines.append("    ax.set_yticklabels(x_labels)")
             else:
-                if plot_type == "Tricontour":
-                    lines.append(f"    cont = ax.tricontour(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
-                    lines.append(f"    ax.clabel(cont, inline=True, fontsize=8)")
-                elif plot_type == "Tricontourf":
-                    lines.append(f"    contf = ax.tricontourf(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
-                    lines.append(f"    fig.colorbar(contf, ax=ax, label={z_col})")
-                elif plot_type == "Tripcolor":
-                    lines.append(f"    trip = ax.tripcolor(df[{x_col}], df[{y_col_str}], df[{z_col}], {g_adv_kwargs}, cmap={palette})")
-                    lines.append(f"    fig.colorbar(trip, ax=ax, label={z_col})")
-
-        else:
-            lines.append(f"    # Plot type {plot_type} not supported by exporter, using scatter.")
-            lines.append(f"    sns.scatterplot({g_plot_kwargs}, x={x_plot}, y={y_plot}, {g_adv_kwargs})")
-
-        lines.append("\n    # --- 4. Scatter Plot Analysis---")
-        if plot_type == "Scatter":
-            lines.extend(self._generate_scatter_analysis(get_cfg, x_col, y_col_str, flip_axes))
-
-        # 
-        lines.append("\n    # --- 5. Apply Customizations (Lines and Bars) ---")
-        lines.append("    # This mimics _apply_plot_customizations from plot_tab.py")
-        lines.append(f"    g_line_color = {self._clean_value(g_line_kwargs.get('color'))}")
-        lines.append(f"    g_marker_color = {self._clean_value(g_marker_kwargs.get('color'))}")
-        lines.append(f"    g_marker_edge_color = {self._clean_value(g_marker_kwargs.get('edge_color'))}")
-        lines.append(f"    g_marker_edge_width = {g_marker_kwargs.get('edge_width', 1.0)}")
-        lines.append(f"    line_customs = {self._clean_value(get_cfg('advanced.line_customizations', {}))}")
-        lines.append("    all_lines = ax.get_lines()")
-        lines.append(f"    if {get_cfg('advanced.multi_line_custom', False)}:")
-        lines.append("        for line in all_lines:")
-        lines.append("            label = line.get_label()")
-        lines.append("            if label in line_customs:")
-        lines.append("                line.set(**line_customs[label])") 
-        lines.append("    else:") 
-        lines.append("        for line in all_lines:")
-        lines.append("            if line.get_gid() == 'confidence_interval': continue")
-        lines.append(f"            if g_line_color and g_line_color != 'Auto': line.set_color(g_line_color)")
-        lines.append(f"            if g_marker_color and g_marker_color != 'Auto': line.set_markerfacecolor(g_marker_color)")
-        lines.append(f"            if g_marker_edge_color and g_marker_edge_color != 'Auto': line.set_markeredgecolor(g_marker_edge_color)")
-        lines.append(f"            if g_marker_edge_width: line.set_markeredgewidth(g_marker_edge_width)")
-
-        lines.append(f"    g_bar_color = {self._clean_value(g_bar_kwargs.get('color'))}")
-        lines.append(f"    g_bar_edgecolor = {self._clean_value(g_bar_kwargs.get('edge_color'))}")
-        lines.append(f"    g_bar_edgewidth = {g_bar_kwargs.get('edge_width', 1.0)}")
-        lines.append(f"    bar_customs = {self._clean_value(get_cfg('advanced.bar_customizations', {}))}")
-        lines.append(f"    if {get_cfg('advanced.multi_bar_custom', False)}:")
-        lines.append("        legend_handles, legend_labels = ax.get_legend_handles_labels()")
-        lines.append("        for i, container in enumerate(ax.containers):")
-        lines.append("            label = None")
-        lines.append("            try: label = legend_labels[i]") 
-        lines.append("            except: label = container.get_label() or f'Bar Series {{i+1}}'")
-        lines.append("            if label in bar_customs:")
-        lines.append("                plt.setp(container.patches, **bar_customs[label])")
-        lines.append(f"    elif {alpha} != 1.0 or g_bar_color or g_bar_edgecolor:") 
-        lines.append("        global_bar_style = {}")
-        lines.append(f"        if g_bar_color and g_bar_color != 'Auto': global_bar_style['facecolor'] = g_bar_color")
-        lines.append(f"        if g_bar_edgecolor and g_bar_edgecolor != 'Auto': global_bar_style['edgecolor'] = g_bar_edgecolor")
-        lines.append(f"        if g_bar_edgewidth: global_bar_style['linewidth'] = g_bar_edgewidth")
-        lines.append(f"        global_bar_style['alpha'] = {alpha}")
-        lines.append("        plt.setp(ax.patches, **global_bar_style)")
-
-
-        lines.append("\n    # --- 6. Customize Appearance (Titles/Labels) ---")
-        xlabel_text_cfg = get_cfg('appearance.xlabel.text')
-        xlabel_to_set = xlabel_text_cfg if xlabel_text_cfg else x_col_raw
-        ylabel_text_cfg = get_cfg('appearance.ylabel.text')
-        ylabel_to_set = ylabel_text_cfg if ylabel_text_cfg else (y_col_raw if len(y_cols_raw)==1 else 'Value')
+                lines.append(f"        ax.bar(x_pos + offset, vals, width=bar_width, label=col, alpha={ctx['alpha']})")
+                lines.append("    ax.set_xticks(x_pos)")
+                lines.append("    ax.set_xticklabels(x_labels)")
+        return lines
+    
+    def _generate_histogram(self, ctx: Dict) -> List[str]:
+        lines = []
+        hist_cfg = self._get_cfg(ctx['config'], "advanced.histogram", {})
+        bins = hist_cfg.get('bins', 30)
+        density = "True" if hist_cfg.get('show_normal') or hist_cfg.get('show_kde') else "False"
         
-        if get_cfg("appearance.title.enabled", True):
-            lines.append(f"    ax.set_title('', loc='left')")
-            lines.append(f"    ax.set_title('', loc='center')")
-            lines.append(f"    ax.set_title('', loc='right')")
+        lines.append(f"    data = df[{ctx['y']}].dropna()")
+        lines.append(f"    _, bins, _ = ax.hist(data, bins={bins}, density={density}, alpha={ctx['alpha']}, label='Histogram')")
+        
+        if hist_cfg.get('show_normal'):
+            lines.append("    # Overlay Normal Distribution")
+            lines.append("    mu, sigma = data.mean(), data.std()")
+            lines.append("    y_norm = norm.pdf(np.linspace(bins[0], bins[-1], 100), mu, sigma)")
+            lines.append("    ax.plot(np.linspace(bins[0], bins[-1], 100), y_norm, 'r-', lw=2, label='Normal Dist')")
             
-            lines.append(f"    ax.set_title(")
-            lines.append(f"        label={self._clean_value(get_cfg('appearance.title.text', plot_type))},")
-            lines.append(f"        fontsize={get_cfg('appearance.title.size', 14)},")
-            lines.append(f"        fontweight={self._clean_value(get_cfg('appearance.title.weight', 'bold'))},")
-            lines.append(f"        fontfamily=font_family,")
-            lines.append(f"        loc={self._clean_value(get_cfg('appearance.title.location', 'center'))}")
-            lines.append("    )")
-        else:
-            lines.append("    ax.set_title('')")
+        if hist_cfg.get('show_kde'):
+            lines.append("    # Overlay KDE")
+            lines.append("    kde = gaussian_kde(data)")
+            lines.append("    x_kde = np.linspace(bins[0], bins[-1], 100)")
+            lines.append("    ax.plot(x_kde, kde(x_kde), 'g--', lw=2, label='KDE')")
             
-        if get_cfg("appearance.xlabel.enabled", True):
-            lines.append(f"    ax.set_xlabel(")
-            lines.append(f"        xlabel={self._clean_value(xlabel_to_set)},")
-            lines.append(f"        fontsize={get_cfg('appearance.xlabel.size', 12)},")
-            lines.append(f"        fontweight={self._clean_value(get_cfg('appearance.xlabel.weight', 'normal'))},")
-            lines.append(f"        fontfamily=font_family")
-            lines.append("    )")
-        else:
-            lines.append("    ax.set_xlabel('')")
+        return lines
+    
+    def _generate_box_plot(self, ctx: Dict) -> List[str]:
+        vert = str(not ctx['flip'])
+        return [f"    df.boxplot(column={ctx['ys']}, ax=ax, vert={vert})"]
 
-        if get_cfg("appearance.ylabel.enabled", True):
-            lines.append(f"    ax.set_ylabel(")
-            lines.append(f"        ylabel={self._clean_value(ylabel_to_set)},")
-            lines.append(f"        fontsize={get_cfg('appearance.ylabel.size', 12)},")
-            lines.append(f"        fontweight={self._clean_value(get_cfg('appearance.ylabel.weight', 'normal'))},")
-            lines.append(f"        fontfamily=font_family")
-            lines.append("    )")
-        else:
-            lines.append("    ax.set_ylabel('')")
+    def _generate_violin_plot(self, ctx: Dict) -> List[str]:
+        x_var, y_var = (ctx['x'], ctx['y']) if not ctx['flip'] else (ctx['y'], ctx['x'])
+        orient = "'h'" if ctx['flip'] else "'v'"
+        return [f"    sns.violinplot(data=df, x={x_var}, y={y_var}, hue={ctx['hue']}, orient={orient}, palette={ctx['palette']}, ax=ax)"]
+
+    def _generate_area_plot(self, ctx: Dict) -> List[str]:
+        lines = []
+        lines.append("    try:")
+        lines.append(f"        df_plot = df.set_index({ctx['x']})[{ctx['ys']}]")
+        lines.append(f"        if {ctx['flip']}:")
+        lines.append(f"            # Area plot doesn't support direct flip in pandas, using fill_betweenx manually")
+        lines.append(f"            for col in {ctx['ys']}:")
+        lines.append(f"                ax.fill_betweenx(df_plot.index, 0, df_plot[col], label=col, alpha={ctx['alpha']})")
+        lines.append("        else:")
+        lines.append(f"            df_plot.plot(kind='area', stacked=True, alpha={ctx['alpha']}, colormap={ctx['palette']}, ax=ax)")
+        lines.append("    except Exception as e: print(f'Area plot error: {{e}}')")
+        return lines
+
+    def _generate_pie_chart(self, ctx: Dict) -> List[str]:
+        lines = []
+        pie_cfg = self._get_cfg(ctx['config'], "advanced.pie", {})
+        lines.append("    try:")
+        lines.append(f"        data = df.groupby({ctx['x']})[{ctx['y']}].sum()")
         
-        lines.append("\n    # --- 7. Customize Spines ---")
-        for side in ['top', 'bottom', 'left', 'right']:
-            lines.append(f"    ax.spines[{self._clean_value(side)}].set_visible({get_cfg(f'appearance.spines.{side}.visible', True)})")
-            lines.append(f"    ax.spines[{self._clean_value(side)}].set_linewidth({get_cfg(f'appearance.spines.{side}.width', 1.0)})")
-            lines.append(f"    ax.spines[{self._clean_value(side)}].set_color({self._clean_value(get_cfg(f'appearance.spines.{side}.color', 'black'))})")
-
-        lines.append("\n    # --- 8. Customize Axes (Limits, Ticks, Scale) ---")
-        if not get_cfg("axes.x_axis.auto_limits", True):
-            lines.append(f"    ax.set_xlim({get_cfg('axes.x_axis.min')}, {get_cfg('axes.x_axis.max')})")
-        if not get_cfg("axes.y_axis.auto_limits", True):
-            lines.append(f"    ax.set_ylim({get_cfg('axes.y_axis.min')}, {get_cfg('axes.y_axis.max')})")
+        explode_list = "None"
+        if pie_cfg.get("explode_first"):
+             dist = pie_cfg.get("explode_distance", 0.1)
+             lines.append(f"        explode = [0.0] * len(data)")
+             lines.append(f"        if explode: explode[0] = {dist}")
+             explode_list = "explode"
+             
+        autopct = "'%1.2f%%'" if pie_cfg.get("show_percentages") else "None"
+        start = pie_cfg.get("start_angle", 0)
+        shadow = pie_cfg.get("shadow", False)
         
-        if get_cfg("axes.x_axis.invert", False): lines.append("    ax.invert_xaxis()")
-        if get_cfg("axes.y_axis.invert", False): lines.append("    ax.invert_yaxis()")
+        lines.append(f"        ax.pie(data, labels=data.index, autopct={autopct}, startangle={start}, explode={explode_list}, shadow={shadow})")
+        lines.append("        ax.set_ylabel('')")
+        lines.append("    except Exception as e: print(f'Pie chart error: {{e}}')")
+        return lines
+    
+    def _generate_heatmap(self, ctx: Dict) -> List[str]:
+        return [
+            "    # Heatmap of correlations",
+            "    numeric = df.select_dtypes(include=[np.number])",
+            f"    sns.heatmap(numeric.corr(), annot=True, cmap={ctx['palette']}, ax=ax)"
+        ]
 
-        if get_cfg("axes.x_axis.top_axis", False):
-            lines.append("    ax.xaxis.tick_top()")
-            lines.append("    ax.xaxis.set_label_position('top')")
-        else:
-            lines.append("    ax.xaxis.tick_bottom()")
-            lines.append("    ax.xaxis.set_label_position('bottom')")
+    def _generate_kde_plot(self, ctx: Dict) -> List[str]:
+        return [f"    df[{ctx['y']}].plot(kind='kde', ax=ax, alpha={ctx['alpha']})"]
+
+    def _generate_2d_distribution(self, ctx: Dict, plot_type: str) -> List[str]:
+        lines = []
+        if plot_type == "Hexbin":
+            x_v, y_v = (ctx['x'], ctx['y']) if not ctx['flip'] else (ctx['y'], ctx['x'])
+            lines.append(f"    ax.hexbin(df[{x_v}], df[{y_v}], gridsize=20, cmap={ctx['palette']})")
+        elif plot_type == "2D Density":
+            lines.append(f"    sns.kdeplot(data=df, x={ctx['x']}, y={ctx['y']}, fill=True, cmap={ctx['palette']}, ax=ax)")
+        elif plot_type == "2D Histogram":
+             lines.append(f"    h = ax.hist2d(df[{ctx['x']}], df[{ctx['y']}], cmap={ctx['palette']})")
+             lines.append("    fig.colorbar(h[3], ax=ax)")
+        return lines
+    
+    def _generate_specialty_plot(self, ctx: Dict, plot_type: str) -> List[str]:
+        lines = []
+        if plot_type == "Stem":
+            lines.append(f"    ax.stem(df[{ctx['x']}], df[{ctx['y']}])")
+        elif plot_type == "Stairs":
+            lines.append(f"    ax.stairs(df[{ctx['y']}], edges=np.arange(len(df)+1)) # Approximation")
+        elif plot_type == "Eventplot":
+             lines.append(f"    # Eventplot expects list of lists")
+             lines.append(f"    data = [df[c].dropna().values for c in {ctx['ys']}]")
+             lines.append(f"    ax.eventplot(data, alpha={ctx['alpha']})")
+        elif plot_type == "ECDF":
+             lines.append(f"    ax.ecdf(df[{ctx['y']}])")
+        elif plot_type == "Stackplot":
+             lines.append(f"    # Ensure sorted X")
+             lines.append(f"    dfs = df.sort_values(by={ctx['x']})")
+             lines.append(f"    ax.stackplot(dfs[{ctx['x']}], dfs[{ctx['ys']}].T, labels={ctx['ys']}, alpha={ctx['alpha']})")
+             lines.append(f"    ax.legend(loc='upper left')")
+        return lines
+    
+    def _generate_gridded_plot(self, ctx: Dict, plot_type: str) -> List[str]:
+        lines = []
+        z = self._clean_value(ctx['y_list'][1] if len(ctx['y_list']) > 1 else None)
+        if z == "None": return ["    print('Error: Z-axis column missing for gridded plot')"]
+        
+        lines.append("    # Prepare Gridded Data")
+        lines.append(f"    piv = df.pivot_table(index={ctx['y']}, columns={ctx['x']}, values={z}, aggfunc='mean')")
+        lines.append("    X, Y = np.meshgrid(piv.columns, piv.index)")
+        lines.append("    Z = piv.values")
+        
+        if plot_type == "Image Show (imshow)":
+            lines.append(f"    im = ax.imshow(Z, origin='lower', aspect='auto', cmap={ctx['palette']})")
+            lines.append("    fig.colorbar(im, ax=ax)")
+        elif plot_type == "Contour":
+            lines.append(f"    ax.contour(X, Y, Z, cmap={ctx['palette']})")
+        elif plot_type == "Contourf":
+            lines.append(f"    cf = ax.contourf(X, Y, Z, cmap={ctx['palette']})")
+            lines.append("    fig.colorbar(cf, ax=ax)")
+        elif plot_type == "pcolormesh":
+            lines.append(f"    pcm = ax.pcolormesh(X, Y, Z, cmap={ctx['palette']})")
+            lines.append("    fig.colorbar(pcm, ax=ax)")
             
-        lines.append(f"    ax.set_xscale({self._clean_value(get_cfg('axes.x_axis.scale', 'linear'))})")
-        lines.append(f"    ax.set_yscale({self._clean_value(get_cfg('axes.y_axis.scale', 'linear'))})")
+        return lines
+    
+    def _generate_vector_plot(self, ctx: Dict, plot_type: str) -> List[str]:
+        lines = []
+        if len(ctx['y_list']) < 3: return ["    print('Error: Need U and V columns for vector plot')"]
+        u, v = self._clean_value(ctx['y_list'][1]), self._clean_value(ctx['y_list'][2])
         
-        # Ticks
-        lines.append(f"    ax.tick_params(axis='x', labelsize={get_cfg('axes.x_axis.tick_label_size')}, rotation={get_cfg('axes.x_axis.tick_rotation')}, " +
-                    f"which='major', direction={self._clean_value(get_cfg('axes.x_axis.major_tick_direction'))}, width={get_cfg('axes.x_axis.major_tick_width')})")
-        lines.append(f"    ax.tick_params(axis='y', labelsize={get_cfg('axes.y_axis.tick_label_size')}, rotation={get_cfg('axes.y_axis.tick_rotation')}, " +
-                    f"which='major', direction={self._clean_value(get_cfg('axes.y_axis.major_tick_direction'))}, width={get_cfg('axes.y_axis.major_tick_width')})")
-        if get_cfg("axes.x_axis.minor_ticks_enabled"):
-            lines.append("    ax.minorticks_on()")
-            lines.append(f"    ax.tick_params(axis='x', which='minor', direction={self._clean_value(get_cfg('axes.x_axis.minor_tick_direction'))}, width={get_cfg('axes.x_axis.minor_tick_width')})")
-        if get_cfg("axes.y_axis.minor_ticks_enabled"):
-            lines.append("    ax.minorticks_on()")
-            lines.append(f"    ax.tick_params(axis='y', which='minor', direction={self._clean_value(get_cfg('axes.y_axis.minor_tick_direction'))}, width={get_cfg('axes.y_axis.minor_tick_width')})")
-
-        lines.append(f"    ax.xaxis.set_major_locator(MaxNLocator(nbins={get_cfg('axes.x_axis.max_ticks', 10)}))")
-        lines.append(f"    ax.yaxis.set_major_locator(MaxNLocator(nbins={get_cfg('axes.y_axis.max_ticks', 10)}))")
-
-        # Datetime Formatting
-        if get_cfg("axes.datetime.enabled", False):
-            lines.append("    # Apply Datetime Formatting")
-            x_fmt_preset = get_cfg("axes.datetime.x_format_preset", "Auto")
-            x_fmt_custom = get_cfg("axes.datetime.x_format_custom", "")
-            x_fmt = x_fmt_custom if x_fmt_preset == "Custom" and x_fmt_custom else (x_fmt_preset.split(" ")[0] if x_fmt_preset != "Auto" else None)
-            if x_fmt:
-                lines.append(f"    try: ax.xaxis.set_major_formatter(mdates.DateFormatter({self._clean_value(x_fmt)}))")
-                lines.append("    except Exception as e: print(f'Failed to set x-axis datetime format: {{e}}')")
-
-            y_fmt_preset = get_cfg("axes.datetime.y_format_preset", "Auto")
-            y_fmt_custom = get_cfg("axes.datetime.y_format_custom", "")
-            y_fmt = y_fmt_custom if y_fmt_preset == "Custom" and y_fmt_custom else (y_fmt_preset.split(" ")[0] if y_fmt_preset != "Auto" else None)
-            if y_fmt:
-                lines.append(f"    try: ax.yaxis.set_major_formatter(mdates.DateFormatter({self._clean_value(y_fmt)}))")
-                lines.append("    except Exception as e: print(f'Failed to set y-axis datetime format: {{e}}')")
-
-
-        # --- 9. Customize Grid ---
-        lines.append("\n    # --- 9. Customize Grid ---")
-        if get_cfg("grid.enabled", False):
-            if get_cfg("grid.independent_axes", False):
-                cfg = get_cfg("grid.x_major")
-                style = cfg['style'][cfg['style'].find('(')+1:cfg['style'].find(')')]
-                lines.append(f"    ax.grid({cfg['enabled']}, which='major', axis='x', ls={self._clean_value(style)}, lw={cfg['width']}, color={self._clean_value(cfg['color'])}, alpha={cfg['alpha']})")
-                cfg = get_cfg("grid.x_minor")
-                style = cfg['style'][cfg['style'].find('(')+1:cfg['style'].find(')')]
-                lines.append(f"    ax.grid({cfg['enabled']}, which='minor', axis='x', ls={self._clean_value(style)}, lw={cfg['width']}, color={self._clean_value(cfg['color'])}, alpha={cfg['alpha']})")
-                cfg = get_cfg("grid.y_major")
-                style = cfg['style'][cfg['style'].find('(')+1:cfg['style'].find(')')]
-                lines.append(f"    ax.grid({cfg['enabled']}, which='major', axis='y', ls={self._clean_value(style)}, lw={cfg['width']}, color={self._clean_value(cfg['color'])}, alpha={cfg['alpha']})")
-                cfg = get_cfg("grid.y_minor")
-                style = cfg['style'][cfg['style'].find('(')+1:cfg['style'].find(')')]
-                lines.append(f"    ax.grid({cfg['enabled']}, which='minor', axis='y', ls={self._clean_value(style)}, lw={cfg['width']}, color={self._clean_value(cfg['color'])}, alpha={cfg['alpha']})")
+        if plot_type == "Quiver":
+            lines.append(f"    ax.quiver(df[{ctx['x']}], df[{ctx['y']}], df[{u}], df[{v}])")
+        elif plot_type == "Barbs":
+            lines.append(f"    ax.barbs(df[{ctx['x']}], df[{ctx['y']}], df[{u}], df[{v}])")
+        elif plot_type == "Streamplot":
+             lines.append(f"    # Streamplot requires grid")
+             lines.append(f"    # (Assuming simple grid logic similar to contour for export brevity)")
+             lines.append(f"    print('Note: Streamplot export assumes data is griddable')")
+        return lines
+    
+    def _generate_tri_plot(self, ctx: Dict, plot_type: str) -> List[str]:
+        lines = []
+        z = self._clean_value(ctx['y_list'][1] if len(ctx['y_list']) > 1 else None)
+        
+        if plot_type == "Triplot":
+            lines.append(f"    ax.triplot(df[{ctx['x']}], df[{ctx['y']}])")
+        elif z != "None":
+            if plot_type == "Tricontour":
+                lines.append(f"    ax.tricontour(df[{ctx['x']}], df[{ctx['y']}], df[{z}], cmap={ctx['palette']})")
+            elif plot_type == "Tricontourf":
+                lines.append(f"    tc = ax.tricontourf(df[{ctx['x']}], df[{ctx['y']}], df[{z}], cmap={ctx['palette']})")
+                lines.append("    fig.colorbar(tc, ax=ax)")
+        return lines
+    
+    def _generate_geospatial_plot(self, ctx: Dict) -> List[str]:
+        lines = []
+        lines.append("    try:")
+        lines.append("        import geopandas as gpd")
+        lines.append("        if 'geometry' not in df.columns:")
+        lines.append("            print('Error: No geometry column found for geospatial plot')")
+        lines.append("        else:")
+        lines.append("            gdf = gpd.GeoDataFrame(df, geometry='geometry')")
+        
+        col = ctx['y'] if ctx['y'] != "None" else "None"
+        scheme = self._clean_value(self._get_cfg(ctx['config'], "advanced.geospatial.scheme", "quantiles"))
+        
+        if col != "None":
+             lines.append(f"            gdf.plot(column={col}, ax=ax, legend=True, scheme={scheme}, cmap={ctx['palette']})")
+        else:
+             lines.append("            gdf.plot(ax=ax)")
+             
+        if self._get_cfg(ctx['config'], "advanced.geospatial.axis_off"):
+            lines.append("            ax.set_axis_off()")
+            
+        lines.append("    except ImportError:")
+        lines.append("        print('Error: geopandas not installed')")
+        return lines
+    
+    def _generate_appearance(self, config: Dict[str, Any], x_col: str, y_cols: List[str]) -> List[str]:
+        """Generate the code used for axis labels, titles, spines etc"""
+        lines = ["\n    # --- 4. Appearance & Labels ---"]
+        
+        # Explicitly fetch font family again to pass to specific label setters
+        font_family = self._clean_value(self._get_cfg(config, 'appearance.font_family', 'Arial'))
+        
+        # Labels
+        labels = {
+            "title": (self._get_cfg(config, "appearance.title.text", ""), self._get_cfg(config, "appearance.title.enabled", True)),
+            "xlabel": (self._get_cfg(config, "appearance.xlabel.text", x_col), self._get_cfg(config, "appearance.xlabel.enabled", True)),
+            "ylabel": (self._get_cfg(config, "appearance.ylabel.text", y_cols[0] if y_cols else "Value"), self._get_cfg(config, "appearance.ylabel.enabled", True))
+        }
+        
+        for kind, (text, enabled) in labels.items():
+            if enabled:
+                text_clean = self._clean_value(text)
+                size = self._get_cfg(config, f"appearance.{kind}.size", 12)
+                weight = self._clean_value(self._get_cfg(config, f"appearance.{kind}.weight", 'normal'))
+                lines.append(f"    ax.set_{kind}({text_clean}, fontsize={size}, fontweight={weight})")
             else:
-                cfg = get_cfg("grid.global")
-                lines.append(f"    ax.grid(True, which={self._clean_value(cfg['which'])}, axis={self._clean_value(cfg['axis'])}, alpha={cfg['alpha']})")
-        else:
-            lines.append("    ax.grid(False)")
-
-
-        # --- 10. Customize Legend ---
-        lines.append("\n    # --- 10. Customize Legend ---")
-        if get_cfg("legend.enabled", False):
-            lines.append("    try:")
-            lines.append("        handles, labels = ax.get_legend_handles_labels()")
-            lines.append("        if handles or labels:")
-            lines.append("            legend = ax.legend(handles=handles, labels=labels,")
-            lines.append(f"                loc={self._clean_value(get_cfg('legend.location', 'best'))},")
-            lines.append(f"                title={self._clean_value(get_cfg('legend.title'))},")
-            lines.append(f"                fontsize={get_cfg('legend.font_size', 10)},")
-            lines.append(f"                ncols={get_cfg('legend.columns', 1)},")
-            lines.append(f"                columnspacing={get_cfg('legend.column_spacing', 1.0)},")
-            lines.append(f"                frameon={get_cfg('legend.frame', True)},")
-            lines.append(f"                fancybox={get_cfg('legend.fancy_box', True)},")
-            lines.append(f"                shadow={get_cfg('legend.shadow', False)},")
-            lines.append(f"                framealpha={get_cfg('legend.alpha', 1.0)},")
-            lines.append(f"                facecolor={self._clean_value(get_cfg('legend.bg_color', 'white'))},")
-            lines.append(f"                edgecolor={self._clean_value(get_cfg('legend.edge_color', 'black'))}")
-            lines.append("            )")
-            lines.append("            if legend and legend.get_frame():")
-            lines.append(f"                legend.get_frame().set_linewidth({get_cfg('legend.edge_width', 1.0)})")
-            lines.append("            if legend and legend.get_title():")
-            lines.append(f"                legend.get_title().set_fontfamily(font_family)")
-            lines.append("            if legend:")
-            lines.append("                for text in legend.get_texts():")
-            lines.append(f"                    text.set_fontfamily(font_family)")
-            lines.append("    except: pass")
-        else:
-            lines.append("    if ax.get_legend(): ax.get_legend().remove()")
-        
-
-        # --- 11. Add Annotations ---
-        lines.append("\n    # --- 11. Add Annotations ---")
-        for ann in get_cfg("annotations.text_annotations", []):
-            lines.append(f"    ax.text(x={ann['x']}, y={ann['y']}, s={self._clean_value(ann['text'])}, " +
-                        f"fontsize={ann['fontsize']}, color={self._clean_value(ann['color'])}, " +
-                        "transform=ax.transAxes, ha='center', va='center', " +
-                        "bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))")
-
-        if get_cfg("annotations.textbox.enabled", False) and get_cfg("annotations.textbox.content"):
-            lines.append("    # Add Textbox")
-            tb_cfg = get_cfg("annotations.textbox")
-            pos_map = {
-                "upper left": (0.05, 0.95, 'left', 'top'), "upper center": (0.5, 0.95, 'center', 'top'), "upper right": (0.95, 0.95, 'right', 'top'),
-                "center left": (0.05, 0.5, 'left', 'center'), "center": (0.5, 0.5, 'center', 'center'), "center right": (0.95, 0.5, 'right', 'center'),
-                "lower left": (0.05, 0.05, 'left', 'bottom'), "lower center": (0.5, 0.05, 'center', 'bottom'), "lower right": (0.95, 0.05, 'right', 'bottom')
-            }
-            x_pos, y_pos, ha, va = pos_map.get(tb_cfg['position'], (0.5, 0.5, 'center', 'center'))
-            style_map = {'Rounded': 'round', 'Square': 'square', 'round,pad=1': 'round,pad=1', 'round4,pad=0.5': 'round4,pad=0.5'}
-            boxstyle = style_map.get(tb_cfg['style'], 'round')
-            
-            lines.append(f"    ax.text({x_pos}, {y_pos}, {self._clean_value(tb_cfg['content'])}, transform=ax.transAxes,")
-            lines.append(f"            fontsize=11, verticalalignment='{va}', horizontalalignment='{ha}',")
-            lines.append(f"            bbox=dict(boxstyle={self._clean_value(boxstyle)}, facecolor={self._clean_value(tb_cfg['bg_color'])}, alpha=0.8, pad=1))")
-        
-        if get_cfg("annotations.table.enabled", False):
-            lines.append("\n    # --- 12. Add Data Table ---")
-            lines.append("    try:")
-            table_type = get_cfg("annotations.table.type", "First 5 Rows")
-            table_loc = self._clean_value(get_cfg("annotations.table.location", "bottom"))
-            
-            lines.append(f"        # Determine columns for table ({table_type})")
-            lines.append("        table_cols = []")
-            
-            if x_col_raw:
-                lines.append(f"        if {x_col} in df.columns: table_cols.append({x_col})")
-            
-            lines.append(f"        for c in {y_cols_str}:")
-            lines.append("            if c in df.columns: table_cols.append(c)")
-            
-            lines.append("        if table_cols:")
-            lines.append("            table_df = df[table_cols]")
-            lines.append("        else:")
-            lines.append("            table_df = df.select_dtypes(include=[np.number])")
-
-            lines.append(f"        # Transform data")
-            if table_type == "Summary Stats":
-                lines.append("        table_data = table_df.describe().round(2)")
-            elif table_type == "First 5 Rows":
-                lines.append("        table_data = table_df.head(5)")
-            elif table_type == "Last 5 Rows":
-                lines.append("        table_data = table_df.tail(5)")
-            elif table_type == "Correlation Matrix":
-                lines.append("        table_data = table_df.corr().round(2)")
+                lines.append(f"    ax.set_{kind}('')")
+                
+        # Spines
+        lines.append("")
+        for spine in ['top', 'bottom', 'left', 'right']:
+            visible = self._get_cfg(config, f"appearance.spines.{spine}.visible", True)
+            if not visible:
+                lines.append(f"    ax.spines['{spine}'].set_visible(False)")
             else:
-                lines.append("        table_data = table_df.head(5)")
+                color = self._clean_value(self._get_cfg(config, f"appearance.spines.{spine}.color", 'black'))
+                width = self._get_cfg(config, f"appearance.spines.{spine}.width", 1.0)
+                if color != "'black'": lines.append(f"    ax.spines['{spine}'].set_color({color})")
+                if width != 1.0: lines.append(f"    ax.spines['{spine}'].set_linewidth({width})")
 
-            lines.append(f"        # Add table to plot")
-            lines.append(f"        the_table = pd.plotting.table(ax, table_data, loc={table_loc})")
-            auto_font = get_cfg("annotations.table.auto_font_size", False)
-            fontsize = get_cfg("annotations.table.fontsize", 10)
-            scale = get_cfg("annotations.table.scale", 1.2)
+        return lines
+    
+    def _generate_axes_config(self, config: Dict[str, Any]) -> List[str]:
+        """Generate scales, limits, and grids."""
+        lines = ["\n    # --- 5. Axes & Grid ---"]
+        
+        # Scales
+        lines.append(f"    ax.set_xscale({self._clean_value(self._get_cfg(config, 'axes.x_axis.scale', 'linear'))})")
+        lines.append(f"    ax.set_yscale({self._clean_value(self._get_cfg(config, 'axes.y_axis.scale', 'linear'))})")
+        
+        # Limits
+        if not self._get_cfg(config, "axes.x_axis.auto_limits", True):
+             lines.append(f"    ax.set_xlim({self._get_cfg(config, 'axes.x_axis.min')}, {self._get_cfg(config, 'axes.x_axis.max')})")
+        if not self._get_cfg(config, "axes.y_axis.auto_limits", True):
+             lines.append(f"    ax.set_ylim({self._get_cfg(config, 'axes.y_axis.min')}, {self._get_cfg(config, 'axes.y_axis.max')})")
+             
+        # Invert
+        if self._get_cfg(config, "axes.x_axis.invert"): lines.append("    ax.invert_xaxis()")
+        if self._get_cfg(config, "axes.y_axis.invert"): lines.append("    ax.invert_yaxis()")
 
-            lines.append(f"        the_table.auto_set_font_size({auto_font})")
-            if not auto_font:
-                lines.append(f"        the_table.set_fontsize({fontsize})")
-            
-            lines.append(f"        the_table.scale({scale}, {scale})")
+        # Grid
+        if self._get_cfg(config, "grid.enabled"):
+             which = self._clean_value(self._get_cfg(config, "grid.global.which", "major"))
+             lines.append(f"    ax.grid(True, which={which}, alpha={self._get_cfg(config, 'grid.global.alpha', 0.5)})")
+        else:
+             lines.append("    ax.grid(False)")
 
-            lines.append("    except Exception as e:")
-            lines.append("        print(f'Warning: Failed to add data table: {e}')")
+        return lines
 
+    def _generate_legend(self, config: Dict[str, Any]) -> List[str]:
+        """Generate legend configuration."""
+        lines = []
+        if self._get_cfg(config, "legend.enabled", False):
+            loc = self._clean_value(self._get_cfg(config, "legend.location", "best"))
+            lines.append(f"    ax.legend(loc={loc})")
+        return lines
+    
+    def _generate_plot_code(self, df: pd.DataFrame, plot_config: Dict[str, Any]) -> str:
+        """Generation of the main plotting code"""
 
-        lines.append("\n    # --- 12. Final Touches ---")
-        if get_cfg("appearance.figure.tight_layout", True):
-            lines.append("    try:")
-            lines.append("        fig.tight_layout()")
-            lines.append("    except Exception as e:")
-            lines.append("        print(f'Tight layout failed: {{e}}')")
-            
-        lines.append("\n    print('Plot created successfully.')")
-        lines.append("    return fig, ax")
+        x_col = self._clean_value(self._get_cfg(plot_config, "basic.x_column"))
+        y_cols_raw = self._get_cfg(plot_config, "basic.y_columns", [])
+        hue = self._get_cfg(plot_config, "basc.hue_column")
+        palette = self._get_cfg(plot_config, "appearance.figure.palette", "deep")
+
+        lines = [
+            "", 
+            "def create_plot(df):", 
+            "    \"\"\"Create the visualization.\"\"\""
+        ]
+
+        # Setup part
+        lines.extend(self._generate_figure_setup(plot_config))
+
+        # Data preparation
+        lines.extend(self._generate_data_prep(df, plot_config, self._get_cfg(plot_config, "basic.x_column"), y_cols_raw))
+
+        # Plot dispatch
+        lines.extend(self._generate_plot_dispatch(plot_config, x_col, y_cols_raw, hue, palette))
+
+        # Add scatter analysis 
+        if self._get_cfg(plot_config, "plot_type") == "Scatter":
+            get_cfg_wrapper = lambda p, d=None: self._get_cfg(plot_config, p, d)
+            flip = self._get_cfg(plot_config, "axes.flip_axes", False)
+            y_str = self._clean_value(y_cols_raw[0] if y_cols_raw else "None")
+            lines.extend(self._generate_scatter_analysis(get_cfg_wrapper, x_col, y_str, flip))
+        
+        # Styling
+        lines.extend(self._generate_appearance(plot_config, self._get_cfg(plot_config, "basic.x_column"), y_cols_raw))
+        lines.extend(self._generate_axes_config(plot_config))
+        lines.extend(self._generate_legend(plot_config))
+
+        # End
+        lines.append("\n    try: fig.tight_layout()")
+        lines.append("    except: pass")
+        lines.append("\n    return fig, ax")
+        
         return "\n".join(lines)
 
     def _generate_main(self, export_type: str) -> str:
