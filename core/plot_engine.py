@@ -433,6 +433,7 @@ class PlotEngine:
         show_normal = kwargs.pop("show_normal", False)
         show_kde = kwargs.pop("show_kde", False)
         show_stats = kwargs.pop("show_stats", True)
+        cmap_name = kwargs.pop("cmap", None)
         
         data = df[column].dropna()
 
