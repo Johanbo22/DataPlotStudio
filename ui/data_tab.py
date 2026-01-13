@@ -823,8 +823,11 @@ class DataTab(QWidget):
         self.update_statistics()
 
         if self.data_handler.has_google_sheets_import():
-            self.status_bar.set_data_source(f"Google Sheet ({self.data_handler.last_gsheet_name})")
             self.data_source_refresh_button.setVisible(True)
+            display_name = self.data_handler.last_gsheet_name
+            if not display_name:
+                display_name = f"GID: {self.data_handler.last_gsheet_gid}"
+            self.status_bar.set_data_source(f"Google Sheets: {display_name}")
         elif hasattr(self.data_handler, "file_path") and self.data_handler.file_path:
             try:
                 file_name = Path(self.data_handler.file_path).name
@@ -2007,11 +2010,14 @@ class DataTab(QWidget):
             print(f"DEBUG: Rows after refresh: {rows_after}")
             print(f"DEBUG: Row difference: {diff_text}")
 
+            sheet_identifier = self.data_handler.last_gsheet_name or f"GID: {self.data_handler.last_gsheet_gid}"
+
+
             #loogg
             self.status_bar.log_action(
                 f"Refreshed Google sheets data: {self.data_handler.last_gsheet_id}",
                 details={
-                    "sheet_name": self.data_handler.last_gsheet_name,
+                    "sheet_name": sheet_identifier,
                     "sheed_id": self.data_handler.last_gsheet_id,
                     "rows_before": rows_before,
                     "rows_after": rows_after,
@@ -2024,7 +2030,7 @@ class DataTab(QWidget):
                     self,
                     "Refresh Complete",
                     f"Google Sheets data refreshed successfully\n\n"
-                    f"Sheet: {self.data_handler.last_gsheet_name}\n"
+                    f"Sheet: {sheet_identifier}\n"
                     f"Rows: {rows_after:,} ({diff_text})\n"
                     f"Columns: {len(self.data_handler.df.columns)}"
             )

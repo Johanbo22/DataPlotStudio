@@ -673,7 +673,7 @@ class DataHandler:
     def refresh_google_sheets(self) -> pd.DataFrame:
         """Refresh the CSV data from the last imported Google Sheets document 
         without the user having to re-enter SheetID"""
-        if not self.last_gsheet_id or not self.last_gsheet_name:
+        if not self.last_gsheet_id or (not self.last_gsheet_name and not self.last_gsheet_gid):
             raise ValueError("No history a Google Sheet Import")
         
         print(f"DEBUG refresh_google_sheets: Using stored parameters:")
@@ -696,7 +696,7 @@ class DataHandler:
     
     def has_google_sheets_import(self) -> bool:
         """Check if a Google Sheet can be refreshed"""
-        return bool(self.last_gsheet_id and self.last_gsheet_name)
+        return bool(self.last_gsheet_id and (self.last_gsheet_name or self.last_gsheet_gid))
     
     def get_history_info(self) -> Dict[str, Any]:
         """Get full history of changes for better undo/redo
