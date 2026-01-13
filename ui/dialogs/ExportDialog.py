@@ -1,8 +1,10 @@
+from xml.etree.ElementInclude import include
 from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout
+from typing import Dict, Any, Optional
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
@@ -43,8 +45,18 @@ class ExportDialog(QDialog):
         self.include_index_check.setChecked(False)
         options_layout.addWidget(self.include_index_check)
 
+        self.description_label = QLabel()
+        self.description_label.setWordWrap(True)
+        self.description_label.setStyleSheet("color: #888888; font-style: italic; font-size: 11px;")
+        options_layout.addWidget(self.description_label)
+
         options_group.setLayout(options_layout)
         layout.addWidget(options_group)
+
+        self.format_combo.currentTextChanged.connect(self.update_format_info)
+        self.include_index_check.stateChanged.connect(self.update_format_info)
+
+        self.update_format_info()
 
         layout.addStretch()
 
@@ -65,6 +77,23 @@ class ExportDialog(QDialog):
 
         self.setLayout(layout)
 
+    def update_format_info(self) -> None:
+        """Update a description label based on selected format and current optins"""
+        format = self.format_combo.currentText()
+        include_index = self.include_index_check.isChecked()
+
+        if format == "JSON":
+            if include_index:
+                self.description_label.setText("Export as a 'columns' oriented JSON.")
+            else:
+                self.description_label.setText("Export as a 'records' oriented JSON.")
+        elif format == "CSV":
+            self.description_label.setText("Standard Comma Separated Values file.")
+        elif format == "XLSX":
+            self.description_label.setText("Microsoft Excel Spreadsheet format.")
+        else:
+            self.description_label.setText("")
+
     def on_export_clicked(self):
         """Handle export button click"""
         export_format = self.format_combo.currentText()
@@ -82,7 +111,7 @@ class ExportDialog(QDialog):
 
         filepath, _ = QFileDialog.getSaveFileName(
             self,
-            "Export_Data",
+            "Export Data",
             f"export{default_ext}",
             file_filter
         )
