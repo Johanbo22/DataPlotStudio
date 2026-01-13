@@ -66,6 +66,13 @@ class DataTab(QWidget):
         self.create_new_dataset_button.clicked.connect(self.create_new_dataset)
         toolbar_layout.addWidget(self.create_new_dataset_button)
 
+        self.data_source_refresh_button = DataPlotStudioButton("Refresh Data", parent=self, base_color_hex="#27ae60",hover_color_hex="#229954", text_color_hex="white", font_weight="bold")
+        self.data_source_refresh_button.setIcon(QIcon("icons/menu_bar/google_sheet.png"))
+        self.data_source_refresh_button.setToolTip("Re-import data from your Google Sheets document")
+        self.data_source_refresh_button.clicked.connect(self.refresh_google_sheets_data)
+        self.data_source_refresh_button.setVisible(False)
+        toolbar_layout.addWidget(self.data_source_refresh_button)
+
         toolbar_layout.addStretch()
 
         #edit current dataset toggle
@@ -77,41 +84,6 @@ class DataTab(QWidget):
         toolbar_layout.addWidget(self.edit_dataset_toggle_button)
 
         left_layout.addLayout(toolbar_layout)
-
-        #data source inor bar
-        self.data_source_container = QWidget()
-        data_source_layout = QHBoxLayout(self.data_source_container)
-        data_source_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.data_source_prefix_label = QLabel("Data Source:")
-        self.data_source_prefix_label.setStyleSheet("color: #2c3e50; font-weight: bold;")
-        data_source_layout.addWidget(self.data_source_prefix_label)
-
-        self.data_source_name_label = QLabel("")
-        self.data_source_name_label.setStyleSheet("color: #3498db; font-style: italic;")
-        data_source_layout.addWidget(self.data_source_name_label)
-
-        self.subset_view_label = QLabel("")
-        self.subset_view_label.setStyleSheet("color: #e67e22; font-weight: bold; margin-left: 10px;")
-        self.subset_view_label.setVisible(False)
-        data_source_layout.addWidget(self.subset_view_label)
-
-        self.aggregation_view_label = QLabel("")
-        self.aggregation_view_label.setStyleSheet("color: #8e44ad; font-weight: bold; margin-left: 10px;")
-        self.aggregation_view_label.setVisible(False)
-        data_source_layout.addWidget(self.aggregation_view_label)
-
-        data_source_layout.addStretch()
-        self.data_source_refresh_button = DataPlotStudioButton("Refresh Data", parent=self, base_color_hex="#27ae60",hover_color_hex="#229954", text_color_hex="white", font_weight="bold", padding="6px 12px")
-        
-        self.data_source_refresh_button.setIcon(QIcon("icons/menu_bar/google_sheet.png"))
-        self.data_source_refresh_button.setToolTip("Re-import data from your Google Sheets document")
-        
-        self.data_source_refresh_button.clicked.connect(self.refresh_google_sheets_data)
-        data_source_layout.addWidget(self.data_source_refresh_button)
-
-        self.data_source_container.setVisible(False)
-        left_layout.addWidget(self.data_source_container)
         
         # Create tabs for data and statistics
         self.data_tabs = DataPlotStudioTabWidget()
@@ -812,7 +784,9 @@ class DataTab(QWidget):
         if self.data_handler.df is None:
             self.data_table.setModel(None)
             self.stats_text.clear()
-            self.data_source_container.setVisible(False)
+            self.data_source_refresh_button.setVisible(False)
+            self.status_bar.set_data_source("")
+            self.status_bar.set_view_contex("", "normal")
             return
         
         df = self.data_handler.df
@@ -849,9 +823,7 @@ class DataTab(QWidget):
         self.update_statistics()
 
         if self.data_handler.has_google_sheets_import():
-            self.data_source_container.setVisible(True)
-            self.data_source_prefix_label.setText("Google Sheets Data:")
-            self.data_source_name_label.setText(self.data_handler.last_gsheet_name)
+            self.status_bar.set_data_source(f"Google Sheet ({self.data_handler.last_gsheet_name})")
             self.data_source_refresh_button.setVisible(True)
         elif hasattr(self.data_handler, "file_path") and self.data_handler.file_path:
             try:
@@ -859,12 +831,11 @@ class DataTab(QWidget):
             except Exception:
                 file_name = str(self.data_handler.file_path)
             
-            self.data_source_container.setVisible(True)
-            self.data_source_prefix_label.setText("Local file:")
-            self.data_source_name_label.setText(file_name)
+            self.status_bar.set_data_source(f"Local file: {file_name}")
             self.data_source_refresh_button.setVisible(False)
         else:
-            self.data_source_container.setVisible(False)
+            self.status_bar.set_data_source("New")
+            self.data_source_refresh_button.setVisible(False)
         
         try:
             if hasattr(self, 'subset_manager'):
@@ -877,27 +848,10 @@ class DataTab(QWidget):
         inserted_name = getattr(self.data_handler, "inserted_subset_name", None)
         agg_name = getattr(self.data_handler, "viewing_aggregation_name", None)
 
-        if agg_name and self.data_source_container.isVisible():
-            if hasattr(self, "aggregation_view_label"):
-                self.aggregation_view_label.setText(f"Viewing Aggregation: {agg_name}")
-                self.aggregation_view_label.setVisible(True)
-            if hasattr(self, "subset_view_label"):
-                self.subset_view_label.setVisible(False)
-        
-        elif inserted_name and self.data_source_container.isVisible():
-            if hasattr(self, "subset_view_label"):
-                self.subset_view_label.setText(f"Viewing subset: {inserted_name}")
-                self.subset_view_label.setVisible(True)
-            if hasattr(self, "aggregation_view_label"):
-                self.aggregation_view_label.setVisible(False)
-        
-        else:
-            if hasattr(self, "subset_view_label"):
-                self.subset_view_label.setText("")
-                self.subset_view_label.setVisible(False)
-            if hasattr(self, "aggregation_view_label"):
-                self.aggregation_view_label.setText("")
-                self.aggregation_view_label.setVisible(False)
+        if agg_name:
+            self.status_bar.set_view_contex(f"Viewing Aggregation: {agg_name}")
+        elif inserted_name:
+            self.status_bar.set_view_contex(f"Viewing Subset: {inserted_name}")
         
         if hasattr(self, "history_list"):
             self.history_list.clear()
@@ -2145,8 +2099,9 @@ class DataTab(QWidget):
         self.data_table.setModel(None)
         self.stats_text.clear()
 
-        if hasattr(self, "data_source_container"):
-            self.data_source_container.setVisible(False)
+        self.data_source_refresh_button.setVisible(False)
+        self.status_bar.set_data_source("")
+        self.status_bar.set_view_contex("", "normal")
 
     @pyqtSlot(str)
     def show_help_dialog(self, topic_id: str):

@@ -115,7 +115,16 @@ class StatusBar(QStatusBar):
         self.addWidget(self.status_label, 0)
         self.addWidget(self.terminal, 1)
         self.addWidget(self.history_button)
+
+        self.source_label = QLabel("")
+        self.source_label.setStyleSheet("color: #3498db; font-size: 11px; padding-right: 10px;")
+
+        self.view_context_label = QLabel("")
+        self.view_context_label.setStyleSheet("color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;")
+        
         self.addPermanentWidget(self.progress_bar)
+        self.addPermanentWidget(self.source_label)
+        self.addPermanentWidget(self.view_context_label)
         self.addPermanentWidget(self.stats_label)
 
     def set_logger(self, logger) -> None:
@@ -262,3 +271,28 @@ class StatusBar(QStatusBar):
         
         self.popup.move(x, y)
         self.popup.show()
+
+    def set_data_source(self, source_text: str) -> None:
+        """Update the data source label"""
+        if source_text:
+            self.source_label.setText(f"Source: {source_text}")
+            self.source_label.show()
+        else:
+            self.source_label.clear()
+            self.source_label.hide()
+    
+    def set_view_contex(self, context_text: str, context_type: str = "subset") -> None:
+        """update the view context label to match current viewing"""
+        if not context_text or context_type == "normal":
+            self.view_context_label.clear()
+            self.view_context_label.hide()
+            return
+        
+        self.view_context_label.setText(context_text)
+        self.view_context_label.show()
+
+        # Colors
+        if context_type == "aggregation":
+            self.view_context_label.setStyleSheet("color: #8e44ad; font-weight: bold; font-size: 11px; padding-right: 10px;")
+        else:
+            self.view_context_label.setStyleSheet("color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;")
