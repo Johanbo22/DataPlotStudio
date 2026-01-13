@@ -6,7 +6,11 @@ from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
+from ui.animations.DataFilterAnimation import DataFilterAnimation
+from ui.animations.DataTypeChangeAnimation import DataTypeChangeAnimation
+from ui.animations.DropColumnAnimation import DropColumnAnimation
 from ui.animations.OutlierDetectionAnimation import OutlierDetectionAnimation
+from ui.animations.RenameColumnAnimation import RenameColumnAnimation
 from ui.status_bar import StatusBar
 from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog, TableCustomizationDialog
 from core.subset_manager import SubsetManager
@@ -1500,6 +1504,9 @@ class DataTab(QWidget):
                 },
                 level="SUCCESS"
             )
+
+            self.filter_animation = DataFilterAnimation(message="Filter Data")
+            self.filter_animation.start(target_widget=self)
         
         except Exception as ApplyFilterError:
             self.status_bar.log(f"Failed to execute 'Filter': {str(ApplyFilterError)}", "ERROR")
@@ -1547,16 +1554,22 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
+
+                self.drop_column_animation = DropColumnAnimation(message="Dropped Column")
+                self.drop_column_animation.start(target_widget=self)
             except Exception as DropColumnError:
                 self.status_bar.log(f"Failed to drop columns: {str(DropColumnError)}", "ERROR")
                 QMessageBox.critical(self, "Error", f"Failed to drop columns: {str(DropColumnError)}")
 
     def rename_column(self):
         """Rename selected column"""
-        old_name = self.column_list.currentText()
-        if not old_name:
+        selected_items = self.column_list.selectedItems()
+
+        if not selected_items:
             self.status_bar.log("No column selected", "WARNING")
             return
+        
+        old_name = selected_items[0].text()
         
         dialog = RenameColumnDialog(old_name, self)
         if dialog.exec():
@@ -1570,7 +1583,7 @@ class DataTab(QWidget):
 
                 self.refresh_data_view()
                 self.status_bar.log_action(
-                    f"Renamed '{old_name}' → '{new_name}'",
+                    f"Renamed '{old_name}' -> '{new_name}'",
                     details={
                         'old_name': old_name,
                         'new_name': new_name,
@@ -1578,6 +1591,9 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
+
+                self.rename_column_animation = RenameColumnAnimation(message="Rename Column")
+                self.rename_column_animation.start(self)
             except Exception as RenameColumnError:
                 self.status_bar.log(f"Failed to rename column: {str(RenameColumnError)}", "ERROR")
 
@@ -1587,10 +1603,16 @@ class DataTab(QWidget):
             QMessageBox.warning(self, "No data", "Please load data first")
             return
 
-        column = self.column_list.currentItem()
-        if not column:
+        selected_items = self.column_list.selectedItems()
+        if not selected_items:
             self.status_bar.log("No Column Selected", "WARNING")
             return
+        
+        if len(selected_items) > 1:
+            QMessageBox.warning(self, "Selection Error", "Please select only one column to change datatype")
+            return
+        
+        column = selected_items[0].text()
         
         type_str = self.type_combo.currentText()
 
@@ -1645,6 +1667,9 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
+                self.changedatatype_animation = DataTypeChangeAnimation(message="Change Data Type", old_type={old_type}, new_type={new_type})
+                self.changedatatype_animation.start(self)
+
         except Exception as ChangeColumnDataTypeError:
             error_msg = f"Failed to convert '{column}' to {target_type}: {str(ChangeColumnDataTypeError)}"
             QMessageBox.critical(self, "Conversion Error", error_msg)
@@ -1738,7 +1763,6 @@ class DataTab(QWidget):
                 df = self.data_handler.df
                 
                 if logic == 'AND':
-                    # Apply filters sequentially (AND logic)
                     for f in filters:
                         # Convert value if needed
                         value = f['value']
@@ -1752,7 +1776,6 @@ class DataTab(QWidget):
                         
                         self.data_handler.filter_data(f['column'], f['condition'], value)
                 else:
-                    # Apply OR logic - combine all conditions
                     import pandas as pd
                     mask = pd.Series([False] * len(df))
                     
@@ -1761,7 +1784,6 @@ class DataTab(QWidget):
                         condition = f['condition']
                         value = f['value']
                         
-                        # Try to convert value to appropriate type
                         try:
                             if column in df.columns:
                                 col_dtype = df[column].dtype
@@ -1772,7 +1794,6 @@ class DataTab(QWidget):
                         except (ValueError, TypeError):
                             pass
                         
-                        # Create condition mask
                         try:
                             if condition == '>':
                                 mask = mask | (df[column] > value)
@@ -1794,7 +1815,6 @@ class DataTab(QWidget):
                             QMessageBox.warning(self, "Warning", f"Error with filter {column} {condition} {value}: {str(FilterError)}")
                             continue
                     
-                    # Apply the OR mask
                     self.data_handler.df = df[mask]
                 
                 after = len(self.data_handler.df)
@@ -1806,6 +1826,9 @@ class DataTab(QWidget):
                     f"Advanced filters ({logic}): {filter_desc} | Rows: {before:,} → {after:,} (-{removed:,})",
                     "SUCCESS"
                 )
+
+                self.filter_animation = DataFilterAnimation(message="Filter Data")
+                self.filter_animation.start(target_widget=self)
             except Exception as FilterError:
                 QMessageBox.critical(self, "Error", str( FilterError))
                 self.status_bar.log(f"Filter failed: {str( FilterError)}", "ERROR")
