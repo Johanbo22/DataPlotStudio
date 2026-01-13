@@ -6,9 +6,11 @@ from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
+from ui.animations.AggregationAnimation import AggregationAnimation
 from ui.animations.DataFilterAnimation import DataFilterAnimation
 from ui.animations.DataTypeChangeAnimation import DataTypeChangeAnimation
 from ui.animations.DropColumnAnimation import DropColumnAnimation
+from ui.animations.MeltDataAnimation import MeltDataAnimation
 from ui.animations.OutlierDetectionAnimation import OutlierDetectionAnimation
 from ui.animations.RenameColumnAnimation import RenameColumnAnimation
 from ui.status_bar import StatusBar
@@ -1845,6 +1847,9 @@ class DataTab(QWidget):
                     },
                     level="SUCCESS"
                 )
+
+                self.aggregate_animation = AggregationAnimation(message="Aggregated Data")
+                self.aggregate_animation.start(self)
             except Exception as AggregationDialogError:
                 QMessageBox.critical(self, "Error", str(AggregationDialogError))
                 self.status_bar.log(f"Aggregation failed: {str(AggregationDialogError)}", "ERROR")
@@ -2095,6 +2100,9 @@ class DataTab(QWidget):
                         },
                         level="SUCCESS"
                     )
+
+                    self.melt_animation = MeltDataAnimation()
+                    self.melt_animation.start(self)
             
             except Exception as MeltDataError:
                 QMessageBox.critical(self, "Error", f"Failed to melt data:\n{str(MeltDataError)}")
