@@ -141,7 +141,7 @@ class DataTab(QWidget):
         right_layout = QVBoxLayout()
         
         # Reset button at the to
-        reset_button = DataPlotStudioButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf")
+        reset_button = DataPlotStudioButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf", typewriter_effect=True)
         reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
         reset_button.clicked.connect(self.reset_data)
         right_layout.addWidget(reset_button)

@@ -124,7 +124,8 @@ class PlotTabUI(QWidget):
             hover_color_hex="#5cb85c",
             pressed_color_hex="#4a9c4d",
             text_color_hex="#FFFFFF",
-            border_style="none"
+            border_style="none",
+            typewriter_effect=True
         )
         self.plot_button.setMinimumHeight(40)
         self.plot_button.setIcon(QIcon("icons/generate_plot.png"))
@@ -138,7 +139,8 @@ class PlotTabUI(QWidget):
             hover_color_hex="#f5f5f5",
             pressed_color_hex="#dcdcdc",
             text_color_hex="#000000",
-            border_style="1px solid #c9c9c9"
+            border_style="1px solid #c9c9c9",
+            typewriter_effect=True
         )
         self.clear_button.setMinimumHeight(40)
         self.clear_button.setIcon(QIcon("icons/clean.png"))
@@ -151,7 +153,8 @@ class PlotTabUI(QWidget):
             hover_color_hex="#42A5F5",
             pressed_color_hex="#1e88e5",
             text_color_hex="#ffffff",
-            border_style="none"
+            border_style="none",
+            typewriter_effect=True
         )
         self.editor_button.setMinimumHeight(40)
         self.editor_button.setIcon(QIcon("icons/code_edit.png"))
