@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
 from PyQt6.QtCore import Qt, QThreadPool, pyqtSlot, QTimer
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from PyQt6.QtGui import QIcon, QCloseEvent
+from PyQt6.QtGui import QIcon, QCloseEvent, QDragEnterEvent, QDropEvent
 from pathlib import Path
 import traceback
 
@@ -41,6 +41,8 @@ class MainWindow(QWidget):
         self.progress_dialog: ProgressDialog | None = None
         self._temp_import_filepath: str | None = None
         self._temp_import_filesize: float = 0.0
+
+        self.setAcceptDrops(True)
 
         self.unsaved_changes: bool = False
         self.init_ui()
@@ -198,6 +200,54 @@ class MainWindow(QWidget):
         
         return True
     
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Handle the drag event for filre imports"""
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls and urls[0].isLocalFile():
+                filepath = Path(urls[0].toLocalFile())
+                valid_extensions = {".csv", ".xlsx", ".xls", ".txt", ".json", ".geojson", ".shp", ".gpkg"}
+                if filepath.suffix.lower() in valid_extensions:
+                    event.accept()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Handle the dropped event as import file"""
+        urls = event.mimeData().urls()
+        if urls and urls[0].isLocalFile():
+            filepath = urls[0].toLocalFile()
+            self.load_file_from_path(filepath)
+    
+    def load_file_from_path(self, filepath: str) -> None:
+        """Process and import file from a path string"""
+        path = Path(filepath)
+        file_size_kb = path.stat().st_size / 1024
+        self._temp_import_filepath = filepath
+        self._temp_import_filesize = file_size_kb
+
+        self.status_bar.show_progress(True)
+        self.status_bar.set_progress(0)
+
+        self.progress_dialog = None
+        if file_size_kb > 500:
+            self.progress_dialog = ProgressDialog(
+                title="Importing data", message=f"Loading {path.name}...", parent=self
+            )
+            self.progress_dialog.show()
+            self.progress_dialog.update_progress(10, "Reading file")
+        else:
+            self.status_bar.log(f"Importing. {filepath}...")
+        
+        worker = FileImportWorker(self.data_handler, filepath)
+        worker.signals.finished.connect(self._on_import_finished)
+        worker.signals.error.connect(self._on_import_error)
+        worker.signals.progress.connect(self._on_import_progress)
+
+        self.import_file_animation = FileImportAnimation(parent=None, message="Imported File")
+        self.import_file_animation.start(target_widget=self)
+        self.threadpool.start(worker)
+    
     def import_file(self) -> None:
         """Import a data file"""
         geospatial_filter = "Geospatial Files (*.geojson *.shp *gpkg)"
@@ -207,32 +257,7 @@ class MainWindow(QWidget):
         
         filepath, _ = QFileDialog.getOpenFileName(self, "Import Data File", "", file_filter)
         if filepath:
-            path = Path(filepath)
-            file_size_kb = path.stat().st_size / 1024
-            self._temp_import_filepath = filepath
-            self._temp_import_filesize = file_size_kb
-
-            self.status_bar.show_progress(True)
-            self.status_bar.set_progress(0)
-
-            self.progress_dialog = None
-            if file_size_kb > 500:
-                self.progress_dialog = ProgressDialog(
-                    title="Importing data", message=f"Loading {path.name}...", parent=self
-                )
-                self.progress_dialog.show()
-                self.progress_dialog.update_progress(10, "Reading file")
-            else:
-                self.status_bar.log(f"Importing. {filepath}...")
-            
-            worker = FileImportWorker(self.data_handler, filepath)
-            worker.signals.finished.connect(self._on_import_finished)
-            worker.signals.error.connect(self._on_import_error)
-            worker.signals.progress.connect(self._on_import_progress)
-
-            self.import_file_animation = FileImportAnimation(parent=None, message="Imported File")
-            self.import_file_animation.start(target_widget=self)
-            self.threadpool.start(worker)
+            self.load_file_from_path(filepath)
     
     @pyqtSlot(int, str)
     def _on_import_progress(self, percentage: int, message: str) -> None:
