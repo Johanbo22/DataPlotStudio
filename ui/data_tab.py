@@ -2,7 +2,7 @@
 import traceback
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor
+from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -14,7 +14,7 @@ from ui.animations.MeltDataAnimation import MeltDataAnimation
 from ui.animations.OutlierDetectionAnimation import OutlierDetectionAnimation
 from ui.animations.RenameColumnAnimation import RenameColumnAnimation
 from ui.status_bar import StatusBar
-from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog, TableCustomizationDialog
+from ui.dialogs import ProgressDialog, RenameColumnDialog, FilterAdvancedDialog, AggregationDialog, FillMissingDialog, HelpDialog, MeltDialog, OutlierDetectionDialog, TableCustomizationDialog, SearchResultsDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
 
@@ -101,6 +101,10 @@ class DataTab(QWidget):
         # Data table context menu
         self.data_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.data_table.customContextMenuRequested.connect(self.show_table_context_menu)
+
+        # Search functionality to data table
+        self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.search_shortcut.activated.connect(self.open_search_dialog)
 
         data_table_icon = QIcon("icons/data_table.png")
         self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
@@ -652,8 +656,58 @@ class DataTab(QWidget):
             self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
             self.status_bar.log(f"Edit Mode Disabled", "INFO")
         
-        #update the flags
-        self.refresh_data_view()
+        #update the flags 
+        if self.data_table.model() is not None and isinstance(self.data_table.model(), DataTableModel):
+            self.data_table.model().set_editable(self.is_editing)
+        else:
+            self.refresh_data_view()
+
+    def open_search_dialog(self):
+        """Opens a search dialog to find the values in the data table"""
+        if self.data_handler.df is None:
+            return
+        
+        text, ok = QInputDialog.getText(self, "Find in table", "Search for a value:")
+        if ok and text:
+            self.perform_search(text)
+    
+    def perform_search(self, search_text: str):
+        """Executes a search on the dataframe"""
+        df = self.data_handler.df
+        matches = []
+
+        search_text_lower = str(search_text).lower()
+
+        for row_index in range(df.shape[0]):
+            for column_index in range(df.shape[1]):
+                value = str(df.iloc[row_index, column_index])
+                if search_text_lower in value.lower():
+                    matches.append((row_index, column_index, df.columns[column_index], value))
+        
+        if not matches:
+            QMessageBox.information(self, "Search", f"No matches found for '{search_text}'")
+            return
+        
+        if len(matches) == 1:
+            self.highlight_cell(matches[0][0], matches[0][1])
+            self.status_bar.log(f"Found 1 match at Row {matches[0][0]}, Column '{matches[0][1]}'", "SUCCESS")
+        else:
+            dialog = SearchResultsDialog(matches, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_match:
+                row, col_index, col, value = dialog.selected_match
+                self.highlight_cell(row, col_index)
+                self.status_bar.log(f"Selected match at Row: {row}, Column: '{col}'", "SUCCESS")
+    
+    def highlight_cell(self, row_index: int, column_index: int):
+        """Scrolls to and highlights the specified index cell in the data table"""
+        if self.data_table.model() is None:
+            return
+        
+        index = self.data_table.model().index(row_index, column_index)
+        if index.isValid():
+            self.data_table.setCurrentIndex(index)
+            self.data_table.scrollTo(index, QTableView.ScrollHint.EnsureVisible)
+            self.data_table.setFocus()
 
 
     def inject_subset_to_dataframe(self):

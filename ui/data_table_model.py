@@ -102,6 +102,11 @@ class DataTableModel(QAbstractTableModel):
         
         return default_flags
     
+    def set_editable(self, editable: bool) -> None:
+        """Update the editable state of the table model"""
+        self.editable = editable
+        self.layoutChanged.emit()
+    
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> QVariant | str:
         """Returns the header of the data"""
         if role != Qt.ItemDataRole.DisplayRole or self._data is None:

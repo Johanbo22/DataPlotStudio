@@ -19,6 +19,7 @@ from .AboutDialog import AboutDialog
 from .OutlierDetectionDialog import OutlierDetectionDialog
 from .LogHistoryPopup import LogHistoryPopup
 from .TableCustomizationDialog import TableCustomizationDialog
+from .SearchResultsDialog import SearchResultsDialog
 
 __all__ = [
     "AggregationDialog",
@@ -41,5 +42,6 @@ __all__ = [
     "AboutDialog",
     "OutlierDetectionDialog",
     "LogHistoryPopup",
-    "TableCustomizationDialog"
+    "TableCustomizationDialog",
+    "SearchResultsDialog"
 ]
