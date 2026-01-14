@@ -706,6 +706,7 @@ class PlotEngine:
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
+        _ = kwargs.pop("legend", None)
 
         mask = df[x].notna() & df[y].notna()
         hist = self.current_ax.hist2d(df.loc[mask, x], df.loc[mask, y], **kwargs)
@@ -717,6 +718,7 @@ class PlotEngine:
         """Create an ECDF plot"""
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
+        _ = kwargs.pop("legend", None)
 
         self.current_ax.ecdf(df[y], **kwargs)
 
@@ -748,6 +750,7 @@ class PlotEngine:
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
+        _ = kwargs.pop("legend", None)
 
         X, Y, Z = self._prepare_gridded_data(df, x, y, z)
 
@@ -761,6 +764,7 @@ class PlotEngine:
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
+        _ = kwargs.pop("legend", None)
 
         X, Y, Z = self._prepare_gridded_data(df, x, y, z)
         X_grid, Y_grid = np.meshgrid(X, Y)
@@ -775,6 +779,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
 
         X, Y, Z = self._prepare_gridded_data(df, x, y, z)
         X_grid, Y_grid = np.meshgrid(X, Y)
@@ -789,6 +794,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
 
         X, Y, Z = self._prepare_gridded_data(df, x, y, z)
         X_grid, Y_grid = np.meshgrid(X, Y)
@@ -845,6 +851,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
         
         cont = self.current_ax.tricontour(df[x], df[y], df[z], **kwargs)
         self.current_ax.clabel(cont, inline=True, fontsize=8)
@@ -856,6 +863,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
         
         contf = self.current_ax.tricontourf(df[x], df[y], df[z], **kwargs)
         self.current_figure.colorbar(contf, ax=self.current_ax, label=z)
@@ -867,6 +875,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
         
         trip = self.current_ax.tripcolor(df[x], df[y], df[z], **kwargs)
         self.current_figure.colorbar(trip, ax=self.current_ax, label=z)
@@ -878,6 +887,7 @@ class PlotEngine:
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
+        _ = kwargs.pop("legend", None)
         
         self.current_ax.triplot(df[x], df[y], **kwargs)
         
