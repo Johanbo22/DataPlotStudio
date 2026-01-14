@@ -32,7 +32,7 @@ class DataPlotStudioCheckBox(QCheckBox):
         self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        icon = "icons/ui_styling/checkmark.png"
+        icon = "icons/ui_styling/checkmark.svg"
         self.setStyleSheet(f"""
             QCheckBox {{
                 spacing: 5px;

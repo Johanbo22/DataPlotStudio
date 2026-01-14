@@ -31,7 +31,7 @@ class DataPlotStudioComboBox(QComboBox):
         self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        arrow_icon_path = "icons/ui_styling/arrow_down.png"
+        arrow_icon_path = "icons/ui_styling/arrow-down-to-line.svg"
 
         self.setStyleSheet(f"""
             QComboBox {{

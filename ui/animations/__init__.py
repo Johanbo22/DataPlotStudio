@@ -15,6 +15,7 @@ from .RemoveRowAnimation import RemoveRowAnimation
 from .DropMissingValueAnimation import DropMissingValueAnimation
 from .FillMissingValuesAnimation import FillMissingValuesAnimation
 from .OutlierDetectionAnimation import OutlierDetectionAnimation
+from .EditModeToggleAnimation import EditModeToggleAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -32,5 +33,6 @@ __all__ = [
     "ProjectOpenAnimation",
     "RemoveRowAnimation",
     "DropMissingValueAnimation",
-    "FillMissingValuesAnimation"
+    "FillMissingValuesAnimation",
+    "EditModeToggleAnimation"
 ]

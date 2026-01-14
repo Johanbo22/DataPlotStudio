@@ -63,7 +63,7 @@ class DataTab(QWidget):
 
         #create dataset
         self.create_new_dataset_button = DataPlotStudioButton("Create a New Dataset", parent=self, base_color_hex="#3498DB", text_color_hex="white")
-        self.create_new_dataset_button.setIcon(QIcon("icons/menu_bar/new_project.png"))
+        self.create_new_dataset_button.setIcon(QIcon("icons/menu_bar/file-plus-corner.svg"))
         self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
         self.create_new_dataset_button.clicked.connect(self.create_new_dataset)
         toolbar_layout.addWidget(self.create_new_dataset_button)
@@ -79,7 +79,7 @@ class DataTab(QWidget):
 
         #edit current dataset toggle
         self.edit_dataset_toggle_button = DataPlotStudioButton("Edit Mode: OFF", parent=self, base_color_hex="#95a5a6", text_color_hex="white")
-        self.edit_dataset_toggle_button.setIcon(QIcon("icons/code_edit.png"))
+        self.edit_dataset_toggle_button.setIcon(QIcon("icons/pencil-ruler.svg"))
         self.edit_dataset_toggle_button.setCheckable(True)
         self.edit_dataset_toggle_button.setToolTip("Toggle to edit data directly in the table")
         self.edit_dataset_toggle_button.clicked.connect(self.toggle_edit_mode)
@@ -124,7 +124,7 @@ class DataTab(QWidget):
         
         # Reset button at the to
         reset_button = DataPlotStudioButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf", typewriter_effect=True)
-        reset_button.setIcon(QIcon("icons/data_operations/reset.png"))
+        reset_button.setIcon(QIcon("icons/data_operations/rotate-ccw.svg"))
         reset_button.clicked.connect(self.reset_data)
         right_layout.addWidget(reset_button)
         
@@ -402,7 +402,7 @@ class DataTab(QWidget):
 
         melt_layout = QHBoxLayout()
         melt_button = DataPlotStudioButton("Melt/Unpivot Data", parent=self)
-        # melt_button.setIcon(QIcon(""))
+        melt_button.setIcon(QIcon("icons/data_operations/melt_data.svg"))
         melt_button.clicked.connect(self.open_melt_dialog)
         self.melt_help = HelpIcon("melt_data")
         self.melt_help.clicked.connect(self.show_help_dialog)
@@ -671,7 +671,7 @@ class DataTab(QWidget):
             self.edit_dataset_toggle_button.updateColors(base_color_hex="#95A5A6", hover_color_hex="#7F8C8D")
             self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
             self.status_bar.log(f"Edit Mode Disabled", "INFO")
-            
+
             self.edit_toggle_off_animation = EditModeToggleAnimation(parent=self, is_on=False)
             self.edit_toggle_off_animation.start(target_widget=self)
         

@@ -143,7 +143,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.clear_button.setMinimumHeight(40)
-        self.clear_button.setIcon(QIcon("icons/clean.png"))
+        self.clear_button.setIcon(QIcon("icons/clean.svg"))
         button_layout.addWidget(self.clear_button)
         
         self.editor_button = DataPlotStudioButton(
@@ -157,7 +157,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.editor_button.setMinimumHeight(40)
-        self.editor_button.setIcon(QIcon("icons/code_edit.png"))
+        self.editor_button.setIcon(QIcon("icons/ui_styling/file-code-corner.svg"))
         self.editor_button.setToolTip("Open the code editor to view/write python code for the plot.")
         button_layout.addWidget(self.editor_button)
         
