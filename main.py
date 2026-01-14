@@ -2,6 +2,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTranslator, QLocale
+from PyQt6.QtSvgWidgets import QSvgWidget
 
 from ui.DataPlotStudioApp import DataPlotStudio
 

@@ -1,8 +1,9 @@
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget, QStyle, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget, QStyle, QTreeWidget, QTreeWidgetItem, QSplitter
 
 
 import sys
@@ -22,8 +23,8 @@ class DatabaseConnectionDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Import from Database")
         self.setWindowIcon(QIcon("icons/menu_bar/database.png"))
-        self.setMinimumWidth(800)
-        self.resize(900, 500)
+        self.setMinimumWidth(900)
+        self.resize(100, 600)
 
         self.details = {}
 
@@ -33,7 +34,7 @@ class DatabaseConnectionDialog(QDialog):
         db_type_layout = QHBoxLayout()
         db_type_layout.addWidget(QLabel("Database Type:"))
         self.db_type_combo = DataPlotStudioComboBox()
-        self.db_type_combo.addItems(["SQLite", "PostgreSQL", "MySQL"])
+        self.db_type_combo.addItems(["SQLite","DuckDB", "PostgreSQL", "MySQL"])
         self.db_type_combo.currentTextChanged.connect(self.on_db_type_changed)
         db_type_layout.addWidget(self.db_type_combo)
         main_layout.addLayout(db_type_layout)
@@ -63,38 +64,57 @@ class DatabaseConnectionDialog(QDialog):
         self.dbname_input = DataPlotStudioLineEdit("postgres")
         self.connection_layout.addRow(self.dbname_label, self.dbname_input)
 
-        # SQLITE specific
-        self.sqlite_layout = QHBoxLayout()
-        self.sqlite_layout.setContentsMargins(0, 0, 0, 0)
-        self.sqlite_label = QLabel("Database File:")
-        self.sqlite_path_input = DataPlotStudioLineEdit()
-        self.sqlite_path_input.setPlaceholderText("Click 'Browse' to select a .db, .sqlite, or .sqlite3 file")
-        self.sqlite_browse_btn = DataPlotStudioButton("Browse", parent=self)
-        self.sqlite_browse_btn.clicked.connect(self.browse_sqlite_file)
-        self.sqlite_layout.addWidget(self.sqlite_path_input)
-        self.sqlite_layout.addWidget(self.sqlite_browse_btn)
-        self.sqlite_widget = QWidget()
-        self.sqlite_widget.setLayout(self.sqlite_layout)
-        self.connection_layout.addRow(self.sqlite_label, self.sqlite_widget)
+        # SQLITE and duckDB specific
+        self.file_db_layout = QHBoxLayout()
+        self.file_db_layout.setContentsMargins(0, 0, 0, 0)
+        self.file_db_label = QLabel("Database File:")
+        self.file_db_path_input = DataPlotStudioLineEdit()
+        self.file_db_path_input.setPlaceholderText("Click 'Browse' to select a database file")
+        self.file_db_browse_button = DataPlotStudioButton("Browse", parent=self)
+        self.file_db_browse_button.clicked.connect(self.browse_file_db)
+        self.file_db_layout.addWidget(self.file_db_path_input)
+        self.file_db_layout.addWidget(self.file_db_browse_button)
+        self.file_db_widget = QWidget()
+        self.file_db_widget.setLayout(self.file_db_layout)
+        self.connection_layout.addRow(self.file_db_label, self.file_db_widget)
+
+        # A test connection button
+        self.test_connection_wrapper = QWidget()
+        test_connection_layout = QHBoxLayout(self.test_connection_wrapper)
+        test_connection_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Database icons
+        self.db_icon_label = QLabel()
+        self.db_icon_label.setFixedHeight(24)
+        self.db_icon_label.setStyleSheet("border: none; background: transparent;")
+        test_connection_layout.addWidget(self.db_icon_label)
+
+        test_connection_layout.addStretch()
+
+        self.test_connection_button = DataPlotStudioButton("Test Connection", parent=self)
+        self.test_connection_button.clicked.connect(self.test_connection)
+        test_connection_layout.addWidget(self.test_connection_button)
+
+        self.connection_layout.addRow("", self.test_connection_wrapper)
 
         self.connection_group.setLayout(self.connection_layout)
         main_layout.addWidget(self.connection_group)
 
-        # Editor Grouping to show both the query and the schema
-        editors_layout = QHBoxLayout()
-        #querey editor
+        # Editor grouping with a splitter instead of hardlocked widgets
+        self.editors_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        # Query editor
         query_group = DataPlotStudioGroupBox("SQL Query", parent=self)
         query_layout = QVBoxLayout()
         instructions = (
-            "Enter your SQL query below. You can select specific columns and join tables.\n\n"
-            "Example:\n"
-            "SELECT t1.col_a, t2.col_b FROM table1 t1 JOIN table2 t2 ON t1.id = t2.id;"
+            "Enter your SQL query below. You can select specific columns and join tables.\n"
+            "Supports standard SELECT statements and CTEs."
         )
         self.info_label = QLabel(instructions)
         self.info_label.setWordWrap(True)
         query_layout.addWidget(self.info_label)
         self.query_editor = QTextEdit()
-        self.query_editor.setPlaceholderText("SELECT * FROM ...")
+        self.query_editor.setPlaceholderText("SELECT * FROM table_name ...")
         self.query_editor.setFontFamily("JetBrains Mono")
         self.query_editor.setMinimumHeight(150)
         query_layout.addWidget(self.query_editor)
@@ -113,7 +133,7 @@ class DatabaseConnectionDialog(QDialog):
         query_layout.addLayout(status_layout)
 
         query_group.setLayout(query_layout)
-        editors_layout.addWidget(query_group)
+        self.editors_splitter.addWidget(query_group)
 
         # Schema viewer
         schema_group = DataPlotStudioGroupBox("Database Schema", parent=self)
@@ -132,9 +152,13 @@ class DatabaseConnectionDialog(QDialog):
         schema_layout.addWidget(self.schema_tree)
 
         schema_group.setLayout(schema_layout)
-        editors_layout.addWidget(schema_group, stretch=1)
+        self.editors_splitter.addWidget(schema_group)
 
-        main_layout.addLayout(editors_layout)
+        # Set sizes for splitter. query is larger than schema
+        self.editors_splitter.setStretchFactor(0, 3)
+        self.editors_splitter.setStretchFactor(1, 2)
+
+        main_layout.addWidget(self.editors_splitter, stretch=1)
 
         #buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -146,6 +170,27 @@ class DatabaseConnectionDialog(QDialog):
 
         self.on_db_type_changed("SQLite")
         self.on_query_changed()
+    
+    def test_connection(self) -> None:
+        """Tests the database connection before loading the schema"""
+        try:
+            self.setCursor(Qt.CursorShape.WaitCursor)
+            connection_string = self._build_connection_string()
+
+            # Create an sql engine and attempt a query
+            engine = create_engine(connection_string)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            QMessageBox.information(self, "Success", "Connection established")
+        
+        except ValueError as InputError:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            QMessageBox.warning(self, "Input Error", str(InputError))
+        except Exception as ConnectionError:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            QMessageBox.critical(self, "Connection Failed", f"Could not connect to database:\n{str(ConnectionError)}")
 
     def fetch_schema(self) -> None:
         """Connects to the DB using the provided details and populates the schema tree with the tables and columns found in the db"""
@@ -215,23 +260,24 @@ class DatabaseConnectionDialog(QDialog):
 
         connection_string = ""
 
-        if db_type == "SQLite":
-            db_path = self.sqlite_path_input.text().strip()
+        if db_type in ["SQLite", "DuckDB"]:
+            db_path = self.file_db_path_input.text().strip()
             if not db_path:
-                raise ValueError("Please provide a path to the SQLite database file.")
+                raise ValueError(f"Please provide a path to the {db_type} database file.")
             
             db_path_abs = str(Path(db_path).resolve())
+            prefix = "sqlite" if db_type == "SQLite" else "duckdb"
             #Handle Windows path for sqlalchemy
             if sys.platform == "win32":
-                connection_string = f"sqlite:///{db_path_abs}"
+                connection_string = f"{prefix}:///{db_path_abs}"
             else:
-                connection_string = f"sqlite:///{db_path_abs}"
+                connection_string = f"{prefix}:///{db_path_abs}"
         
         else:
             host = self.host_input.text().strip()
             port = self.port_input.text().strip()
             user = self.user_input.text().strip()
-            password = self.user_input.text().strip()
+            password = self.password_input.text().strip()
             dbname = self.dbname_input.text().strip()
 
             if not all([host, port, user, dbname]):
@@ -262,7 +308,7 @@ class DatabaseConnectionDialog(QDialog):
             )
         else:
             self._set_query_status(
-                "Invalid query (Must be a SELECT statement with FROM clause)",
+                "Invalid query (Must be a SELECT statement or WITH clause)",
                 valid=False
             )
     
@@ -305,23 +351,23 @@ class DatabaseConnectionDialog(QDialog):
 
     def on_db_type_changed(self, db_type) -> None:
         """Show or hide fields based on db type"""
-        is_sqlite = (db_type == "SQLite")
+        is_file_db = (db_type in ["SQLite", "DuckDB"])
 
         #toggle server fields
-        self.host_label.setVisible(not is_sqlite)
-        self.host_input.setVisible(not is_sqlite)
-        self.port_label.setVisible(not is_sqlite)
-        self.port_input.setVisible(not is_sqlite)
-        self.user_label.setVisible(not is_sqlite)
-        self.user_input.setVisible(not is_sqlite)
-        self.password_label.setVisible(not is_sqlite)
-        self.password_input.setVisible(not is_sqlite)
-        self.dbname_label.setVisible(not is_sqlite)
-        self.dbname_input.setVisible(not is_sqlite)
+        self.host_label.setVisible(not is_file_db)
+        self.host_input.setVisible(not is_file_db)
+        self.port_label.setVisible(not is_file_db)
+        self.port_input.setVisible(not is_file_db)
+        self.user_label.setVisible(not is_file_db)
+        self.user_input.setVisible(not is_file_db)
+        self.password_label.setVisible(not is_file_db)
+        self.password_input.setVisible(not is_file_db)
+        self.dbname_label.setVisible(not is_file_db)
+        self.dbname_input.setVisible(not is_file_db)
 
         #toggle SQLITE fields
-        self.sqlite_label.setVisible(is_sqlite)
-        self.sqlite_widget.setVisible(is_sqlite)
+        self.file_db_label.setVisible(is_file_db)
+        self.file_db_widget.setVisible(is_file_db)
 
         #set defaults on port and usr
         if db_type == "PostgreSQL":
@@ -332,27 +378,49 @@ class DatabaseConnectionDialog(QDialog):
             self.port_input.setText("3306")
             self.user_input.setText("root")
             self.dbname_input.setText("")
+        elif db_type == "DuckDB":
+            self.file_db_path_input.setPlaceholderText("Click 'Browse' to select a DuckDB file (.db, .duckdb)")
+        elif db_type == "SQLite":
+            self.file_db_path_input.setPlaceholderText("Click 'Browse' to select a SQLite file (.db, .sqlite, .sqlite3)")
 
-    def browse_sqlite_file(self) -> None:
+        # Update the icon
+        icon_map = {
+            "SQLite": "icons/database_icons/sqlite.svg",
+            "DuckDB": "icons/database_icons/duckdb-logo.svg",
+            "PostgreSQL": "icons/database_icons/postgresql-inc.svg",
+            "MySQL": "icons/database_icons/mysql-3.svg"
+        }
+        icon_path = icon_map.get(db_type, "")
+
+        if not Path(icon_path).exists():
+            icon_path = "icons/menu_bar/database.png"
+        
+        if Path(icon_path).exists():
+            pixmap = QPixmap(icon_path)
+            scaled_pixmap = pixmap.scaledToHeight(24, Qt.TransformationMode.SmoothTransformation)
+            self.db_icon_label.setPixmap(scaled_pixmap)
+            self.db_icon_label.setToolTip(f"{db_type} Database")
+        else:
+            self.db_icon_label.clear()
+
+    def browse_file_db(self) -> None:
         """Open a file dialog to find a local SQLite database file"""
+        current_database_type = self.db_type_combo.currentText()
+
+        filters = "All Files (*)"
+        if current_database_type == "SQLite":
+            filters = "SQLite Files (*.db *.sqlite *.sqlite3);;All Files (*)"
+        elif current_database_type == "DuckDB":
+            filters = "DuckDB Files (*.db *.duckdb);;All Files (*)"
+        
         filepath, _ = QFileDialog.getOpenFileName(
             self,
-            "Select SQLite Database file",
+            f"Select {current_database_type} Database file",
             "",
-            "Database Files (*.db *.sqlite *.sqlite3);;All Files (*)"
+            filters
         )
         if filepath:
-            path = Path(filepath)
-            if path.suffix.lower() not in [".db", ".sqlite", ".sqlite3"]:
-                QMessageBox.warning(
-                    self,
-                    "Invalid File Format",
-                    f"The file format {path.suffix.lower()} is not a valid file format\nPlease select a valid SQLite file (.db, .sqlite, .sqlite3)"
-                )
-                self.browse_sqlite_file()
-                return
-            
-            self.sqlite_path_input.setText(filepath)
+            self.file_db_path_input.setText(filepath)
 
     def on_accept(self):
         """Validate the input and build connection string before acception"""
@@ -363,11 +431,11 @@ class DatabaseConnectionDialog(QDialog):
             QMessageBox.warning(self, "Input Error", "Please enter a SQL Query")
             return
         
-        if not query.lower().startswith("select"):
+        if not (query.lower().startswith("select") or query.lower().startswith("with")):
             QMessageBox.warning(
                 self,
                 "Invalid Query Syntax",
-                "The SQL query must be a 'SELECT' statement"
+                "The SQL query must be a 'SELECT' statement or start with 'WITH'"
             )
             return
         

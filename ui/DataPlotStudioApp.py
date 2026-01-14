@@ -12,12 +12,14 @@ from PyQt6.QtGui import QCloseEvent, QFont, QIcon
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from pathlib import Path
 
+from resources.version import APPLICATION_VERSION
+
 class DataPlotStudio(QMainWindow):
     """Main Application shell"""
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("DataPlotStudio")
+        self.setWindowTitle(f"DataPlotStudio - v{APPLICATION_VERSION}")
         self.setWindowIcon(QIcon(r"icons\DPS_icon.ico"))
 
         # Initialize the core managers
