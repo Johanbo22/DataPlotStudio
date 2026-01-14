@@ -23,7 +23,7 @@ from ui.data_table_model import DataTableModel
 from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
 
 
-from ui.animations import DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation
+from ui.animations import DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, EditModeToggleAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
@@ -663,11 +663,17 @@ class DataTab(QWidget):
             self.edit_dataset_toggle_button.updateColors(base_color_hex="#E74C3C", hover_color_hex="#C0392B")
             self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
             self.status_bar.log(f"Edit Mode Enabled. You are now able to edit cells in the data table", "INFO")
+
+            self.edit_toggle_on_animation = EditModeToggleAnimation(parent=self, is_on=True)
+            self.edit_toggle_on_animation.start(target_widget=self)
         else:
             self.edit_dataset_toggle_button.setText("Edit Mode: OFF")
             self.edit_dataset_toggle_button.updateColors(base_color_hex="#95A5A6", hover_color_hex="#7F8C8D")
             self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
             self.status_bar.log(f"Edit Mode Disabled", "INFO")
+            
+            self.edit_toggle_off_animation = EditModeToggleAnimation(parent=self, is_on=False)
+            self.edit_toggle_off_animation.start(target_widget=self)
         
         #update the flags 
         if self.data_table.model() is not None and isinstance(self.data_table.model(), DataTableModel):
