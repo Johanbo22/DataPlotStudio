@@ -8,21 +8,16 @@ The program is built up of two primary functionality:
 
 ## Features
 * Import data from files: csv, Microsoft Excel, text files, JSON and GeoSpatial fileformats (shp, GeoPackage, GeoJSON)
-* Import data from Google Sheets documents and from SQL databases
-* Edit and manipulate your data visually using embedded tools from pandas
+* Import data from Google Sheets documents and from SQLite, PostgreSQL and SQL databases
+* Edit and manipulate your data visually using tools from pandas and embedded tools
 * View statistics about your data
 * Plot the data with 30 different available plot types using matplotlib, seaborn and plotly
 * Interactively design the plot
-* Add custom plotting code using the integrated Python editor
+* Add custom plotting code using the integrated Python editor to augment the your plot even further
 * Export data and Python code to share or use in other tools
 
 ## Requirements
-If you wish to build the application from source, a requirements.txt is provided. To install with [pip](https://pip.pypa.io/en/stable/):
-
-```
-pip install -r requirements.txt
-```
-Otherwise the following packages are required:
+Following Python packages are required for the application to run:
 ```
 pandas==2.2.3
 duckdb==1.1.3
@@ -40,4 +35,28 @@ PyQt6-Qt6==6.10.1
 PyQt6-WebEngine==6.10.0
 PyQt6-WebEngine-Qt6==6.10.1
 PyQt6_sip==13.10.2
+```
+
+## Built from source
+If you wish to build the application from source, a requirements.txt is provided. 
+
+1. Clone the repository:
+```
+git clone https://github.com/Johanbo22/DataPlotStudio.git
+```
+
+2. Install the requirements.txt file with [pip](https://pip.pypa.io/en/stable/):
+
+```
+pip install -r requirements.txt
+```
+Otherwise install the following packages individually:
+```
+pip install pandas, duckdb, numpy, requests, SQLAlchemy, geopandas, scikit-learn, scipy, matplotlib, seaborn, plotly, PyQt6, PyQt6-Qt6, PyQt6-WebEngine, PyQt6-WebEngine-Qt6, PyQt6_sip
+```
+
+3. Cd into DataPlotStudio root and run main
+```
+cd DataPlotStudio
+python ./main.py
 ```
