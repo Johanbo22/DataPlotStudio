@@ -106,18 +106,31 @@ class FilterAdvancedDialog(QDialog):
         button_layout = QHBoxLayout()
 
         apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex="#e8f5fa")
-        apply_button.setMinimumWidth(120)
+        #apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
+        clear_button = DataPlotStudioButton("Clear Filters", parent=self, base_color_hex="#ffebee")
+        #clear_button.setMaximumWidth(100)
+        clear_button.clicked.connect(self.clear_fields)
+        button_layout.addWidget(clear_button)
+
         cancel_button = DataPlotStudioButton("Cancel", parent=self, base_color_hex="#e8f5fa")
-        cancel_button.setMinimumWidth(120)
+        #cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
 
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+        self.update_preview()
+
+    def clear_fields(self):
+        """Reset the filter fields to default"""
+        for i, row in enumerate(self.filter_rows):
+            row["active"].setChecked(i == 0)
+            row["value"].clear()
+
         self.update_preview()
 
     def update_preview(self):

@@ -263,6 +263,19 @@ class DataTab(QWidget):
         apply_filter_layout.addWidget(apply_filter_button)
         apply_filter_layout.addWidget(self.apply_filter_help)
         filter_layout.addLayout(apply_filter_layout)
+
+        clear_filter_layout = QHBoxLayout()
+        clear_filter_button = DataPlotStudioButton("Clear Filters", parent=self)
+        clear_filter_button.setToolTip("Reset the dataset to its original state and remove the filters")
+        clear_filter_button.setIcon(QIcon("icons/data_operations/reset.png"))
+        clear_filter_button.clicked.connect(self.clear_filters)
+        placeholder_help_icon_clear_filter = QWidget()
+        placeholder_help_icon_clear_filter.setFixedSize(self.apply_filter_help.size())
+        placeholder_help_icon_clear_filter.setVisible(True)
+        clear_filter_layout.addWidget(clear_filter_button)
+        clear_filter_layout.addWidget(placeholder_help_icon_clear_filter)
+        
+        filter_layout.addLayout(clear_filter_layout)
         
         filter_layout.addSpacing(10)
         
@@ -1475,27 +1488,6 @@ class DataTab(QWidget):
             except ValueError:
                 pass
 
-            #we reset to original before apply a new filter. this is so the user doesnt have to click the button themselves
-            if self.data_handler.original_df is not None:
-                self.data_handler.reset_data()
-
-                if hasattr(self.data_handler, "pre_insert_df"):
-                    self.data_handler.pre_insert_df = None
-                if hasattr(self.data_handler, "inserted_subset_name"):
-                    self.data_handler.inserted_subset_name = None
-                if hasattr(self.data_handler, "viewing_aggregation_name"):
-                    self.data_handler.viewing_aggregation_name = None
-                if hasattr(self.data_handler, "pre_agg_view_df"):
-                    self.data_handler.pre_agg_view_df = None
-                
-                if hasattr(self, "injection_status_label"):
-                    self.injection_status_label.setText("Status: Working with original data")
-                    self.injection_status_label.setStyleSheet(
-                        "color: #27ae60; font-weight: bold; padding: 5px;"
-                        "background-color: #ecf0f1; border-radius: 3px;"
-                    )
-                    self.restore_original_btn.setEnabled(False)
-                    self.inject_subset_tbn.setEnabled(True)
             
             before = len(self.data_handler.df)
             self.data_handler.filter_data(column, condition, value)
@@ -1523,6 +1515,14 @@ class DataTab(QWidget):
         
         except Exception as ApplyFilterError:
             self.status_bar.log(f"Failed to execute 'Filter': {str(ApplyFilterError)}", "ERROR")
+
+    def clear_filters(self):
+        """Clear filters by reseting the data to original state"""
+        if self.data_handler.df is None:
+            return
+        
+        self.reset_data()
+        self.status_bar.log(f"Filters cleared and data reset to original state", "INFO")
 
     
     def drop_column(self):
@@ -1770,9 +1770,6 @@ class DataTab(QWidget):
             
             try:
                 before = len(self.data_handler.df)
-                
-                # Reset to original first
-                self.data_handler.reset_data()
                 df = self.data_handler.df
                 
                 if logic == 'AND':
