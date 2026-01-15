@@ -60,6 +60,14 @@ class MainWindow(QWidget):
         data_icon = QIcon("icons/data_explorer.png")
         data_explorer_name = "Data Explorer"
         self.data_tab = DataTab(self.data_handler, self.status_bar, self.subset_manager)
+
+        # Welcome page signals
+        self.data_tab.request_open_project.connect(self.open_project)
+        self.data_tab.request_import_file.connect(self.import_file)
+        self.data_tab.request_import_sheets.connect(self.import_google_sheets)
+        self.data_tab.request_import_db.connect(self.import_from_database)
+        self.data_tab.request_quit.connect(QApplication.instance().quit)
+        
         self.tabs.addTab(self.data_tab, data_icon, data_explorer_name)
 
         # Plot tab

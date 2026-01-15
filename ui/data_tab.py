@@ -1,9 +1,10 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox, QStackedWidget)
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 
+from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.animations.AggregationAnimation import AggregationAnimation
@@ -21,12 +22,18 @@ from pathlib import Path
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
 from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
-
+from ui.LandingPage import LandingPage
 
 from ui.animations import DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, EditModeToggleAnimation
 
 class DataTab(QWidget):
     """Tab for viewing and manipulating data"""
+
+    request_open_project = pyqtSignal()
+    request_import_file = pyqtSignal()
+    request_import_sheets = pyqtSignal()
+    request_import_db = pyqtSignal()
+    request_quit = pyqtSignal()
     
     def __init__(self, data_handler: DataHandler, status_bar: StatusBar, subset_manager: SubsetManager):
         super().__init__()
@@ -54,8 +61,29 @@ class DataTab(QWidget):
         """Initialize the data tab UI"""
         main_layout = QHBoxLayout(self)
         
-        # Left side: Data table and operations
-        left_layout = QVBoxLayout()
+        # Left side: Data table and operations stacked with landing page
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.left_stack = QStackedWidget()
+        left_layout.addWidget(self.left_stack)
+
+        # Landing page
+        self.landing_page = LandingPage()
+        self.landing_page.open_project_clicked.connect(self.request_open_project.emit)
+        self.landing_page.import_file_clicked.connect(self.request_import_file.emit)
+        self.landing_page.import_sheets_clicked.connect(self.request_import_sheets.emit)
+        self.landing_page.import_db_clicked.connect(self.request_import_db.emit)
+        self.landing_page.new_dataset_clicked.connect(self.create_new_dataset)
+        self.landing_page.quit_clicked.connect(self.request_quit.emit)
+        self.left_stack.addWidget(self.landing_page)
+
+        # Data view container
+        self.data_view_widget = QWidget()
+        data_view_layout = QVBoxLayout(self.data_view_widget)
+        data_view_layout.setContentsMargins(0, 0, 0,0)
+        self.left_stack.addWidget(self.data_view_widget)
 
         #data toolbar
         toolbar_layout = QHBoxLayout()
@@ -85,7 +113,7 @@ class DataTab(QWidget):
         self.edit_dataset_toggle_button.clicked.connect(self.toggle_edit_mode)
         toolbar_layout.addWidget(self.edit_dataset_toggle_button)
 
-        left_layout.addLayout(toolbar_layout)
+        data_view_layout.addLayout(toolbar_layout)
         
         # Create tabs for data and statistics
         self.data_tabs = DataPlotStudioTabWidget()
@@ -118,9 +146,10 @@ class DataTab(QWidget):
         stats_icon = QIcon("icons/data_stats.png")
         self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
         
-        left_layout.addWidget(self.data_tabs, 1)
+        data_view_layout.addWidget(self.data_tabs, 1)
         
-        right_layout = QVBoxLayout()
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
         
         # Reset button at the to
         reset_button = DataPlotStudioButton("Reset to Original", parent=self, base_color_hex="#ffcccc", hover_color_hex="#faafaf", typewriter_effect=True)
@@ -610,12 +639,6 @@ class DataTab(QWidget):
         
         right_layout.addWidget(ops_tabs)
         
-        # Create widgets for layout management
-        left_widget = QWidget()
-        left_widget.setLayout(left_layout)
-        right_widget = QWidget()
-        right_widget.setLayout(right_layout)
-        
         # Create splitter
         from PyQt6.QtWidgets import QSplitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -625,6 +648,9 @@ class DataTab(QWidget):
         
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
+
+
+        self.refresh_data_view()
 
     def create_new_dataset(self):
         """Creates a new empty dataset"""
@@ -857,12 +883,25 @@ class DataTab(QWidget):
     def refresh_data_view(self):
         """Refresh the data table and statistics"""
         if self.data_handler.df is None:
-            self.data_table.setModel(None)
-            self.stats_text.clear()
-            self.data_source_refresh_button.setVisible(False)
+            if hasattr(self, "left_stack"):
+                self.left_stack.setCurrentIndex(0)
+            
+            if hasattr(self, 'data_table') and self.data_table is not None:
+                self.data_table.setModel(None)
+            
+            if hasattr(self, 'stats_text') and self.stats_text is not None:
+                self.stats_text.clear()
+            
+            if hasattr(self, 'data_source_refresh_button'):
+                self.data_source_refresh_button.setVisible(False)
+            
             self.status_bar.set_data_source("")
             self.status_bar.set_view_contex("", "normal")
+            
             return
+        
+        if hasattr(self, "left_stack"):
+            self.left_stack.setCurrentIndex(1)
         
         df = self.data_handler.df
         
