@@ -10,6 +10,8 @@ and this project adheres to Semantic Versioning.
 - DuckDB databases as new possible database connections.
 - A Test connection button so a database connection can be tested before a query is sent.
 - Drag and drop files from explorer into the main view. This will load the file and import the data as normal.
+- Welcome page with actions for opening existing project, creating new empty project, importing data from file, sheet, database
+- Welcome page with what's new information
 ### Changed
 - The way filtering data is handled. The reset does not happen automatically. Allows for filter into filter operations
 ### Fixed
