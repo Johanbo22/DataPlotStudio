@@ -462,6 +462,27 @@ class DataHandler:
 
         except Exception as FilterDataError:
             raise Exception(f"Error filtering data: {str(FilterDataError)}")
+        
+    def create_computed_column(self, new_column_name: str, expression: str) -> pd.DataFrame:
+        """Creates a new column based on an evaluated expression"""
+        if self.df is None:
+            raise ValueError("No data loaded")
+        
+        try:
+            self._save_state()
+
+            # Using padnas eval for arithmetic expressions
+            self.df[new_column_name] = self.df.eval(expression)
+
+            self.operation_log.append({
+                "type": "computed_column",
+                "new_column": new_column_name,
+                "expression": expression
+            })
+
+            return self.df
+        except Exception as ComputedColumnError:
+            raise Exception(f"Error computing and creating new column: {str(ComputedColumnError)}")
 
     
     def aggregate_data(self, group_by: List[str], agg_columns: List[str], agg_func: str) -> pd.DataFrame:

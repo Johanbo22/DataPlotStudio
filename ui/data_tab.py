@@ -23,6 +23,7 @@ from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
 from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
 from ui.LandingPage import LandingPage
+from ui.dialogs.ComputedColumnDialog import ComputedColumnDialog
 
 from ui.animations import DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, EditModeToggleAnimation
 
@@ -362,6 +363,15 @@ class DataTab(QWidget):
         rename_layout.addWidget(rename_button)
         rename_layout.addWidget(self.rename_column_help)
         column_layout.addLayout(rename_layout)
+
+        #Section to compute new columns using expressions
+        computed_layout = QHBoxLayout()
+        computed_button = DataPlotStudioButton("Compute Column", parent=self)
+        computed_button.setToolTip("Create a new column based on a formula (e.g., Total = Price * Quantity)")
+        computed_button.setIcon(QIcon("icons/data_operations/calculator.svg"))
+        computed_button.clicked.connect(self.open_computed_column_dialog)
+        computed_layout.addWidget(computed_button)
+        column_layout.addLayout(computed_layout)
 
         column_layout.addSpacing(10)
 
@@ -1824,6 +1834,34 @@ class DataTab(QWidget):
         except Exception as TextManipulationError:
             QMessageBox.critical(self, "Text Manipulation Error", {str(TextManipulationError)})
             self.status_bar.log(f"Text manipulation failed: {str(TextManipulationError)}", "ERROR")
+    
+    def open_computed_column_dialog(self):
+        """Opens the dialog to create a new column from a formula"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first")
+            return
+        
+        columns = list(self.data_handler.df.columns)
+        dialog = ComputedColumnDialog(columns, self)
+
+        if dialog.exec():
+            new_column, expression = dialog.get_data()
+            try:
+                self.data_handler.create_computed_column(new_column, expression)
+                self.refresh_data_view()
+
+                self.status_bar.log_action(
+                    f"Created column '{new_column}' = {expression}",
+                    details={
+                        "new_column": new_column,
+                        "expression": expression,
+                        "operation": "computed_column"
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as ComputedColumnError:
+                self.status_bar.log(f"Failed to create and calculate new column: {str(ComputedColumnError)}")
+                QMessageBox.critical(self, "Computation Error", f"Failed to create and calculate new column:\n{str(ComputedColumnError)}")
 
     def reset_data(self):
         """Reset data to original state"""
