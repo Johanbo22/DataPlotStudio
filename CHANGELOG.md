@@ -6,6 +6,16 @@ and this project adheres to Semantic Versioning.
 
 ## Unreleased
 ### Added
+- Text Manipulation to string data. Trim text data, and standardize casing etc
+### Changed
+-
+### Fixed
+-
+### Removed
+-
+
+## v0.0.3-alpha
+### Added
 - New search functionality to the data table. Allows for searching for values in the table and finds them.
 - DuckDB databases as new possible database connections.
 - A Test connection button so a database connection can be tested before a query is sent.
