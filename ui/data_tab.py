@@ -405,6 +405,44 @@ class DataTab(QWidget):
 
         type_group.setLayout(type_layout)
         column_layout.addWidget(type_group)
+
+        column_layout.addSpacing(10)
+
+        # Text manipulation group
+        text_group = DataPlotStudioGroupBox("Text Manipulation")
+        text_layout = QVBoxLayout()
+
+        text_info = QLabel("Standardize text data in the selected column.\nRemove whitespace, fix casing etc.")
+        text_info.setWordWrap(True)
+        text_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        text_layout.addWidget(text_info)
+
+        self.text_operation_combo = DataPlotStudioComboBox()
+        self.text_operation_combo.addItems([
+            "Trim Whitespace",
+            "Trim leading whitespace",
+            "Trim trailing whitepsace",
+            "Convert to lowercase",
+            "Convert to UPPERCASE",
+            "Convert to Title Case",
+            "Capitalize First Letter"
+        ])
+        text_layout.addWidget(self.text_operation_combo)
+
+        text_apply_layout = QHBoxLayout()
+        text_apply_button = DataPlotStudioButton("Apply Text Operation", parent=self)
+        text_apply_button.setIcon(QIcon("icons/data_operations/text_operation.svg"))
+        text_apply_button.clicked.connect(self.apply_text_manipulation)
+
+        self.text_manipulation_help = HelpIcon("text_manipulation")
+        self.text_manipulation_help.clicked.connect(self.show_help_dialog)
+
+        text_apply_layout.addWidget(text_apply_button)
+        text_apply_layout.addWidget(self.text_manipulation_help)
+        text_layout.addLayout(text_apply_layout)
+
+        text_group.setLayout(text_layout)
+        column_layout.addWidget(text_group)
         
         column_layout.addStretch()
         column_icon = QIcon("icons/data_operations/edit_cols.png")
@@ -1735,6 +1773,58 @@ class DataTab(QWidget):
             traceback.print_exc()
             self.refresh_data_view()
 
+    def apply_text_manipulation(self):
+        """Apply the requested text manipulation to the selected column """
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+        
+        selected_items = self.column_list.selectedItems()
+        if not selected_items:
+            self.status_bar.log(f"No Column Selected", "WARNING")
+            return
+        
+        if len(selected_items) > 1:
+            QMessageBox.warning(self, "Selection Error", "Please select only one column for text manipulation")
+            return
+        
+        column = selected_items[0].text()
+        selected_operation = self.text_operation_combo.currentText()
+
+        operation_map  = {
+            "Trim Whitespace": "strip",
+            "Trim leading whitespace": "lstrip",
+            "Trim trailing whitepsace": "rstrip",
+            "Convert to lowercase": "lower",
+            "Convert to UPPERCASE": "upper",
+            "Convert to Title Case": "title",
+            "Capitalize First Letter": "capitalize"
+        }
+
+        operation = operation_map.get(selected_operation)
+
+        try:
+            self.data_handler.clean_data(
+                "text_manipulation",
+                column=column,
+                operation=operation
+            )
+            self.refresh_data_view()
+            self.status_bar.log_action(
+                f"Applied text operation: '{selected_operation}' to '{column}'",
+                details={
+                    "column": column,
+                    "operation": operation,
+                    "type": "text_manipulation"
+                },
+                level="SUCCESS"
+            )
+
+            self.status_bar.log(f"Successfully applied '{selected_operation}' to column '{column}'", "SUCCESS")
+        
+        except Exception as TextManipulationError:
+            QMessageBox.critical(self, "Text Manipulation Error", {str(TextManipulationError)})
+            self.status_bar.log(f"Text manipulation failed: {str(TextManipulationError)}", "ERROR")
+
     def reset_data(self):
         """Reset data to original state"""
 
@@ -2324,7 +2414,6 @@ class DataTab(QWidget):
         elif action == settings_action:
             self.open_table_customization()
 
-    
     def open_table_customization(self):
         """Opens the settings dialog for the table customzation"""
         if self.data_handler.df is None:

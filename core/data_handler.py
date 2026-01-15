@@ -616,6 +616,40 @@ class DataHandler:
                     self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
                 else:
                     raise ValueError(f"Unsupported data type conversion: {new_type}")
+                
+            elif action == "text_manipulation":
+                column = kwargs.get("column")
+                operation = kwargs.get("operation")
+
+                if not column and not operation:
+                    raise ValueError("Column and operaton are required for text manipulation")
+                
+                if column not in self.df.columns:
+                    raise ValueError(f"Column '{column}' not found")
+                
+                try:
+                    if not hasattr(self.df[column], "str"):
+                        raise TypeError("Column does not support string operations")
+                    
+                    if operation == "lower":
+                        self.df[column] = self.df[column].str.lower()
+                    elif operation == "upper":
+                        self.df[column] = self.df[column].str.upper()
+                    elif operation == "title":
+                        self.df[column] = self.df[column].str.title()
+                    elif operation == "capitalize":
+                        self.df[column] = self.df[column].str.capitalize()
+                    elif operation == "strip":
+                        self.df[column] = self.df[column].str.strip()
+                    elif operation == "lstrip":
+                        self.df[column] = self.df[column].str.lstrip()
+                    elif operation == "lstrip":
+                        self.df[column] = self.df[column].str.rstrip()
+                    else:
+                        raise ValueError(f"Unsupported text operation: {operation}")
+                
+                except (AttributeError, TypeError):
+                    raise ValueError(f"Column '{column}' is not a text column. Please convert it to 'string' first using 'Change Data Type'")
             
             elif action == "remove_rows":
                 rows_to_remove = kwargs.get("rows")
