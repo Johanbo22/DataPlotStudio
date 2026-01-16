@@ -43,6 +43,8 @@ class FillMissingDialog(QDialog):
         self.method_combo.addItems([
             "Forward Fill (Previous Values)",
             "Backward Fill (Next Value)",
+            "Linear Interpolation",
+            "Time Interpolation",
             "Static Value (Type Below)",
             "Mean (Average)",
             "Median (Middle Value)",
@@ -96,6 +98,8 @@ class FillMissingDialog(QDialog):
 
         if "Forward" in text: method = "ffill"
         elif "Backward" in text: method = "bfill"
+        elif "Linear" in text: method = "linear_interpolation"
+        elif "Time" in text: method = "time_interpolation"
         elif "Static" in text: method = "static_value"
         elif "Mean" in text: method = "mean"
         elif "Median" in text: method = "median"

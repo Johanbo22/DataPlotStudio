@@ -642,6 +642,13 @@ class DataHandler:
                 elif method in ["ffill", "bfill"]:
                     for col in target_cols:
                         self.df[col] = self.df[col].fillna(method=method)
+                elif method in ["linear", "time"]:
+                    if method == "time" and not isinstance(self.df.index, pd.DatetimeIndex):
+                        raise ValueError("Time interpolation requires the DataFrame index to be a DatetimeIndex")
+                    
+                    for col in target_cols:
+                        if pd.api.types.is_numeric_dtype(self.df[col]):
+                            self.df[col] = self.df[col].interpolate(method=method)
             elif action == 'drop_column':
                 cols_to_drop = []
                 if "columns" in kwargs:
