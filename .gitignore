@@ -1,5 +1,6 @@
 test_data/
 f_and_b.txt
+f_and_b.md
 features_and_bugs.xlsx
 *.idea
 *.env

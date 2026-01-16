@@ -2,7 +2,7 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox, QMessageBox, QStackedWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox, QDialog, QDialogButtonBox
+    QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox, QDialog, QDialogButtonBox, QFrame, 
 )
 from PyQt6.QtCore import Qt, QRect, QSize, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QColor, QPainter, QLinearGradient, QBrush, QPixmap
@@ -178,13 +178,40 @@ class PlotTabUI(QWidget):
     def _create_basic_tab(self):
         """Create basic settings tab"""
         basic_tab = QWidget()
-        layout = QVBoxLayout(basic_tab)
+        main_layout = QVBoxLayout(basic_tab)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+
+        scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
+        scroll_layout = QVBoxLayout(scroll_widget)
         
         # plot type
         self.plot_type_group = DataPlotStudioGroupBox("Plot Type")
         plot_type_layout = QVBoxLayout()
-        self.plot_type = DataPlotStudioComboBox()
-        # bith plot type is in the plotTab.py
+
+        self.current_plot_label = QLabel("Selected Plot: None")
+        self.current_plot_label.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 11pt; margin-bottom: 5px;")
+        plot_type_layout.addWidget(self.current_plot_label)
+
+        self.plot_type = QToolBox()
+        self.plot_type.setMinimumHeight(350)
+        self.plot_type.setStyleSheet("""
+            QToolBox::tab {
+                background: #E0E0E0;
+                border-radius: 2px;
+                color: #333;
+                font-weight: bold;
+                padding-left: 5px;
+            }
+            QToolBox::tab:selected { 
+                background: #D0D0D0;
+                color: black;
+            }
+        """)
         plot_type_layout.addWidget(self.plot_type)
 
         #checkbox for addings ubplots
@@ -202,7 +229,7 @@ class PlotTabUI(QWidget):
         plot_type_layout.addWidget(self.use_subset_check)
         
         self.plot_type_group.setLayout(plot_type_layout)
-        layout.addWidget(self.plot_type_group)
+        scroll_layout.addWidget(self.plot_type_group)
 
         #subplots
         self.subplot_group = DataPlotStudioGroupBox("Subplot Configeration")
@@ -268,9 +295,9 @@ class PlotTabUI(QWidget):
         subplot_layout.addWidget(self.freeze_data_check)
 
         self.subplot_group.setLayout(subplot_layout)
-        layout.addWidget(self.subplot_group)
+        scroll_layout.addWidget(self.subplot_group)
 
-        layout.addSpacing(10)
+        scroll_layout.addSpacing(10)
 
         # data selection
         data_group = DataPlotStudioGroupBox("Data")
@@ -324,7 +351,7 @@ class PlotTabUI(QWidget):
         data_layout.addWidget(self.multi_y_info)
 
         data_group.setLayout(data_layout)
-        layout.addWidget(data_group)
+        scroll_layout.addWidget(data_group)
 
         #  SUBSEts
         self.subset_group = DataPlotStudioGroupBox("Data Subset")
@@ -356,7 +383,7 @@ class PlotTabUI(QWidget):
         subset_layout.addWidget(refresh_subsets_btn)
 
         self.subset_group.setLayout(subset_layout)
-        layout.addWidget(self.subset_group)
+        scroll_layout.addWidget(self.subset_group)
 
         hue_group = DataPlotStudioGroupBox("Hue/Group:")
         hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
@@ -365,9 +392,9 @@ class PlotTabUI(QWidget):
         self.hue_column.addItem("None")
         hue_layout.addWidget(self.hue_column)
         hue_group.setLayout(hue_layout)
-        layout.addWidget(hue_group)
+        scroll_layout.addWidget(hue_group)
 
-        layout.addSpacing(10)
+        scroll_layout.addSpacing(10)
 
         #plot description tab
         description_group = DataPlotStudioGroupBox(f"Plot Description: ")
@@ -383,9 +410,11 @@ class PlotTabUI(QWidget):
 
 
         description_group.setLayout(description_layout)
-        layout.addWidget(description_group)
+        scroll_layout.addWidget(description_group)
         
-        layout.addStretch()
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        main_layout.addWidget(scroll)
         return basic_tab
     
     def _create_appearance_tab(self):

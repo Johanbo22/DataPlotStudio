@@ -1,8 +1,8 @@
 # ui/plot_tab.py
 
 from re import M
-from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel
-from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem
+from PyQt6.QtCore import QTimer, QSize, Qt
 from PyQt6.QtGui import QIcon, QColor, QPalette, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
@@ -28,6 +28,7 @@ from matplotlib.colors import to_hex
 from typing import Dict, List, Any
 
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
+from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 
 
 class PlotTab(PlotTabUI):
@@ -49,6 +50,7 @@ class PlotTab(PlotTabUI):
         self.script_sync_timer.setSingleShot(True)
         self.script_sync_timer.setInterval(500)
         self.script_sync_timer.timeout.connect(self._perform_script_sync)
+        self.current_plot_type_name = "Line"
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -113,6 +115,15 @@ class PlotTab(PlotTabUI):
             "Triplot": self.plot_engine.strategy_triplot,
             "GeoSpatial": self.plot_engine.strategy_geospatial
         }
+        # Categories
+        self.plot_categories = {
+            "Basic & Relational": ["Line", "Scatter", "Bar", "Area", "Pie", "Stem", "Stairs"],
+            "Distribution": ["Histogram", "Box", "Violin", "KDE", "ECDF", "Count Plot", "Eventplot"],
+            "2D, Gridded & 3D": ["Heatmap", "Hexbin", "2D Density", "2D Histogram", "Image Show (imshow)", "pcolormesh", "Contour", "Contourf", "Stackplot"],
+            "Vector Fields": ["Barbs", "Quiver", "Streamplot"],
+            "Triangulation": ["Tricontour", "Tricontourf", "Tripcolor", "Triplot"],
+            "Geospatial": ["GeoSpatial"]
+        }
         
         # Create canvas and toolbar
         self.plot_engine.create_figure()
@@ -122,11 +133,9 @@ class PlotTab(PlotTabUI):
         self.init_ui(canvas, toolbar)
         
         #populate box in general tab with icons
-        for label, icon_key in self.plot_engine.AVAILABLE_PLOTS.items():
-            icon_path = f"icons/plot_tab/plots/{icon_key}.png"
-            icon = QIcon(icon_path)
-            self.plot_type.addItem(icon, label)
-        
+        #
+        self._populate_plot_toolbox()
+
         # Connect all signals to their logic methods
         self._connect_signals()
 
@@ -136,7 +145,7 @@ class PlotTab(PlotTabUI):
         # Load initial data
         self.update_column_combo()
         
-        self.on_plot_type_changed(self.plot_type.currentText(), log=False)
+        self._select_plot_in_toolbox("Line")
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
@@ -147,11 +156,9 @@ class PlotTab(PlotTabUI):
         self.clear_button.clicked.connect(self.clear_plot)
 
         #editor sync
-        self.plot_type.currentTextChanged.connect(self._sync_script_if_open)
         self.x_column.currentTextChanged.connect(self._sync_script_if_open)
         
         #  Tab 1: Basic 
-        self.plot_type.currentTextChanged.connect(self.on_plot_type_changed)
         self.multi_y_check.stateChanged.connect(self.toggle_multi_y)
         self.select_all_y_btn.clicked.connect(self.select_all_y_columns)
         self.clear_all_y_btn.clicked.connect(self.clear_all_y_columns)
@@ -229,6 +236,68 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+
+    def _populate_plot_toolbox(self):
+        while self.plot_type.count() > 0:
+            self.plot_type.removeItem(0)
+        
+        self.category_lists = []
+        for category, plot_names in self.plot_categories.items():
+            list_widget = DataPlotStudioListWidget()
+            list_widget.setViewMode(DataPlotStudioListWidget.ViewMode.IconMode)
+            list_widget.setResizeMode(DataPlotStudioListWidget.ResizeMode.Adjust)
+            list_widget.setMovement(DataPlotStudioListWidget.Movement.Static)
+            list_widget.setSpacing(8)
+            list_widget.setIconSize(QSize(42, 42))
+            list_widget.setStyleSheet("QListWidget { background-color: white; border: none; } QListWidget::item { padding: 5px; } QListWidget::item:selected { background-color: #e3f2fd; border-radius: 5px; color: black; border: 1px solid #2196F3; }")
+
+            list_widget.itemClicked.connect(self._on_plot_list_item_clicked)
+
+            for plot_name in plot_names:
+                if plot_name in self.plot_engine.AVAILABLE_PLOTS:
+                    icon_key = self.plot_engine.AVAILABLE_PLOTS[plot_name]
+                    icon_path = f"icons/plot_tab/plots/{icon_key}.png"
+
+                    item = QListWidgetItem(QIcon(icon_path), plot_name)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
+                    item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    item.setToolTip(self.plot_engine.PLOT_DESCRIPTIONS.get(plot_name, ""))
+                    list_widget.addItem(item)
+            
+            self.plot_type.addItem(list_widget, category)
+            self.category_lists.append(list_widget)
+    
+    def _on_plot_list_item_clicked(self, item):
+        if not item: return
+
+        plot_type = item.text()
+        self.current_plot_type_name = plot_type
+        self.current_plot_label.setText(f"Selected Plot: {plot_type}")
+
+        for list_w in self.category_lists:
+            if list_w != item.listWidget():
+                list_w.clearSelection()
+        
+        self.on_plot_type_changed(plot_type)
+        self._sync_script_if_open()
+    
+    def _select_plot_in_toolbox(self, plot_type_name):
+        self.current_plot_type_name = plot_type_name
+        self.current_plot_label.setText(f"Selected Plot: {plot_type_name}")
+
+        for i, (category, names) in enumerate(self.plot_categories.items()):
+            if plot_type_name in names:
+                self.plot_type.setCurrentIndex(i)
+                list_widget = self.category_lists[i]
+
+                items = list_widget.findItems(plot_type_name, Qt.MatchFlag.MatchExactly)
+                if items:
+                    list_widget.setCurrentItem(items[0])
+                    for list_w in self.category_lists:
+                        if list_w != list_widget:
+                            list_w.clearSelection()
+                    self.on_plot_type_changed(plot_type_name)
+                break
 
     def toggle_plotly_backend(self):
 
@@ -1188,7 +1257,7 @@ class PlotTab(PlotTabUI):
             return
         
         active_df = active_df.copy()
-        plot_type = self.plot_type.currentText()
+        plot_type = self.current_plot_type_name
 
         # Handle the plotly backend
         if self.use_plotly_check.isChecked():
@@ -1341,7 +1410,7 @@ class PlotTab(PlotTabUI):
     def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index):
         """Generate plot using matplotlib settings"""
         data_size = len(self.data_handler.df)
-        show_progress = data_size > 100
+        show_progress = data_size > 1000
         progress_dialog = None
 
         try:
@@ -2351,7 +2420,7 @@ class PlotTab(PlotTabUI):
             #Load the intial plottype 
             if "plot_type" in config:
                 self.plot_type.blockSignals(True)
-                self.plot_type.setCurrentText(config["plot_type"])
+                self._select_plot_in_toolbox(config["plot_type"])
                 self.plot_type.blockSignals(False)
                 self.on_plot_type_changed(config["plot_type"])
             
@@ -2669,7 +2738,7 @@ class PlotTab(PlotTabUI):
         """Get current plot configuration"""
         config = {
             "version": 1.0,
-            "plot_type": self.plot_type.currentText(),
+            "plot_type": self.current_plot_type_name,
             "basic": self._get_basic_config(),
             "appearance": self._get_appearance_config(),
             "axes": self._get_axes_config(),
