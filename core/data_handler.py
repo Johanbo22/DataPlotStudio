@@ -35,6 +35,9 @@ class DataHandler:
         #operation log
         self.operation_log: List[Dict[str, Any]] = []
 
+        # Track th sorting state
+        self.sort_state: Optional[tuple[str, bool]] = None
+
         #temporary file tracking
         self.temp_csv_path: Optional[Path] = None
         self.is_temp_file: bool = False
@@ -79,8 +82,14 @@ class DataHandler:
         if self.df is not None:
             self.redo_stack.append((self.df.copy(), self.operation_log.copy()))
         
-        # Restore from undo stack
-        restored_df, restored_log = self.undo_stack.pop()
+        state = self.undo_stack.pop()
+        if len(state) == 3:
+            restored_df, restored_log, restored_sort = state
+            self.sort_state = restored_sort
+        else:
+            restored_df, restored_log = state
+            self.sort_state = None
+
         self.df = restored_df.copy()
         self.operation_log = restored_log.copy()
         print(f"DEBUG: Undo complete. Remaining stack: {len(self.undo_stack)}")
@@ -94,10 +103,17 @@ class DataHandler:
         
         # Save current state to undo stack
         if self.df is not None:
-            self.undo_stack.append((self.df.copy(), self.operation_log.copy()))
+            self.undo_stack.append((self.df.copy(), self.operation_log.copy(), self.sort_state))
         
         # Restore from redo stack
-        restored_df, restored_log = self.redo_stack.pop()
+        state = self.redo_stack.pop()
+        if len(state) == 3:
+            restored_df, restored_log, restored_sort = state
+            self.sort_state = restored_sort
+        else:
+            restored_df, restored_log = state
+            self.sort_state = None
+
         self.df = restored_df.copy()
         self.operation_log = restored_log.copy()
         print(f"DEBUG: Redo complete. Remaining stack: {len(self.redo_stack)}")
@@ -380,6 +396,7 @@ class DataHandler:
             self.last_gsheet_name = None
             self.last_db_connection_string = None
             self.last_db_query = None
+            self.sort_state = None
 
             self.undo_stack.clear()
             self.redo_stack.clear()
@@ -483,6 +500,32 @@ class DataHandler:
             return self.df
         except Exception as ComputedColumnError:
             raise Exception(f"Error computing and creating new column: {str(ComputedColumnError)}")
+        
+    def sort_data(self, column: str, ascending: bool = True) -> pd.DataFrame:
+        """Sort data by a specified column permanently"""
+        if self.df is None:
+            raise ValueError("No data loaded")
+        
+        if self.sort_state == (column, ascending):
+            return self.df
+        
+        try:
+            self._save_state()
+
+            if column not in self.df.columns:
+                raise ValueError(f"Column '{column}' not found")
+            
+            self.df = self.df.sort_values(by=column, ascending=ascending)
+
+            self.operation_log.append({
+                "type": "sort",
+                "column": column,
+                "ascending": ascending
+            })
+
+            return self.df
+        except Exception as SortDataError:
+            raise Exception(f"Error sorting data: {str(SortDataError)}")
 
     
     def aggregate_data(self, group_by: List[str], agg_columns: List[str], agg_func: str) -> pd.DataFrame:
@@ -497,6 +540,8 @@ class DataHandler:
             agg_dict = {col: (col, agg_func) for col in agg_columns}
 
             self.df = self.df.groupby(group_by).agg(**agg_dict).reset_index()
+
+            self.sort_state = None
 
             self.operation_log.append({
                 "type": "aggregate",
@@ -526,6 +571,8 @@ class DataHandler:
                 var_name=var_name,
                 value_name=value_name
             )
+
+            self.sort_state = None
 
             self.operation_log.append({
                 "type": "melt",
@@ -609,6 +656,8 @@ class DataHandler:
 
                 if cols_to_drop:
                     self.df = self.df.drop(columns=cols_to_drop)
+                    if self.sort_state and self.sort_state[0] in cols_to_drop:
+                        self.sort_state = None
             elif action == 'rename_column':
                 old_name = kwargs.get('old_name')
                 new_name = kwargs.get('new_name')
@@ -693,6 +742,7 @@ class DataHandler:
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
+            self.sort_state = None
             self.df = self.original_df.copy()
             print(f"DEBUG: Data reset. Stacks cleared")
     

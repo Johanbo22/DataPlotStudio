@@ -490,6 +490,35 @@ class DataTab(QWidget):
         melt_layout.addWidget(self.melt_help)
         transform_layout.addLayout(melt_layout)
 
+        #Sorting section
+        sorting_group = DataPlotStudioGroupBox("Sort Data")
+        sorting_layout = QVBoxLayout()
+
+        sorting_info = QLabel("Permanently sort your dataset by a column. This affects row order for exports and indexing")
+        sorting_info.setWordWrap(True)
+        sorting_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        sorting_layout.addWidget(sorting_info)
+
+        sort_controls = QHBoxLayout()
+        self.sort_column_combo = DataPlotStudioComboBox()
+        sort_controls.addWidget(self.sort_column_combo, 2)
+
+        self.sort_order_combo = DataPlotStudioComboBox()
+        self.sort_order_combo.addItems(["Ascending", "Descending"])
+        sort_controls.addWidget(self.sort_order_combo, 1)
+
+        sorting_layout.addLayout(sort_controls)
+
+        sort_button_layout = QHBoxLayout()
+        self.sort_button = DataPlotStudioButton("Sort Data", parent=self)
+        self.sort_button.setIcon(QIcon("icons/data_operations/arrow-down-up.svg"))
+        self.sort_button.clicked.connect(self.apply_sort)
+
+        sort_button_layout.addWidget(self.sort_button)
+        sorting_layout.addLayout(sort_button_layout)
+
+        sorting_group.setLayout(sorting_layout)
+        transform_layout.addWidget(sorting_group)
 
         transform_layout.addSpacing(10)
 
@@ -931,7 +960,7 @@ class DataTab(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to restore original data:\n{str(RestoreOriginalDataFrameError)}")
             traceback.print_exc()
     
-    def refresh_data_view(self):
+    def refresh_data_view(self, reload_model: bool = True):
         """Refresh the data table and statistics"""
         if self.data_handler.df is None:
             if hasattr(self, "left_stack"):
@@ -957,9 +986,27 @@ class DataTab(QWidget):
         df = self.data_handler.df
         
         # Update table
-        self.model = DataTableModel(self.data_handler, editable=self.is_editing)
-        self.data_table.setModel(self.model)
-        self.data_table.setSortingEnabled(True)
+        if reload_model:
+            self.model = DataTableModel(self.data_handler, editable=self.is_editing)
+            self.data_table.setSortingEnabled(False)
+            self.data_table.setModel(self.model)
+
+            header = self.data_table.horizontalHeader()
+            header.blockSignals(True)
+
+            if self.data_handler.sort_state:
+                col_name, ascending = self.data_handler.sort_state
+                try:
+                    col_index = list(df.columns).index(col_name)
+                    order = Qt.SortOrder.AscendingOrder if ascending else Qt.SortOrder.DescendingOrder
+                    header.setSortIndicator(col_index, order)
+                except ValueError:
+                    header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+            else:
+                header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+            
+            header.blockSignals(False)
+            self.data_table.setSortingEnabled(True)
 
         if self.is_editing:
             self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
@@ -972,6 +1019,16 @@ class DataTab(QWidget):
         self.filter_column.addItems(columns)
         self.column_list.clear()
         self.column_list.addItems(columns)
+
+        #Update the sort col combo
+        if hasattr(self, 'sort_column_combo'):
+            current_sort = self.sort_column_combo.currentText()
+            self.sort_column_combo.clear()
+            self.sort_column_combo.addItems(columns)
+            if current_sort and current_sort in columns:
+                self.sort_column_combo.setCurrentText(current_sort)
+            elif self.data_handler.sort_state and self.data_handler.sort_state[0] in columns:
+                self.sort_column_combo.setCurrentText(self.data_handler.sort_state[0])
         
         # Update subset column combo if it exists
         if hasattr(self, 'subset_column_combo'):
@@ -2334,6 +2391,41 @@ class DataTab(QWidget):
             except Exception as MeltDataError:
                 QMessageBox.critical(self, "Error", f"Failed to melt data:\n{str(MeltDataError)}")
                 self.status_bar.log(f"Melt failed: {str(MeltDataError)}", "ERROR")
+    
+    def apply_sort(self):
+        """Apply a permanent sorting to data"""
+        if self.data_handler is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+            return
+        
+        column = self.sort_column_combo.currentText()
+        if not column:
+            return
+        
+        ascending = self.sort_order_combo.currentText() == "Ascending"
+
+        try:
+            col_index = list(self.data_handler.df.columns).index(column)
+            order = Qt.SortOrder.AscendingOrder if ascending else Qt.SortOrder.DescendingOrder
+
+            self.data_table.sortByColumn(col_index, order)
+            self.refresh_data_view(reload_model=False)
+
+            direction = "ascending" if ascending else "descending"
+            self.status_bar.log_action(
+                f"Sorted data by '{column}' ({direction})",
+                details={
+                    "column": column,
+                    "direction": direction,
+                    "operation": "sort"
+                },
+                level="SUCCESS"
+            )
+        except ValueError:
+            pass
+        except Exception as SortError:
+            self.status_bar.log(f"Sort failed: {str(SortError)}", "ERROR")
+            QMessageBox.critical(self, "Error", str(SortError))
 
     def clear(self):
         """Clear the data tab"""
@@ -2401,6 +2493,9 @@ class DataTab(QWidget):
                 return f"Aggregation: {operation.get("agg_func")} on {len(operation.get("agg_columns", []))} columns"
             case "melt":
                 return f"Melt/Pivot Data"
+            case "sort":
+                direction = "Asc" if operation.get("ascending") else "Desc"
+                return f"Sort: {operation.get("column")} ({direction})"
             case _:
                 return f"{operation_type.replace("_", " ").title()}"
             

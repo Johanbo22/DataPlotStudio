@@ -137,9 +137,8 @@ class DataTableModel(QAbstractTableModel):
             col_name = self._data.columns[column]
             ascending = (order == Qt.SortOrder.AscendingOrder)
 
-            self._data = self._data.sort_values(by=col_name, ascending=ascending)
-            self.data_handler.df = self._data
-        
+            self.data_handler.sort_data(col_name, ascending)
+            self._data = self.data_handler.df
         except Exception as SortError:
             print(f"Error sorting data: {str(SortError)}")
             self.status_bar = StatusBar()
