@@ -141,6 +141,8 @@ class ComputedColumnDialog(QDialog):
         if not name:
             QMessageBox.warning(self, "Validation Error", "Please enter a column name")
             return
+        if not name.isidentifier():
+            QMessageBox.warning(self, "Validation Error", "Column name must be a valid Python identifier.")
         if not expression:
             QMessageBox.warning(self, "Validation Error", "Please enter an expression")
         if name in self.columns:
