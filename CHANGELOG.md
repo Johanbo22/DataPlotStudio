@@ -4,13 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
-## Unreleased
+## Unreleashed
+
+## v0.0.4
 ### Added
 - Text Manipulation to string data. Trim text data, and standardize casing etc
+- Calculate column. Create new columns and use arithmetic, comparative and logical operations to calculate values in the new column.
+- Sorting tool added to the operations panel on the right side of the data tab.
+- Interpolation as options in the fill missing values tool. Choose between linear interpolation and time interpolation.
 ### Changed
--
+- The way sorting the table is done. Allows a permanent sorting of data, useful before exporting data to a new file.s
 ### Fixed
--
+- Text error in Create and calculate column dialog
 ### Removed
 -
 
