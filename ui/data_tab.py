@@ -370,7 +370,10 @@ class DataTab(QWidget):
         computed_button.setToolTip("Create a new column based on a formula (e.g., Total = Price * Quantity)")
         computed_button.setIcon(QIcon("icons/data_operations/calculator.svg"))
         computed_button.clicked.connect(self.open_computed_column_dialog)
+        self.compute_column_help = HelpIcon("compute_column")
+        self.compute_column_help.clicked.connect(self.show_help_dialog)
         computed_layout.addWidget(computed_button)
+        computed_layout.addWidget(self.compute_column_help)
         column_layout.addLayout(computed_layout)
 
         column_layout.addSpacing(10)
@@ -1860,7 +1863,7 @@ class DataTab(QWidget):
                     level="SUCCESS"
                 )
             except Exception as ComputedColumnError:
-                self.status_bar.log(f"Failed to create and calculate new column: {str(ComputedColumnError)}")
+                self.status_bar.log(f"Failed to create and calculate new column: {str(ComputedColumnError)}", "ERROR")
                 QMessageBox.critical(self, "Computation Error", f"Failed to create and calculate new column:\n{str(ComputedColumnError)}")
 
     def reset_data(self):
