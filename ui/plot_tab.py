@@ -1289,8 +1289,10 @@ class PlotTab(PlotTabUI):
         if current_subplot_index < 0:
             current_subplot_index = 0
 
-        use_frozen_data = (self.freeze_data_check.isChecked() and self.add_subplots_check.isChecked())
-        frozen_config = (self.subplot_data_configs.get(current_subplot_index if use_frozen_data else None))
+        frozen_config = None
+        if self.freeze_data_check.isChecked() and self.add_subplots_check.isChecked():
+            if current_subplot_index in self.subplot_data_configs:
+                frozen_config = self.subplot_data_configs[current_subplot_index]
 
         return current_subplot_index, frozen_config
 
