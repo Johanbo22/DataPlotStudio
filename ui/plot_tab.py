@@ -1593,6 +1593,15 @@ class PlotTab(PlotTabUI):
         scheme_text = self.geo_scheme_combo.currentText()
         hatch_text = self.geo_hatch_combo.currentText()
 
+        target_crs_input = getattr(self, "geo_target_crs_input", None)
+        target_crs = target_crs_input.text() if target_crs_input else None
+
+        basemap_check = getattr(self, "geo_basemap_check", None)
+        add_basemap = basemap_check.isChecked() if basemap_check else False
+
+        basemap_combo = getattr(self, "geo_basemap_style_combo", None)
+        basemap_source = basemap_combo.currentText() if basemap_combo else "OpenStreetMap"
+
         kwargs = {
             "scheme": scheme_text if scheme_text != "None" else None,
             "k": self.geo_k_spin.value(),
@@ -1611,7 +1620,10 @@ class PlotTab(PlotTabUI):
                 "hatch": hatch_text if hatch_text != "None" else None
             },
             "edgecolor": self.geo_edge_color,
-            "linewidth": self.geo_linewidth_spin.value()
+            "linewidth": self.geo_linewidth_spin.value(),
+            "target_crs": target_crs,
+            "add_basemap": add_basemap,
+            "basemap_source": basemap_source
         }
         if self.geo_boundary_check.isChecked():
             kwargs["facecolor"] = "none"

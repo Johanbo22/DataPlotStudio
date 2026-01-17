@@ -28,6 +28,11 @@ try:
     PLOTLY_AVAILABLE = True
 except:
     PLOTLY_AVAILABLE = False
+try:
+    import contextily as ctx
+except ImportError:
+    ctx = None
+
 
 
 class PlotEngine:
@@ -1910,6 +1915,36 @@ class PlotEngine:
         if not isinstance(gdf, gpd.GeoDataFrame):
             self.current_ax.text(0.5, 0.5, "Data is not a GeoDataFrame.\nEnsure a 'geometry' column is present.",ha="center", va="center", fontsize=12, color="red")
             return
+
+        #CRS support and basemap support
+        target_crs = kwargs.pop("target_crs", None)
+        add_basemap = kwargs.pop("add_basemap", False)
+        basemap_source = kwargs.pop("basemap_source", "OpenStreetMap")
+        basemap_zoom = kwargs.pop("basemap_zoom", "auto")
+
+        if gdf.crs is None:
+            print(f"Warning. Data has no CRS defined.")
+            try:
+                gdf.set_crs("EPSG:4326")
+            except Exception as SetCRSError:
+                print(f"Failed to set default CRS: {SetCRSError}")
+
+        # CRS Transformation
+        if target_crs and target_crs.lower() != "none" and target_crs.strip():
+            try:
+                gdf = gdf.to_crs(target_crs)
+            except Exception as CRSInfo:
+                print(f"Warning: Coordinate Reference System Transformation failed: {CRSInfo}")
+            
+        # Basemap
+        ## If adding a basemap an no specific CRS is chosen default to Web mercator projection
+        if add_basemap and ctx:
+            if not target_crs:
+                try:
+                    if gdf.crs and gdf.crs.to_string() != "EPSG:3857":
+                        gdf = gdf.to_crs("EPSG:3857")
+                except Exception as ReprojectError:
+                    print(f"Warning: Auto-projection for basemap failed: {str(ReprojectError)}")
         
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
@@ -1962,6 +1997,36 @@ class PlotEngine:
         if axis_off:
             self.current_ax.set_axis_off()
         
+        # Adding basemap
+        if add_basemap and ctx:
+            try:
+                #Default to OpenStreetMap from Mapnik
+                provider = ctx.providers.OpenStreetMap.Mapnik
+
+                source_map = {
+                    "OpenStretMap": ctx.providers.OpenStreetMap.Mapnik,
+                    "CartoDB Positron": ctx.providers.CartoDB.Positron,
+                    "CartoDB DarkMatter": ctx.providers.CartoDB.DarkMatter,
+                    "Esri Satellite": ctx.providers.Esri.WorldImagery,
+                    "Esri Street": ctx.providers.Esri.WorldStreetMap
+                }
+                if basemap_source in source_map:
+                    provider = source_map[basemap_source]
+
+                if gdf.crs:
+                    ctx.add_basemap(
+                        self.current_ax,
+                        crs=gdf.crs.to_string(),
+                        source=provider,
+                        zoom=basemap_zoom
+                    )
+                else:
+                    print("Unable to add basemap: CRS is undefined")
+            except Exception as BasemapError:
+                print(f"Failed to add basemap: {BasemapError}")
+        elif add_basemap and not ctx:
+            self.current_ax.text(0.02, 0.02, "Install 'contextily' for basemaps", transform=self.current_ax.transAxes, fontsize=8, color="red", bbox=dict(facecolor="white",alpha=0.7))
+        
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def strategy_geospatial(self, plot_tab: "PlotTab", x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
@@ -1998,6 +2063,9 @@ class PlotEngine:
         general_kwargs["linewidth"] = plot_tab.geo_linewidth_spin.value()
         if plot_tab.geo_boundary_check.isChecked():
             general_kwargs["facecolor"] = "none"
+        
+        if plot_kwargs:
+            general_kwargs.update(plot_kwargs)
         
         plot_method = getattr(self, self.AVAILABLE_PLOTS["GeoSpatial"])
         plot_method(gdf, **general_kwargs)

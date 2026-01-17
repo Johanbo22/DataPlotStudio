@@ -2069,6 +2069,40 @@ class PlotTabUI(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
+        #CRS and basemap
+        proj_group = DataPlotStudioGroupBox("Projection and Basemap")
+        proj_layout = QVBoxLayout()
+
+        #CRS
+        proj_layout.addWidget(QLabel("Target Coordinate System:"))
+        self.geo_target_crs_input = DataPlotStudioLineEdit()
+        self.geo_target_crs_input.setPlaceholderText("Leave empty to keep original")
+        self.geo_target_crs_input.setToolTip("Enter an EPSG code (e.g., EPSG:3857 for Web Mercator) to reproject map")
+        proj_layout.addWidget(self.geo_target_crs_input)
+
+        proj_layout.addSpacing(10)
+
+        #Basemap
+        self.geo_basemap_check = DataPlotStudioCheckBox("Add background Basemap")
+        self.geo_basemap_check.setToolTip("Overlay data on top of a web map tile.\nRequires an internet connection")
+        proj_layout.addWidget(self.geo_basemap_check)
+
+        proj_layout.addWidget(QLabel("Basemap Source:"))
+        self.geo_basemap_style_combo = DataPlotStudioComboBox()
+        self.geo_basemap_style_combo.addItems([
+            "OpenStreetMap", 
+            "CartoDB Positron", 
+            "CartoDB DarkMatter", 
+            "Esri Satellite", 
+            "Esri Street"
+        ])
+        self.geo_basemap_style_combo.setToolTip("Select the provider for the basemap tile")
+        proj_layout.addWidget(self.geo_basemap_style_combo)
+
+        proj_group.setLayout(proj_layout)
+        scroll_layout.addWidget(proj_group)
+        scroll_layout.addSpacing(10)
+
         #settings for choropleth mapping
         choro_group = DataPlotStudioGroupBox("Choropleth and Classification")
         choro_layout = QVBoxLayout()
