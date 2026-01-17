@@ -52,7 +52,7 @@ pip install -r requirements.txt
 ```
 Otherwise install the following packages individually:
 ```
-pip install pandas, duckdb, numpy, requests, SQLAlchemy, geopandas, scikit-learn, scipy, matplotlib, seaborn, plotly, PyQt6, PyQt6-Qt6, PyQt6-WebEngine, PyQt6-WebEngine-Qt6, PyQt6_sip
+pip install pandas, duckdb, numpy, requests, SQLAlchemy, geopandas, scikit-learn, scipy, matplotlib, seaborn, plotly, PyQt6, PyQt6-Qt6, PyQt6-WebEngine, PyQt6-WebEngine-Qt6, PyQt6_sip, contextily
 ```
 
 3. Cd into DataPlotStudio root and run main
