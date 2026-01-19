@@ -58,6 +58,7 @@ class PlotTab(PlotTabUI):
         self.script_sync_timer.setInterval(500)
         self.script_sync_timer.timeout.connect(self._perform_script_sync)
         self.current_plot_type_name = "Line"
+        self._last_plot_signature = None
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -1379,6 +1380,26 @@ class PlotTab(PlotTabUI):
         if not self._validate_active_dataframe(active_df):
             return
         
+        plot_type = self.current_plot_type_name
+
+        # Do a collection of params to cache to the plot signature.
+        current_signature = (
+            id(active_df),
+            active_df.shape,
+            plot_type,
+            tuple(y_cols) if y_cols else None,
+            hue,
+            subset_name,
+            self.flip_axes_check.isChecked(),
+            self.histogram_bins_spin.value() if plot_type == "Histogram" else None,
+            self.pie_start_angle_spin.value() if plot_type == "Pie" else None,
+            self.pie_explode_check.isChecked() if plot_type == "Pie" else None,
+            self.geo_scheme_combo.currentText() if plot_type == "GeoSpatial" else None,
+            self.geo_k_spin.value() if plot_type == "GeoSpatial" else None
+        )
+        keep_data = (self._last_plot_signature == current_signature) and not self.use_plotly_check.isChecked()
+        self._last_plot_signature = current_signature
+        
         active_df = active_df.copy()
         # Apply a quick filter if set
         if quick_filter:
@@ -1386,22 +1407,23 @@ class PlotTab(PlotTabUI):
             if active_df is None:
                 return
 
-        plot_type = self.current_plot_type_name
-
         # Handle the plotly backend
         if self.use_plotly_check.isChecked():
             self._generate_plotly_plot(active_df, plot_type, x_col, y_cols, hue)
             return
-        
-        # Sample data if needed
-        active_df = self._sample_data_if_needed(active_df, plot_type)
-        
-        #Convert datetime columns
-        self._convert_datetime_columns(active_df, x_col, y_cols)
+
+        if not keep_data:
+            # Sample data if needed
+            active_df = self._sample_data_if_needed(active_df, plot_type)
+            
+            #Convert datetime columns
+            self._convert_datetime_columns(active_df, x_col, y_cols)
+        else:
+            self.status_bar.log("Using cached data to render plot", "INFO")
 
         # Generate main plot
         self._generate_main_plot(
-            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter
+            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=keep_data
         )
     
     def _apply_quick_filter(self, df: pd.DataFrame, query: str) -> Optional[pd.DataFrame]:
@@ -1555,19 +1577,20 @@ class PlotTab(PlotTabUI):
         except Exception as ConvertColumnToDatetimeError:
             self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertColumnToDatetimeError)}", "ERROR")
     
-    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter=""):
+    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter="", keep_data=False):
         """Generate plot using matplotlib settings"""
         data_size = len(self.data_handler.df)
-        show_progress = data_size > 1000
+        show_progress = (data_size > 1000 and not keep_data)
         progress_dialog = None
 
         try:
             progress_dialog = self._init_progress_dialog(show_progress, data_size)
 
-            if not self._validate_plot_requirements(plot_type, x_col, y_cols):
-                return
+            if not keep_data:
+                if not self._validate_plot_requirements(plot_type, x_col, y_cols):
+                    return
             
-            self._update_progress(progress_dialog, 10, "Preparing data")
+                self._update_progress(progress_dialog, 10, "Preparing data")
 
             #Build config
             axes_flipped = self.flip_axes_check.isChecked()
@@ -1579,20 +1602,24 @@ class PlotTab(PlotTabUI):
             plot_kwargs = self._build_plot_specific_kwargs(plot_type)
 
             # Setup plot
-            self._update_progress(progress_dialog, 30, "Clearing previous plot")
-            self._setup_plot_figure()
+            if not keep_data:
+                self._update_progress(progress_dialog, 30, "Clearing previous plot")
+                self._setup_plot_figure(clear=True)
+            else:
+                self._setup_plot_figure(clear=False)
 
             self._update_progress(progress_dialog, 35, "Setting plot style")
             self._apply_plot_style()
             self._set_axis_limits_and_scales()
 
             #Create
-            self._update_progress(progress_dialog, 40, f"Creating {plot_type} plot")
+            if not keep_data:
+                self._update_progress(progress_dialog, 40, f"Creating {plot_type} plot")
 
-            if not self._execute_plot_strategy(plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
-                if progress_dialog:
-                    progress_dialog.accept()
-                return
+                if not self._execute_plot_strategy(plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
+                    if progress_dialog:
+                        progress_dialog.accept()
+                    return
             
             # Apply formatting and customizations
             self._apply_plot_formatting(progress_dialog, x_col, y_cols, axes_flipped, font_family, general_kwargs, active_df)
@@ -1602,9 +1629,10 @@ class PlotTab(PlotTabUI):
             self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter)
 
             # Log
-            self._log_plot_message(
-                plot_type, x_col, y_cols, hue, subset_name, active_df, quick_filter
-            )
+            if not keep_data:
+                self._log_plot_message(
+                    plot_type, x_col, y_cols, hue, subset_name, active_df, quick_filter
+                )
 
             self._update_progress(progress_dialog, 100, "Complete")
             if progress_dialog:
@@ -1783,14 +1811,16 @@ class PlotTab(PlotTabUI):
         
         return kwargs
     
-    def _setup_plot_figure(self):
+    def _setup_plot_figure(self, clear: bool = True):
         """Setup plot figure with current settings"""
-        self.plot_engine.clear_current_axis()
+        if clear:
+            self.plot_engine.clear_current_axis()
+            
         self.plot_engine.current_figure.set_size_inches(self.width_spin.value(), self.height_spin.value())
 
         self.plot_engine.current_figure.set_dpi(self.dpi_spin.value())
         self.plot_engine.current_figure.set_facecolor(self.bg_color)
-    
+
     def _apply_plot_style(self):
         """Apply plotting style"""
         try:

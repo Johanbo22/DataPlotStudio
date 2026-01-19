@@ -34,43 +34,56 @@ class DataTableModel(QAbstractTableModel):
             return 0
         return self._data.shape[1]
     
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> QVariant | int | float | bool | str | QColor:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Returns le data"""
         if not index.isValid() or self._data is None:
-            return QVariant()
-    
-        row = index.row()
-        column = index.column()
+            return None
 
-        try:
-            if role == Qt.ItemDataRole.BackgroundRole:
-                if row in self.highlighted_rows:
-                    return QColor("#FFCCCC")
-                
-            value = self._data.iloc[row, column]
-            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                if pd.isna(value):
-                    return "" if role == Qt.ItemDataRole.EditRole else "NaN"
-                
-                if isinstance(value, np.integer):
-                    return int(value)
-                if isinstance(value, np.floating):
-                    return float(value)
-                if isinstance(value, np.bool):
-                    return bool(value)
-                
-                return str(value)
+        if role == Qt.ItemDataRole.DisplayRole:
+            try:
+                row = index.row()
+                col = index.column()
+                val = self._data.iat[row, col]
+
+                if pd.isna(val):
+                    return "NaN"
+
+                if isinstance(val, (bool, np.bool_)):
+                    return str(val)
+
+                if isinstance(val, (int, np.integer)):
+                    return int(val)
+
+                if isinstance(val, (float, np.floating)):
+                    return f"{val:.6g}"
+
+                s_val = str(val)
+                if len(s_val) > 64:
+                    return s_val[:64] + "..."
+                return s_val
+
+            except Exception:
+                return None
+
+        elif role == Qt.ItemDataRole.EditRole:
+            try:
+                val = self._data.iat[index.row(), index.column()]
+                if pd.isna(val):
+                    return ""
+                return str(val)
+            except Exception:
+                return ""
+
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            if index.row() in self.highlighted_rows:
+                return QColor("#FFCCCC")
             
-            elif role == Qt.ItemDataRole.TextAlignmentRole:
-                if self._is_numeric[column]:
-                    return QVariant(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter)
-                return QVariant(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignCenter)
-        
-        except Exception as DataModelError:
-            print(f"Error in DataTableModel.data(): {str(DataModelError)} for row: {row}, column: {column}, role: {role}")
-            return QVariant()
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            if index.column() < len(self._is_numeric) and self._is_numeric[index.column()]:
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
+            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignCenter
 
-        return QVariant()
+        return None
     
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         """data ypdater"""
