@@ -313,7 +313,7 @@ class PlotTabUI(QWidget):
 
         # ycols, try for multiple 
         y_label_layout = QHBoxLayout()
-        y_label_layout.addWidget(QLabel("Y Columns (s)"))
+        y_label_layout.addWidget(QLabel("Y Column(s)"))
         y_label_layout.addStretch()
 
         #toggle between two and more ycols
@@ -349,6 +349,28 @@ class PlotTabUI(QWidget):
         self.multi_y_info.setStyleSheet("color: #7f8c8d; font-size: 9.5pt; font-style: italic;")
         self.multi_y_info.setVisible(False)
         data_layout.addWidget(self.multi_y_info)
+
+        #secondary y-axis section
+        data_layout.addSpacing(10)
+        secondary_y_layout = QHBoxLayout()
+        self.secondary_y_check = DataPlotStudioCheckBox("Secondary Y-Axis")
+        self.secondary_y_check.setToolTip("Enabled a secondary Y-axis on the right side of the plot")
+        secondary_y_layout.addWidget(self.secondary_y_check)
+        data_layout.addLayout(secondary_y_layout)
+
+        sec_y_config_layout = QHBoxLayout()
+        self.secondary_y_column = DataPlotStudioComboBox()
+        self.secondary_y_column.setEnabled(False)
+        self.secondary_y_column.setToolTip("Select the column to plot on the y-axis")
+        sec_y_config_layout.addWidget(self.secondary_y_column, stretch=2)
+
+        self.secondary_plot_type_combo = DataPlotStudioComboBox()
+        self.secondary_plot_type_combo.setEnabled(False)
+        self.secondary_plot_type_combo.setToolTip("Select the plot type for the secondary axis")
+        self.secondary_plot_type_combo.addItems(["Line", "Scatter", "Bar", "Area"])
+        sec_y_config_layout.addWidget(self.secondary_plot_type_combo, stretch=1)
+
+        data_layout.addLayout(sec_y_config_layout)
 
         data_group.setLayout(data_layout)
         scroll_layout.addWidget(data_group)

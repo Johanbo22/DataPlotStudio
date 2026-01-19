@@ -175,6 +175,7 @@ class PlotTab(PlotTabUI):
         self.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         self.use_subset_check.stateChanged.connect(self.use_subset)
         self.use_plotly_check.stateChanged.connect(self.toggle_plotly_backend)
+        self.secondary_y_check.stateChanged.connect(lambda state: self._toggle_secondary_input(bool(state)))
         
         #  Tab 2:- Appearance 
         self.individual_spines_check.stateChanged.connect(self.toggle_individual_spines)
@@ -1084,6 +1085,7 @@ class PlotTab(PlotTabUI):
         current_x = self.x_column.currentText()
         current_y = self.y_column.currentText()
         current_hue = self.hue_column.currentText()
+        current_secondary_y = self.secondary_y_column.currentText()
         current_auto_annoate = self.auto_annotate_col_combo.currentText()
         current_multi_y = []
         if self.multi_y_check.isChecked():
@@ -1093,6 +1095,7 @@ class PlotTab(PlotTabUI):
         self.x_column.blockSignals(True)
         self.y_column.blockSignals(True)
         self.hue_column.blockSignals(True)
+        self.secondary_y_column.blockSignals(True)
         self.y_columns_list.blockSignals(True)
         self.auto_annotate_col_combo.blockSignals(True)
         
@@ -1107,6 +1110,12 @@ class PlotTab(PlotTabUI):
         self.y_column.addItems(columns)
         if current_y in columns:
             self.y_column.setCurrentText(current_y)
+
+        #update secondary y col
+        self.secondary_y_column.clear()
+        self.secondary_y_column.addItems(columns)
+        if current_secondary_y in columns:
+            self.secondary_y_column.setCurrentText(current_secondary_y)
 
         #update more ycols
         self.y_columns_list.clear()
@@ -1139,6 +1148,7 @@ class PlotTab(PlotTabUI):
         self.x_column.blockSignals(False)
         self.y_column.blockSignals(False)
         self.hue_column.blockSignals(False)
+        self.secondary_y_column.blockSignals(False)
         self.y_columns_list.blockSignals(False)
         self.auto_annotate_col_combo.blockSignals(False)
     
@@ -1258,6 +1268,14 @@ class PlotTab(PlotTabUI):
             self.multi_y_check.setEnabled(False)
             self.multi_y_check.setChecked(False)
             self.multi_y_check.setToolTip(f"{plot_type} plots do not support multiple y columns")
+        
+        #Disbale plots with no dual yaxis support
+        dual_axis_supported = ["Line", "Bar", "Scatter", "Area"]
+        if plot_type in dual_axis_supported:
+            self.secondary_y_check.setEnabled(True)
+        else:
+            self.secondary_y_check.setChecked(False)
+            self.secondary_y_check.setEnabled(False)
 
         #disable hue for certain plots
         plots_without_hue: list[str] = [
@@ -1618,6 +1636,11 @@ class PlotTab(PlotTabUI):
             "ylabel": self.ylabel_input.text() or y_label_text,
             "legend": self.legend_check.isChecked()
         }
+
+        # Add secondary y axis
+        if self.secondary_y_check.isChecked() and self.secondary_y_check.isEnabled():
+            general_kwargs["secondary_y"] = self.secondary_y_column.currentText()
+            general_kwargs["secondary_plot_type"] = self.secondary_plot_type_combo.currentText()
         
         cmap = self.palette_combo.currentText()
         if cmap and cmap != "None":
@@ -2497,6 +2520,13 @@ class PlotTab(PlotTabUI):
             level="INFO"
         )
     
+    def _toggle_secondary_input(self, enabled: bool):
+        is_enabled = bool(enabled)
+
+        self.secondary_y_column.setEnabled(is_enabled)
+        if hasattr(self, "secondary_plot_type_combo"):
+            self.secondary_plot_type_combo.setEnabled(is_enabled)
+    
     def load_config(self, config: dict) -> None:
         """Load plot configuration"""
         self.current_config = config
@@ -2544,6 +2574,14 @@ class PlotTab(PlotTabUI):
                 self.y_column.setCurrentText(y_cols[0])
         
         self.hue_column.setCurrentText(config.get("hue_column", "None"))
+
+        # secondary y config
+        sec_y_enabled = config.get("secondary_y_enabled", False)
+        self.secondary_y_check.setChecked(sec_y_enabled)
+        self._toggle_secondary_inputs(sec_y_enabled)
+        if sec_y_enabled:
+            self.secondary_y_column.setCurrentText(config.get("secondary_y_column", ""))
+            self.secondary_plot_type_combo.setCurrentText(config.get("secondary_plot_type", "Line"))
 
         # Subsets
         use_subset = config.get("use_subset", False)
@@ -2842,7 +2880,10 @@ class PlotTab(PlotTabUI):
             "multi_y_checked": self.multi_y_check.isChecked(),
             "hue_column": self.hue_column.currentText(),
             "use_subset": self.use_subset_check.isChecked(),
-            "subset_name": self.subset_combo.currentData()
+            "subset_name": self.subset_combo.currentData(),
+            "secondary_y_enabled": self.secondary_y_check.isChecked(),
+            "secondary_y_column": self.secondary_y_column.currentText(),
+            "secondary_plot_type": self.secondary_plot_type_combo.currentText()
         }
 
     def _get_appearance_config(self) -> Dict[str, Any]:

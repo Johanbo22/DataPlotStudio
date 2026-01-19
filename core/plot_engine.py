@@ -125,6 +125,7 @@ class PlotEngine:
         self.axes_flat = []
         self.current_plot_type: Optional[str] = None
         self.plot_config: Dict[str, Any] = {}
+        self.secondary_ax = None
     
     def create_figure(self, figsize=(10, 6), dpi=100) -> Figure:
         """Create a new matplotlib figure"""
@@ -309,16 +310,66 @@ class PlotEngine:
             return [cmap(i) for i in np.linspace(0, 1, n_colors)]
         except:
             return None
+    
+    def _clear_axes(self):
+        if self.secondary_ax:
+            try:
+                self.secondary_ax.remove()
+            except Exception:
+                pass
+            self.secondary_ax = None
+        
+        self.current_ax.clear()
+    
+    def _handle_secondary_axis(self, df: pd.DataFrame, x: str, secondary_y: str, secondary_plot_type: str, **kwargs) -> Any:
+        """
+        Method to handle plotting data on a secondary y axis (TwinX)
+        Returns the secondary axis objet
+        """
+        if not secondary_y or secondary_y not in df.columns:
+            return None
+        
+        ax2 = self.current_ax.twinx()
+        self.secondary_ax = ax2
 
+        if secondary_plot_type == "Line":
+            ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}")
+        elif secondary_plot_type == "Bar":
+            ax2.bar(df[x], df[secondary_y], alpha=0.3, label=f"{secondary_y}")
+        elif secondary_plot_type == "Scatter":
+            ax2.scatter(df[x], df[secondary_y], label=f"{secondary_y}")
+        elif secondary_plot_type == "Area":
+            ax2.fill_between(df[x], 0, df[secondary_y], alpha=0.2, label=f"{secondary_y}")
+        else:
+            ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}", linestyle="--")
+        
+        ax2.set_ylabel(secondary_y)
+        ax2.tick_params(axis="y")
+
+        return ax2
+
+    def _consolidate_legends(self, ax1, ax2):
+        """Combine legends from primary and secondary axes into one"""
+        if not ax1 and ax2:
+            return
+        
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+
+        if lines1 or lines2:
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc="best")
     
     def plot_line(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create a line plot"""
+        self._clear_axes()
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         hue = kwargs.pop("hue", None)
         cmap_name = kwargs.pop("cmap", None)
+        secondary_y = kwargs.pop("secondary_y", None)
+        secondary_plot_type = kwargs.pop("secondary_plot_type", "Line")
 
         marker = kwargs.pop("marker", None)
 
@@ -343,16 +394,29 @@ class PlotEngine:
                 if colors: kwargs["color"] = colors[i]
                 self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, picker=5, **kwargs)
         
-        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
+        ax2 = None
+        if secondary_y:
+            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, **kwargs)
+        
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
+
+        if legend:
+            if ax2:
+                self._consolidate_legends(self.current_ax, ax2)
+            else:
+                self.current_ax.legend()
     
     def plot_scatter(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a scatter plot"""
+        self._clear_axes()
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         hue = kwargs.pop('hue', None)
         cmap_name = kwargs.pop("cmap", None)
+        secondary_y = kwargs.pop("secondary_y", None)
+        secondary_plot_type = kwargs.pop("secondary_plot_type", "Line")
         
         if hue:
             groups = df[hue].unique()
@@ -367,10 +431,21 @@ class PlotEngine:
             mask = df[x].notna() & df[y].notna()
             self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], picker=5, **kwargs)
         
-        self._set_labels(title, xlabel, ylabel, legend, **kwargs)
+        ax2 = None
+        if secondary_y:
+            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, **kwargs)
+        
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
+
+        if legend:
+            if ax2:
+                self._consolidate_legends(self.current_ax, ax2)
+            else:
+                self.current_ax.legend()
     
     def plot_bar(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a bar plot"""
+        self._clear_axes()
         df = df[df[x].notna()]
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
@@ -380,6 +455,8 @@ class PlotEngine:
         width = kwargs.pop("width", 0.8)
         horizontal = kwargs.pop("horizontal", False)
         palette = kwargs.pop("palette", None)
+        secondary_y = kwargs.pop("secondary_y", None)
+        secondary_plot_type = kwargs.pop("secondary_plot_type", "Line")
         
         if isinstance(y, str):
             y = [y]
@@ -425,8 +502,20 @@ class PlotEngine:
                 sns.barplot(data=df, y=x, x=y[0], hue=hue, ax=self.current_ax, orient="h", picker=True, **kwargs)
             else:
                 sns.barplot(data=df, x=x, y=y[0], hue=hue, ax=self.current_ax, picker=True, **kwargs)
+        
+        ax2 = None
+        if secondary_y and not horizontal:
+            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, **kwargs)
 
-        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
+
+        if legend:
+            if ax2:
+                self._consolidate_legends(self.current_ax, ax2)
+            else:
+                handles, labels = self.current_ax.get_legend_handles_labels()
+                if handles:
+                    self.current_ax.legend()
     
     def plot_histogram(self, df: pd.DataFrame, column: str, **kwargs) -> None:
         """Create a histogram"""
@@ -533,10 +622,13 @@ class PlotEngine:
     
     def plot_area(self, df: pd.DataFrame, x: str, y: List[str], **kwargs) -> None:
         """Create an area plot"""
+        self._clear_axes()
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
+        secondary_y = kwargs.pop("secondary_y", None)
+        secondary_plot_type = kwargs.pop("secondary_plot_type", "Line")
 
         if isinstance(y, str):
             y = [y]
@@ -544,8 +636,17 @@ class PlotEngine:
         df_plot = df[df[x].notna()].set_index(x)[y]
         df_plot.plot(kind="area", ax=self.current_ax, stacked=True, picker=True, **kwargs)
         
+        ax2 = None
+        if secondary_y:
+            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, **kwargs)
         
-        self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
+        self._set_labels(title, xlabel, ylabel, False, **kwargs)
+
+        if legend:
+            if ax2:
+                self._consolidate_legends(self.current_ax, ax2)
+            else:
+                self.current_ax.legend()
     
     def plot_pie(self, df: pd.DataFrame, values: str, names: str, **kwargs) -> None:
         """Create a pie chart"""
