@@ -34,6 +34,7 @@ from matplotlib.collections import PathCollection
 
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
+from ui.dialogs.PlotExportDialog import PlotExportDialog
 
 
 class PlotTab(PlotTabUI):
@@ -407,19 +408,22 @@ class PlotTab(PlotTabUI):
             return
         
         try:
-            filepath, selected_filter = QFileDialog.getSaveFileName(
-                self,
-                "Save Plot",
-                "plot.png",
-                "PNG Image (*.png);;PDF Document (*.pdf);; SVG Image (*.svg);;JPEG Image (*.jpg)"
-            )
-            if filepath:
-                self.plot_engine.current_figure.savefig(
-                    filepath,
-                    dpi=self.dpi_spin.value(),
-                    bbox_inches="tight" if self.tight_layout_check.isChecked() else None,
-                    facecolor=self.bg_color
-                )
+            dialog = PlotExportDialog(current_dpi=self.dpi_spin.value(), parent=self)
+            if dialog.exec():
+                config = dialog.get_config()
+                filepath = config["filepath"]
+
+                if filepath:
+                    kwargs = {
+                        "dpi": config["dpi"],
+                        "bbox_inches": "tight" if self.tight_layout_check.isChecked() else None,
+                        "transparent": config["transparent"]
+                    }
+                    if not config["transparent"]:
+                        kwargs["facecolor"] = self.bg_color
+                    
+                    self.plot_engine.current_figure.savefig(filepath, **kwargs)
+                    
                 self.status_bar.log_action(f"Plot saved to {filepath}", level="SUCCESS")
                 QMessageBox.information(self, "Success", f"Plot saved successfully to:\n{filepath}")
         except Exception as ExportPlotAsImageError:
