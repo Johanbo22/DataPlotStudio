@@ -27,6 +27,7 @@ from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
+from ui.widgets.QuickFilterEdit import QuickFilterEdit
 from ui.widgets.HelpIcon import HelpIcon
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -386,6 +387,18 @@ class PlotTabUI(QWidget):
         sec_y_config_layout.addWidget(self.secondary_plot_type_combo, stretch=1)
 
         data_layout.addLayout(sec_y_config_layout)
+
+        # Quick filter
+        data_layout.addSpacing(10)
+        data_layout.addWidget(QLabel("Quick Filter:"))
+        self.quick_filter_input = QuickFilterEdit()
+        self.quick_filter_input.setPlaceholderText("e.g. value > 100 or category == 'A'")
+        self.quick_filter_input.setToolTip("Apply a Pandas query expression to filter data temporarily before plotting.\n"
+                                        "Examples:\n"
+                                        "age > 25\n"
+                                        "income < 50000 and status == 'Active'\n"
+                                        "col1 > col2")
+        data_layout.addWidget(self.quick_filter_input)
 
         data_group.setLayout(data_layout)
         scroll_layout.addWidget(data_group)

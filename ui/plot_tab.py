@@ -31,6 +31,7 @@ from matplotlib.lines import Line2D
 from matplotlib.text import Text
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PathCollection
+from typing import Optional
 
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
@@ -1112,6 +1113,7 @@ class PlotTab(PlotTabUI):
             return
         
         columns = list(self.data_handler.df.columns)
+        self.quick_filter_input.set_columns(columns)
 
         # Preserve the current selection
         current_x = self.x_column.currentText()
@@ -1372,12 +1374,18 @@ class PlotTab(PlotTabUI):
 
         # Get data configuration
         current_subplot_index, frozen_config = self._get_subplot_config()
-        active_df, x_col, y_cols, hue, subset_name = self._resolve_data_config(current_subplot_index, frozen_config)
+        active_df, x_col, y_cols, hue, subset_name, quick_filter = self._resolve_data_config(current_subplot_index, frozen_config)
 
         if not self._validate_active_dataframe(active_df):
             return
         
         active_df = active_df.copy()
+        # Apply a quick filter if set
+        if quick_filter:
+            active_df = self._apply_quick_filter(active_df, quick_filter)
+            if active_df is None:
+                return
+
         plot_type = self.current_plot_type_name
 
         # Handle the plotly backend
@@ -1393,8 +1401,23 @@ class PlotTab(PlotTabUI):
 
         # Generate main plot
         self._generate_main_plot(
-            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index
+            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter
         )
+    
+    def _apply_quick_filter(self, df: pd.DataFrame, query: str) -> Optional[pd.DataFrame]:
+        """Apply a pandas query to the dataframe"""
+        try:
+            filtered_df = df.query(query)
+            if filtered_df.empty:
+                QMessageBox.warning(self, "Empty Result", f"The filter {query} returned an empty dataset")
+                self.status_bar.log(f"Filter {query} returned 0 rows", "WARNING")
+                return None
+            self.status_bar.log(f"Quick Filter applied: {query} ({len(df)} -> {len(filtered_df)} rows)", "INFO")
+            return filtered_df
+        except Exception as QuickFilterError:
+            error_message = f"Invaid Quick Filter expression:\n{str(QuickFilterError)}"
+            self.status_bar.log(f"Quick Filter error: {str(QuickFilterError)}", "ERROR")
+            QMessageBox.critical(self, "Filter Error", error_message)
     
     def _validate_data_loaded(self) -> bool:
         """Check if data is loaded"""
@@ -1424,6 +1447,7 @@ class PlotTab(PlotTabUI):
             y_cols = frozen_config.get("y_cols")
             hue = frozen_config.get("hue")
             subset_name = frozen_config.get("subset_name")
+            quick_filter = frozen_config.get("quick_filter", "")
             active_df = self._restore_frozen_data(subset_name)
             self.status_bar.log(f"Using data config for plot {current_subplot_index + 1}", "INFO")
         else:
@@ -1432,8 +1456,9 @@ class PlotTab(PlotTabUI):
             y_cols = self.get_selected_y_columns()
             hue = (self.hue_column.currentText() if self.hue_column.currentText() != "None" else None)
             subset_name = (self.subset_combo.currentData() if self.use_subset_check.isChecked() else None)
+            quick_filter = self.quick_filter_input.text().strip()
 
-        return active_df, x_col, y_cols, hue, subset_name
+        return active_df, x_col, y_cols, hue, subset_name, quick_filter
 
     def _restore_frozen_data(self, subset_name):
         """Restore data from a frozen subset"""
@@ -1530,7 +1555,7 @@ class PlotTab(PlotTabUI):
         except Exception as ConvertColumnToDatetimeError:
             self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertColumnToDatetimeError)}", "ERROR")
     
-    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index):
+    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter=""):
         """Generate plot using matplotlib settings"""
         data_size = len(self.data_handler.df)
         show_progress = data_size > 1000
@@ -1574,11 +1599,11 @@ class PlotTab(PlotTabUI):
 
             # Finalize
             self._update_progress(progress_dialog, 98, "Finising up")
-            self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name)
+            self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter)
 
             # Log
             self._log_plot_message(
-                plot_type, x_col, y_cols, hue, subset_name, active_df
+                plot_type, x_col, y_cols, hue, subset_name, active_df, quick_filter
             )
 
             self._update_progress(progress_dialog, 100, "Complete")
@@ -1854,7 +1879,7 @@ class PlotTab(PlotTabUI):
         else:
             self.plot_engine.current_ax.grid(False)
     
-    def _finalize_plot(self, current_subplot_index, x_col, y_cols, hue, subset_name) -> None:
+    def _finalize_plot(self, current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter) -> None:
         """Finalize plot and save configs"""
         try:
             if self.tight_layout_check.isChecked():
@@ -1869,12 +1894,13 @@ class PlotTab(PlotTabUI):
             "x_col": x_col,
             "y_cols": y_cols,
             "hue": hue,
-            "subset_name": subset_name
+            "subset_name": subset_name,
+            "quick_filter": quick_filter
         }
             
         self._sync_script_if_open()
 
-    def _log_plot_message(self, plot_type, x_col, y_cols, hue, subset_name, active_df):
+    def _log_plot_message(self, plot_type, x_col, y_cols, hue, subset_name, active_df, quick_filter=""):
         """Log plot generation to log"""
         plot_details = {
             "plot_type": plot_type,
@@ -1886,6 +1912,9 @@ class PlotTab(PlotTabUI):
 
         if hue:
             plot_details["hue"] = hue
+
+        if quick_filter:
+            plot_details["filter"] = quick_filter
 
         if self.use_subset_check.isChecked() and subset_name:
             plot_details["subset"] = subset_name
@@ -2044,9 +2073,6 @@ class PlotTab(PlotTabUI):
                 collection.set_facecolor(marker_color)
             if marker_edge_color:
                 collection.set_edgecolor(marker_edge_color)
-            # Note: marker size for scatter is often set with 's' in the plot call
-            # This is a global override, which might be too broad.
-            # collection.set_sizes([marker_size**2]) 
         
         #apply to patches (e.g., bar plots, histograms)
         if self.multibar_custom_check.isChecked():
@@ -2104,7 +2130,7 @@ class PlotTab(PlotTabUI):
         # Check if there's anything to make a legend for
         handles, labels = self.plot_engine.current_ax.get_legend_handles_labels()
         if not handles:
-            return # No legend to show
+            return
 
         legend_kwargs = {
             "loc": self.legend_loc_combo.currentText(),
@@ -2508,6 +2534,7 @@ class PlotTab(PlotTabUI):
         self.subplot_rows_spin.blockSignals(True)
         self.subplot_cols_spin.blockSignals(True)
         self.active_subplot_combo.blockSignals(True)
+        self.quick_filter_input.clear()
 
         self.subplot_rows_spin.setValue(1)
         self.subplot_cols_spin.setValue(1)
@@ -2588,6 +2615,7 @@ class PlotTab(PlotTabUI):
 
     def _load_basic_config(self, config: dict):
         self.x_column.setCurrentText(config.get("x_column", ""))
+        self.quick_filter_input.setText(config.get("quick_filter", ""))
 
         # Multi Y config
         multi_y = config.get("multi_y_checked", False)
@@ -2915,7 +2943,8 @@ class PlotTab(PlotTabUI):
             "subset_name": self.subset_combo.currentData(),
             "secondary_y_enabled": self.secondary_y_check.isChecked(),
             "secondary_y_column": self.secondary_y_column.currentText(),
-            "secondary_plot_type": self.secondary_plot_type_combo.currentText()
+            "secondary_plot_type": self.secondary_plot_type_combo.currentText(),
+            "quick_filter": self.quick_filter_input.text()
         }
 
     def _get_appearance_config(self) -> Dict[str, Any]:
