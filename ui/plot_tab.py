@@ -4,6 +4,7 @@ from re import M
 from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem
 from PyQt6.QtCore import QTimer, QSize, Qt
 from PyQt6.QtGui import QIcon, QColor, QPalette, QFont
+from flask.config import T
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -26,6 +27,10 @@ import matplotlib.pyplot as plt
 import traceback
 from matplotlib.colors import to_hex
 from typing import Dict, List, Any
+from matplotlib.lines import Line2D
+from matplotlib.text import Text
+from matplotlib.patches import Rectangle
+from matplotlib.collections import PathCollection
 
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
@@ -141,6 +146,8 @@ class PlotTab(PlotTabUI):
 
         self.selection_overlay = SubplotOverlay(self.canvas)
         self.canvas.mpl_connect("resize_event", self.on_canvas_resize)
+
+        self.canvas.mpl_connect("pick_event", self.on_pick)
         
         # Load initial data
         self.update_column_combo()
@@ -390,6 +397,70 @@ class PlotTab(PlotTabUI):
     
     def on_canvas_resize(self, event):
         self._update_overlay()
+    
+    def on_pick(self, event):
+        """Handles the pick events from the main canvas"""
+        artist = event.artist
+
+        if isinstance(artist, Text):
+            self.custom_tabs.setCurrentIndex(1)
+            if artist == self.plot_engine.current_ax.get_title():
+                self.title_input.setFocus()
+            elif artist == self.plot_engine.current_ax.xaxis.get_label():
+                self.xlabel_input.setFocus()
+            elif artist == self.plot_engine.current_ax.yaxis.get_label():
+                self.ylabel_input.setFocus()
+            
+            self.status_bar.log(f"Selected text element: {artist.get_text()}", "INFO")
+        
+        elif isinstance(artist, Line2D):
+            if artist.get_gid() in ["regression_line", "confidence_interval"]:
+                return
+            
+            self.custom_tabs.setCurrentIndex(4)
+
+            if not self.multiline_custom_check.isChecked():
+                self.multiline_custom_check.setChecked(True)
+
+            label = artist.get_label()
+            if label:
+                index = self.line_selector_combo.findText(label)
+                if index >= 0:
+                    self.line_selector_combo.setCurrentIndex(index)
+                    self.status_bar.log(f"Selected line: {label}", "INFO")
+                else:
+                    lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+                    if artist in lines:
+                        idx = lines.index(artist)
+                        if idx < self.line_selector_combo.count():
+                            self.line_selector_combo.setCurrentIndex(idx)
+                            self.status_bar.log(f"Selected line index: {idx}", "INFO")
+        
+        elif isinstance(artist, Rectangle):
+            found_container = None
+            if self.plot_engine.current_ax and self.plot_engine.current_ax.containers:
+                for container in self.plot_engine.current_ax.containers:
+                    if artist in container:
+                        found_container = container
+                        break
+            
+            if found_container:
+                if hasattr(self, 'custom_tabs'):
+                    self.custom_tabs.setCurrentIndex(4)
+                
+                if not self.multibar_custom_check.isChecked():
+                    self.multibar_custom_check.setChecked(True)
+                
+                for i in range(self.bar_selector_combo.count()):
+                    if self.bar_selector_combo.itemData(i) == found_container:
+                        self.bar_selector_combo.setCurrentIndex(i)
+                        label = self.bar_selector_combo.itemText(i)
+                        self.status_bar.log(f"Selected bar series: {label}", "INFO")
+                        break
+        
+        elif isinstance(artist, PathCollection):
+            self.custom_tabs.setCurrentIndex(4)
+            self.status_bar.log("Selected scatter points", "INFO")
 
     def choose_geo_missing_color(self):
         color = QColorDialog.getColor()
@@ -817,8 +888,8 @@ class PlotTab(PlotTabUI):
             #load color
             color = line.get_color()
             if color:
-                self.line_color = color
-                self.line_color_label.setText(color)
+                self.line_color = to_hex(color)
+                self.line_color_label.setText(self.line_color)
                 self.line_color_button.updateColors(base_color_hex=self.line_color)
 
             #load markers

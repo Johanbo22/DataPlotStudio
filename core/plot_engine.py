@@ -142,11 +142,11 @@ class PlotEngine:
         title_weight = kwargs.get("title_weight", default_weight)
 
         if title:
-            self.current_ax.set_title(title, fontsize=14, fontweight=title_weight)
+            self.current_ax.set_title(title, fontsize=14, fontweight=title_weight, picker=True)
         if xlabel:
-            self.current_ax.set_xlabel(xlabel, fontsize=12)
+            self.current_ax.set_xlabel(xlabel, fontsize=12, picker=True)
         if ylabel:
-            self.current_ax.set_ylabel(ylabel, fontsize=12)
+            self.current_ax.set_ylabel(ylabel, fontsize=12, picker=True)
         if legend:
             self.current_ax.legend()
         
@@ -335,13 +335,13 @@ class PlotEngine:
                 mask = (df[hue] == group) & df[x].notna()
                 if colors: kwargs["color"] = colors[i]
                 for col in y:
-                    self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=f"{col} - {group}", **kwargs)
+                    self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=f"{col} - {group}", picker=5, **kwargs)
         else:
             colors = self._get_colors_from_cmap(cmap_name, len(y))
             for i, col in enumerate(y):
                 mask = df[x].notna()
                 if colors: kwargs["color"] = colors[i]
-                self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, **kwargs)
+                self.current_ax.plot(df.loc[mask, x], df.loc[mask, col], label=col, picker=5, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
     
@@ -361,11 +361,11 @@ class PlotEngine:
             for i, group in enumerate(groups):
                 mask = (df[hue] == group) & df[x].notna() & df[y].notna()
                 if colors: kwargs["color"] = colors[i]
-                self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], label=group, **kwargs)
+                self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], label=group, picker=5, **kwargs)
         else:
             if cmap_name: kwargs["cmap"] = cmap_name
             mask = df[x].notna() & df[y].notna()
-            self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], **kwargs)
+            self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], picker=5, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, legend, **kwargs)
     
@@ -388,9 +388,9 @@ class PlotEngine:
             #single y col
             y_col_name = y[0]
             if horizontal:
-                self.current_ax.barh(df[x], df[y_col_name], height=width, **kwargs)
+                self.current_ax.barh(df[x], df[y_col_name], height=width, picker=True, **kwargs)
             else:
-                self.current_ax.bar(df[x], df[y_col_name], width=width, **kwargs)
+                self.current_ax.bar(df[x], df[y_col_name], width=width, picker=True, **kwargs)
         
         elif len(y) > 1:
             #grouped bar chart
@@ -407,9 +407,9 @@ class PlotEngine:
                 if colors: kwargs["color"] = colors[i]
 
                 if horizontal:
-                    self.current_ax.barh(x_pos + offset, values, height=bar_width, label=col, **kwargs)
+                    self.current_ax.barh(x_pos + offset, values, height=bar_width, label=col, picker=True, **kwargs)
                 else:
-                    self.current_ax.bar(x_pos + offset, values, width=bar_width, label=col, **kwargs)
+                    self.current_ax.bar(x_pos + offset, values, width=bar_width, label=col, picker=True, **kwargs)
             
             if horizontal:
                 self._helper_format_categorical_axis(self.current_ax.yaxis, x_labels)
@@ -422,9 +422,9 @@ class PlotEngine:
             if palette: kwargs["palette"] = palette
             
             if horizontal:
-                sns.barplot(data=df, y=x, x=y[0], hue=hue, ax=self.current_ax, orient="h", **kwargs)
+                sns.barplot(data=df, y=x, x=y[0], hue=hue, ax=self.current_ax, orient="h", picker=True, **kwargs)
             else:
-                sns.barplot(data=df, x=x, y=y[0], hue=hue, ax=self.current_ax, **kwargs)
+                sns.barplot(data=df, x=x, y=y[0], hue=hue, ax=self.current_ax, picker=True, **kwargs)
 
         self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
     
