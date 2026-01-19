@@ -131,6 +131,21 @@ class PlotTabUI(QWidget):
         self.plot_button.setIcon(QIcon("icons/generate_plot.png"))
         self.plot_button.setShortcut("Ctrl+Return")
         button_layout.addWidget(self.plot_button)
+
+        self.save_plot_button = DataPlotStudioButton(
+            "Save Plot",
+            parent=self,
+            base_color_hex="#ff9800",
+            hover_color_hex="#ffb74d",
+            pressed_color_hex="#f57c00",
+            text_color_hex="#ffffff",
+            border_style="none",
+            typewriter_effect=True
+        )
+        self.save_plot_button.setMinimumHeight(40)
+        self.save_plot_button.setIcon(QIcon("icons/menu_bar/save.svg"))
+        self.save_plot_button.setToolTip("Export the current plot to PNG, PDF or SVG")
+        button_layout.addWidget(self.save_plot_button)
         
         self.clear_button = DataPlotStudioButton(
             "Clear",

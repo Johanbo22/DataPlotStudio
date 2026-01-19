@@ -1,7 +1,7 @@
 # ui/plot_tab.py
 
 from re import M
-from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem
+from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem, QFileDialog
 from PyQt6.QtCore import QTimer, QSize, Qt
 from PyQt6.QtGui import QIcon, QColor, QPalette, QFont
 from flask.config import T
@@ -161,6 +161,7 @@ class PlotTab(PlotTabUI):
         self.plot_button.clicked.connect(self.generate_plot)
         self.editor_button.clicked.connect(self.open_script_editor)
         self.clear_button.clicked.connect(self.clear_plot)
+        self.save_plot_button.clicked.connect(self.save_plot_image)
 
         #editor sync
         self.x_column.currentTextChanged.connect(self._sync_script_if_open)
@@ -398,6 +399,33 @@ class PlotTab(PlotTabUI):
     
     def on_canvas_resize(self, event):
         self._update_overlay()
+
+    def save_plot_image(self) -> None:
+        """Save the plot to a file. This is the quick method for most common choices: png, pdf, and svg files"""
+        if self.plot_engine.current_figure is None:
+            QMessageBox.warning(self, "Warning", "No plot available to save")
+            return
+        
+        try:
+            filepath, selected_filter = QFileDialog.getSaveFileName(
+                self,
+                "Save Plot",
+                "plot.png",
+                "PNG Image (*.png);;PDF Document (*.pdf);; SVG Image (*.svg);;JPEG Image (*.jpg)"
+            )
+            if filepath:
+                self.plot_engine.current_figure.savefig(
+                    filepath,
+                    dpi=self.dpi_spin.value(),
+                    bbox_inches="tight" if self.tight_layout_check.isChecked() else None,
+                    facecolor=self.bg_color
+                )
+                self.status_bar.log_action(f"Plot saved to {filepath}", level="SUCCESS")
+                QMessageBox.information(self, "Success", f"Plot saved successfully to:\n{filepath}")
+        except Exception as ExportPlotAsImageError:
+            self.status_bar.log(f"Failed to save plot: {str(ExportPlotAsImageError)}", "ERROR")
+            QMessageBox.critical(self, "Save Error", f"Could not save plot:\n{str(ExportPlotAsImageError)}")
+            traceback.print_exc()
     
     def on_pick(self, event):
         """Handles the pick events from the main canvas"""
