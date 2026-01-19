@@ -447,7 +447,7 @@ class PlotEngine:
         sigma = data.std()
         median = data.median()
 
-        n, bins_edges, patches = self.current_ax.hist(data, bins=bins, density=show_normal or show_kde, **kwargs)
+        n, bins_edges, patches = self.current_ax.hist(data, bins=bins, density=show_normal or show_kde, picker=True, **kwargs)
 
         #add ndist
         if show_normal:
@@ -492,7 +492,7 @@ class PlotEngine:
         if isinstance(columns, str):
             columns = [columns]
         
-        df[columns].plot(kind='box', ax=self.current_ax, **kwargs)
+        df[columns].plot(kind='box', ax=self.current_ax, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -503,7 +503,7 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         
-        sns.violinplot(data=df, x=x, y=y, ax=self.current_ax, **kwargs)
+        sns.violinplot(data=df, x=x, y=y, ax=self.current_ax, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -516,7 +516,7 @@ class PlotEngine:
         
         # Ensure numeric data
         numeric_df = df.select_dtypes(include=[np.number])
-        sns.heatmap(numeric_df.corr(), annot=True, ax=self.current_ax, **kwargs)
+        sns.heatmap(numeric_df.corr(), annot=True, ax=self.current_ax, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -527,7 +527,7 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         
-        df[column].plot(kind='kde', ax=self.current_ax, **kwargs)
+        df[column].plot(kind='kde', ax=self.current_ax, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -542,7 +542,7 @@ class PlotEngine:
             y = [y]
         
         df_plot = df[df[x].notna()].set_index(x)[y]
-        df_plot.plot(kind="area", ax=self.current_ax, stacked=True, **kwargs)
+        df_plot.plot(kind="area", ax=self.current_ax, stacked=True, picker=True, **kwargs)
         
         
         self._set_labels(title, xlabel, ylabel, legend and len(y) > 1, **kwargs)
@@ -567,7 +567,7 @@ class PlotEngine:
         if explode_first:
             explode = [explode_distance] + [0] * (len(df[values]) - 1)
         
-        self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, **kwargs)
+        self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, picker=True, **kwargs)
         self.current_ax.set_ylabel('')
 
         self.current_ax.axis("equal")
@@ -581,7 +581,7 @@ class PlotEngine:
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         
-        sns.countplot(data=df, x=column, ax=self.current_ax, **kwargs)
+        sns.countplot(data=df, x=column, ax=self.current_ax, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -594,7 +594,7 @@ class PlotEngine:
         gridsize = kwargs.pop('gridsize', 20)
         
         mask = df[x].notna() & df[y].notna()
-        self.current_ax.hexbin(df.loc[mask, x], df.loc[mask, y], gridsize=gridsize, **kwargs)
+        self.current_ax.hexbin(df.loc[mask, x], df.loc[mask, y], gridsize=gridsize, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
@@ -616,7 +616,7 @@ class PlotEngine:
         mask = df[x].notna() & df[y].notna()
         clean_df = df.loc[mask]
         
-        sns.kdeplot(data=clean_df, x=x, y=y, ax=self.current_ax, fill=True, **kwargs)
+        sns.kdeplot(data=clean_df, x=x, y=y, ax=self.current_ax, fill=True, picker=True, **kwargs)
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
@@ -648,14 +648,16 @@ class PlotEngine:
                 df[y], df[x],
                 orientation="horizontal",
                 bottom=bottom,
-                label=label
+                label=label,
+                picker=True
             )
         else:
             markerline, stemlines, baseline = self.current_ax.stem(
                 df[x], df[y],
                 orientation="vertical",
                 bottom=bottom,
-                label=label
+                label=label,
+                picker=True
             )
         
         plt.setp(markerline, marker=marker, markersize=marker_size, color=color, alpha=alpha)
@@ -674,7 +676,7 @@ class PlotEngine:
         df_sorted = df[df[x].notna()].sort_values(by=x)
         y_data = [df_sorted[col] for col in y]
 
-        self.current_ax.stackplot(df_sorted[x], *y_data, labels=y, **kwargs)
+        self.current_ax.stackplot(df_sorted[x], *y_data, labels=y, picker=True, **kwargs)
 
         self._set_labels(title, xlabel, ylabel, legend, **kwargs)
 
@@ -685,7 +687,7 @@ class PlotEngine:
         ylabel = kwargs.pop("ylabel", None)
 
         df_sorted = df[df[x].notna()].sort_values(by=x)
-        self.current_ax.stairs(df_sorted[x], df_sorted[y], **kwargs)
+        self.current_ax.stairs(df_sorted[x], df_sorted[y], picker=True, **kwargs)
 
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
@@ -698,7 +700,7 @@ class PlotEngine:
 
         data_to_plot = [df[col].dropna().values for col in y]
 
-        self.current_ax.eventplot(data_to_plot, **kwargs)
+        self.current_ax.eventplot(data_to_plot, picker=True, **kwargs)
 
         if len(y) > 1:
             self.current_ax.set_yticks(range(len(y)))
@@ -714,7 +716,7 @@ class PlotEngine:
         _ = kwargs.pop("legend", None)
 
         mask = df[x].notna() & df[y].notna()
-        hist = self.current_ax.hist2d(df.loc[mask, x], df.loc[mask, y], **kwargs)
+        hist = self.current_ax.hist2d(df.loc[mask, x], df.loc[mask, y], picker=True, **kwargs)
         self.current_figure.colorbar(hist[3], ax=self.current_ax, label="counts")
 
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
@@ -727,7 +729,7 @@ class PlotEngine:
 
         self.current_ax.ecdf(df[y], **kwargs)
 
-        self._set_labels(title, xlabel, "ECDF", False, **kwargs)
+        self._set_labels(title, xlabel, "ECDF", False, picker=True, **kwargs)
 
     def _prepare_gridded_data(self, df: pd.DataFrame, x: str, y: str, z: str):
         """Helper func to pivot data for gridded plots"""
