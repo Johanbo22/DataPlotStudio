@@ -1,0 +1,58 @@
+{
+    "appearance": {
+        "figure": {
+            "style": "dark_background",
+            "bg_color": "#121212",
+            "face_facecolor": "#121212",
+            "dpi": 100
+        },
+        "spines": {
+            "top": {
+                "visible": false,
+                "color": "#ffffff"
+            },
+            "right": {
+                "visible": false,
+                "color": "#ffffff"
+            },
+            "bottom": {
+                "visible": true,
+                "color": "#ffffff",
+                "width": 1.2
+            },
+            "left": {
+                "visible": true,
+                "color": "#ffffff",
+                "width": 1.2
+            }
+        },
+        "font_family": "Sans Serif",
+        "title": {
+            "enabled": true,
+            "size": 14,
+            "weight": "bold"
+        },
+        "xlabel": {
+            "enabled": true,
+            "size": 11
+        },
+        "ylabel": {
+            "enabled": true,
+            "size": 11
+        }
+    },
+    "grid": {
+        "enabled": true,
+        "global": {
+            "alpha": 0.3,
+            "which": "major",
+            "axis": "both"
+        }
+    },
+    "legend": {
+        "enabled": true,
+        "bg_color": "#1e1e1e",
+        "edge_clor": "#333333",
+        "font_size": 10
+    }
+}

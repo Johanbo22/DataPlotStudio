@@ -1,0 +1,60 @@
+{
+    "appearance": {
+        "figure": {
+            "style": "default",
+            "bg_color": "#ffffff",
+            "face_facecolor": "#ffffff",
+            "dpi": 300,
+            "tight_layout": true
+        },
+        "spines": {
+            "top": {
+                "visible": false
+            },
+            "right": {
+                "visible": false
+            },
+            "bottom": {
+                "visible": true,
+                "color": "black",
+                "width": 1.5
+            },
+            "left": {
+                "visible": true,
+                "color": "black",
+                "width": 1.5
+            }
+        },
+        "font_family": "Serif",
+        "title": {
+            "enabled": false
+        },
+        "xlabel": {
+            "enabled": true,
+            "size": 12,
+            "weight": "bold"
+        },
+        "ylabel": {
+            "enabled": true,
+            "size": 12,
+            "weight": "bold"
+        }
+    },
+    "axes": {
+        "x_axis": {
+            "tick_label_size": 10,
+            "major_tick_width": 1.2,
+            "major_tick_direction": "in"
+        },
+        "y_axis": {
+            "tick_label_size": 10,
+            "major_tick_width": 1.2,
+            "major_tick_direction": "in"
+        }
+    },
+    "legend": {
+        "enabled": true,
+        "frame": false,
+        "location": "best"
+    }
+}

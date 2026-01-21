@@ -477,6 +477,45 @@ class PlotTabUI(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
+        # Theme manager
+        theme_group = DataPlotStudioGroupBox("Theme Manager")
+        theme_layout = QVBoxLayout()
+
+        theme_info = QLabel("Save or load custom visual styles")
+        theme_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        theme_layout.addWidget(theme_info)
+
+        # Controls to load theme from file
+        load_theme_layout = QHBoxLayout()
+        load_theme_layout.addWidget(QLabel("Select Theme:"))
+        self.theme_combo = DataPlotStudioComboBox()
+        self.theme_combo.addItem("Select a theme...")
+        load_theme_layout.addWidget(self.theme_combo, 1)
+
+        self.load_theme_button = DataPlotStudioButton("Apply theme", parent=self)
+        self.load_theme_button.setToolTip("Apply the selected theme to the current plot")
+        load_theme_layout.addWidget(self.load_theme_button)
+        theme_layout.addLayout(load_theme_layout)
+
+        #Save + delete theme controls
+        theme_controls_layout = QHBoxLayout()
+        self.save_theme_button = DataPlotStudioButton("Save Current Theme", parent=self)
+        self.save_theme_button.setToolTip("Save the current visual settings to a JSON file")
+        theme_controls_layout.addWidget(self.save_theme_button)
+
+        self.edit_theme_button = DataPlotStudioButton("Edit JSON", parent=self)
+        self.edit_theme_button.setToolTip("Edit the JSON file of the selected theme")
+        theme_controls_layout.addWidget(self.edit_theme_button)
+
+        self.delete_theme_button = DataPlotStudioButton("Delete theme", parent=self, base_color_hex="#d32f2f")
+        theme_controls_layout.addWidget(self.delete_theme_button)
+        theme_layout.addLayout(theme_controls_layout)
+
+        theme_group.setLayout(theme_layout)
+        scroll_layout.addWidget(theme_group)
+
+        scroll_layout.addSpacing(15)
+
         # Font FAMILY
         font_group = DataPlotStudioGroupBox("Font Settings")
         font_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")

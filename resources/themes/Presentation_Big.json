@@ -1,0 +1,38 @@
+{
+    "appearance": {
+        "figure": {
+            "style": "bmh",
+            "dpi": 96
+        },
+        "font_family": "Sans Serif",
+        "title": {
+            "enabled": true,
+            "size": 24,
+            "weight": "bold"
+        },
+        "xlabel": {
+            "enabled": true,
+            "size": 18,
+            "weight": "bold"
+        },
+        "ylabel": {
+            "enabled": true,
+            "size": 18,
+            "weight": "bold"
+        }
+    },
+    "axes": {
+        "x_axis": {
+            "tick_label_size": 14,
+            "major_tick_width": 2
+        },
+        "y_axis": {
+            "tick_label_size": 14,
+            "major_tick_width": 2
+        }
+    },
+    "legend": {
+        "enabled": true,
+        "font_size": 16
+    }
+}

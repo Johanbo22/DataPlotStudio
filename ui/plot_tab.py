@@ -1,9 +1,11 @@
 # ui/plot_tab.py
 
 from re import M
-from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem, QFileDialog
+from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem, QFileDialog, QInputDialog
 from PyQt6.QtCore import QTimer, QSize, Qt
 from PyQt6.QtGui import QIcon, QColor, QPalette, QFont
+import json
+import os
 from flask.config import T
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
@@ -36,6 +38,7 @@ from typing import Optional
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.dialogs.PlotExportDialog import PlotExportDialog
+from ui.dialogs.ThemeEditorDialog import ThemeEditorDialog
 
 
 class PlotTab(PlotTabUI):
@@ -157,6 +160,13 @@ class PlotTab(PlotTabUI):
         
         self._select_plot_in_toolbox("Line")
 
+        # Initialize the themes
+        self.theme_dir = os.path.join(os.getcwd(), "resources", "themes")
+        if not os.path.exists(self.theme_dir):
+            os.makedirs(self.theme_dir, exist_ok=True)
+        self.default_theme_names = ["Dark_Mode", "Publication_Ready", "Presentation_Big", "Default"]
+        self.refresh_theme_list()
+
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
         
@@ -248,6 +258,12 @@ class PlotTab(PlotTabUI):
         #tab 7 geospatial
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+
+        # Theme contrsol
+        self.load_theme_button.clicked.connect(self.apply_selected_theme)
+        self.save_theme_button.clicked.connect(self.save_custom_theme)
+        self.edit_theme_button.clicked.connect(self.edit_custom_theme)
+        self.delete_theme_button.clicked.connect(self.delete_custom_theme)
 
     def _populate_plot_toolbox(self):
         while self.plot_type.count() > 0:
@@ -3410,3 +3426,165 @@ class PlotTab(PlotTabUI):
             
         except Exception as GUISyncError:
             print(f"Warning: Could not sync GUI from plot: {GUISyncError}")
+    
+    def refresh_theme_list(self):
+        """Scane the theme directory to update theme selection box"""
+        self.theme_combo.blockSignals(True)
+        self.theme_combo.clear()
+        self.theme_combo.addItem("Select a theme...")
+
+        if os.path.exists(self.theme_dir):
+            themes = [theme_file for theme_file in os.listdir(self.theme_dir) if theme_file.endswith(".json")]
+            for theme in sorted(themes):
+                self.theme_combo.addItem(theme.replace(".json", ""), userData=theme)
+        
+        self.theme_combo.blockSignals(False)
+    
+    def get_theme_config(self) -> Dict[str, Any]:
+        theme_data = {
+            "appearance": self._get_appearance_config(),
+            "axes": self._get_axes_config(),
+            "legend": self._get_legend_config(),
+            "grid": self._get_grid_config(),
+            "advanced": self._get_advanced_config()
+        }
+
+        if "axes" in theme_data:
+            theme_data["axes"]["x_axis"]["auto_limits"] = True
+            theme_data["axes"]["y_axis"]["auto_limits"] = True
+            theme_data["axes"]["x_axis"]["min"] = 0
+            theme_data["axes"]["x_axis"]["max"] = 1
+            theme_data["axes"]["y_axis"]["min"] = 0
+            theme_data["axes"]["y_axis"]["max"] = 1
+        
+        return theme_data
+    
+    def save_custom_theme(self):
+        """Save the current visual settings to a JSON file"""
+        text, ok = QInputDialog.getText(self, "Save theme", "Enter theme name")
+        if ok and text:
+            if text in self.default_theme_names:
+                QMessageBox.warning(self, "Action Denied", f"'{text}' is the name of a default theme. Please choose another theme name")
+            filename = "".join(x for x in text if x.isalnum() or x in " _-") + ".json"
+            filepath = os.path.join(self.theme_dir, filename)
+
+            theme_data = self.get_theme_config()
+
+            try:
+                with open(filepath, "w") as file:
+                    json.dump(theme_data, file, indent=4)
+                self.status_bar.log(f"Theme '{text}' saved", "SUCCESS")
+                self.refresh_theme_list()
+
+                # Automaticaly seltect the new created theme
+                index = self.theme_combo.findText(text)
+                if index >= 0:
+                    self.theme_combo.setCurrentIndex(index)
+            
+            except Exception as SaveThemeError:
+                self.status_bar.log(f"Failed to save theme: {SaveThemeError}", "ERROR")
+                QMessageBox.critical(self, "Error", f"Could not save theme: {str(SaveThemeError)}")
+    
+    def apply_selected_theme(self):
+        """Load and apply the selected theme"""
+        theme_file = self.theme_combo.currentData()
+        if not theme_file:
+            return
+        
+        filepath = os.path.join(self.theme_dir, theme_file)
+        if not os.path.exists(filepath):
+            self.status_bar.log(f"Theme file not found: {filepath}", "ERROR")
+            return
+        
+        try:
+            with open(filepath, "r") as file:
+                theme_config = json.load(file)
+            
+            if "appearance" in theme_config: self._load_appearance_config(theme_config["appearance"])
+            if "axes" in theme_config: self._load_axes_config(theme_config["axes"])
+            if "legend" in theme_config: self._load_legend_config(theme_config["legend"])
+            if "grid" in theme_config: self._load_grid_config(theme_config["grid"])
+            if "advanced" in theme_config: self._load_advanced_config(theme_config["advanced"])
+
+            self.status_bar.log(f"Theme '{self.theme_combo.currentText()}' applied", "SUCCESS")
+
+            # if data is present, create the plot again
+            if self.data_handler.df is not None:
+                self.generate_plot()
+        
+        except Exception as ApplyThemeError:
+            self.status_bar.log(f"Failed to load theme: {ApplyThemeError}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Could not load theme: {str(ApplyThemeError)}")
+            traceback.print_exc()
+    
+    def delete_custom_theme(self):
+        """Delete the selected theme"""
+        theme_file = self.theme_combo.currentData()
+        theme_name = self.theme_combo.currentText()
+
+        if not theme_file or theme_name == "Select a theme...":
+            return
+        
+        clean_name = theme_file.replace(".json", "")
+        if clean_name in self.default_theme_names:
+            QMessageBox.warning(self, "Action Denied", f"'{theme_name}' is a default theme and cannot be deleted.")
+            return
+        
+        confirm = QMessageBox.question(
+            self, "Confrm Delete", f"Are you sure you want to delete theme '{theme_name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if confirm == QMessageBox.StandardButton.Yes:
+            try:
+                filepath = os.path.join(self.theme_dir, theme_file)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    self.refresh_theme_list()
+                    self.status_bar.log(f"Theme '{theme_name}' deleted", "INFO")
+            except Exception as DeleteThemeError:
+                self.status_bar.log(f"Failed to delete theme: {DeleteThemeError}", "ERROR")
+    
+    def edit_custom_theme(self):
+        """Open JSON editor for the selected theme"""
+        theme_file = self.theme_combo.currentData()
+        theme_name = self.theme_combo.currentText()
+
+        if not theme_file or theme_name == "Select a theme...":
+            return
+        
+        filepath = os.path.join(self.theme_dir, theme_file)
+        if not os.path.exists(filepath):
+            return
+        
+        try:
+            with open(filepath, "r") as file:
+                content = json.load(file)
+            
+            clean_name = theme_file.replace(".json", "")
+            is_protected = clean_name in self.default_theme_names
+
+            dialog = ThemeEditorDialog(theme_name, content, is_protected, self)
+            if dialog.exec():
+                new_content = dialog.final_content
+
+                if is_protected and dialog.new_theme_name:
+                    save_name = dialog.new_theme_name
+                    filename = "".join(x for x in save_name if x.isalnum() or x in " _-") + ".json"
+                    save_path = os.path.join(self.theme_dir, filename)
+                else:
+                    save_name = theme_name
+                    save_path = filepath
+
+                with open(save_path, "w") as file:
+                    json.dump(new_content, file, indent=4)
+                
+                self.status_bar.log(f"Theme '{save_name}' updated", "SUCCESS")
+                self.refresh_theme_list()
+
+                index = self.theme_combo.findText(save_name)
+                if index >= 0:
+                    self.theme_combo.setCurrentIndex(index)
+        except Exception as EditThemeJSONError:
+            self.status_bar.log(f"Failed to edit theme: {EditThemeJSONError}", "ERROR")
+            QMessageBox.critical(self, "Error", f"Could not edit theme: {str(EditThemeJSONError)}")

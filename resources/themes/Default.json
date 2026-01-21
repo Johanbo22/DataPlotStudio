@@ -1,0 +1,198 @@
+{
+    "appearance": {
+        "font_family": "Arial",
+        "usetex": false,
+        "title": {
+            "enabled": true,
+            "text": "",
+            "size": 14,
+            "weight": "bold",
+            "location": "center"
+        },
+        "xlabel": {
+            "enabled": true,
+            "text": "",
+            "size": 12,
+            "weight": "normal"
+        },
+        "ylabel": {
+            "enabled": true,
+            "text": "",
+            "size": 12,
+            "weight": "normal"
+        },
+        "spines": {
+            "top": {
+                "visible": true,
+                "width": 1.0,
+                "color": "black"
+            },
+            "bottom": {
+                "visible": true,
+                "width": 1.0,
+                "color": "black"
+            },
+            "left": {
+                "visible": true,
+                "width": 1.0,
+                "color": "black"
+            },
+            "right": {
+                "visible": true,
+                "width": 1.0,
+                "color": "black"
+            }
+        },
+        "figure": {
+            "width": 12,
+            "height": 8,
+            "dpi": 100,
+            "bg_color": "white",
+            "face_facecolor": "white",
+            "palette": "viridis",
+            "tight_layout": true,
+            "style": "default"
+        }
+    },
+    "axes": {
+        "x_axis": {
+            "auto_limits": true,
+            "invert": false,
+            "top_axis": false,
+            "min": 0,
+            "max": 1,
+            "tick_label_size": 10,
+            "tick_rotation": 0,
+            "max_ticks": 10,
+            "minor_ticks_enabled": false,
+            "major_tick_direction": "out",
+            "major_tick_width": 1.0,
+            "minor_tick_direction": "out",
+            "minor_tick_width": 0.5,
+            "scale": "linear",
+            "display_units": "None"
+        },
+        "y_axis": {
+            "auto_limits": true,
+            "invert": false,
+            "min": 0,
+            "max": 1,
+            "tick_label_size": 10,
+            "tick_rotation": 0,
+            "max_ticks": 10,
+            "minor_ticks_enabled": false,
+            "major_tick_direction": "out",
+            "major_tick_width": 1.0,
+            "minor_tick_direction": "out",
+            "minor_tick_width": 0.5,
+            "scale": "linear",
+            "display_units": "None"
+        },
+        "flip_axes": false,
+        "datetime": {
+            "enabled": false,
+            "x_format_preset": "Auto",
+            "x_format_custom": "",
+            "y_format_preset": "Auto",
+            "y_format_custom": ""
+        }
+    },
+    "legend": {
+        "enabled": false,
+        "location": "best",
+        "title": "",
+        "font_size": 10,
+        "columns": 1,
+        "column_spacing": 1.0,
+        "frame": true,
+        "fancy_box": true,
+        "shadow": false,
+        "bg_color": "white",
+        "edge_clor": "black",
+        "edge_width": 1.0,
+        "alpha": 1.0
+    },
+    "grid": {
+        "enabled": false,
+        "independent_axes": false,
+        "global": {
+            "which": "major",
+            "axis": "both",
+            "alpha": 1.0
+        },
+        "x_major": {
+            "enabled": true,
+            "style": "Solid (-)",
+            "width": 0.8,
+            "color": "gray",
+            "alpha": 0.75
+        },
+        "x_minor": {
+            "enabled": false,
+            "style": "Dotted (:)",
+            "width": 0.5,
+            "color": "lightgray",
+            "alpha": 0.3
+        },
+        "y_major": {
+            "enabled": true,
+            "style": "Solid (-)",
+            "width": 0.8,
+            "color": "gray",
+            "alpha": 0.75
+        },
+        "y_minor": {
+            "enabled": false,
+            "style": "Dotted (:)",
+            "width": 0.5,
+            "color": "lightgray",
+            "alpha": 0.3
+        }
+    },
+    "advanced": {
+        "multi_line_custom": false,
+        "line_customizations": {},
+        "global_line": {
+            "width": 1.5,
+            "style": "-",
+            "color": null
+        },
+        "global_marker": {
+            "shape": "None",
+            "size": 6,
+            "color": null,
+            "edge_color": null,
+            "edge_width": 1.0
+        },
+        "multi_bar_custom": false,
+        "bar_customizations": {},
+        "global_bar": {
+            "width": 0.8,
+            "color": null,
+            "edge_color": null,
+            "edge_width": 1.0
+        },
+        "histogram": {
+            "bins": 30,
+            "show_normal": false,
+            "show_kde": false
+        },
+        "global_alpha": 1.0,
+        "scatter": {
+            "show_regression": false,
+            "show_ci": false,
+            "show_r2": false,
+            "show_rmse": false,
+            "show_equation": false,
+            "error_bars": "None",
+            "ci_level": 95
+        },
+        "pie": {
+            "show_percentages": false,
+            "start_angle": 0,
+            "explode_first": false,
+            "explode_distance": 0.1,
+            "shadow": false
+        }
+    }
+}
