@@ -1,7 +1,6 @@
 # ui/dialogs/OutlierDetectionDialog.py
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QDoubleSpinBox, QTableView, QHeaderView, QMessageBox, QGroupBox)
-from PyQt6.QtCore import Qt
-from ui.widgets import DataPlotStudioComboBox, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableView, QMessageBox)
+from ui.widgets import DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 from ui.data_table_model import DataTableModel

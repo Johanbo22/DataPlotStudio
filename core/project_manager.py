@@ -1,5 +1,4 @@
 # core/project_manager.py
-import json
 import xml.etree.ElementTree as XMLET
 import pickle
 from pathlib import Path

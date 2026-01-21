@@ -135,7 +135,6 @@ class Animation(HelpAnimationEngine):
 
     def _draw_scatter_chart(self, painter, rect, color, progress):
         """Draws random dots."""
-        import random
         dots = [(0.2, 0.3), (0.4, 0.6), (0.6, 0.4), (0.8, 0.8), (0.5, 0.5)]
         
         color.setAlphaF(progress)

@@ -1,10 +1,6 @@
-from xml.etree.ElementInclude import include
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 
 
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout
-from typing import Dict, Any, Optional
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox

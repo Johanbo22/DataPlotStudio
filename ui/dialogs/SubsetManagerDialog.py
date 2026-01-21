@@ -7,7 +7,6 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox, QSplitter, QTextEdit, QVBoxLayout, QWidget
 
 
-import traceback
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 
@@ -27,12 +26,12 @@ class SubsetManagerDialog(QDialog):
         self.init_ui()
         print(f"DEBUG: SubsetManager has {len(self.subset_manager.list_subsets())} subsets")
         if self.data_handler.df is not None:
-            print(f"DEBUG: Applying subsets to calculate row counts")
+            print("DEBUG: Applying subsets to calculate row counts")
             self.apply_all_subsets()
         else:
-            print(f"DEBUG: No data to apply subsets")
+            print("DEBUG: No data to apply subsets")
 
-        print(f"DEBUG: Refreshing the subset list")
+        print("DEBUG: Refreshing the subset list")
         self.refresh_subset_list()
 
         print(f"DEBUG: QListWidget has {self.subset_list.count()} items")
@@ -206,7 +205,7 @@ class SubsetManagerDialog(QDialog):
 
     def refresh_subset_list(self):
         """Refreshes the list of subsets"""
-        print(f"DEBUG: resfresh_subset_list: Starting")
+        print("DEBUG: resfresh_subset_list: Starting")
         print(f"DEBUG: refresh_subset_list: subset_list widget exists: {hasattr(self, "subset_list")}")
 
         if not hasattr(self, "subset_list"):
@@ -214,7 +213,7 @@ class SubsetManagerDialog(QDialog):
             return
 
         self.subset_list.clear()
-        print(f"DEBUG: refresh_subset_list: Cleared the list widget")
+        print("DEBUG: refresh_subset_list: Cleared the list widget")
 
         subset_names = self.subset_manager.list_subsets()
         print(f"DEBUG refresh_subset_list: Found {len(subset_names)} subsets: {subset_names}")
@@ -223,7 +222,7 @@ class SubsetManagerDialog(QDialog):
             placeholder = QListWidgetItem("(No subsets created yet)")
             placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
             self.subset_list.addItem(placeholder)
-            print(f"DEBUG: refresh_subset_list: Added placeholder for empty list")
+            print("DEBUG: refresh_subset_list: Added placeholder for empty list")
             return
 
         for name in subset_names:

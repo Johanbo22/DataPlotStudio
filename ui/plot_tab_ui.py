@@ -2,18 +2,15 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox, QDialog, QDialogButtonBox, QFrame, QLayout 
+    QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QFrame, QLayout 
 )
-from PyQt6.QtCore import Qt, QRect, QSize, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont, QColor, QPainter, QLinearGradient, QBrush, QPixmap
-import matplotlib
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QFont
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-import matplotlib.pyplot as plt
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.AnimatedSlider import DataPlotStudioSlider
 from ui.widgets.ColormapButton import ColormapButton
-from ui.data_tab import DataTab 
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
 import traceback
@@ -448,7 +445,7 @@ class PlotTabUI(QWidget):
         scroll_layout.addSpacing(10)
 
         #plot description tab
-        description_group = DataPlotStudioGroupBox(f"Plot Description: ")
+        description_group = DataPlotStudioGroupBox("Plot Description: ")
         description_group.setStyleSheet("AnimatedGroupBox { font-size: 16pt; font-weight: bold;}")
         description_layout = QVBoxLayout()
         self.description_label = QLabel()

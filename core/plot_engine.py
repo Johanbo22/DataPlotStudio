@@ -1,19 +1,12 @@
 # core/plot_engine.py
-import deprecated
-from matplotlib.mlab import GaussianKDE
 import matplotlib.pyplot as plt
-import matplotlib
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pandas as pd
 import numpy as np
 import seaborn as sns
 from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 import matplotlib.dates as mdates
-from matplotlib.ticker import MaxNLocator
 import matplotlib.ticker as ticker
-from scipy import stats
-from scipy.stats import t as t_dist
 if TYPE_CHECKING:
     from ui.plot_tab import PlotTab
 try:
@@ -23,8 +16,6 @@ except ImportError:
     gpd = None
 try:
     import plotly.express as px
-    import plotly.graph_objects as go
-    import plotly.io as pio
     PLOTLY_AVAILABLE = True
 except:
     PLOTLY_AVAILABLE = False
@@ -1335,7 +1326,7 @@ class PlotEngine:
                 reg_line = self.current_ax.plot(
                     *plot_args, 
                     color="red", linestyle="-", linewidth=2, 
-                    label=f"Linear Fit", alpha=0.5
+                    label="Linear Fit", alpha=0.5
                 )[0]
                 reg_line.set_gid("regression_line")
             
@@ -2050,7 +2041,7 @@ class PlotEngine:
         basemap_zoom = kwargs.pop("basemap_zoom", "auto")
 
         if gdf.crs is None:
-            print(f"Warning. Data has no CRS defined.")
+            print("Warning. Data has no CRS defined.")
             try:
                 gdf.set_crs("EPSG:4326")
             except Exception as SetCRSError:

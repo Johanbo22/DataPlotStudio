@@ -2,11 +2,10 @@
 from duckdb import connect
 import pandas as pd
 import numpy as np
-import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import requests
-import os, tempfile, atexit
+import atexit
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from core.tempfilehandling.cleanup_temp_files import cleanup_temp_csv_files
@@ -218,7 +217,7 @@ class DataHandler:
             self.last_gsheet_thousands = thousands
             self.last_gsheet_gid = gid
 
-            print(f"DEBUG data_handler.py->import_google_sheets: Storing parameters:")
+            print("DEBUG data_handler.py->import_google_sheets: Storing parameters:")
             print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
             print(f"  - Decimal: '{self.last_gsheet_decimal}'")
             print(f"  - Thousands: {repr(self.last_gsheet_thousands)}")
@@ -751,7 +750,7 @@ class DataHandler:
             self.operation_log.clear()
             self.sort_state = None
             self.df = self.original_df.copy()
-            print(f"DEBUG: Data reset. Stacks cleared")
+            print("DEBUG: Data reset. Stacks cleared")
     
     def export_data(self, filepath: str, format: str = 'csv', include_index: bool = False) -> None:
         """Export data to file"""
@@ -788,7 +787,7 @@ class DataHandler:
         if not self.last_gsheet_id or (not self.last_gsheet_name and not self.last_gsheet_gid):
             raise ValueError("No history a Google Sheet Import")
         
-        print(f"DEBUG refresh_google_sheets: Using stored parameters:")
+        print("DEBUG refresh_google_sheets: Using stored parameters:")
         print(f"  - Sheet ID: {self.last_gsheet_id}")
         print(f"  - Sheet Name: {self.last_gsheet_name}")
         print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")

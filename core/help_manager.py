@@ -31,7 +31,7 @@ class HelpManager:
             tuple: (title, description, link)
         """
         if not self.connection:
-            debug(f"No Database connection")
+            debug("No Database connection")
             return None, None, None
         
         try:

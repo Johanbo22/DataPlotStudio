@@ -1,6 +1,5 @@
-import math
-from PyQt6.QtGui import QPainterPath, QFont, QColor, QPen, QPolygonF
-from PyQt6.QtCore import Qt, QRectF, QPointF
+from PyQt6.QtGui import QPainterPath, QFont, QColor, QPen
+from PyQt6.QtCore import Qt, QRectF
 
 from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
 

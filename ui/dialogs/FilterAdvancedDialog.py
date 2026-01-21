@@ -147,7 +147,7 @@ class FilterAdvancedDialog(QDialog):
             preview = f"Preview: {logic.join(active_filters)}"
             self.preview_label.setText(preview)
         else:
-            self.preview_label.setText(f"Preview: No filters active")
+            self.preview_label.setText("Preview: No filters active")
 
     def validate_and_accept(self):
         """Validate filters before accepting"""

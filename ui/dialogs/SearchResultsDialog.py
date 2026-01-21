@@ -1,9 +1,6 @@
-import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve, QModelIndex
-from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
+from PyQt6.QtWidgets import (QVBoxLayout, QListWidgetItem, QDialog, QDialogButtonBox)
+from PyQt6.QtCore import Qt
 
-from core.data_handler import DataHandler
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 

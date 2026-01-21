@@ -1,9 +1,9 @@
 from PyQt6.QtCore import (
-    Qt, QTimer, QRect, QEasingCurve, QPropertyAnimation, 
-    QVariantAnimation, QAbstractAnimation, QPoint
+    Qt, QTimer, QEasingCurve, QPropertyAnimation, 
+    QVariantAnimation, QPoint
 )
 from PyQt6.QtWidgets import QWidget, QApplication
-from PyQt6.QtGui import QPainter, QColor, QPen
+from PyQt6.QtGui import QPainter, QColor
 
 class OverlayAnimationEngine(QWidget):
     def __init__(self, parent=None):

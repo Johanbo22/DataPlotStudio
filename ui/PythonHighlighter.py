@@ -39,8 +39,8 @@ class PythonHighlighter(QSyntaxHighlighter):
         self_format = QTextCharFormat()
         self_format.setForeground(QColor("#ffb86c"))
         self_format.setFontItalic(True)
-        self.highlighting_rules.append((re.compile(f"\\bself\\b"), self_format))
-        self.highlighting_rules.append((re.compile(f"\\bcls\\b"), self_format))
+        self.highlighting_rules.append((re.compile("\\bself\\b"), self_format))
+        self.highlighting_rules.append((re.compile("\\bcls\\b"), self_format))
 
         #decorators
         decorator_format = QTextCharFormat()

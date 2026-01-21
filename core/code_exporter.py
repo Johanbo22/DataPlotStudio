@@ -72,7 +72,7 @@ class CodeExporter:
     def _generate_header(self) -> str:
         """Generates the script header and imports."""
         header = [
-            f"\"\"\"",
+            "\"\"\"",
             "DataPlot Studio - Generated Analysis Script",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "",
@@ -120,7 +120,7 @@ class CodeExporter:
             lines.append("    print('Loading data from Google Sheets...')")
             lines.append(f"    sheet_id = {sheet_id}")
             lines.append(f"    sheet_name = {sheet_name}")
-            lines.append(f"    url = f'https://docs.google.com/spreadsheets/d/{{sheet_id}}/gviz/tq?tqx=out:csv&sheet={{sheet_name}}'")
+            lines.append("    url = f'https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}'")
             lines.append("    try:")
             lines.append("        response = requests.get(url, timeout=10)")
             lines.append("        response.raise_for_status()")
@@ -179,7 +179,7 @@ class CodeExporter:
                     # Try to auto-convert numeric, but fall back to string
                     val_str = self._clean_value(val)
                     lines.append("    try:")
-                    lines.append(f"        # Attempt numeric conversion for filter value")
+                    lines.append("        # Attempt numeric conversion for filter value")
                     lines.append(f"        filter_val = {val_str}")
                     lines.append("        if isinstance(filter_val, (int, float)):")
                     lines.append(f"            df_processed[{col}] = pd.to_numeric(df_processed[{col}], errors='coerce')")
@@ -311,7 +311,7 @@ class CodeExporter:
             lines.append("            # Add Standard Error bars")
             lines.append("            y_pred_all = slope * x_data_raw + intercept")
             lines.append("            residuals = y_data_raw - y_pred_all")
-            lines.append(f"            residual_std = np.sqrt(np.sum(residuals**2) / (len(x_data_raw) - 2))")
+            lines.append("            residual_std = np.sqrt(np.sum(residuals**2) / (len(x_data_raw) - 2))")
             lines.append("            x_mean = np.mean(x_data_raw)")
             lines.append("            se_points = residual_std * np.sqrt(1/len(x_data_raw) + (x_data_raw - x_mean)**2 / np.sum((x_data_raw - x_mean)**2))")
             lines.append("            step = max(1, len(x_data_raw) // 30)")
@@ -344,9 +344,9 @@ class CodeExporter:
         lines = ["\n    # --- 1. Set up Figure and Style ---"]
         
         style = self._clean_value(self._get_cfg(config, "appearance.figure.style", "default"))
-        lines.append(f"    try:")
+        lines.append("    try:")
         lines.append(f"        plt.style.use({style})")
-        lines.append(f"    except Exception: plt.style.use('default')")
+        lines.append("    except Exception: plt.style.use('default')")
 
         font_family = self._clean_value(self._get_cfg(config, 'appearance.font_family', 'Arial'))
         lines.append(f"    plt.rcParams['font.family'] = {font_family}")
@@ -472,7 +472,7 @@ class CodeExporter:
             lines.append("    for group in groups:")
             lines.append(f"        mask = df[{ctx['hue']}] == group")
             lines.append(f"        for col in {ctx['ys']}:")
-            lines.append(f"            # Plot with Hue")
+            lines.append("            # Plot with Hue")
             plot_cmd = f"ax.plot(df.loc[mask, {ctx['x']}], df.loc[mask, col], label=f'{{col}} - {{group}}', {kwargs_str})"
             if ctx['flip']:
                 plot_cmd = f"ax.plot(df.loc[mask, col], df.loc[mask, {ctx['x']}], label=f'{{col}} - {{group}}', {kwargs_str})"
@@ -587,7 +587,7 @@ class CodeExporter:
         lines.append("    try:")
         lines.append(f"        df_plot = df.set_index({ctx['x']})[{ctx['ys']}]")
         lines.append(f"        if {ctx['flip']}:")
-        lines.append(f"            # Area plot doesn't support direct flip in pandas, using fill_betweenx manually")
+        lines.append("            # Area plot doesn't support direct flip in pandas, using fill_betweenx manually")
         lines.append(f"            for col in {ctx['ys']}:")
         lines.append(f"                ax.fill_betweenx(df_plot.index, 0, df_plot[col], label=col, alpha={ctx['alpha']})")
         lines.append("        else:")
@@ -604,7 +604,7 @@ class CodeExporter:
         explode_list = "None"
         if pie_cfg.get("explode_first"):
              dist = pie_cfg.get("explode_distance", 0.1)
-             lines.append(f"        explode = [0.0] * len(data)")
+             lines.append("        explode = [0.0] * len(data)")
              lines.append(f"        if explode: explode[0] = {dist}")
              explode_list = "explode"
              
@@ -646,16 +646,16 @@ class CodeExporter:
         elif plot_type == "Stairs":
             lines.append(f"    ax.stairs(df[{ctx['y']}], edges=np.arange(len(df)+1)) # Approximation")
         elif plot_type == "Eventplot":
-             lines.append(f"    # Eventplot expects list of lists")
+             lines.append("    # Eventplot expects list of lists")
              lines.append(f"    data = [df[c].dropna().values for c in {ctx['ys']}]")
              lines.append(f"    ax.eventplot(data, alpha={ctx['alpha']})")
         elif plot_type == "ECDF":
              lines.append(f"    ax.ecdf(df[{ctx['y']}])")
         elif plot_type == "Stackplot":
-             lines.append(f"    # Ensure sorted X")
+             lines.append("    # Ensure sorted X")
              lines.append(f"    dfs = df.sort_values(by={ctx['x']})")
              lines.append(f"    ax.stackplot(dfs[{ctx['x']}], dfs[{ctx['ys']}].T, labels={ctx['ys']}, alpha={ctx['alpha']})")
-             lines.append(f"    ax.legend(loc='upper left')")
+             lines.append("    ax.legend(loc='upper left')")
         return lines
     
     def _generate_gridded_plot(self, ctx: Dict, plot_type: str) -> List[str]:
@@ -692,9 +692,9 @@ class CodeExporter:
         elif plot_type == "Barbs":
             lines.append(f"    ax.barbs(df[{ctx['x']}], df[{ctx['y']}], df[{u}], df[{v}])")
         elif plot_type == "Streamplot":
-             lines.append(f"    # Streamplot requires grid")
-             lines.append(f"    # (Assuming simple grid logic similar to contour for export brevity)")
-             lines.append(f"    print('Note: Streamplot export assumes data is griddable')")
+             lines.append("    # Streamplot requires grid")
+             lines.append("    # (Assuming simple grid logic similar to contour for export brevity)")
+             lines.append("    print('Note: Streamplot export assumes data is griddable')")
         return lines
     
     def _generate_tri_plot(self, ctx: Dict, plot_type: str) -> List[str]:

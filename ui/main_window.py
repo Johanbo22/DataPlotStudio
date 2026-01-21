@@ -1,14 +1,12 @@
 #ui/main_window.py
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QFileDialog, QMessageBox, QSplitter, QPushButton, QApplication)
-from PyQt6.QtCore import Qt, QThreadPool, pyqtSlot, QTimer
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from PyQt6.QtGui import QIcon, QCloseEvent, QDragEnterEvent, QDropEvent
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFileDialog, QMessageBox, QApplication)
+from PyQt6.QtCore import QThreadPool, pyqtSlot, QTimer
+from PyQt6.QtGui import QIcon, QDragEnterEvent, QDropEvent
 from pathlib import Path
 import traceback
 
 
 from resources.version import APPLICATION_VERSION, SCRIPT_FILE_NAME, LOG_FILE_NAME
-from core import subset_manager
 from core.subset_manager import SubsetManager
 from ui.workers import FileImportWorker, GoogleSheetsImportWorker
 from ui.data_tab import DataTab
@@ -382,7 +380,7 @@ class MainWindow(QWidget):
                 self.status_bar.show_progress(True)
                 self.status_bar.set_progress(10)
                 
-                self.progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message=f"Connecting...", parent=self)
+                self.progress_dialog = ProgressDialog(title=f"Importing from {db_type}", message="Connecting...", parent=self)
                 self.progress_dialog.show()
                 self.progress_dialog.update_progress(10, "Connecting...")
                 QApplication.processEvents()

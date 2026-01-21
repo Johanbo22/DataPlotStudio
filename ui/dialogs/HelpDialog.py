@@ -1,10 +1,12 @@
-from PyQt6.QtCore import Qt, QUrl, QSize
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QDialog, QDialogButtonBox, QFrame, QLabel, 
     QScrollArea, QVBoxLayout, QWidget, QPushButton
 )
-import os, sys, importlib.util
+import os
+import sys
+import importlib.util
 
 class HelpDialog(QDialog):
     """Dialog window do display help content"""

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QPen, QFontMetrics
+from PyQt6.QtGui import QColor, QFontMetrics
 
 from ui.help_animation_engine import HelpAnimationEngine
 

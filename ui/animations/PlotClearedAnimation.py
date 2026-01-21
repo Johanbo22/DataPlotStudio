@@ -1,4 +1,3 @@
-import math
 from PyQt6.QtGui import QPainterPath, QFont, QColor, QPen, QLinearGradient
 from PyQt6.QtCore import Qt, QRectF, QPointF
 

@@ -1,6 +1,5 @@
-from tokenize import endpats
 from PyQt6.QtCore import QRectF, Qt, QPointF
-from PyQt6.QtGui import QColor, QPen, QPainterPath, QBrush
+from PyQt6.QtGui import QColor, QPen, QPainterPath
 
 from ui.help_animation_engine import HelpAnimationEngine
 

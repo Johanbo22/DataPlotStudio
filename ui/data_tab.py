@@ -1,10 +1,9 @@
 # ui/data_tab.py
 import traceback
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QListWidgetItem, QApplication, QTableView, QHeaderView, QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,QTableWidgetItem, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox, QSpinBox, QMessageBox, QTabWidget, QTextEdit, QScrollArea, QInputDialog, QListWidgetItem, QListWidget, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QDialogButtonBox, QStackedWidget)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QInputDialog, QListWidgetItem, QApplication, QTableView, QHeaderView, QGraphicsOpacityEffect, QMenu, QAbstractItemView, QDialog, QStackedWidget)
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QPropertyAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 
-from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from ui.animations.AggregationAnimation import AggregationAnimation
@@ -21,7 +20,7 @@ from pathlib import Path
 
 from core.help_manager import HelpManager
 from ui.data_table_model import DataTableModel
-from ui.widgets import DataPlotStudioListWidget, DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
+from ui.widgets import DataPlotStudioListWidget, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget, HelpIcon
 from ui.LandingPage import LandingPage
 from ui.dialogs.ComputedColumnDialog import ComputedColumnDialog
 
@@ -768,7 +767,7 @@ class DataTab(QWidget):
             self.edit_dataset_toggle_button.setText("Edit Mode: ON")
             self.edit_dataset_toggle_button.updateColors(base_color_hex="#E74C3C", hover_color_hex="#C0392B")
             self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
-            self.status_bar.log(f"Edit Mode Enabled. You are now able to edit cells in the data table", "INFO")
+            self.status_bar.log("Edit Mode Enabled. You are now able to edit cells in the data table", "INFO")
 
             self.edit_toggle_on_animation = EditModeToggleAnimation(parent=self, is_on=True)
             self.edit_toggle_on_animation.start(target_widget=self)
@@ -776,7 +775,7 @@ class DataTab(QWidget):
             self.edit_dataset_toggle_button.setText("Edit Mode: OFF")
             self.edit_dataset_toggle_button.updateColors(base_color_hex="#95A5A6", hover_color_hex="#7F8C8D")
             self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
-            self.status_bar.log(f"Edit Mode Disabled", "INFO")
+            self.status_bar.log("Edit Mode Disabled", "INFO")
 
             self.edit_toggle_off_animation = EditModeToggleAnimation(parent=self, is_on=False)
             self.edit_toggle_off_animation.start(target_widget=self)
@@ -1247,7 +1246,7 @@ class DataTab(QWidget):
             #Request redirection to index 1
             dialog.plot_subset_requested.connect(self.handle_plot_request)
             
-            print(f"DEBUG open_subset_manager: Dialog created, executing")
+            print("DEBUG open_subset_manager: Dialog created, executing")
             dialog.exec()
             
             print("DEBUG open_subset_manager: Dialog closed, refreshing active subsets")
@@ -1675,7 +1674,7 @@ class DataTab(QWidget):
             return
         
         self.reset_data()
-        self.status_bar.log(f"Filters cleared and data reset to original state", "INFO")
+        self.status_bar.log("Filters cleared and data reset to original state", "INFO")
 
     
     def drop_column(self):
@@ -1686,7 +1685,7 @@ class DataTab(QWidget):
         # Get the selected items
         selected_items = self.column_list.selectedItems()
         if not selected_items:
-            self.status_bar.log(f"No columns selected to drop", "WARNING")
+            self.status_bar.log("No columns selected to drop", "WARNING")
             QMessageBox.warning(self, "Selection Error", "Please select at least one column to drop")
             return
         
@@ -1811,7 +1810,7 @@ class DataTab(QWidget):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
                 if reply == QMessageBox.StandardButton.No:
-                    self.status_bar.log(f"Data Type conversion cancelled", "WARNING")
+                    self.status_bar.log("Data Type conversion cancelled", "WARNING")
                     return
                 
                 self.data_handler.clean_data(
@@ -1850,7 +1849,7 @@ class DataTab(QWidget):
         
         selected_items = self.column_list.selectedItems()
         if not selected_items:
-            self.status_bar.log(f"No Column Selected", "WARNING")
+            self.status_bar.log("No Column Selected", "WARNING")
             return
         
         if len(selected_items) > 1:
@@ -2252,7 +2251,7 @@ class DataTab(QWidget):
     def refresh_google_sheets_data(self):
         """Refresh data from the last imported Google Sheet document"""
         try:
-            print(f"DEBUG: Attempting to refresh Google Sheets")
+            print("DEBUG: Attempting to refresh Google Sheets")
             print(f"DEBUG: Sheet ID: {self.data_handler.last_gsheet_id}")
             print(f"DEBUG: Sheet Name: {self.data_handler.last_gsheet_name}")
             print(f"DEBUG: Delimiter: '{self.data_handler.last_gsheet_delimiter}'")
@@ -2278,16 +2277,16 @@ class DataTab(QWidget):
             progress_dialog.update_progress(30, f"Downloading data from: '{self.data_handler.last_gsheet_id}'")
             QApplication.processEvents()
 
-            print(f"DEBUG: Calling refresh_google_sheets()...")
+            print("DEBUG: Calling refresh_google_sheets()...")
             self.data_handler.refresh_google_sheets()
-            print(f"DEBUG: refresh_google_sheets() completed successfully")
+            print("DEBUG: refresh_google_sheets() completed successfully")
 
             progress_dialog.update_progress(70, "Processing data")
             QApplication.processEvents()
 
-            print(f"DEBUG: Refreshing data view...")
+            print("DEBUG: Refreshing data view...")
             self.refresh_data_view()
-            print(f"DEBUG: Data view refreshed")
+            print("DEBUG: Data view refreshed")
 
             progress_dialog.update_progress(100, "Complete")
             QTimer.singleShot(300, progress_dialog.accept)
@@ -2486,13 +2485,13 @@ class DataTab(QWidget):
             case "fill_missing":
                 return f"Fill missing Values: {operation.get("column")} ({operation.get("method")})"
             case "drop_missing":
-                return f"Drop missing Values"
+                return "Drop missing Values"
             case "drop_duplicates":
-                return f"Remove Duplicate Values"
+                return "Remove Duplicate Values"
             case "aggregate":
                 return f"Aggregation: {operation.get("agg_func")} on {len(operation.get("agg_columns", []))} columns"
             case "melt":
-                return f"Melt/Pivot Data"
+                return "Melt/Pivot Data"
             case "sort":
                 direction = "Asc" if operation.get("ascending") else "Desc"
                 return f"Sort: {operation.get("column")} ({direction})"

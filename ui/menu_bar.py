@@ -1,6 +1,5 @@
 # ui/menu_bar.py
-from stat import filemode
-from PyQt6.QtWidgets import QMenuBar, QMenu
+from PyQt6.QtWidgets import QMenuBar
 from PyQt6.QtGui import QAction, QIcon
 from ui.widgets.AnimatedMenu import DataPlotStudioMenu
 

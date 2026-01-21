@@ -1,10 +1,7 @@
-import math
-from PyQt6.QtGui import QPainterPath, QFont, QPainter, QColor, QPen
+from PyQt6.QtGui import QFont, QColor, QPen
 from PyQt6.QtCore import (
-    Qt, QTimer, QRect, QEasingCurve, QPropertyAnimation, 
-    QVariantAnimation, QAbstractAnimation, QRectF
+    Qt, QRectF
 )
-from PyQt6.QtWidgets import QWidget, QApplication
 from ui.animations.OverlayAnimationEngine import OverlayAnimationEngine
 
 class FailedAnimation(OverlayAnimationEngine):

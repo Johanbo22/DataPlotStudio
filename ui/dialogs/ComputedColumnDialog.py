@@ -1,7 +1,5 @@
 # ui/dialogs/ComputedColumnDialog.py
-import operator
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QListWidget, QAbstractItemView, QWidget, QGridLayout)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QAbstractItemView, QGridLayout)
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox

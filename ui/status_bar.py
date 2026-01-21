@@ -1,5 +1,5 @@
 # ui/status_bar.py
-from PyQt6.QtWidgets import QStatusBar, QLabel, QLineEdit, QProgressBar, QPushButton, QDialog, QTextEdit, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QStatusBar, QLabel, QLineEdit, QProgressBar, QApplication
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from datetime import datetime
 from core.logger import Logger

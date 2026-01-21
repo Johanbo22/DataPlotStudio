@@ -1,5 +1,5 @@
 import json
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, QMessageBox, QPushButton, QInputDialog
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, QMessageBox, QInputDialog
 from PyQt6.QtGui import QFont
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton

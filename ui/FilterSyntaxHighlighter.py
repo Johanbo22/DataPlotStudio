@@ -1,6 +1,4 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, Qt
 from PyQt6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat, QFont
-from PyQt6.QtWidgets import QLineEdit, QPlainTextEdit
 import re
 
 class FilterSyntaxHighlighter(QSyntaxHighlighter):

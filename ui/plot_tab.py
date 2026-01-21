@@ -1,12 +1,10 @@
 # ui/plot_tab.py
 
-from re import M
-from PyQt6.QtWidgets import QMessageBox, QColorDialog, QApplication, QHBoxLayout, QComboBox, QSpinBox, QMessageBox, QFrame, QLabel, QListWidgetItem, QFileDialog, QInputDialog
+from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog
 from PyQt6.QtCore import QTimer, QSize, Qt
-from PyQt6.QtGui import QIcon, QColor, QPalette, QFont
+from PyQt6.QtGui import QIcon, QColor, QFont
 import json
 import os
-from flask.config import T
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
@@ -28,14 +26,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import traceback
 from matplotlib.colors import to_hex
-from typing import Dict, List, Any
+from typing import Dict, Any
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PathCollection
 from typing import Optional
 
-from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioSlider
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.dialogs.PlotExportDialog import PlotExportDialog
 from ui.dialogs.ThemeEditorDialog import ThemeEditorDialog
@@ -1555,7 +1552,7 @@ class PlotTab(PlotTabUI):
                         self.data_handler.df, subset_name
                     )
                 else:
-                    self.status_bar.log(f"Subset Manager not initialized, using full dataset", "WARNING")
+                    self.status_bar.log("Subset Manager not initialized, using full dataset", "WARNING")
                     return self.data_handler.df
             except Exception as UseSubsetError:
                 self.status_bar.log(f"Could not restore subset '{subset_name}'. Error: {str(UseSubsetError)}", "ERROR")
@@ -1595,12 +1592,12 @@ class PlotTab(PlotTabUI):
                     self.web_view.setHtml(html_content)
                     self.status_bar.log(f"{plot_type} plot generated with plotly")
                 else:
-                    self.status_bar.log(f"WebEngineView not available", "ERROR")
+                    self.status_bar.log("WebEngineView not available", "ERROR")
             
             elif isinstance(result, str):
                 if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
                     self.web_view.setHtml(result)
-                self.status_bar.log(f"Plotly generation returned a message (likely error)", "WARNING")
+                self.status_bar.log("Plotly generation returned a message (likely error)", "WARNING")
         
         except Exception as PlotlyFetchError:
             self.status_bar.log(f"Plotting {plot_type} using plotly has failed: {str(PlotlyFetchError)}", "ERROR")
