@@ -1282,30 +1282,38 @@ class PlotTab(PlotTabUI):
         description = self.plot_engine.PLOT_DESCRIPTIONS.get(plot_type, "")
         self.description_label.setText(description)
 
+        line_plots = ["Line", "Area", "Step", "Stairs"]
+        bar_plots = ["Bar", "Count Plot", "Stem"]
+        hist_plots = ["Histogram"]
+        scatter_plots = ["Scatter"]
+        pie_plots = ["Pie"]
 
-        #CONTROL FOR THE VISIBLE CUSTOMIZATIONS IN ADVANCED TAB. i think i need to add more
-        if plot_type != "Histogram" and plot_type != "Bar":
-            self.histogram_group.setVisible(False)
-            self.bar_group.setVisible(False)
-        else:
-            if plot_type == "Histogram":
-                self.histogram_group.setVisible(True)
-                self.bar_group.setVisible(True)
-            elif plot_type == "Bar":
-                self.histogram_group.setVisible(False)
-                self.bar_group.setVisible(True)
-
-        if plot_type != "Pie":
-            self.pie_group.setVisible(False)
-        else:
-            self.pie_group.setVisible(True)
-
-        if plot_type != "Scatter":
-            self.scatter_group.setVisible(False)
-        else:
-            self.scatter_group.setVisible(True)
-
+        show_markers = False
+        show_error_bars = False
         
+        if plot_type in line_plots:
+            self.advanced_stack.setCurrentIndex(0)
+            show_markers = True
+            show_error_bars = True
+        elif plot_type in hist_plots:
+            self.advanced_stack.setCurrentIndex(1)
+            self.histogram_group.setVisible(True)
+            show_error_bars = False
+        elif plot_type in bar_plots or plot_type in ["Box", "Violin"]:
+            self.advanced_stack.setCurrentIndex(1)
+            self.histogram_group.setVisible(False)
+            show_error_bars = True
+        elif plot_type in scatter_plots:
+            self.advanced_stack.setCurrentIndex(2)
+            show_markers = True
+            show_error_bars = True
+        elif plot_type in pie_plots:
+            self.advanced_stack.setCurrentIndex(3)
+        else:
+            self.advanced_stack.setCurrentIndex(4)
+        
+        self.marker_group.setVisible(show_markers)
+        self.error_bars_group.setVisible(show_error_bars)
 
 
         #plots with multiple ycols

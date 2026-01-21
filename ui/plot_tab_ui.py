@@ -2,7 +2,7 @@
 
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
-    QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox, QDialog, QDialogButtonBox, QFrame, 
+    QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QApplication, QCompleter, QComboBox, QDialog, QDialogButtonBox, QFrame, QLayout 
 )
 from PyQt6.QtCore import Qt, QRect, QSize, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QColor, QPainter, QLinearGradient, QBrush, QPixmap
@@ -19,6 +19,7 @@ from ui.dialogs import HelpDialog
 import traceback
 import shutil
 
+from ui.widgets.AutoResizingStackedWidget import AutoResizingStackedWidget
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
@@ -1362,7 +1363,7 @@ class PlotTabUI(QWidget):
 
         scroll_layout.addSpacing(10)
         
-        # === LEGEND BOX STYLING ===
+        #  LEGEND BOX STYLING 
         self.box_styling_group = DataPlotStudioGroupBox("Legend Box Styling")
         self.box_styling_group.setVisible(False)
         box_styling_layout = QVBoxLayout()
@@ -1416,7 +1417,7 @@ class PlotTabUI(QWidget):
 
         scroll_layout.addSpacing(10)
         
-        # === GRID SETTINGS ===
+        #  GRID SETTINGS 
         #docs https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.grid.html
         grid_group = DataPlotStudioGroupBox("Gridlines")
         grid_layout = QVBoxLayout()
@@ -1690,6 +1691,15 @@ class PlotTabUI(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
+        self.advanced_stack = AutoResizingStackedWidget()
+        self.advanced_stack.currentChanged.connect(lambda: self.advanced_stack.updateGeometry())
+
+        # Lines
+        self.page_line = QWidget()
+        page_line_layout = QVBoxLayout(self.page_line)
+        page_line_layout.setContentsMargins(0, 0, 0, 0)
+        page_line_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
+
         #line properties
         
         line_group = DataPlotStudioGroupBox("Line Properties")
@@ -1738,52 +1748,36 @@ class PlotTabUI(QWidget):
         line_layout.addWidget(self.save_line_custom_button)
 
         line_group.setLayout(line_layout)
-        scroll_layout.addWidget(line_group)
+        page_line_layout.addWidget(line_group)
+        page_line_layout.addStretch()
+        self.advanced_stack.addWidget(self.page_line)
         
-        scroll_layout.addSpacing(10)
+        self.page_bar_hist = QWidget()
+        page_bar_layout = QVBoxLayout(self.page_bar_hist)
+        page_bar_layout.setContentsMargins(0, 0, 0, 0)
+        page_bar_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
         
-        #  MARKER PROPERTIES 
-        marker_group = DataPlotStudioGroupBox("Marker Properties")
-        marker_layout = QVBoxLayout()
+        #  Histogram Properties 
+        self.histogram_group = DataPlotStudioGroupBox("Histogram Properties")
+        histogram_layout = QVBoxLayout()
+        
+        histogram_layout.addWidget(QLabel("Number of Bins:"))
+        self.histogram_bins_spin = DataPlotStudioSpinBox()
+        self.histogram_bins_spin.setRange(5, 200)
+        self.histogram_bins_spin.setValue(30)
+        histogram_layout.addWidget(self.histogram_bins_spin)
 
-        marker_layout.addWidget(QLabel("Marker Shape:"))
-        self.marker_combo = DataPlotStudioComboBox()
-        self.marker_combo.addItems(['None', 'o', 's', '^', 'v', 'D', '*', '+', 'x', '|', '_', 'p', 'H', 'h'])
-        marker_layout.addWidget(self.marker_combo)
-        
-        marker_layout.addWidget(QLabel("Marker Size:"))
-        self.marker_size_spin = DataPlotStudioSpinBox()
-        self.marker_size_spin.setRange(2, 20)
-        self.marker_size_spin.setValue(6)
-        marker_layout.addWidget(self.marker_size_spin)
-        
-        marker_layout.addWidget(QLabel("Marker Color:"))
-        marker_color_layout = QHBoxLayout()
-        self.marker_color_button = DataPlotStudioButton("Choose", parent=self)
-        self.marker_color_label = QLabel("Auto")
-        marker_color_layout.addWidget(self.marker_color_button)
-        marker_color_layout.addWidget(self.marker_color_label)
-        marker_layout.addLayout(marker_color_layout)
-        
-        marker_layout.addWidget(QLabel("Marker Edge Color:"))
-        marker_edge_layout = QHBoxLayout()
-        self.marker_edge_button = DataPlotStudioButton("Choose", parent=self)
-        self.marker_edge_label = QLabel("Auto")
-        marker_edge_layout.addWidget(self.marker_edge_button)
-        marker_edge_layout.addWidget(self.marker_edge_label)
-        marker_layout.addLayout(marker_edge_layout)
-        
-        marker_layout.addWidget(QLabel("Marker Edge Width:"))
-        self.marker_edge_width_spin = DataPlotStudioDoubleSpinBox()
-        self.marker_edge_width_spin.setRange(0, 3)
-        self.marker_edge_width_spin.setValue(1)
-        self.marker_edge_width_spin.setSingleStep(0.1)
-        marker_layout.addWidget(self.marker_edge_width_spin)
+        #normal distribution curve
+        self.histogram_show_normal_check = DataPlotStudioCheckBox("Overlay a Normal Distribution Curve")
+        self.histogram_show_normal_check.setChecked(False)
+        histogram_layout.addWidget(self.histogram_show_normal_check)
 
-        marker_group.setLayout(marker_layout)
-        scroll_layout.addWidget(marker_group)
-        
-        scroll_layout.addSpacing(10)
+        self.histogram_show_kde_check = DataPlotStudioCheckBox("Overlay Kernel Density Estimate")
+        self.histogram_show_kde_check.setChecked(False)
+        histogram_layout.addWidget(self.histogram_show_kde_check)
+
+        self.histogram_group.setLayout(histogram_layout)
+        page_bar_layout.addWidget(self.histogram_group)
         
         #  BAR PROPERTIES 
         self.bar_group = DataPlotStudioGroupBox("Bar Properties")
@@ -1840,61 +1834,16 @@ class PlotTabUI(QWidget):
         bar_layout.addWidget(self.save_bar_custom_button)
 
         self.bar_group.setLayout(bar_layout)
-        scroll_layout.addWidget(self.bar_group)
-        
-        scroll_layout.addSpacing(10)
-
-        #  Histogram Properties 
-        self.histogram_group = DataPlotStudioGroupBox("Histogram Properties")
-        histogram_layout = QVBoxLayout()
-        
-        histogram_layout.addWidget(QLabel("Number of Bins:"))
-        self.histogram_bins_spin = DataPlotStudioSpinBox()
-        self.histogram_bins_spin.setRange(5, 200)
-        self.histogram_bins_spin.setValue(30)
-        histogram_layout.addWidget(self.histogram_bins_spin)
-
-        #normal distribution curve
-        self.histogram_show_normal_check = DataPlotStudioCheckBox("Overlay a Normal Distribution Curve")
-        self.histogram_show_normal_check.setChecked(False)
-        histogram_layout.addWidget(self.histogram_show_normal_check)
-
-        self.histogram_show_kde_check = DataPlotStudioCheckBox("Overlay Kernel Density Estimate")
-        self.histogram_show_kde_check.setChecked(False)
-        histogram_layout.addWidget(self.histogram_show_kde_check)
-
-        self.histogram_group.setLayout(histogram_layout)
-        scroll_layout.addWidget(self.histogram_group)
-
-        scroll_layout.addSpacing(10)
-        
-        #  TRANSPARENCY 
-        alpha_group = DataPlotStudioGroupBox("Transparency")
-        alpha_layout = QVBoxLayout()
-        
-        alpha_layout.addWidget(QLabel("Alpha/Transparency:"))
-        self.alpha_slider = DataPlotStudioSlider(Qt.Orientation.Horizontal)
-        self.alpha_slider.setRange(10, 100)
-        self.alpha_slider.setValue(100)
-        alpha_layout.addWidget(self.alpha_slider)
-        
-        self.alpha_label = QLabel("100%")
-        alpha_layout.addWidget(self.alpha_label)
-        
-        alpha_group.setLayout(alpha_layout)
-        scroll_layout.addWidget(alpha_group)
-        
-        scroll_layout.addSpacing(10)
-
-        self.error_bars_group = DataPlotStudioGroupBox("Error Bars")
-        error_bars_layout = QVBoxLayout()
-        self.error_bars_combo = DataPlotStudioComboBox()
-        self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
-        error_bars_layout.addWidget(self.error_bars_combo)
-        self.error_bars_group.setLayout(error_bars_layout)
-        scroll_layout.addWidget(self.error_bars_group)
+        page_bar_layout.addWidget(self.bar_group)
+        page_bar_layout.addStretch()
+        self.advanced_stack.addWidget(self.page_bar_hist)
 
         #  SCatter stats 
+        self.page_scatter = QWidget()
+        page_scatter_layout = QVBoxLayout(self.page_scatter)
+        page_scatter_layout.setContentsMargins(0, 0, 0, 0)
+        page_scatter_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
+
         self.scatter_group = DataPlotStudioGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
 
@@ -1914,8 +1863,6 @@ class PlotTabUI(QWidget):
         self.show_equation_check = DataPlotStudioCheckBox("Show Regression Equation")
         scatter_layout.addWidget(self.show_equation_check)
 
-        
-
         scatter_layout.addWidget(QLabel("Confidence Level (%):"))
         self.confidence_level_spin = DataPlotStudioSpinBox()
         self.confidence_level_spin.setRange(80, 99)
@@ -1923,11 +1870,16 @@ class PlotTabUI(QWidget):
         scatter_layout.addWidget(self.confidence_level_spin)
 
         self.scatter_group.setLayout(scatter_layout)
-        scroll_layout.addWidget(self.scatter_group)
-
-        scroll_layout.addSpacing(10)
+        page_scatter_layout.addWidget(self.scatter_group)
+        page_scatter_layout.addStretch()
+        self.advanced_stack.addWidget(self.page_scatter)
         
         #  PiE CHART PROPERTIRES
+        self.page_pie = QWidget()
+        page_pie_layout = QVBoxLayout(self.page_pie)
+        page_pie_layout.setContentsMargins(0, 0, 0, 0)
+        page_pie_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
+
         self.pie_group = DataPlotStudioGroupBox("Pie Chart Properties")
         pie_layout = QVBoxLayout()
 
@@ -1957,8 +1909,82 @@ class PlotTabUI(QWidget):
         pie_layout.addWidget(self.pie_shadow_check)
 
         self.pie_group.setLayout(pie_layout)
-        scroll_layout.addWidget(self.pie_group)
+        page_pie_layout.addWidget(self.pie_group)
+        page_pie_layout.addStretch()
+        self.advanced_stack.addWidget(self.page_pie)
 
+        self.page_empty = QWidget()
+        page_empty_layout = QVBoxLayout(self.page_empty)
+        page_empty_layout.setContentsMargins(0, 0, 0, 0)
+        page_empty_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
+        self.advanced_stack.addWidget(self.page_empty)
+
+        scroll_layout.addWidget(self.advanced_stack)
+
+        #  MARKER PROPERTIES 
+        self.marker_group = DataPlotStudioGroupBox("Marker Properties")
+        marker_layout = QVBoxLayout()
+
+        marker_layout.addWidget(QLabel("Marker Shape:"))
+        self.marker_combo = DataPlotStudioComboBox()
+        self.marker_combo.addItems(['None', 'o', 's', '^', 'v', 'D', '*', '+', 'x', '|', '_', 'p', 'H', 'h'])
+        marker_layout.addWidget(self.marker_combo)
+        
+        marker_layout.addWidget(QLabel("Marker Size:"))
+        self.marker_size_spin = DataPlotStudioSpinBox()
+        self.marker_size_spin.setRange(2, 20)
+        self.marker_size_spin.setValue(6)
+        marker_layout.addWidget(self.marker_size_spin)
+        
+        marker_layout.addWidget(QLabel("Marker Color:"))
+        marker_color_layout = QHBoxLayout()
+        self.marker_color_button = DataPlotStudioButton("Choose", parent=self)
+        self.marker_color_label = QLabel("Auto")
+        marker_color_layout.addWidget(self.marker_color_button)
+        marker_color_layout.addWidget(self.marker_color_label)
+        marker_layout.addLayout(marker_color_layout)
+        
+        marker_layout.addWidget(QLabel("Marker Edge Color:"))
+        marker_edge_layout = QHBoxLayout()
+        self.marker_edge_button = DataPlotStudioButton("Choose", parent=self)
+        self.marker_edge_label = QLabel("Auto")
+        marker_edge_layout.addWidget(self.marker_edge_button)
+        marker_edge_layout.addWidget(self.marker_edge_label)
+        marker_layout.addLayout(marker_edge_layout)
+        
+        marker_layout.addWidget(QLabel("Marker Edge Width:"))
+        self.marker_edge_width_spin = DataPlotStudioDoubleSpinBox()
+        self.marker_edge_width_spin.setRange(0, 3)
+        self.marker_edge_width_spin.setValue(1)
+        self.marker_edge_width_spin.setSingleStep(0.1)
+        marker_layout.addWidget(self.marker_edge_width_spin)
+
+        self.marker_group.setLayout(marker_layout)
+        scroll_layout.addWidget(self.marker_group)
+
+        self.error_bars_group = DataPlotStudioGroupBox("Error Bars")
+        error_bars_layout = QVBoxLayout()
+        self.error_bars_combo = DataPlotStudioComboBox()
+        self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
+        error_bars_layout.addWidget(self.error_bars_combo)
+        self.error_bars_group.setLayout(error_bars_layout)
+        scroll_layout.addWidget(self.error_bars_group)
+        
+        #  TRANSPARENCY 
+        alpha_group = DataPlotStudioGroupBox("Transparency")
+        alpha_layout = QVBoxLayout()
+        
+        alpha_layout.addWidget(QLabel("Alpha/Transparency:"))
+        self.alpha_slider = DataPlotStudioSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider.setRange(10, 100)
+        self.alpha_slider.setValue(100)
+        alpha_layout.addWidget(self.alpha_slider)
+        
+        self.alpha_label = QLabel("100%")
+        alpha_layout.addWidget(self.alpha_label)
+        
+        alpha_group.setLayout(alpha_layout)
+        scroll_layout.addWidget(alpha_group)
         
         scroll_layout.addStretch()
         scroll.setWidget(scroll_widget)
