@@ -7,16 +7,15 @@ from ui.DataPlotStudioApp import DataPlotStudio
 
 
 def main():
-    print("DEBUG: Application starting")
     app = QApplication(sys.argv)
     translator = QTranslator()
 
     if translator.load(QLocale.system(), "dataplotstudio", "_", "translations"):
         app.installTranslator(translator)
 
-    qss = DataPlotStudio.load_stylesheet("styles/style.css")
-    app.setStyleSheet(qss)
-    
+    main_application_theme = DataPlotStudio.load_stylesheet("styles/style.css")
+    app.setStyleSheet(main_application_theme)
+
     window = DataPlotStudio()
     window.showMaximized()
     sys.exit(app.exec())
