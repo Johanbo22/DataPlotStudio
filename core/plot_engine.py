@@ -154,7 +154,10 @@ class PlotEngine:
         self.current_figure.tight_layout()
     
     def generate_plotly_plot(self, df: pd.DataFrame, plot_type: str, x: str, y: List[str], **kwargs) -> str:
-        """"""
+        """
+        Generates a Plotly figure object
+        Returns a plotly.graph_objects.Figure or an HTML string with the error occurred
+        """
         if not PLOTLY_AVAILABLE:
             return """
             <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
@@ -226,8 +229,13 @@ class PlotEngine:
                     fig = px.area(df, x=x, y=y, **px_kwargs)
             
             elif plot_type == "3D Scatter" or (plot_type == "Scatter" and len(y) > 1 and kwargs.get("3d", False)):
-                ## To Do
                 pass
+            
+            if fig is None and plot_type == "Scatter":
+                if len(y) == 1:
+                     fig = px.scatter(df, x=x, y=y[0], **px_kwargs)
+                else:
+                     fig = px.scatter(df, x=x, y=y, **px_kwargs)
 
             if fig is None:
                 return f"""
@@ -244,7 +252,7 @@ class PlotEngine:
                 margin=dict(l=40, r=40, t=40, b=40)
             )
 
-            return fig.to_html(include_plotlyjs="cdn", full_html=True)
+            return fig
 
         except Exception as PlotlyError:
             return f"""

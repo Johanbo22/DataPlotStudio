@@ -1577,7 +1577,7 @@ class PlotTab(PlotTabUI):
 
             kwargs = self._build_plotly_kwargs(plot_type, x_col, y_cols, hue)
             
-            html_content = self.plot_engine.generate_plotly_plot(
+            result = self.plot_engine.generate_plotly_plot(
                 active_df,
                 plot_type,
                 x_col,
@@ -1585,16 +1585,109 @@ class PlotTab(PlotTabUI):
                 **kwargs
             )
 
-            if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
-                self.web_view.setHtml(html_content)
-                self.status_bar.log(f"{plot_type} plot generated with plotly")
-            else:
-                self.status_bar.log(f"WebEngineView not available", "ERROR")
+            if hasattr(result, "to_html"):
+                fig = result
+                self._apply_plotly_formatting(fig)
+                
+                html_content = fig.to_html(include_plotlyjs="cdn", full_html=True)
+
+                if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
+                    self.web_view.setHtml(html_content)
+                    self.status_bar.log(f"{plot_type} plot generated with plotly")
+                else:
+                    self.status_bar.log(f"WebEngineView not available", "ERROR")
+            
+            elif isinstance(result, str):
+                if hasattr(self, "web_view") and hasattr(self.web_view, "setHtml"):
+                    self.web_view.setHtml(result)
+                self.status_bar.log(f"Plotly generation returned a message (likely error)", "WARNING")
         
         except Exception as PlotlyFetchError:
             self.status_bar.log(f"Plotting {plot_type} using plotly has failed: {str(PlotlyFetchError)}", "ERROR")
             QMessageBox.critical(self, "Plotly Plotting Error", str(PlotlyFetchError))
             traceback.print_exc()
+
+    def _apply_plotly_formatting(self, fig):
+        """Apply the main formatting options to the plotly created figure"""
+        #_Fonts 
+        font_family = self.font_family_combo.currentFont().family()
+        fig.update_layout(
+            font=dict(family=font_family),
+            paper_bgcolor=self.bg_color,
+            plot_bgcolor=self.face_color
+        )
+        # Title
+        if self.title_check.isChecked():
+            fig.update_layout(
+                title=dict(
+                    text=self.title_input.text(),
+                    font=dict(size=self.title_size_spin.value()),
+                    x=0.5 if self.title_position_combo.currentText() == "center" else (0.05 if self.title_position_combo.currentText() == "left" else 0.95),
+                    xanchor=self.title_position_combo.currentText()
+                )
+            )
+        else:
+            fig.update_layout(title=None)
+        
+        #Axes Formatting
+        # X-Axis
+        xaxis_update = dict(
+            title=dict(
+                text=self.xlabel_input.text() if self.xlabel_check.isChecked() else "",
+                font=dict(size=self.xlabel_size_spin.value())
+            ),
+            showline=True,
+            linecolor=self.bottom_spine_color if self.bottom_spine_visible_check.isChecked() else "rgba(0,0,0,0)",
+            linewidth=self.bottom_spine_width_spin.value(),
+            showgrid=self.grid_check.isChecked() and (self.x_major_grid_check.isChecked() if self.independent_grid_check.isChecked() else True),
+            gridcolor=self.x_major_grid_color if self.independent_grid_check.isChecked() else "gray",
+            tickfont=dict(size=self.xtick_label_size_spin.value()),
+            tickangle=self.xtick_rotation_spin.value()
+        )
+        
+        if not self.x_auto_check.isChecked():
+            xaxis_update["range"] = [self.x_min_spin.value(), self.x_max_spin.value()]
+        if self.x_scale_combo.currentText() == "log":
+            xaxis_update["type"] = "log"
+
+        # Y-Axis
+        yaxis_update = dict(
+            title=dict(
+                text=self.ylabel_input.text() if self.ylabel_check.isChecked() else "",
+                font=dict(size=self.ylabel_size_spin.value())
+            ),
+            showline=True,
+            linecolor=self.left_spine_color if self.left_spine_visible_check.isChecked() else "rgba(0,0,0,0)",
+            linewidth=self.left_spine_width_spin.value(),
+            showgrid=self.grid_check.isChecked() and (self.y_major_grid_check.isChecked() if self.independent_grid_check.isChecked() else True),
+            gridcolor=self.y_major_grid_color if self.independent_grid_check.isChecked() else "gray",
+            tickfont=dict(size=self.ytick_label_size_spin.value()),
+            tickangle=self.ytick_rotation_spin.value()
+        )
+        if not self.y_auto_check.isChecked():
+            yaxis_update["range"] = [self.y_min_spin.value(), self.y_max_spin.value()]
+        if self.y_scale_combo.currentText() == "log":
+            yaxis_update["type"] = "log"
+
+        fig.update_xaxes(**xaxis_update)
+        fig.update_yaxes(**yaxis_update)
+
+        # Legend
+        if self.legend_check.isChecked():
+            fig.update_layout(
+                showlegend=True,
+                legend=dict(
+                    bgcolor=self.legend_bg_color,
+                    bordercolor=self.legend_edge_color,
+                    borderwidth=self.legend_edge_width_spin.value(),
+                    font=dict(size=self.legend_size_spin.value())
+                )
+            )
+        else:
+            fig.update_layout(showlegend=False)
+            
+        if self.top_spine_visible_check.isChecked():
+            fig.update_xaxes(mirror=True)
     
     def _build_plotly_kwargs(self, plot_type, x_col, y_cols, hue):
         """Build kwargs for plotly plot"""
