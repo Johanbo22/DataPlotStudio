@@ -1018,6 +1018,10 @@ class PlotEngine:
         if df is None or df.empty:
             return
         
+        if self.current_ax:
+            for table in list(self.current_ax.tables):
+                table.remove()
+        
         clean_kwargs = {k: v for k, v in kwargs.items() if k not in ["xlabel", "ylabel", "title", "legend"]}
 
         table_object = pd.plotting.table(
