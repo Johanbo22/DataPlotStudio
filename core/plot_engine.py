@@ -279,6 +279,17 @@ class PlotEngine:
     def clear_current_axis(self):
         """Clear the active subplot"""
         if self.current_ax:
+            if hasattr(self.current_ax, "_cax") and self.current_ax._cax is not None:
+                try:
+                    if self.current_figure:
+                        self.current_figure.delaxes(self.current_ax._cax)
+                    else:
+                        self.current_ax._cax.remove()
+                except Exception:
+                    pass
+                self.current_ax._cax = None
+            
+            self.current_ax.set_axes_locator(None)
             self.current_ax.clear()
     
     def get_active_axis_geometry(self) -> Optional[Tuple[int, int, int, int]]:
@@ -659,6 +670,7 @@ class PlotEngine:
         explode_first = kwargs.pop("explode_first", False)
         explode_distance = kwargs.pop("explode_distance", 0.1)
         shadow = kwargs.pop("shadow", False)
+        cmap = kwargs.pop("cmap", None)
 
         # create format
         autopct = "%1.2f%%" if show_percentages else None
@@ -668,7 +680,7 @@ class PlotEngine:
         if explode_first:
             explode = [explode_distance] + [0] * (len(df[values]) - 1)
         
-        self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, picker=True, **kwargs)
+        self.current_ax.pie(df[values], labels=df[names], autopct=autopct, startangle=start_angle, explode=explode, shadow=shadow, **kwargs)
         self.current_ax.set_ylabel('')
 
         self.current_ax.axis("equal")
@@ -2052,25 +2064,17 @@ class PlotEngine:
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
-        legend = kwargs.pop("legend", False)
+        legend = kwargs.pop("legend", True)
         orientation = kwargs.pop("orientation", None)
         legend_kwds = kwargs.pop("legend_kwds", {})
+        if legend_kwds is None:
+            legend_kwds = {}
 
         use_divider = kwargs.pop("use_divider", False)
+        if use_divider and column:
+            legend = True
         cax_enabled = kwargs.pop("cax_enabled", False)
         axis_off = kwargs.pop("axis_off", False)
-
-        cax = None
-        if use_divider and column and legend:
-            divider = make_axes_locatable(self.current_ax)
-            if orientation == "horizontal":
-                cax = divider.append_axes("bottom", size="5%", pad=0.1)
-            else:
-                cax = divider.append_axes("right", size="5%", pad=0.1)
-            legend_kwds["cax"] = cax
-        elif cax_enabled and column:
-            pass
-
 
         is_categorical = False
         if column and column in gdf:
@@ -2081,18 +2085,43 @@ class PlotEngine:
                 is_categorical = True
             if "scheme" in kwargs and kwargs["scheme"] is not None and kwargs["scheme"] != "None":
                 is_categorical = False
+        if is_categorical:
+            pass
+        else:
+            if "loc" in legend_kwds:
+                legend_kwds.pop("loc")
+            if "loc" in kwargs:
+                kwargs.pop("loc")
+
+            if isinstance(orientation, str):
+                orientation = orientation.lower()
+                legend_kwds["orientation"] = orientation
+        
+        cax = None
+        if use_divider and column and legend:
+            try:
+                divider = make_axes_locatable(self.current_ax)
+                if orientation == "horizontal":
+                    cax = divider.append_axes("bottom", size="5%", pad=0.1)
+                else:
+                    cax = divider.append_axes("right", size="5%", pad=0.1)
+                
+                self.current_ax._cax = cax
+            except Exception as DividerError:
+                print(f"Error creating axis divider: {DividerError}")
+                cax = None
+        elif cax_enabled and column:
+            pass
         
         if legend:
             if orientation and not is_categorical:
                 legend_kwds["orientation"] = orientation
-            if cax:
-                legend_kwds["cax"] = cax
         
         if "cmap" not in kwargs and not is_categorical:
             kwargs["cmap"] = "viridis"
 
         if column and column in gdf:
-            gdf.plot(column=column, ax=self.current_ax, legend=legend, legend_kwds=legend_kwds, **kwargs)
+            gdf.plot(column=column, ax=self.current_ax, cax=cax, legend=legend, legend_kwds=legend_kwds, **kwargs)
         else:
             kwargs.pop("cmap", None)
             gdf.plot(ax=self.current_ax, **kwargs)

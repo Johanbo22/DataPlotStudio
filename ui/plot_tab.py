@@ -1383,20 +1383,60 @@ class PlotTab(PlotTabUI):
         plot_type = self.current_plot_type_name
 
         # Do a collection of params to cache to the plot signature.
-        current_signature = (
+        generation_params = [
             id(active_df),
             active_df.shape,
             plot_type,
+            x_col,
             tuple(y_cols) if y_cols else None,
             hue,
             subset_name,
+            current_subplot_index,
             self.flip_axes_check.isChecked(),
-            self.histogram_bins_spin.value() if plot_type == "Histogram" else None,
-            self.pie_start_angle_spin.value() if plot_type == "Pie" else None,
-            self.pie_explode_check.isChecked() if plot_type == "Pie" else None,
-            self.geo_scheme_combo.currentText() if plot_type == "GeoSpatial" else None,
-            self.geo_k_spin.value() if plot_type == "GeoSpatial" else None
-        )
+            self.palette_combo.currentText(),
+            self.style_combo.currentText()
+        ]
+        # Plot specific params
+        if plot_type == "Histogram":
+            generation_params.extend([
+                self.histogram_bins_spin.value(),
+                self.histogram_show_kde_check.isChecked(),
+                self.histogram_show_normal_check.isChecked()
+            ])
+        elif plot_type == "Pie":
+            generation_params.extend([
+                self.pie_start_angle_spin.value(),
+                self.pie_explode_check.isChecked(),
+                self.pie_explode_distance_spin.value(),
+                self.pie_shadow_check.isChecked(),
+                self.pie_show_percentages_check.isChecked()
+            ])
+        elif plot_type == "Scatter":
+            generation_params.extend([
+                self.regression_line_check.isChecked(),
+                self.confidence_interval_check.isChecked(),
+                self.error_bars_combo.currentText(),
+                self.confidence_level_spin.value()
+            ])
+        elif plot_type == "Bar":
+            generation_params.extend([
+                self.bar_width_spin.value()
+            ])
+        elif plot_type == "GeoSpatial":
+            generation_params.extend([
+                self.geo_scheme_combo.currentText(),
+                self.geo_k_spin.value(),
+                self.geo_boundary_check.isChecked(),
+                self.geo_basemap_check.isChecked() if hasattr(self, 'geo_basemap_check') else None,
+                self.geo_axis_off_check.isChecked(),
+                self.geo_cax_check.isChecked(),
+                self.geo_legend_check.isChecked(),
+                self.geo_legend_loc_combo.currentText(),
+                self.geo_use_divider_check.isChecked()
+            ])
+        
+        current_signature = tuple(generation_params)
+
         keep_data = (self._last_plot_signature == current_signature) and not self.use_plotly_check.isChecked()
         self._last_plot_signature = current_signature
         
