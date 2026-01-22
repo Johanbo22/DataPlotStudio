@@ -5,6 +5,9 @@ The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
 ## Unreleashed
+
+
+## v0.0.5
 ### Added
 - Coordinate Reference System Transformation for geospatial plots
 - Adding basemap tiles from Esri, OpenStreetMap, CartoDB as background maps.
