@@ -163,6 +163,8 @@ class PlotTab(PlotTabUI):
             os.makedirs(self.theme_dir, exist_ok=True)
         self.default_theme_names = ["Dark_Mode", "Publication_Ready", "Presentation_Big", "Default"]
         self.refresh_theme_list()
+        if hasattr(self, 'dpi_spin'):
+            self.dpi_spin.setVisible(False)
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
@@ -200,6 +202,8 @@ class PlotTab(PlotTabUI):
         self.no_spines_btn.clicked.connect(self.preset_no_spines)
         self.bg_color_button.clicked.connect(self.choose_bg_color)
         self.face_color_button.clicked.connect(self.choose_face_color)
+        self.width_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
+        self.height_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
         
         #  Tab 3: Axes 
         self.x_auto_check.stateChanged.connect(lambda: self.x_min_spin.setEnabled(not self.x_auto_check.isChecked()))
@@ -415,6 +419,8 @@ class PlotTab(PlotTabUI):
     
     def on_canvas_resize(self, event):
         self._update_overlay()
+        self._setup_plot_figure(clear=False)
+        self.canvas.draw_idle()
 
     def save_plot_image(self) -> None:
         """Save the plot to a file. This is the quick method for most common choices: png, pdf, and svg files"""
@@ -423,7 +429,8 @@ class PlotTab(PlotTabUI):
             return
         
         try:
-            dialog = PlotExportDialog(current_dpi=self.dpi_spin.value(), parent=self)
+            default_export_dpi = 300
+            dialog = PlotExportDialog(current_dpi=default_export_dpi, parent=self)
             if dialog.exec():
                 config = dialog.get_config()
                 filepath = config["filepath"]
@@ -1969,10 +1976,24 @@ class PlotTab(PlotTabUI):
         """Setup plot figure with current settings"""
         if clear:
             self.plot_engine.clear_current_axis()
-            
-        self.plot_engine.current_figure.set_size_inches(self.width_spin.value(), self.height_spin.value())
 
-        self.plot_engine.current_figure.set_dpi(self.dpi_spin.value())
+        target_width_inch = self.width_spin.value()
+        target_height_inch = self.height_spin.value()
+
+        canvas_width = self.canvas.width()
+        canvas_height = self.canvas.height()
+
+        if canvas_width <= 0: canvas_width = 800
+        if canvas_height <= 0: canvas_height = 600
+
+        dpi_w = canvas_width / target_width_inch
+        dpi_h = canvas_height / target_height_inch
+        
+        calculated_dpi = min(dpi_w, dpi_h)
+        calculated_dpi = max(calculated_dpi, 10)
+
+        self.plot_engine.current_figure.set_size_inches(target_width_inch, target_height_inch)
+        self.plot_engine.current_figure.set_dpi(calculated_dpi)
         self.plot_engine.current_figure.set_facecolor(self.bg_color)
 
     def _apply_plot_style(self):

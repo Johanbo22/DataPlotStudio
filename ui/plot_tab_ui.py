@@ -855,7 +855,6 @@ class PlotTabUI(QWidget):
         figure_size_group.setLayout(figure_size_layout)
 
         # DPI
-        figure_size_layout.addWidget(QLabel("DPI (Resolution):"))
         self.dpi_spin = DataPlotStudioSpinBox()
         self.dpi_spin.setRange(50, 300)
         self.dpi_spin.setValue(100)
