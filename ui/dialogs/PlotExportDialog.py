@@ -25,7 +25,7 @@ class PlotExportDialog(QDialog):
         # Format selection
         layout.addWidget(QLabel("Format:"))
         self.format_combo = DataPlotStudioComboBox()
-        self.format_combo.addItems(["PNG", "PDF", "SVG", "JPEG"])
+        self.format_combo.addItems(["PNG", "PDF", "SVG", "JPEG", "EPS", "TIFF", "PS", "RAW", "RGBA"])
         layout.addWidget(self.format_combo)
 
         layout.addSpacing(10)
@@ -70,12 +70,18 @@ class PlotExportDialog(QDialog):
     def on_save_clicked(self):
         extension = self.format_combo.currentText().lower()
         if extension == "jpeg": extension = "jpg"
+        if extension == "tiff": extension = "tif"
 
         filters = {
             "png": "PNG Image (*.png)",
             "pdf": "PDF Document (*.pdf)",
             "svg": "SVG Image (*.svg)",
-            "jpg": "JPEG Image (*.jpg)"
+            "jpg": "JPEG Image (*.jpg)",
+            "eps": "Encapsulated PostScript (*.eps)",
+            "tif": "TIFF Image (*.tif)",
+            "ps": "PostScript (*.ps)",
+            "raw": "Raw Image (*.raw)",
+            "rgba": "RGBA Image (*rgba)"
         }
         filepath, _ = QFileDialog.getSaveFileName(
             self,
