@@ -297,18 +297,40 @@ class PlotEngine:
         if not self.current_ax or not self.current_figure:
             return None
         
-        bbox = self.current_ax.get_position()
+        # We get the device pixe ratio for scaling on higher DPI screns
+        dpr = 1.0
+        if hasattr(self.current_figure, "canvas") and self.current_figure.canvas:
+            if hasattr(self.current_figure.canvas, "devicePixelRatio"):
+                dpr = self.current_figure.canvas.devicePixelRatio()
+        
+        try:
+            trans = self.current_ax.transAxes
+            p0 = trans.transform([0, 0])
+            p1 = trans.transform([1, 1])
 
-        width, height = self.current_figure.get_size_inches() * self.current_figure.get_dpi()
+            x0, y0 = p0
+            x1, y1 = p1
 
-        #calculate the pixels
-        x = int(bbox.x0 * width)
-        w = int(bbox.width * width)
-        h = int(bbox.height * height)
+            x = x0 / dpr
+            w = (x1 - x0) / dpr
+            h = (y1 - y0) / dpr
+            
+            canvas.height = self.current_figure.bbox_height / dpr
+            y = canvas.height - (y1 / dpr)
 
-        y = int(height - (bbox.y0 * height) - h)
+            return (int(x), int(y), int(w), int(h))
+        
+        except Exception:
+            bbox = self.current_ax.get_position()
+            width, height = self.current_figure.get_size_inches() * self.current_figure.get_dpi()
 
-        return (x, y, w, h)
+            x = int((bbox.x0 * width) / dpr)
+            w = int((bbox.width * width) / dpr)
+            h = int((bbox.height * height) / dpr)
+
+            y = int((height / dpr) - ((bbox.y0 * height) / dpr) - h)
+
+            return (x, y, w, h)
     
     def _get_colors_from_cmap(self, cmap_name, n_colors):
         """Generate a list of colors from a cmap"""

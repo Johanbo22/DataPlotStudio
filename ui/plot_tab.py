@@ -2094,6 +2094,8 @@ class PlotTab(PlotTabUI):
         
         self.canvas.draw()
 
+        self._update_overlay()
+
         if self.add_subplots_check.isChecked():
             self.subplot_data_configs[current_subplot_index] = {
             "x_col": x_col,
