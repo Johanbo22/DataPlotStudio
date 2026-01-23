@@ -4,7 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
-## Unreleashed
+## v0.0.6
+### Added
+- Added EPS, TIFF, PS, RAW bitmap and RGBA as options for file formats when saving figure. 
+- Drag manually added annotations around the plot canvas.
+
+### Changed
+- DPI settings are now located in the dialog when exporting/saving the figure as an image.
+
+### Fixed
+- Issue where changing DPI, figure height or width would result in a canvas that was too large to view on screen.
+- Issue where the overlay graphics for the current active subplot did not draw correctly and was offset by lower bbox.
+- Bug where clearing a plot would result in an empty plot when recreating the same plot using the same parameters.
+- Bug where checking "Auto Annotate Points" would result in unremoveable annotations as they would persist after unchecking.
+- Bug where adding a manual annotation, moving it and then recreate the plot would duplicate the annotation
+
+### Removed
+- DPI settings from plotting interface.
 
 
 ## v0.0.5
