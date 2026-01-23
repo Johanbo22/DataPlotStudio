@@ -2738,6 +2738,8 @@ class PlotTab(PlotTabUI):
         """Clear the plot"""
         self.plot_engine.clear_plot()
 
+        self._last_plot_signature = None
+
         self.subplot_rows_spin.blockSignals(True)
         self.subplot_cols_spin.blockSignals(True)
         self.active_subplot_combo.blockSignals(True)
