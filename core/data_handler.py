@@ -527,31 +527,81 @@ class DataHandler:
             raise Exception(f"Error sorting data: {str(SortDataError)}")
 
     
-    def aggregate_data(self, group_by: List[str], agg_columns: List[str], agg_func: str) -> pd.DataFrame:
-        """Aggregate data with groupby operations"""
+    def aggregate_data(self, group_by: List[str], agg_config: Dict[str, str], date_grouping: Dict[str, str]) -> pd.DataFrame:
+        """
+        Aggregate data with specific functions per column and datetime if possible
+        """
+        global freq_map
+
         if self.df is None:
             raise ValueError("No data loaded")
         
         try:
             self._save_state()
 
-            #build aggregation dict
-            agg_dict = {col: (col, agg_func) for col in agg_columns}
-
-            self.df = self.df.groupby(group_by).agg(**agg_dict).reset_index()
+            groupers = []
+            freq_map = {
+                "Year": "Y",
+                "Quarter": "Q",
+                "Month": "M",
+                "Week": "W",
+                "Day": "D"
+            }
+            for col in group_by:
+                if date_grouping and col in date_grouping:
+                    freq_name = date_grouping[col]
+                    pandas_freq = freq_map.get(freq_name, None)
+                    if pandas_freq:
+                        groupers.append(pd.Grouper(key=col, freq=pandas_freq))
+                    else:
+                        groupers.append(col)
+                else:
+                    groupers.append(col)
+            
+            if not groupers:
+                raise ValueError("No valid grouping columns provided")
+            
+            self.df = self.df.groupby(groupers).agg(agg_config).reset_index()
 
             self.sort_state = None
 
             self.operation_log.append({
                 "type": "aggregate",
                 "group_by": group_by,
-                "agg_columns": agg_columns,
-                "agg_func": agg_func
+                "agg_config": agg_config,
+                "date_grouping": date_grouping
             })
 
             return self.df
         except Exception as AggregateDataError:
             raise Exception(f"Error aggregating data: {str(AggregateDataError)}")
+    
+    def preview_aggregation(self, group_by: List[str], agg_config: Dict[str, str], date_grouping: Dict[str, str] = None, limit: int = 5) -> pd.DataFrame:
+        """Preview the result of an aggregation without modifying the current dataframe"""
+        if self.df is None:
+            return pd.DataFrame()
+        
+        try:
+            groupers = []
+            for col in group_by:
+                if date_grouping and col in date_grouping:
+                    pandas_freq = freq_map.get(date_grouping[col])
+                    if pandas_freq:
+                        groupers.append(pd.Grouper(key=col, freq=pandas_freq))
+                    else:
+                        groupers.append(col)
+                else:
+                    groupers.append(col)
+
+            if not groupers or not agg_config:
+                return pd.DataFrame()
+
+            preview_df = self.df.groupby(groupers).agg(agg_config).reset_index()
+
+            return preview_df.head(limit)
+        
+        except Exception as PreviewAggregationError:
+            raise Exception(f"Preview Calculation failed: {str(PreviewAggregationError)}")
     
     def melt_data(self, id_vars: List[str], value_vars: List[str], var_name: str, value_name: str) -> pd.DataFrame:
         """Use melt to unpivot a dataframe"""
