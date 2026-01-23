@@ -59,6 +59,8 @@ class PlotTab(PlotTabUI):
         self.script_sync_timer.timeout.connect(self._perform_script_sync)
         self.current_plot_type_name = "Line"
         self._last_plot_signature = None
+        self.dragged_annotation = None
+        self.ignore_next_click = False
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -174,6 +176,11 @@ class PlotTab(PlotTabUI):
         self.editor_button.clicked.connect(self.open_script_editor)
         self.clear_button.clicked.connect(self.clear_plot)
         self.save_plot_button.clicked.connect(self.save_plot_image)
+
+        # Connection of canvas events for anotations
+        self.canvas.mpl_connect("button_press_event", self.on_mouse_press)
+        self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
+        self.canvas.mpl_connect("button_release_event", self.on_mouse_release)
 
         #editor sync
         self.x_column.currentTextChanged.connect(self._sync_script_if_open)
@@ -458,6 +465,20 @@ class PlotTab(PlotTabUI):
         artist = event.artist
 
         if isinstance(artist, Text):
+            gid = artist.get_gid()
+            if gid and str(gid).startswith("annotation_"):
+                self.dragged_annotation = artist
+                self.ignore_next_click = True
+                self.custom_tabs.setCurrentIndex(5)
+                try:
+                    idx = int(gid.split("_")[1])
+                    if idx < self.annotations_list.count():
+                        self.annotations_list.setCurrentRow(idx)
+                        self.on_annotation_selected(self.annotations_list.item(idx))
+                        self.status_bar.log(f"Selected annotation: {artist.get_text()}", "INFO")
+                except ValueError:
+                    pass
+                return
             self.custom_tabs.setCurrentIndex(1)
             if artist == self.plot_engine.current_ax.get_title():
                 self.title_input.setFocus()
@@ -516,6 +537,68 @@ class PlotTab(PlotTabUI):
         elif isinstance(artist, PathCollection):
             self.custom_tabs.setCurrentIndex(4)
             self.status_bar.log("Selected scatter points", "INFO")
+    
+    def on_mouse_press(self, event):
+        """Handle mouse pressing events on canvas"""
+        if event.button != 1 or not event.inaxes:
+            return
+        
+        if self.ignore_next_click:
+            self.ignore_next_click = False
+            return
+        
+        if self.custom_tabs.currentIndex() == 5:
+            ax = self.plot_engine.current_ax
+            if ax:
+                inv = ax.transAxes.inverted()
+                x, y = inv.transform((event.x, event.y))
+                
+                x = max(0.0, min(1.0, x))
+                y = max(0.0, min(1.0, y))
+
+                self.annotation_x_spin.setValue(x)
+                self.annotation_y_spin.setValue(y)
+    
+    def on_mouse_move(self, event):
+        """Handle mouse movement for dragging an annotation"""
+        if self.dragged_annotation and event.inaxes:
+            ax = self.plot_engine.current_ax
+            inv = ax.transAxes.inverted()
+            x, y = inv.transform((event.x, event.y))
+
+            # Update position
+            self.dragged_annotation.set_position((x, y))
+            self.canvas.draw_idle()
+
+            self.annotation_x_spin.blockSignals(True)
+            self.annotation_y_spin.blockSignals(True)
+            self.annotation_x_spin.setValue(x)
+            self.annotation_y_spin.setValue(y)
+            self.annotation_x_spin.blockSignals(False)
+            self.annotation_y_spin.blockSignals(False)
+    
+    def on_mouse_release(self, event):
+        """Handle mouse release to stop draggng event"""
+        if self.dragged_annotation:
+            gid = self.dragged_annotation.get_gid()
+            if gid and gid.startswith("annotation_"):
+                try:
+                    idx = int(gid.split("_")[1])
+                    if 0 <= idx < len(self.annotations):
+                        pos = self.dragged_annotation.get_position()
+                        self.annotations[idx]["x"] = pos[0]
+                        self.annotations[idx]["y"] = pos[1]
+
+                        #update the widget
+                        if idx < self.annotations_list.count():
+                            item = self.annotations_list.item(idx)
+                            item.setText(f"{self.annotations[idx]["text"]} @ ({pos[0]:.2f}, {pos[1]:.2f})")
+                        
+                        self.status_bar.log(f"Moved annotation to ({pos[0]:.2f}, {pos[1]:.2f})", "INFO")
+                except ValueError:
+                    pass
+            
+            self.dragged_annotation = None
 
     def choose_geo_missing_color(self):
         color = QColorDialog.getColor()
@@ -2376,15 +2459,30 @@ class PlotTab(PlotTabUI):
     def _apply_annotations(self, df=None, x_col=None, y_cols=None):
         """Apply text annotations"""
 
+        if self.plot_engine.current_ax:
+            texts_to_remove = []
+            for text in self.plot_engine.current_ax.texts:
+                gid = text.get_gid()
+                if gid and (str(gid).startswith("annotation_") or gid == "auto_annotation"):
+                    texts_to_remove.append(text)
+            
+            for text in texts_to_remove:
+                try:
+                    text.remove()
+                except ValueError:
+                    pass
+
         #manual annotations
-        for ann in self.annotations:
+        for i, ann in enumerate(self.annotations):
             self.plot_engine.current_ax.text(
                 ann["x"], ann["y"], ann["text"],
                 transform=self.plot_engine.current_ax.transAxes,
                 fontsize=ann["fontsize"],
                 color=ann["color"],
                 ha="center", va="center",
-                bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5)
+                bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+                picker=True,
+                gid=f"annotation_{i}"
             )
         
         #auto annotations based on datapoints
@@ -2421,7 +2519,8 @@ class PlotTab(PlotTabUI):
                             xytext=(5,5),
                             textcoords="offset points",
                             fontsize=font_size,
-                            color=font_color if font_color else "black"
+                            color=font_color if font_color else "black",
+                            gid="auto_annotation"
                         )
                     else:
                         self.plot_engine.current_ax.annotate(
@@ -2430,7 +2529,8 @@ class PlotTab(PlotTabUI):
                             xytext=(5,5),
                             textcoords="offset points",
                             fontsize=font_size,
-                            color=font_color if font_color else "black"
+                            color=font_color if font_color else "black",
+                            gid="auto_annotation"
                         )
             except Exception as ApplyAnnotationsError:
                 self.status_bar.log(f"Error applying annotations to data points: {str(ApplyAnnotationsError)}", "ERROR")
