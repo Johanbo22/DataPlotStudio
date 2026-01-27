@@ -740,60 +740,90 @@ class DataHandler:
                 method = kwargs.get("method", "ffill")
                 column = kwargs.get("column", "All Columns")
                 fill_value = kwargs.get("value", None)
+                group_by = kwargs.get("group_by", None)
 
                 if column == "All Columns" or column is None:
                     target_cols = self.df.columns
                 else:
                     target_cols = [column]
 
-                if method == "static_value":
+                if group_by and group_by in self.df.columns:
                     for col in target_cols:
-                        val_to_use = fill_value
-                        if pd.api.types.is_numeric_dtype(self.df[col]) and isinstance(
-                            fill_value, str
-                        ):
-                            try:
-                                if "." in fill_value:
-                                    val_to_use = float(fill_value)
-                                else:
-                                    val_to_use = int(fill_value)
-                            except ValueError:
-                                pass
-
-                        self.df[col] = self.df[col].fillna(val_to_use)
-
-                elif method in ["mean", "median", "mode"]:
-                    for col in target_cols:
+                        if col == group_by:
+                            continue
                         if method in [
                             "mean",
                             "median",
                         ] and not pd.api.types.is_numeric_dtype(self.df[col]):
                             continue
+
                         if method == "mean":
-                            fill_val = self.df[col].mean()
+                            self.df[col] = self.df[col].fillna(
+                                self.df.groupby(group_by)[col].transform("mean")
+                            )
                         elif method == "median":
-                            fill_val = self.df[col].median()
+                            self.df[col] = self.df[col].fillna(
+                                self.df.groupby(group_by)[col].transform("median")
+                            )
                         elif method == "mode":
-                            modes = self.df[col].mode()
-                            fill_val = modes[0] if not modes.empty else None
+                            self.df[col] = self.df.groupby(group_by)[col].transform(
+                                lambda x: x.fillna(x.mode().iloc[0])
+                                if not x.mode().empty
+                                else x
+                            )
+                        elif method == "ffill":
+                            self.df[col] = self.df.groupby(group_by)[col].ffill()
+                        elif method == "bfill":
+                            self.df[col] = self.df.groupby(group_by)[col].bfill()
+                else:
+                    if method == "static_value":
+                        for col in target_cols:
+                            val_to_use = fill_value
+                            if pd.api.types.is_numeric_dtype(
+                                self.df[col]
+                            ) and isinstance(fill_value, str):
+                                try:
+                                    if "." in fill_value:
+                                        val_to_use = float(fill_value)
+                                    else:
+                                        val_to_use = int(fill_value)
+                                except ValueError:
+                                    pass
 
-                        if fill_val is not None:
-                            self.df[col] = self.df[col].fillna(fill_val)
+                            self.df[col] = self.df[col].fillna(val_to_use)
 
-                elif method in ["ffill", "bfill"]:
-                    for col in target_cols:
-                        self.df[col] = self.df[col].fillna(method=method)
-                elif method in ["linear", "time"]:
-                    if method == "time" and not isinstance(
-                        self.df.index, pd.DatetimeIndex
-                    ):
-                        raise ValueError(
-                            "Time interpolation requires the DataFrame index to be a DatetimeIndex"
-                        )
+                    elif method in ["mean", "median", "mode"]:
+                        for col in target_cols:
+                            if method in [
+                                "mean",
+                                "median",
+                            ] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                                continue
+                            if method == "mean":
+                                fill_val = self.df[col].mean()
+                            elif method == "median":
+                                fill_val = self.df[col].median()
+                            elif method == "mode":
+                                modes = self.df[col].mode()
+                                fill_val = modes[0] if not modes.empty else None
 
-                    for col in target_cols:
-                        if pd.api.types.is_numeric_dtype(self.df[col]):
-                            self.df[col] = self.df[col].interpolate(method=method)
+                            if fill_val is not None:
+                                self.df[col] = self.df[col].fillna(fill_val)
+
+                    elif method in ["ffill", "bfill"]:
+                        for col in target_cols:
+                            self.df[col] = self.df[col].fillna(method=method)
+                    elif method in ["linear", "time"]:
+                        if method == "time" and not isinstance(
+                            self.df.index, pd.DatetimeIndex
+                        ):
+                            raise ValueError(
+                                "Time interpolation requires the DataFrame index to be a DatetimeIndex"
+                            )
+
+                        for col in target_cols:
+                            if pd.api.types.is_numeric_dtype(self.df[col]):
+                                self.df[col] = self.df[col].interpolate(method=method)
             elif action == "drop_column":
                 cols_to_drop = []
                 if "columns" in kwargs:

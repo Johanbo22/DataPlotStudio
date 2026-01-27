@@ -1886,7 +1886,7 @@ class DataTab(QWidget):
 
         try:
             columns = list(self.data_handler.df.columns)
-            dialog = FillMissingDialog(columns, self)
+            dialog = FillMissingDialog(columns, df=self.data_handler.df, parent=self)
 
             if dialog.exec():
                 config = dialog.get_config()
