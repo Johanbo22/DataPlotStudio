@@ -1,17 +1,24 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox, QPushButton, QSplitter, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox, QPushButton, QSplitter, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QHeaderView
+from typing import List
+
+import pandas as pd
+from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 
 
 class MeltDialog(QDialog):
     """Dialog for using the melt function"""
 
-    def __init__(self, columns, parent=None):
+    def __init__(self, df: pd.DataFrame, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Melt Data")
         self.setModal(True)
-        self.resize(700, 600)
-        self.columns = columns
+        self.resize(800, 700)
+        self.df = df
+        self.columns = list(df.columns)
+        self.row_count = df.shape[0]
         self.init_ui()
 
     def init_ui(self):
@@ -95,23 +102,105 @@ class MeltDialog(QDialog):
         naming_group.setLayout(naming_layout)
         layout.addWidget(naming_group)
 
+        preview_group = DataPlotStudioGroupBox("Preview")
+        preview_layout = QVBoxLayout()
+
+        self.preview_label = QLabel("Click 'Update Preview' to see changes")
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_layout.addWidget(self.preview_label)
+
+        self.preview_table = QTableWidget()
+        self.preview_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.preview_table.setAlternatingRowColors(True)
+        self.preview_table.horizontalHeader().setStretchLastSection(True)
+        self.preview_table.verticalHeader().setVisible(False)
+        self.preview_table.setMinimumHeight(200)
+        preview_layout.addWidget(self.preview_table)
+
+        preview_group.setLayout(preview_layout)
+        layout.addWidget(preview_group)
+
         layout.addStretch()
 
         #buttons
         button_layout = QHBoxLayout()
 
-        apply_button = QPushButton("Melt Data")
-        apply_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }")
+        preview_button = DataPlotStudioButton("Update_Preview")
+        preview_button.clicked.connect(self.update_preview)
+        button_layout.addWidget(preview_button)
+
+        apply_button = DataPlotStudioButton("Melt Data", base_color_hex="#4caf50")
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
-        cancel_button = QPushButton("Cancel")
+        cancel_button = DataPlotStudioButton("Cancel")
         cancel_button.setMinimumWidth(120)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
 
         layout.addLayout(button_layout)
+
+    def update_preview(self):
+        """Calculate and display the expected shape of the new dataframe"""
+        id_vars = [item.text() for item in self.id_variable_list.selectedItems()]
+        value_vars = [item.text() for item in self.value_list.selectedItems()]
+
+        overlap = set(id_vars) & set(value_vars)
+        if overlap:
+            self.preview_label.setText(f"Error: Overlap in ID and Value variables: {', '.join(overlap)}")
+            self.preview_label.setStyleSheet("color: red; font-weight: bold;")
+            self.preview_table.clear()
+            self.preview_table.setRowCount(0)
+            self.preview_table.setColumnCount(0)
+            return
+        
+        v_vars = value_vars if value_vars else None
+
+        if not v_vars:
+            num_value_vars = len(self.columns) - len(id_vars)
+        else:
+            num_value_vars = len(v_vars)
+        
+        new_rows = self.row_count * num_value_vars
+        new_cols = len(id_vars) + 2
+        try:
+            df_slice = self.df.head(15).copy()
+
+            preview_df = pd.melt(
+                df_slice,
+                id_vars=id_vars,
+                value_vars=v_vars,
+                var_name=self.variable_name_input.text() or "variable",
+                value_name=self.value_name_input.text() or "value"
+            )
+
+            self.preview_table.setRowCount(preview_df.shape[0])
+            self.preview_table.setColumnCount(preview_df.shape[1])
+            self.preview_table.setHorizontalHeaderLabels(list(preview_df.columns))
+
+            for row in range(preview_df.shape[0]):
+                for col in range(preview_df.shape[1]):
+                    val = str(preview_df.iat[row, col])
+                    self.preview_table.setItem(row, col, QTableWidgetItem(val))
+            
+            text = (
+                f"Original Shape: {self.df.shape}  ->  "
+                f"Result Shape: ({new_rows}, {new_cols})"
+            )
+            style = "color: #333; font-weight: bold; padding: 5px; background-color: #e0e0e0; border-radius: 4px;"
+            
+            if new_rows > 1_000_000 or (self.row_count > 0 and new_rows > self.row_count * 20):
+                text += f"\nWarning: Row count will increase by {num_value_vars}x!"
+                style = "color: #d32f2f; font-weight: bold; padding: 5px; background-color: #ffebee; border-radius: 4px;"
+
+            self.preview_label.setText(text)
+            self.preview_label.setStyleSheet(style)
+        
+        except Exception as PreviewMeltError:
+            self.preview_label.setText(f"Preview Error: {str(PreviewMeltError)}")
+            self.preview_label.setStyleSheet("color: red;")
+            print(PreviewMeltError)
 
     def validate_and_accept(self):
         """Validate the inputs in melt"""

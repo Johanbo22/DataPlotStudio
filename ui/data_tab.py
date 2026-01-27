@@ -2743,8 +2743,7 @@ class DataTab(QWidget):
             QMessageBox.warning(self, "No Data", "Please load data first")
             return
 
-        columns = list(self.data_handler.df.columns)
-        dialog = MeltDialog(columns, self)
+        dialog = MeltDialog(self.data_handler.df, self)
 
         if dialog.exec():
             config = dialog.get_config()
