@@ -1,11 +1,13 @@
+from tkinter import N
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget, QStyle, QTreeWidget, QTreeWidgetItem, QSplitter
+from PyQt6.QtCore import Qt, QThreadPool, QSettings
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget, QStyle, QTreeWidget, QTreeWidgetItem, QSplitter, QRadioButton, QButtonGroup, QInputDialog
 
-
+from ui.widgets.AnimatedRadioButton import DataPlotStudioRadioButton
+from ui.workers import TestConnectionWorker
 import sys
 from pathlib import Path
 import re
@@ -28,7 +30,52 @@ class DatabaseConnectionDialog(QDialog):
 
         self.details = {}
 
+        self.settings = QSettings("DataPlotStudio", "DatabaseProfiles")
+        self.threadpool = QThreadPool.globalInstance()
+
         main_layout = QVBoxLayout(self)
+
+        # Profile selection
+        profiles_group = DataPlotStudioGroupBox("Saved Connections", parent=self)
+        profiles_layout = QHBoxLayout()
+
+        profiles_layout.addWidget(QLabel("Profile:"))
+        self.profiles_combo = DataPlotStudioComboBox()
+        self.populate_profiles()
+        self.profiles_combo.currentIndexChanged.connect(self.load_profile)
+        profiles_layout.addWidget(self.profiles_combo, 1)
+
+        self.save_profile_button = DataPlotStudioButton("Save", parent=self)
+        self.save_profile_button.setToolTip("Save the current connection details")
+        self.save_profile_button.clicked.connect(self.save_profile)
+        profiles_layout.addWidget(self.save_profile_button)
+
+        self.delete_profile_button = DataPlotStudioButton("Delete", parent=self)
+        self.delete_profile_button.setToolTip("Delete selected profile")
+        self.delete_profile_button.clicked.connect(self.delete_profile)
+        profiles_layout.addWidget(self.delete_profile_button)
+
+        profiles_group.setLayout(profiles_layout)
+        main_layout.addWidget(profiles_group)
+
+        # Connection mode
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("Connection Mode:"))
+        self.mode_group = QButtonGroup(self)
+
+        self.mode_builder_radio = DataPlotStudioRadioButton("Connection Builder")
+        self.mode_builder_radio.setChecked(True)
+        self.mode_builder_radio.toggled.connect(self.toggle_connection_mode)
+        self.mode_group.addButton(self.mode_builder_radio)
+        mode_layout.addWidget(self.mode_builder_radio)
+
+        self.mode_uri_radio = DataPlotStudioRadioButton("Raw Connection URI")
+        self.mode_uri_radio.toggled.connect(self.toggle_connection_mode)
+        self.mode_group.addButton(self.mode_uri_radio)
+        mode_layout.addWidget(self.mode_uri_radio)
+
+        mode_layout.addStretch()
+        main_layout.addLayout(mode_layout)
 
         #type selection
         db_type_layout = QHBoxLayout()
@@ -38,6 +85,7 @@ class DatabaseConnectionDialog(QDialog):
         self.db_type_combo.currentTextChanged.connect(self.on_db_type_changed)
         db_type_layout.addWidget(self.db_type_combo)
         main_layout.addLayout(db_type_layout)
+        self.db_type_container = db_type_layout
 
         #connection details
         self.connection_group = DataPlotStudioGroupBox("Connection Details", parent=self)
@@ -63,6 +111,14 @@ class DatabaseConnectionDialog(QDialog):
         self.dbname_label = QLabel("Database:")
         self.dbname_input = DataPlotStudioLineEdit("postgres")
         self.connection_layout.addRow(self.dbname_label, self.dbname_input)
+
+        #raw uri
+        self.uri_label = QLabel("Connection URI:")
+        self.uri_input = DataPlotStudioLineEdit()
+        self.uri_input.setPlaceholderText("dialect+driver://username:password@host:port/database")
+        self.uri_input.setVisible(False)
+        self.uri_label.setVisible(False)
+        self.connection_layout.addRow(self.uri_label, self.uri_input)
 
         # SQLITE and duckDB specific
         self.file_db_layout = QHBoxLayout()
@@ -175,22 +231,37 @@ class DatabaseConnectionDialog(QDialog):
         """Tests the database connection before loading the schema"""
         try:
             self.setCursor(Qt.CursorShape.WaitCursor)
+            self.test_connection_button.setEnabled(False)
+            self.test_connection_button.setText("Testing...")
+            self.db_icon_label.setText("⌛") # TODO: Add a better icon. using this as placeholder
+
             connection_string = self._build_connection_string()
 
-            # Create an sql engine and attempt a query
-            engine = create_engine(connection_string)
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            QMessageBox.information(self, "Success", "Connection established")
+            worker = TestConnectionWorker(connection_string)
+            worker.signals.finished.connect(self.on_test_connection_success)
+            worker.signals.error.connect(self.on_test_connection_error)
+
+            self.threadpool.start(worker)
         
         except ValueError as InputError:
             self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.test_connection_button.setEnabled(True)
+            self.test_connection_button.setText("Test Connection")
+            self.db_icon_label.clear()
             QMessageBox.warning(self, "Input Error", str(InputError))
-        except Exception as ConnectionError:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            QMessageBox.critical(self, "Connection Failed", f"Could not connect to database:\n{str(ConnectionError)}")
+
+    def on_test_connection_success(self):
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.test_connection_button.setEnabled(True)
+        self.test_connection_button.setText("Test Connection")
+        self.db_icon_label.setToolTip("Connected")
+        QMessageBox.information(self, "Success", "Connection established")
+    
+    def on_test_connection_error(self, error):
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.test_connection_button.setEnabled(True)
+        self.test_connection_button.setText("Test Connection")
+        QMessageBox.critical(self, "Connection Failed", f"Could not connect to the database:\n{str(error)}")
 
     def fetch_schema(self) -> None:
         """Connects to the DB using the provided details and populates the schema tree with the tables and columns found in the db"""
@@ -256,6 +327,13 @@ class DatabaseConnectionDialog(QDialog):
 
     def _build_connection_string(self) -> str:
         """Constructs the connection string from inputs"""
+        # URI mode
+        if self.mode_uri_radio.isChecked():
+            uri = self.uri_input.text().strip()
+            if not uri:
+                raise ValueError("Please provide a valid Connection URI")
+            return uri
+
         db_type = self.db_type_combo.currentText()
 
         connection_string = ""
@@ -351,6 +429,9 @@ class DatabaseConnectionDialog(QDialog):
 
     def on_db_type_changed(self, db_type) -> None:
         """Show or hide fields based on db type"""
+        if self.mode_uri_radio.isChecked():
+            return
+
         is_file_db = (db_type in ["SQLite", "DuckDB"])
 
         #toggle server fields
@@ -457,3 +538,129 @@ class DatabaseConnectionDialog(QDialog):
     def get_details(self):
         """Returns the connection string and query"""
         return self.details.get("db_type"), self.details.get("connection_string"), self.details.get("query")
+    
+    def toggle_connection_mode(self):
+        """Switches the UI states"""
+        is_uri_mode = self.mode_uri_radio.isChecked()
+
+        self.uri_label.setVisible(is_uri_mode)
+        self.uri_input.setVisible(is_uri_mode)
+
+        builder_visible = not is_uri_mode
+
+        self.db_type_combo.setVisible(builder_visible)
+
+        if is_uri_mode:
+            self.host_label.setVisible(False)
+            self.host_input.setVisible(False)
+            self.port_label.setVisible(False)
+            self.port_input.setVisible(False)
+            self.user_label.setVisible(False)
+            self.user_input.setVisible(False)
+            self.password_label.setVisible(False)
+            self.password_input.setVisible(False)
+            self.dbname_label.setVisible(False)
+            self.dbname_input.setVisible(False)
+            self.file_db_label.setVisible(False)
+            self.file_db_widget.setVisible(False)
+        else:
+            self.on_db_type_changed(self.db_type_combo.currentText())
+    
+    def populate_profiles(self):
+        self.profiles_combo.blockSignals(True)
+        self.profiles_combo.clear()
+        self.profiles_combo.addItem("Select a profile...", None)
+
+        self.settings.beginGroup("DatabaseProfiles")
+        profiles = self.settings.childGroups()
+        self.settings.endGroup()
+
+        for profile in profiles:
+            self.profiles_combo.addItem(profile, profile)
+        self.profiles_combo.blockSignals(False)
+    
+    def save_profile(self):
+        name, ok = QInputDialog.getText(self, "Save Profile", "Enter profile name")
+        if ok and name:
+            if not name.strip():
+                QMessageBox.warning(self, "Error", "Profile name cannot be empty")
+                return
+            
+            is_uri = self.mode_uri_radio.isChecked()
+            data = {
+                "mode": "uri" if is_uri else "builder",
+                "uri": self.uri_input.text(),
+                "db_type": self.db_type_combo.currentText(),
+                "host": self.host_input.text(),
+                "port": self.port_input.text(),
+                "user": self.user_input.text(),
+                "password": self.password_input.text(),
+                "dbname": self.dbname_input.text(),
+                "file_path": self.file_db_path_input.text()
+            }
+
+            self.settings.beginGroup("DatabaseProfiles")
+            self.settings.beginGroup(name)
+            for key, val in data.items():
+                self.settings.setValue(key, val)
+            self.settings.endGroup()
+            self.settings.endGroup()
+
+            self.populate_profiles()
+            index = self.profiles_combo.findText(name)
+            if index >= 0:
+                self.profiles_combo.setCurrentIndex(index)
+            
+            QMessageBox.information(self, "Saved", f"Profile '{name}' saved")
+    
+    def load_profile(self):
+        """Load the selected profile"""
+        name = self.profiles_combo.currentData()
+        if not name:
+            return
+        
+        self.settings.beginGroup("DatabaseProfiles")
+        self.settings.beginGroup(name)
+
+        mode = self.settings.value("mode", "builder")
+
+        if mode == "uri":
+            self.mode_uri_radio.setChecked(True)
+            self.uri_input.setText(self.settings.value("uri", ""))
+        else:
+            self.mode_builder_radio.setChecked(True)
+            db_type = self.settings.value("db_type", "SQLite")
+            index = self.db_type_combo.findText(db_type)
+            if index >= 0:
+                self.db_type_combo.setCurrentIndex(index)
+            
+            self.host_input.setText(self.settings.value("host", ""))
+            self.port_input.setText(self.settings.value("port", ""))
+            self.user_input.setText(self.settings.value("user", ""))
+            self.password_input.setText(self.settings.value("password", ""))
+            self.dbname_input.setText(self.settings.value("dbname", ""))
+            self.file_db_path_input.setText(self.settings.value("file_path", ""))
+
+            self.on_db_type_changed(db_type)
+        
+        self.settings.endGroup()
+        self.settings.endGroup()
+    
+    def delete_profile(self):
+        """Delete current profile"""
+        name = self.profiles_combo.currentData()
+        if not name:
+            return
+        
+        confirm = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete profile '{name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+        
+        if confirm == QMessageBox.StandardButton.Yes:
+            self.settings.beginGroup("DatabaseProfiles")
+            self.settings.remove(name)
+            self.settings.endGroup()
+            self.populate_profiles()

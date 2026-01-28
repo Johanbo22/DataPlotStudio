@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
 from core.data_handler import DataHandler
+from sqlalchemy import create_engine, text
 
 
 class WorkerSignals(QObject):
@@ -72,3 +73,24 @@ class GoogleSheetsImportWorker(QRunnable):
             self.signals.finished.emit(self.data_handler.df)
         except Exception as RunError:
             self.signals.error.emit(RunError)
+
+class TestConnectionWorker(QRunnable):
+    """Worker to test database connections"""
+
+    def __init__(self, connection_string: str):
+        super().__init__()
+        self.connection_string = connection_string
+        self.signals = WorkerSignals()
+    
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Connecting...")
+            engine = create_engine(self.connection_string)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+            self.signals.progress.emit(100, "Connection Successful")
+            self.signals.finished.emit(True)
+        except Exception as ConnectionError:
+            self.signals.error.emit(ConnectionError)
