@@ -9,7 +9,7 @@ class DataPlotStudioRadioButton(QRadioButton):
         super().__init__(*args, **kwargs)
 
         self._base_border_color = QColor("#777")
-        self._hover_border_color = QColor("#0078d7") # Blue from css
+        self._hover_border_color = QColor("#0078d7")
         self._focus_border_color = QColor("#0078d7")
 
         self._animated_color = self._base_border_color
@@ -31,10 +31,17 @@ class DataPlotStudioRadioButton(QRadioButton):
         self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        # This style is based on your style.css
 
         # Use animated color for unchecked, focus color for checked
         border_color_name = self._focus_border_color.name() if self.isChecked() else color.name()
+
+        dot_color = self._focus_border_color.name()
+        bg_color = "#fcfcfc"
+        checked_background = (
+            f"qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, "
+            f"stop:0 {dot_color}, stop:0.6 {dot_color}, "
+            f"stop:0.7 {bg_color}, stop:1 {bg_color})"
+        )
 
         self.setStyleSheet(f"""
             QRadioButton {{
@@ -46,22 +53,14 @@ class DataPlotStudioRadioButton(QRadioButton):
                 width: 13px;
                 height: 13px;
                 border: 1.5px solid {border_color_name};
-                border-radius: 7px; /* Makes it a circle */
-                background-color: #fcfcfc;
+                border-radius: 7px; 
+                background-color: {bg_color};
             }}
             QRadioButton::indicator:checked {{
-                background-color: #fcfcfc;
+                background-color: {checked_background};
                 border: 1.5px solid {self._focus_border_color.name()};
             }}
-            QRadioButton::indicator:checked::after {{
-                content: '';
-                display: block;
-                width: 9px;
-                height: 9px;
-                border-radius: 4.5px;
-                background-color: {self._focus_border_color.name()};
-                margin: 2px; /* Centers the dot */
-            }}
+            
             QRadioButton::indicator:disabled {{
                 background-color: #e0e0e0;
                 border: 1px solid #b0b0b0;
