@@ -1,6 +1,7 @@
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 import re
 
+from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
 
@@ -35,11 +36,15 @@ class GoogleSheetsDialog(QDialog):
 
         # Sheet ID input
         sheet_id_label = QLabel("Google Sheet Link or Sheet ID:")
-        self.sheet_id = DataPlotStudioLineEdit()
+        self.sheet_id = DataPlotStudioComboBox()
+        self.sheet_id.setEditable(True)
         self.sheet_id.setToolTip("Paste the full Google Sheets URL or the unique Sheet ID")
-        self.sheet_id.setPlaceholderText("Paste URL (e.g., https://docs.google.com/.../edit#gid=0) or ID")
+        self.sheet_id.lineEdit().setPlaceholderText("Paste URL (e.g., https://docs.google.com/.../edit#gid=0) or ID")
         self.sheet_id.setMinimumWidth(350)
-        self.sheet_id.textChanged.connect(self.parse_input)
+        self.sheet_id.editTextChanged.connect(self.parse_input)
+
+        
+
         form_layout.addRow(sheet_id_label, self.sheet_id)
 
         # Sheet Name input
@@ -156,6 +161,8 @@ class GoogleSheetsDialog(QDialog):
 
         self.setLayout(layout)
 
+        self.load_history()
+
     def on_delimiter_changed(self, text) -> None:
         """Handle delimiter selection change"""
         self.custom_delimiter_input.setEnabled(text == "Custom")
@@ -167,9 +174,9 @@ class GoogleSheetsDialog(QDialog):
 
         if id_match:
             extracted_id = id_match.group(1)
-            if self.sheet_id.text() != extracted_id:
+            if self.sheet_id.currentText() != extracted_id:
                 self.sheet_id.blockSignals(True)
-                self.sheet_id.setText(extracted_id)
+                self.sheet_id.setCurrentText(extracted_id)
                 self.sheet_id.blockSignals(False)
             
             # Look for a GID
@@ -192,7 +199,7 @@ class GoogleSheetsDialog(QDialog):
 
     def validate_and_accept(self) -> None:
         """Validate inputs before accepting"""
-        if not self.sheet_id.text().strip():
+        if not self.sheet_id.currentText().strip():
             QMessageBox.warning(self, "Validation Error", "Please enter a Sheet ID")
             return
 
@@ -205,12 +212,13 @@ class GoogleSheetsDialog(QDialog):
             if not self.custom_delimiter_input.text().strip():
                 QMessageBox.warning(self, "Validation Error", "Please enter delimiter")
                 return
-
+        
+        self.save_history()
         self.accept()
 
     def get_inputs(self) -> tuple:
         """Return the sheet ID and name and delimiter settings"""
-        sheet_id = self.sheet_id.text().strip()
+        sheet_id = self.sheet_id.currentText().strip()
         sheet_name = self.sheet_name.text().strip()
 
         #delimiter
@@ -248,3 +256,33 @@ class GoogleSheetsDialog(QDialog):
             thousands = None
 
         return sheet_id, sheet_name, delimiter, decimal, thousands, self.gid
+
+    def load_history(self) -> None:
+        """Load sheet ID history from settings"""
+        settings = QSettings("DataPlotStudio", "GoogleSheetsImport")
+        history = settings.value("history", [], type=list)
+
+        history = [str(item) for item in history if isinstance(item, (str, int))]
+
+        self.sheet_id.clear()
+        self.sheet_id.addItems(history)
+        self.sheet_id.setCurrentIndex(-1)
+    
+    def save_history(self) -> None:
+        """Save the current sheet id to history"""
+        current_id = self.sheet_id.currentText().strip()
+        if not current_id:
+            return
+        
+        settings = QSettings("DataPlotStudio", "GoogleSheetsImport")
+        history = settings.value("history", [], type=list)
+
+        history = [str(item) for item in history if isinstance(item, (str, int))]
+
+        if current_id in history:
+            history.remove(current_id)
+        
+        history.insert(0, current_id)
+        history = history[:10]
+
+        settings.setValue("history", history)

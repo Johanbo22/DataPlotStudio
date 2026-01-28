@@ -92,7 +92,8 @@ class DataPlotStudioComboBox(QComboBox):
                 self._animate_to(self._hover_border_color)
             else:
                 self._animate_to(self._base_border_color)
-        super().focusOutEvent(event)
+        if event is not None:
+            super().focusOutEvent(event)
 
     def showPopup(self):
         self._is_focussed = True
