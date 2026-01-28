@@ -3024,3 +3024,24 @@ class DataTab(QWidget):
                 self.data_table.resizeColumnsToContents()
 
             self.status_bar.log("Table settings updated", "SUCCESS")
+
+    def get_selection_state(self):
+        """Returns the currently selected row indicies and column names"""
+        if self.data_table is None or self.data_table.selectionModel() is None:
+            return [], []
+        
+        indexes = self.data_table.selectionModel().selectedIndexes()
+        if not indexes:
+            return [], []
+        
+        selected_rows = sorted(list(set(index.row() for index in indexes)))
+        if self.data_handler.df is not None:
+            col_indices = sorted(list(set(index.column() for index in indexes)))
+            selected_columns = []
+            for i in col_indices:
+                if i < len(self.data_handler.df.columns):
+                    selected_columns.append(self.data_handler.df.columns[i])
+        else:
+            selected_columns = []
+        
+        return selected_rows, selected_columns

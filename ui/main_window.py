@@ -507,16 +507,21 @@ class MainWindow(QWidget):
             QMessageBox.warning(self, "Warning", "No Data to export")
             return
 
-        dialog = ExportDialog(self)
+        selected_rows, selected_cols = self.data_tab.get_selection_state()
+        dialog = ExportDialog(self, data_handler=self.data_handler, selected_rows=selected_rows, selected_columns=selected_cols)
         if dialog.exec():
             config = dialog.get_export_config()
             if config["filepath"]:
                 try:
-                    self.data_handler.export_data(config["filepath"], format=config["format"], include_index=config.get("include_index", False))
-                    self.status_bar.log(f"Exported data to {config['filepath']}")
-                    self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
-                    self.export_animation.start(target_widget=self)
-                    QMessageBox.information(self, "Success", f"Data exported to {config["filepath"]}")
+                    # self.data_handler.export_data(config["filepath"], format=config["format"], include_index=config.get("include_index", False))
+                    # self.status_bar.log(f"Exported data to {config['filepath']}")
+                    # self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
+                    # self.export_animation.start(target_widget=self)
+                    # QMessageBox.information(self, "Success", f"Data exported to {config["filepath"]}")
+                    self.status_bar.log(f"Export complete to {config['filepath']}")
+                    if not config.get("to_clipboard", False):
+                        self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
+                        self.export_animation.start(target_widget=self)
                 except Exception as ExportDataError:
                     QMessageBox.critical(self, "Error", f"Failed to export data: {str(ExportDataError)}")
                     traceback.print_exc()
