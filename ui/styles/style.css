@@ -1,18 +1,22 @@
-QGroupBox { 
-    font-size: 14pt; font-weight: bold;
-}
-
-QPushButton { 
-    background-color: #ededed; 
-    color: black; 
+QGroupBox {
+    font-size: 14pt;
     font-weight: bold;
 }
+
+QPushButton {
+    background-color: #ededed;
+    color: black;
+    font-weight: bold;
+}
+
 QPushButton:hover {
     background-color: #d8d8d8;
 }
+
 QPushButton:pressed {
     background-color: #c6c6c6;
 }
+
 QPushButton:disabled {
     background-color: #f5f5f5;
     color: #a0a0a0
@@ -113,7 +117,7 @@ QToolTip {
     color: white;
     border: 1px solid black;
     padding: 2px;
-    opacity: 200; 
+    opacity: 200;
 }
 
 QLabel {
@@ -131,7 +135,8 @@ QRadioButton::indicator {
     width: 13px;
     height: 13px;
     border: 1px solid #777;
-    border-radius: 7px; /* Makes it a circle */
+    border-radius: 7px;
+    /* Makes it a circle */
     background-color: #fcfcfc;
 }
 
@@ -142,17 +147,6 @@ QRadioButton::indicator:hover {
 QRadioButton::indicator:checked {
     background-color: #fcfcfc;
     border: 1.5px solid #0078d7;
-}
-
-QRadioButton::indicator:checked::after {
-    /* This is the inner dot */
-    content: '';
-    display: block;
-    width: 9px;
-    height: 9px;
-    border-radius: 4.5px;
-    background-color: #0078d7;
-    margin: 2px; /* Centers the dot */
 }
 
 QRadioButton::indicator:disabled {
@@ -167,8 +161,9 @@ QRadioButton:disabled {
 
 QWidget#ScrollContent {
     background-color: white;
-    border: none; 
+    border: none;
 }
+
 QScrollArea {
     border: none;
 }
@@ -178,7 +173,8 @@ QScrollBar:vertical {
     border: 1px solid #c2c2c2;
     background: #f0f0f0;
     width: 15px;
-    margin: 15px 0 15px 0; /* Top/bottom buttons */
+    margin: 15px 0 15px 0;
+    /* Top/bottom buttons */
 }
 
 QScrollBar::handle:vertical {
@@ -195,7 +191,8 @@ QScrollBar:horizontal {
     border: 1px solid #c2c2c2;
     background: #f0f0f0;
     height: 15px;
-    margin: 0 15px 0 15px; /* Left/right buttons */
+    margin: 0 15px 0 15px;
+    /* Left/right buttons */
 }
 
 QScrollBar::handle:horizontal {
@@ -209,7 +206,8 @@ QScrollBar::handle:horizontal:hover {
 }
 
 /* Scroll bar buttons (arrows) */
-QScrollBar::add-line, QScrollBar::sub-line {
+QScrollBar::add-line,
+QScrollBar::sub-line {
     border: 1px solid #c2c2c2;
     background: #e0e0e0;
     height: 14px;
