@@ -3511,7 +3511,7 @@ class PlotTab(PlotTabUI):
 
         #open dialog
         if self.script_editor is None:
-            self.script_editor = ScriptEditorDialog(code, parent=self)
+            self.script_editor = ScriptEditorDialog(code, df=df, parent=self)
             self.script_editor.run_script_signal.connect(self.run_custom_script)
         
         if not self.script_editor.isVisible():
