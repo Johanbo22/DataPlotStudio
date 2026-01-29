@@ -107,6 +107,9 @@ class DataTab(QWidget):
         self.subset_view_label = None
         self.aggregation_view_label = None
         self.is_editing = False
+        
+        self.current_precision = 2
+        self.current_formatting_rules = []
 
         self.init_ui()
 
@@ -1225,7 +1228,7 @@ class DataTab(QWidget):
 
         # Update table
         if reload_model:
-            self.model = DataTableModel(self.data_handler, editable=self.is_editing)
+            self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
             self.data_table.setSortingEnabled(False)
             self.data_table.setModel(self.model)
 
@@ -2994,11 +2997,16 @@ class DataTab(QWidget):
             "font_size": current_font_size,
             "word_wrap": self.data_table.wordWrap(),
             "selection_behavio": self.data_table.selectionBehavior(),
+            "float_precision": self.current_precision,
+            "conditional_rules": self.current_formatting_rules
         }
 
         dialog = TableCustomizationDialog(current_settings, self)
         if dialog.exec():
             settings = dialog.get_settings()
+            
+            self.current_precision = settings.get("float_precision", 2)
+            self.current_formatting_rules = settings.get("conditional_rules", [])
 
             self.data_table.setAlternatingRowColors(settings["alternating_rows"])
             if settings["alternating_rows"]:
@@ -3022,6 +3030,10 @@ class DataTab(QWidget):
             self.data_table.resizeRowsToContents()
             if settings["word_wrap"]:
                 self.data_table.resizeColumnsToContents()
+            
+            if self.data_table.model() and isinstance(self.data_table.model(), DataTableModel):
+                self.data_table.model().set_float_precision(self.current_precision)
+                self.data_table.model().set_conditional_rules(self.current_formatting_rules)
 
             self.status_bar.log("Table settings updated", "SUCCESS")
 

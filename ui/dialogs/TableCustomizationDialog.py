@@ -1,10 +1,13 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QWidget, QFontComboBox, QAbstractItemView, QColorDialog
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QWidget, QFontComboBox, QAbstractItemView, QColorDialog, QListWidget, QListWidgetItem
 from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
+from ui.widgets.AnimatedDoubleSpinBox import DataPlotStudioDoubleSpinBox
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
 
@@ -12,7 +15,7 @@ class TableCustomizationDialog(QDialog):
     def __init__(self, current_settings: dict, parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle("Customize data table")
-        self.resize(400, 350)
+        self.resize(600, 500)
         self.settings = current_settings or {}
         self.init_ui()
 
@@ -22,6 +25,7 @@ class TableCustomizationDialog(QDialog):
         self.tabs = DataPlotStudioTabWidget()
         self.tabs.addTab(self.create_appearance_tab(), "Appearance")
         self.tabs.addTab(self.create_font_tab(), "Font and Text")
+        self.tabs.addTab(self.create_formatting_tab(), "Formatting")
         self.tabs.addTab(self.create_behavior_tab(), "Behavior")
 
         main_layout.addWidget(self.tabs)
@@ -129,6 +133,82 @@ class TableCustomizationDialog(QDialog):
         layout.addStretch()
         return widget
     
+    def create_formatting_tab(self) -> QWidget:
+        """Creates the tab with numerical and conditional formatting options"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Floating point precision options
+        precision_group = DataPlotStudioGroupBox("Floating Point Precision")
+        precision_layout = QVBoxLayout()
+        
+        hbox_prec = QHBoxLayout()
+        hbox_prec.addWidget(QLabel("Float Decimal Places:"))
+        self.precision_spin = DataPlotStudioSpinBox()
+        self.precision_spin.setRange(0, 10)
+        self.precision_spin.setValue(self.settings.get("float_precision", 2))
+        self.precision_spin.setToolTip("Set the number of decimal places to display for floating point numbers.")
+        hbox_prec.addWidget(self.precision_spin)
+        hbox_prec.addStretch()
+        
+        precision_layout.addLayout(hbox_prec)
+        precision_group.setLayout(precision_layout)
+        layout.addWidget(precision_group)
+        
+        # Conditional formatting options
+        conditional_group = DataPlotStudioGroupBox("Conditional Formatting")
+        conditional_layout = QVBoxLayout()
+        
+        # Rule list
+        self.rule_list = DataPlotStudioListWidget()
+        self.rule_list.setToolTip("List of active conditional formatting rules.")
+        self.rule_list.setMaximumHeight(120)
+        
+        current_rules = self.settings.get("conditional_rules", [])
+        for rule in current_rules:
+            self._add_rule_item(rule)
+        
+        conditional_layout.addWidget(self.rule_list)
+        
+        # Rule controls
+        add_rule_layout = QHBoxLayout()
+        add_rule_layout.addWidget(QLabel("If value"))
+        self.rule_operation_combo = DataPlotStudioComboBox()
+        self.rule_operation_combo.addItems(["<", ">", "=", "<=", ">="])
+        self.rule_operation_combo.setFixedWidth(60)
+        add_rule_layout.addWidget(self.rule_operation_combo)
+        
+        self.rule_value_spin = DataPlotStudioDoubleSpinBox()
+        self.rule_value_spin.setRange(-9999999.0, 9999999.0)
+        self.rule_value_spin.setDecimals(2)
+        self.rule_value_spin.setFixedWidth(100)
+        add_rule_layout.addWidget(self.rule_value_spin)
+        
+        self.rule_color_button = DataPlotStudioButton("Color")
+        self.rule_color_button.setFixedWidth(60)
+        self.rule_color_code = "#FF0000"
+        self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: white;")
+        self.rule_color_button.clicked.connect(self.choose_rule_color)
+        add_rule_layout.addWidget(self.rule_color_button)
+        
+        add_rule_button = DataPlotStudioButton("Add Rule")
+        add_rule_button.setToolTip("Add this conditional formatting fule.")
+        add_rule_button.clicked.connect(self.add_rule)
+        add_rule_layout.addWidget(add_rule_button)
+        
+        conditional_layout.addLayout(add_rule_layout)
+        
+        # Remove rules button
+        remove_rule_button = DataPlotStudioButton("Remove Selected Rule")
+        remove_rule_button.clicked.connect(self.remove_rule)
+        conditional_layout.addWidget(remove_rule_button)
+        
+        conditional_group.setLayout(conditional_layout)
+        layout.addWidget(conditional_group)
+        
+        layout.addStretch()
+        return widget
+    
     def create_behavior_tab(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -159,6 +239,35 @@ class TableCustomizationDialog(QDialog):
         layout.addStretch()
         return widget
     
+    def choose_rule_color(self):
+        """Opens the color dialog for the rules"""
+        color = QColorDialog.getColor(QColor(self.rule_color_code), self, "Select Rule Color")
+        if color.isValid():
+            self.rule_color_code = color.name()
+            self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: white;")
+    
+    def add_rule(self):
+        """Adds new rule to the list"""
+        rule = {
+            "operator": self.rule_operation_combo.currentText(),
+            "value": self.rule_value_spin.value(),
+            "color": self.rule_color_code
+        }
+        self._add_rule_item(rule)
+    
+    def _add_rule_item(self, rule: dict):
+        """Creates a list widget item from the dictionary of added rules"""
+        text = f"Value {rule["operator"]} {rule["value"]} -> Text Color: {rule["color"]}"
+        item = QListWidgetItem(text)
+        item.setData(Qt.ItemDataRole.UserRole, rule)
+        self.rule_list.addItem(item)
+    
+    def remove_rule(self):
+        """Removes the selected rule from the list"""
+        row = self.rule_list.currentRow()
+        if row >= 0:
+            self.rule_list.takeItem(row)
+    
     def toggle_alt_color_button(self, checked: bool):
         self.alt_color_button.setEnabled(checked)
 
@@ -177,6 +286,14 @@ class TableCustomizationDialog(QDialog):
         else:
             selection_behavior = QAbstractItemView.SelectionBehavior.SelectItems
         
+        # Retrieve rules
+        conditional_rules = []
+        for i in range(self.rule_list.count()):
+            item = self.rule_list.item(i)
+            rule_data = item.data(Qt.ItemDataRole.UserRole)
+            if rule_data:
+                conditional_rules.append(rule_data)
+                
         return {
             "alternating_rows": self.alternating_check.isChecked(),
             "alt_color": self.current_alt_color,
@@ -186,5 +303,7 @@ class TableCustomizationDialog(QDialog):
             "font_family": self.font_combo.currentFont().family(),
             "font_size": self.font_size_spin.value(),
             "word_wrap": self.word_wrap_check.isChecked(),
-            "selection_behavior": selection_behavior
+            "selection_behavior": selection_behavior,
+            "float_precision": self.precision_spin.value(),
+            "conditional_rules": conditional_rules
         }
