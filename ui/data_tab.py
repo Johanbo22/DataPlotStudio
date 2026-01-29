@@ -2353,99 +2353,22 @@ class DataTab(QWidget):
         if self.data_handler.df is None:
             QMessageBox.warning(self, "Warning", "No data loaded")
             return
-
-        columns = list(self.data_handler.df.columns)
-        dialog = FilterAdvancedDialog(columns, self)
+        
+        dialog = FilterAdvancedDialog(self.data_handler, self)
         if dialog.exec():
-            filter_config = dialog.get_filters()
-            filters = filter_config["filters"]
-            logic = filter_config["logic"]
-
+            result = dialog.get_filters()
+            filters = result.get("filters", [])
+            
+            if not filters:
+                return
+            
             try:
-                before = len(self.data_handler.df)
-                df = self.data_handler.df
-
-                if logic == "AND":
-                    for f in filters:
-                        # Convert value if needed
-                        value = f["value"]
-                        try:
-                            if "." in str(value):
-                                value = float(value)
-                            else:
-                                value = int(value)
-                        except (ValueError, TypeError):
-                            pass
-
-                        self.data_handler.filter_data(
-                            f["column"], f["condition"], value
-                        )
-                else:
-                    import pandas as pd
-
-                    mask = pd.Series([False] * len(df))
-
-                    for f in filters:
-                        column = f["column"]
-                        condition = f["condition"]
-                        value = f["value"]
-
-                        try:
-                            if column in df.columns:
-                                col_dtype = df[column].dtype
-                                if col_dtype in ["int64", "int32", "int16", "int8"]:
-                                    value = int(value)
-                                elif col_dtype in ["float64", "float32", "float16"]:
-                                    value = float(value)
-                        except (ValueError, TypeError):
-                            pass
-
-                        try:
-                            if condition == ">":
-                                mask = mask | (df[column] > value)
-                            elif condition == "<":
-                                mask = mask | (df[column] < value)
-                            elif condition == "==":
-                                mask = mask | (df[column] == value)
-                            elif condition == "!=":
-                                mask = mask | (df[column] != value)
-                            elif condition == ">=":
-                                mask = mask | (df[column] >= value)
-                            elif condition == "<=":
-                                mask = mask | (df[column] <= value)
-                            elif condition == "contains":
-                                mask = mask | df[column].astype(str).str.contains(
-                                    str(value), na=False
-                                )
-                            elif condition == "in":
-                                mask = mask | df[column].isin([value])
-                        except Exception as FilterError:
-                            QMessageBox.warning(
-                                self,
-                                "Warning",
-                                f"Error with filter {column} {condition} {value}: {str(FilterError)}",
-                            )
-                            continue
-
-                    self.data_handler.df = df[mask]
-
-                after = len(self.data_handler.df)
-                removed = before - after
-
+                self.data_handler.filter_data(advanced_filters=filters)
+                
                 self.refresh_data_view()
-                filter_desc = f" {logic} ".join(
-                    [f"{f['column']} {f['condition']} '{f['value']}'" for f in filters]
-                )
-                self.status_bar.log(
-                    f"Advanced filters ({logic}): {filter_desc} | Rows: {before:,} → {after:,} (-{removed:,})",
-                    "SUCCESS",
-                )
-
-                self.filter_animation = DataFilterAnimation(message="Filter Data")
-                self.filter_animation.start(target_widget=self)
+                self.status_bar.log(f"Filters applied to data: {filters}")
             except Exception as FilterError:
-                QMessageBox.critical(self, "Error", str(FilterError))
-                self.status_bar.log(f"Filter failed: {str(FilterError)}", "ERROR")
+                QMessageBox.critical(self, "Filter Error", f"Error applying filter:\n{str(FilterError)}")
 
     def open_aggregation_dialog(self):
         """Open aggregation dialog"""

@@ -482,20 +482,69 @@ class DataHandler:
         }
         return info
 
-    def filter_data(self, column: str, condition: str, value: Any) -> pd.DataFrame:
-        """Filter data based on conditions (>, <, ==, !=, etc.)"""
+    def filter_data(self, column: str = None, condition: str = None, value: Any = None, advanced_filters: List[Dict] = None) -> pd.DataFrame:
+        """Filter data based on conditions. Both single column filter and multi-conditional filters
+        
+        Args:
+            column (str, optional): The column to filter
+            condition (str, optional): the condition operator
+            value (Any, optional): the value to compare against
+            advanced_filters (List[Dict], optional): List of filter dicts for multi-conditional queries
+        """
         if self.df is None:
             raise ValueError("No data loaded")
-
+        
         if not isinstance(self.df, pd.DataFrame):
             raise TypeError(f"self.df is {type(self.df)}, expected pandas DataFrame")
-
+        
         try:
-            # Ensure column exists
+            self._save_state()
+            
+            if advanced_filters:
+                query_parts = []
+                for item in advanced_filters:
+                    logic = item.get("operator", "")
+                    col = item["column"]
+                    cond = item["condition"]
+                    val = item["value"]
+                    
+                    if col not in self.df.columns:
+                        raise KeyError(f"Column '{col}' not found in DataFrame")
+                    
+                    if cond == "Is Null":
+                        clause = f"`{col}`.isna()"
+                    elif cond == "Is Not Null":
+                        clause = f"`{col}`.notna()"
+                    else:
+                        if isinstance(val, str):
+                            val_str = val.replace("'", "\\'")
+                            clause = f"`{col}` {cond} '{val_str}'"
+                        else:
+                            clause = f"`{col}` {cond} {val}"
+                    
+                    if logic:
+                        query_parts.append(f" {logic.lower()} ")
+                    
+                    query_parts.append(clause)
+                
+                full_query = "".join(query_parts)
+                
+                if full_query:
+                    self.df = self.df.query(full_query, engine="python")
+                
+                self.operation_log.append({
+                    "type": "filter_multiple",
+                    "filters": advanced_filters,
+                    "query": full_query
+                })
+                return self.df
+            
+            if not column and not condition:
+                return self.df
+            
             if column not in self.df.columns:
                 raise KeyError(f"Column '{column}' not found in DataFrame")
-
-            # Match value type to column dtype
+            
             col_dtype = self.df[column].dtype
             try:
                 if pd.api.types.is_integer_dtype(col_dtype):
@@ -506,7 +555,7 @@ class DataHandler:
                     value = str(value)
             except (ValueError, TypeError):
                 pass
-
+            
             # Apply filtering
             if condition == ">":
                 self.df = self.df[self.df[column] > value]
@@ -530,18 +579,16 @@ class DataHandler:
                 self.df = self.df[self.df[column].isin(value)]
             else:
                 raise ValueError(f"Unknown filter condition: {condition}")
-
-            self.operation_log.append(
-                {
+            
+            self.operation_log.append({
                     "type": "filter",
                     "column": column,
                     "condition": condition,
                     "value": value,
-                }
-            )
-
+                })
+            
             return self.df
-
+        
         except Exception as FilterDataError:
             raise Exception(f"Error filtering data: {str(FilterDataError)}")
 
