@@ -2,9 +2,10 @@ from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from ui.dialogs import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
 
-
+import sys
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
+from PyQt6.QtGui import QTextCursor, QColor
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QPlainTextEdit
 
 
 from datetime import datetime
@@ -12,6 +13,37 @@ from datetime import datetime
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 from ui.animations.PlotGeneratedAnimation import PlotGeneratedAnimation
+
+class StreamRedirector:
+    """Redirects stdout/stderr to a plain text widget from the code editor"""
+    def __init__(self, widget: QPlainTextEdit, original_stream, color: str = None):
+        self.widget = widget
+        self.original_stream = original_stream
+        self.color = color
+    
+    def write(self, text: str):
+        if self.original_stream:
+            self.original_stream.write(text)
+        
+        cursor = self.widget.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        
+        if self.color:
+            fmt = cursor.charFormat()
+            original_format = cursor.charFormat()
+            fmt.setForeground(QColor(self.color))
+            cursor.setCharFormat(fmt)
+            cursor.insertText(text)
+            cursor.setCharFormat(original_format)
+        else:
+            cursor.insertText(text)
+        
+        self.widget.setTextCursor(cursor)
+        self.widget.ensureCursorVisible()
+    
+    def flush(self):
+        if self.original_stream:
+            self.original_stream.flush()
 
 
 class ScriptEditorDialog(QDialog):
@@ -29,6 +61,20 @@ class ScriptEditorDialog(QDialog):
         self.run_counter = 0
 
         self.init_ui(initial_code)
+        
+        self.original_stdout = sys.stdout
+        self.original_stderr = sys.stderr
+        
+        self.stdout_redirector = StreamRedirector(self.console_output, self.original_stdout, color="#f8f8f2")
+        self.stderr_redirector = StreamRedirector(self.console_output, self.original_stderr, color="#ff5555")
+        
+        sys.stdout = self.stdout_redirector
+        sys.stderr = self.stderr_redirector
+        
+    def close_event(self, event):
+        sys.stdout = self.original_stdout
+        sys.stderr = self.original_stderr
+        super().closeEvent(event)
 
     def init_ui(self, code):
         layout = QVBoxLayout()
@@ -79,9 +125,27 @@ class ScriptEditorDialog(QDialog):
         """)
         self.editor.textChanged.connect(self.on_text_changed)
 
-        #add python syntax highlighnign
+        # add python syntax highlighnign
         self.highlighter = PythonHighlighter(self.editor.document())
-        layout.addWidget(self.editor, 1)
+        layout.addWidget(self.editor, 3)
+        
+        # console pane
+        layout.addWidget(QLabel("Console Output:"))
+        self.console_output = QPlainTextEdit()
+        self.console_output.setReadOnly(True)
+        self.console_output.setMinimumHeight(100)
+        self.console_output.setMaximumHeight(200)
+        self.console_output.setStyleSheet("""
+            QPlainTextEdit {
+                background-color: #1e1e1e; 
+                color: #f8f8f2; 
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 5px;
+                font-family: Consolas, Monaco, monospace;
+            }
+        """)
+        layout.addWidget(self.console_output, 1)
 
         #buttons
         button_layout = QHBoxLayout()
