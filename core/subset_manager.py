@@ -144,6 +144,22 @@ class SubsetManager:
         if not filters:
             return df.copy()
         
+        if logic == "COMPLEX":
+            if not filters:
+                return df
+            
+            current_mask = self._get_filter_mask(df, filters[0])
+            for i in range(1, len(filters)):
+                filter = filters[i]
+                next_mask = self._get_filter_mask(df, filter)
+                operator = filter.get("operator", "AND")
+                
+                if operator == "AND":
+                    current_mask = current_mask & next_mask
+                elif operator == "OR":
+                    current_mask = current_mask | next_mask
+            return df[current_mask]
+        
         if logic == "AND":
             # apply filters in sequence
             result = df.copy()
@@ -158,44 +174,45 @@ class SubsetManager:
                 mask = mask | df.index.isin(filtered.index)
             return df[mask]
     
-    def _apply_single_filter(self, df: pd.DataFrame, filter_def: Dict[str, Any]) -> pd.DataFrame:
-        """Apply a singulear filter to df"""
+    def _get_filter_mask(self, df: pd.DataFrame, filter_def: Dict[str, Any]) -> pd.Series:
+        """Setup a boolean mask for a single filter"""
         column = filter_def["column"]
         condition = filter_def["condition"]
         value = filter_def["value"]
-
-        # type conversion
-        if column in df.columns:
+        
+        if column not in df.columns:
+            return pd.Series([False] * len(df), index=df.index)
+        
+        if condition == "Is Null":
+            return df[column].isna()
+        if condition == "Is Not Null":
+            return df[column].notna()
+        
+        if value is not None:
             col_dtype = df[column].dtype
             try:
                 if pd.api.types.is_integer_dtype(col_dtype):
                     value = int(value)
                 elif pd.api.types.is_float_dtype(col_dtype):
                     value = float(value)
-            except (ValueError, TypeError):
+            except:
                 pass
         
-        # apply cons
-        if condition == ">":
-            return df[df[column] > value]
-        elif condition == "<":
-            return df[df[column] < value]
-        elif condition == "==":
-            return df[df[column] == value]
-        elif condition == "!=":
-            return df[df[column] != value]
-        elif condition == ">=":
-            return df[df[column] >= value]
-        elif condition == "<=":
-            return df[df[column] <= value]
-        elif condition == "contains":
-            return df[df[column].astype(str).str.contains(str(value), na=False)]
-        elif condition == "in":
-            if not isinstance(value, (list, tuple, set)):
-                value = [value]
-            return df[df[column].isin(value)]
-        else:
-            raise ValueError(f"Unknown condition: {condition}")
+        if condition == ">": return df[column] > value
+        elif condition == "<": return df[column] < value
+        elif condition == "==": return df[column] == value
+        elif condition == "!=": return df[column] != value
+        elif condition == ">=": return df[column] >= value
+        elif condition == "<=": return df[column] <= value
+        elif condition == "contains": return df[column].astype(str).str.contains(str(value), na=False)
+        elif condition == "in": return df[column].isin(value if isinstance(value, list) else [value])
+        
+        return pd.Series([False] * len(df), index=df.index)
+    
+    def _apply_single_filter(self, df: pd.DataFrame, filter_def: Dict[str, Any]) -> pd.DataFrame:
+        """Apply a singulear filter to df"""
+        mask = self._get_filter_mask(df, filter_def)
+        return df[mask]
     
     def clear_cache(self, name: Optional[str] = None) -> None:
         """Clear cached subset data"""

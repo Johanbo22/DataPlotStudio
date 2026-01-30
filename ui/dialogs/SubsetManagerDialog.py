@@ -289,7 +289,7 @@ class SubsetManagerDialog(QDialog):
             return
 
         dialog = CreateSubsetDialog(
-            self.data_handler.df.columns.tolist(),
+            self.data_handler,
             self
         )
 
@@ -396,7 +396,7 @@ class SubsetManagerDialog(QDialog):
         subset = self.subset_manager.get_subset(name)
 
         dialog = CreateSubsetDialog(
-            self.data_handler.df.columns.tolist(),
+            self.data_handler,
             self,
             existing_subset=subset
         )
