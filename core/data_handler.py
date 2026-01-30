@@ -670,6 +670,55 @@ class DataHandler:
             raise Exception(
                 f"Error computing and creating new column: {str(ComputedColumnError)}"
             )
+    
+    def bin_column(self, column: str, new_column_name: str, method: str, bins: Any, labels: List[str] = None) -> pd.DataFrame:
+        """
+        Bin a continuous variable into categorical buckets.
+
+        Args:
+            column: Name of the column to bin.
+            new_column_name: Name of the resulting categorical column.
+            method: 'cut' for value-based (uniform/custom), 'qcut' for quantile-based.
+            bins: Number of bins (int) or list of bin edges.
+            labels: Optional labels for the bins.
+        """
+        if self.df is None:
+            raise ValueError("No data loaded")
+        
+        if column not in self.df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        
+        if not pd.api.types.is_numeric_dtype(self.df[column]):
+            raise TypeError(f"Column '{column}' must be numeric for binning")
+        
+        try:
+            self._save_state()
+            
+            if method == "qcut":
+                #Method: quantilebased discrentization algorithm
+                self.df[new_column_name] = pd.qcut(
+                    self.df[column], q=bins, labels=labels, duplicates="drop"
+                )
+            else:
+                #use value based binning
+                self.df[new_column_name] = pd.cut(
+                    self.df[column], bins=bins, labels=labels, include_lowest=True
+                )
+            
+            if not isinstance(self.df[new_column_name].dtype, pd.CategoricalDtype):
+                self.df[new_column_name] = self.df[new_column_name].astype("category")
+            
+            self.operation_log.append({
+                "type": "bin_column",
+                "column": column,
+                "new_column": new_column_name,
+                "method": method,
+                "bins": bins,
+                "labels": labels,
+            })
+            return self.df
+        except Exception as BinningError:
+            raise Exception(f"Error binning column: {str(BinningError)}")
 
     def sort_data(self, column: str, ascending: bool = True) -> pd.DataFrame:
         """Sort data by a specified column permanently"""

@@ -50,7 +50,8 @@ from ui.dialogs import (
     TableCustomizationDialog,
     SearchResultsDialog,
     PivotDialog,
-    MergeDialog
+    MergeDialog,
+    BinningDialog
 )
 from core.subset_manager import SubsetManager
 from pathlib import Path
@@ -600,6 +601,33 @@ class DataTab(QWidget):
 
         text_group.setLayout(text_layout)
         column_layout.addWidget(text_group)
+        
+        column_layout.addSpacing(10)
+        
+        # binning
+        binning_group = DataPlotStudioGroupBox("Binning / Discretization")
+        binning_layout = QVBoxLayout()
+        
+        binning_info = QLabel("Convert continuous numeric variables into categorical buckets (e.g., Age -> Age Groups).")
+        binning_info.setWordWrap(True)
+        binning_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        binning_layout.addWidget(binning_info)
+        
+        binning_btn_layout = QHBoxLayout()
+        binning_btn = DataPlotStudioButton("Bin / Discretize Column", parent=self)
+        binning_btn.setIcon(QIcon("icons/data_operations/data_transformation.png")) # TODO: Add icon
+        binning_btn.setToolTip("Open tool to create bins from numeric data")
+        binning_btn.clicked.connect(self.open_binning_dialog)
+        
+        self.binning_help = HelpIcon("binning_discretization") # TODO: add to database
+        self.binning_help.clicked.connect(self.show_help_dialog)
+        
+        binning_btn_layout.addWidget(binning_btn)
+        binning_btn_layout.addWidget(self.binning_help)
+        binning_layout.addLayout(binning_btn_layout)
+        
+        binning_group.setLayout(binning_layout)
+        column_layout.addWidget(binning_group)
 
         column_layout.addStretch()
         column_icon = QIcon("icons/data_operations/edit_cols.png")
@@ -2826,6 +2854,48 @@ class DataTab(QWidget):
                 QMessageBox.critical(self, "Merge Error", str(MergeError))
                 self.status_bar.log(f"Merge failed: {str(MergeError)}", "ERROR")
 
+    def open_binning_dialog(self):
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No Data", "Please load data first.")
+            return
+        
+        numeric_cols = self.data_handler.df.select_dtypes(include=["number"]).columns.tolist()
+        
+        if not numeric_cols:
+            QMessageBox.warning(self, "No Numeric Data", "This dataset contains no numeric columns suitable for binning.")
+            return
+        
+        dialog = BinningDialog(numeric_cols, parent=self)
+        if dialog.exec():
+            config = dialog.get_config()
+            if config:
+                try:
+                    self.data_handler.bin_column(
+                            column=config["column"],
+                            new_column_name=config["new_column"],
+                            method=config["method"],
+                            bins=config["bins"],
+                            labels=config["labels"]
+                        )
+                    self.refresh_data_view()
+                    
+                    method_display = "Quantile" if config["method"] == "qcut" else "Uniform/Custom"
+                    bins_display = len(config["bins"]) - 1 if isinstance(config["bins"], list) else config["bins"]
+                    
+                    self.status_bar.log_action(
+                        f"Binned '{config['column']}' -> '{config['new_column']}'",
+                        details={
+                                "source_column": config["column"],
+                                "new_column": config["new_column"],
+                                "method": method_display,
+                                "bins": bins_display,
+                                "operation": "bin_column"
+                        },
+                        level="SUCCESS")
+                except Exception as BinError:
+                    QMessageBox.critical(self, "Binning Error", f"Failed to bin column:\n{str(BinError)}")
+                    self.status_bar.log(f"Binning failed: {str(BinError)}", "ERROR")
+    
     def apply_sort(self):
         """Apply a permanent sorting to data"""
         if self.data_handler.df is None:

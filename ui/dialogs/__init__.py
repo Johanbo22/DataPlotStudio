@@ -22,6 +22,7 @@ from .TableCustomizationDialog import TableCustomizationDialog
 from .SearchResultsDialog import SearchResultsDialog
 from .PivotDialog import PivotDialog
 from .MergeDialog import MergeDialog
+from .BinningDialog import BinningDialog
 
 __all__ = [
     "AggregationDialog",
@@ -47,5 +48,6 @@ __all__ = [
     "TableCustomizationDialog",
     "SearchResultsDialog",
     "PivotDialog",
-    "MergeDialog"
+    "MergeDialog",
+    "BinningDialog"
 ]
