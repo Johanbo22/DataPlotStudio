@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QFontComboBox, QMessageBox, QStackedWidget, QToolBox, QFrame, QLayout 
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QKeySequence
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
@@ -128,7 +128,7 @@ class PlotTabUI(QWidget):
         )
         self.plot_button.setMinimumHeight(40)
         self.plot_button.setIcon(QIcon("icons/generate_plot.png"))
-        self.plot_button.setShortcut("Ctrl+Return")
+        self.plot_button.setShortcut(QKeySequence("Ctrl+Return"))
         button_layout.addWidget(self.plot_button)
 
         self.save_plot_button = DataPlotStudioButton(
