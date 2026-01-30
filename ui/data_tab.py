@@ -49,7 +49,8 @@ from ui.dialogs import (
     OutlierDetectionDialog,
     TableCustomizationDialog,
     SearchResultsDialog,
-    PivotDialog
+    PivotDialog,
+    MergeDialog
 )
 from core.subset_manager import SubsetManager
 from pathlib import Path
@@ -76,6 +77,7 @@ from ui.animations import (
     FailedAnimation,
     NewDataFrameAnimation,
     EditModeToggleAnimation,
+    FileImportAnimation
 )
 
 
@@ -644,6 +646,17 @@ class DataTab(QWidget):
         pivot_layout.addWidget(pivot_button)
         pivot_layout.addWidget(self.pivot_help)
         transform_layout.addLayout(pivot_layout)
+        
+        # Merge datasets
+        merge_layout = QHBoxLayout()
+        merge_button = DataPlotStudioButton("Merge / Join Datasets", parent=self)
+        merge_button.setIcon(QIcon("icons/data_operations/import_data.png")) # TODO: Change icon
+        merge_button.setToolTip("Join the current dataset with another file")
+        merge_button.clicked.connect(self.open_merge_dialog)
+        self.merge_help = HelpIcon("merge_data")
+        merge_layout.addWidget(merge_button)
+        merge_layout.addWidget(self.merge_help)
+        transform_layout.addLayout(merge_layout)        
 
         # Sorting section
         sorting_group = DataPlotStudioGroupBox("Sort Data")
@@ -2772,10 +2785,50 @@ class DataTab(QWidget):
                 QMessageBox.critical(self, "Error", f"Failed to pivot data:\n{str(PivotDataError)}")
                 self.status_bar.log(f"Pivot Failed: {str(PivotDataError)}", "ERROR")
                 print(PivotDataError)
+    
+    def open_merge_dialog(self):
+        """Opens the dialog for merging data"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+            return
+        
+        dialog = MergeDialog(self.data_handler, self)
+        
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                rows_before = len(self.data_handler.df)
+                
+                self.data_handler.merge_data(
+                    right_df=config["right_df"],
+                    how=config["how"],
+                    left_on=config["left_on"],
+                    right_on=config["right_on"],
+                    suffixes=config["suffixes"]
+                )
+                
+                rows_after = len(self.data_handler.df)
+                self.refresh_data_view()
+                
+                self.status_bar.log_action(
+                    f"Merged data ({config["how"]})",
+                    details={
+                        "how": config["how"],
+                        "rows_before": rows_before,
+                        "rows_after": rows_after,
+                        "operation": "merge"
+                    },
+                    level="SUCCESS"
+                )
+                self.merge_animation = FileImportAnimation(message="Data Merged")
+                self.merge_animation.start(target_widget=self)
+            except Exception as MergeError:
+                QMessageBox.critical(self, "Merge Error", str(MergeError))
+                self.status_bar.log(f"Merge failed: {str(MergeError)}", "ERROR")
 
     def apply_sort(self):
         """Apply a permanent sorting to data"""
-        if self.data_handler is None:
+        if self.data_handler.df is None:
             QMessageBox.warning(self, "No data", "Please load data first")
             return
 

@@ -21,6 +21,7 @@ from .LogHistoryPopup import LogHistoryPopup
 from .TableCustomizationDialog import TableCustomizationDialog
 from .SearchResultsDialog import SearchResultsDialog
 from .PivotDialog import PivotDialog
+from .MergeDialog import MergeDialog
 
 __all__ = [
     "AggregationDialog",
@@ -45,5 +46,6 @@ __all__ = [
     "LogHistoryPopup",
     "TableCustomizationDialog",
     "SearchResultsDialog",
-    "PivotDialog"
+    "PivotDialog",
+    "MergeDialog"
 ]

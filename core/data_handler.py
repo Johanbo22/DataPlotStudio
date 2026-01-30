@@ -128,6 +128,58 @@ class DataHandler:
     def can_redo(self) -> bool:
         """Check if redo is available"""
         return len(self.redo_stack) > 0
+    
+    def read_file(self, filepath: str) -> pd.DataFrame:
+        """
+        Reads a file from path and returns a DataFrame without modifying the current instance
+        Args:
+            filepath (str): Path to the file
+        
+        Returns:
+            pd.DatatFrame: The loaded data
+        """
+        path = Path(filepath)
+        extension = path.suffix.lower()
+        
+        try:
+            if extension in [".xlsx", ".xls"]:
+                return pd.read_excel(filepath)
+            elif extension == ".csv":
+                con = connect()
+                try:
+                    return con.execute(
+                        f"SELECT * FROM read_csv_auto('{path.as_posix()}')"
+                    ).df()
+                except Exception as DuckDBError:
+                    print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
+                    return pd.read_csv(filepath)
+                finally:
+                    con.close()
+            elif extension == ".txt":
+                con = connect()
+                try:
+                    return con.execute(
+                        f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\\t')"
+                    ).df()
+                except Exception as DuckDBError:
+                    print(
+                        f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas"
+                    )
+                    return pd.read_csv(filepath, sep="\t")
+                finally:
+                    con.close()
+            elif extension == ".json":
+                return pd.read_json(filepath)
+            elif extension in [".geojson", ".shp", ".gpkg"]:
+                if gpd is None:
+                    raise ImportError("GeoPandas is not installed. Please install GeoPandas to load spatial data")
+                return gpd.read_file(filepath)
+            elif extension == ".shx":
+                raise ValueError("This is a shapefile inex (.shx) file.\nPlease open the shapefile (.shp) instead")
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+        except Exception as ReadFileError:
+            raise Exception(f"Error reading file: {str(ReadFileError)}")
 
     def import_file(self, filepath: str) -> pd.DataFrame:
         """Import data from various file formats
@@ -807,6 +859,38 @@ class DataHandler:
             return self.df
         except Exception as PivotError:
             raise Exception(f"Error pivoting data: {str(PivotError)}")
+    
+    def merge_data(self, right_df: pd.DataFrame, how: str, left_on: List[str], right_on: List[str], suffixes: tuple[str, str] = ("_left", "_right")) -> pd.DataFrame:
+        """Merge the current dataframe with another dataframe
+        Args:
+            right_df (pd.DataFrame): The DataFrame to merge with.
+            how (str): Type of merge ('inner', 'outer', 'left', 'right').
+            left_on (List[str]): Columns to join on in the current DataFrame.
+            right_on (List[str]): Columns to join on in the right DataFrame.
+            suffixes (tuple[str, str]): Suffixes to apply to overlapping column names.
+
+        Returns:
+            pd.DataFrame: The merged DataFrame.
+        """
+        if self.df is None:
+            raise ValueError("No active data to merge with.")
+        
+        try:
+            self._save_state()
+            
+            self.df = pd.merge(self.df, right_df, how=how, left_on=left_on, right_on=right_on, suffixes=suffixes)
+            self.operation_log.append({
+                "type": "merge",
+                "how": how,
+                "left_on": left_on,
+                "right_on": right_on,
+                "suffixes": suffixes
+            })
+            
+            self.sort_state = None
+            return self.df
+        except Exception as MergeDataError:
+            raise Exception(f"Merge operation failed: {str(MergeDataError)}")
 
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
