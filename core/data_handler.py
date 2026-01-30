@@ -769,6 +769,44 @@ class DataHandler:
             return self.df
         except Exception as MeltDataError:
             raise Exception(f"Error melting data: {str(MeltDataError)}")
+    
+    def pivot_data(self, index: List[str], columns: str, values: List[str], aggfunc: str) -> pd.DataFrame:
+        """Create a pivot table from the dataframe"""
+        if self.df is None:
+            raise ValueError("No data loaded")
+        
+        try:
+            self._save_state()
+            
+            #Create the pivot table
+            ### first reset index to make a flat datafframe.
+            self.df = pd.pivot_table(
+                self.df,
+                index=index,
+                columns=columns,
+                values=values,
+                aggfunc=aggfunc
+            ).reset_index()
+            
+            # if we pivot multiple columns or values
+            # then we need to flatten columns using multiindex
+            if isinstance(self.df.columns, pd.MultiIndex):
+                self.df.columns = [f"{str(column[0])}_{str(column[1])}" if len(column) > 1 and column[1] else str(column[0]) for column in self.df.columns]
+            
+            self.df.columns.name = None
+            
+            self.sort_state = None
+            
+            self.operation_log.append({
+                "type": "pivot",
+                "index": index,
+                "columns": columns,
+                "values": values,
+                "aggfunc": aggfunc
+            })
+            return self.df
+        except Exception as PivotError:
+            raise Exception(f"Error pivoting data: {str(PivotError)}")
 
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""

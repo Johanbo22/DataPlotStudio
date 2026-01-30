@@ -49,6 +49,7 @@ from ui.dialogs import (
     OutlierDetectionDialog,
     TableCustomizationDialog,
     SearchResultsDialog,
+    PivotDialog
 )
 from core.subset_manager import SubsetManager
 from pathlib import Path
@@ -632,6 +633,17 @@ class DataTab(QWidget):
         melt_layout.addWidget(melt_button)
         melt_layout.addWidget(self.melt_help)
         transform_layout.addLayout(melt_layout)
+        
+        pivot_layout = QHBoxLayout()
+        pivot_button = DataPlotStudioButton("Pivot Table", parent=self)
+        pivot_button.setIcon(QIcon("icons/data_operations/data_transformation.png")) # TODO: Change this icon
+        pivot_button.setToolTip("Reshape data using index, columns and values")
+        pivot_button.clicked.connect(self.open_pivot_dialog)
+        self.pivot_help = HelpIcon("pivot_data")
+        self.pivot_help.clicked.connect(self.show_help_dialog)
+        pivot_layout.addWidget(pivot_button)
+        pivot_layout.addWidget(self.pivot_help)
+        transform_layout.addLayout(pivot_layout)
 
         # Sorting section
         sorting_group = DataPlotStudioGroupBox("Sort Data")
@@ -2715,6 +2727,51 @@ class DataTab(QWidget):
                     self, "Error", f"Failed to melt data:\n{str(MeltDataError)}"
                 )
                 self.status_bar.log(f"Melt failed: {str(MeltDataError)}", "ERROR")
+    
+    def open_pivot_dialog(self):
+        """Opens the pivot table dialog"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "No data", "Please load data first")
+            return
+        
+        dialog = PivotDialog(self.data_handler.df, self)
+        
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                reply = QMessageBox.question(
+                    self,
+                    "Confirm Pivot",
+                    "Pivoting will restructure your entire dataset.\n\n"
+                    "Are you sure you want to proceed?\n",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    before_shape = self.data_handler.df.shape
+                    
+                    self.data_handler.pivot_data(index=config["index"], columns=config["columns"], values=config["values"], aggfunc=config["aggfunc"])
+                    after_shape = self.data_handler.df.shape
+                    self.refresh_data_view()
+                    
+                    self.status_bar.log_action(
+                        f"Pivoted data: {before_shape} -> {after_shape}",
+                        details={
+                            "index": config["index"],
+                            "columns": config["columns"],
+                            "values": config["values"],
+                            "aggfunc": config["aggfunc"],
+                            "shape_before": before_shape,
+                            "shape_after": after_shape,
+                            "operation": "pivot",
+                        },
+                        level="SUCCESS"
+                    )
+                    self.aggregate_animation = AggregationAnimation(message="Pivoted Data")
+                    self.aggregate_animation.start(self)
+            except Exception as PivotDataError:
+                QMessageBox.critical(self, "Error", f"Failed to pivot data:\n{str(PivotDataError)}")
+                self.status_bar.log(f"Pivot Failed: {str(PivotDataError)}", "ERROR")
+                print(PivotDataError)
 
     def apply_sort(self):
         """Apply a permanent sorting to data"""
