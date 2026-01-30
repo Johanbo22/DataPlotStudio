@@ -107,14 +107,19 @@ class CodeEditor(QPlainTextEdit):
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.completer.activated.connect(self.insertCompletion)
         
-        keywords = [
-            "def", "class", "if", "else", "elif", "while", "for", "in", "return", 
-            "try", "except", "import", "from", "as", "True", "False", "None", 
-            "and", "or", "not", "break", "continue", "pass", "lambda", "with", 
-            "is", "global", "raise", "yield", "print", "range", "len", "list", 
-            "dict", "set", "str", "int", "float", "bool", "super", "__init__",
-            "self", "None", "open", "zip", "enumerate", "isinstance"
-        ]
+        try:
+            from resources.autocomplete_keywords import AUTOCOMPLETE_KEYWORDS
+            keywords = AUTOCOMPLETE_KEYWORDS
+        except ImportError:
+            print("Warning:_Could not import autocomplete_keywords. Using default")
+            keywords = [
+                "def", "class", "if", "else", "elif", "while", "for", "in", "return", 
+                "try", "except", "import", "from", "as", "True", "False", "None", 
+                "and", "or", "not", "break", "continue", "pass", "lambda", "with", 
+                "is", "global", "raise", "yield", "print", "range", "len", "list", 
+                "dict", "set", "str", "int", "float", "bool", "super", "__init__",
+                "self", "None", "open", "zip", "enumerate", "isinstance"
+            ]
         model = QStringListModel(keywords, self.completer)
         self.completer.setModel(model)
     
