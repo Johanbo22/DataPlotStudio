@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTextBrowser)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
 from pathlib import Path
@@ -85,6 +85,9 @@ class LandingPage(QWidget):
         actions_layout.addStretch()
 
         # Right side. a whats new panel/updates
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")
         info_panel = QFrame()
         info_panel.setFrameShape(QFrame.Shape.StyledPanel)
         info_panel.setStyleSheet("background-color: white; border-radius: 15px; border: 1px solid #dfe6e9;")
@@ -119,6 +122,7 @@ class LandingPage(QWidget):
         info_layout.addWidget(app_version)
         info_layout.addWidget(info_content)
         info_layout.addStretch()
+        scroll.setWidget(info_panel)
 
         layout.addWidget(actions_panel, 1)
-        layout.addWidget(info_panel, 1)
+        layout.addWidget(scroll, 1)

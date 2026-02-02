@@ -3,9 +3,75 @@
 <hr>
 <h4>Latest Features:</h4>
 <ul style="font-size: 13px; line-height: 1.5;">
-    <li><b>Plot Formats:</b> Added support for Encapsulated PostScript (EPS), TIFF, PostScript (PS), RAW bitmap and RGBA
-        images as file formats to saving figures.</li>
-    <li><b>Draggable annotations:</b> Drag annotations across the plot instead of manual position parameters.</li>
+    <li><b><em>NEW </em>Pivot table:</b> Added pivot table creation from regular table format.</li>
+    <li><b><em>NEW </em>Merge datasets:</b> Added a dialog for merging / joining two datasets</li>
+    <li><b><em>NEW </em>Bining/Discretization:</b> Added support for binning numerical data into groups.</li>
+    <li><b>Aggregation:</b>
+        <ul>
+            <li>Aggregate multiple columns per grouping with a function.</li>
+            <li>Date grouping for datatime data.</li>
+            <li></li>A preview table for viewing result of aggregation before committing to it.
+        </ul>
+    </li>
+    <li><b>Calculate Column:</b>
+    <li>Math, Trigonometry and String functions to be used in the Calculate Column dialog</li>
+    </li>
+    <li><b>Detect Outliers:</b>
+        <ul>
+            <li>A histogram to view distribution of data when checking for outliers using the Detect Outliers toolbox
+            </li>
+            <li>Clipping outliers from data based on the threshold instead of just removing all rows.</li>
+        </ul>
+    </li>
+    <li><b>Fill Missing Values:</b>
+        <ul>
+            <li>Fill Missing Values now allows for grouping. Fill values in a column based on a grouping of another
+                column</li>
+            <li>Fill Missing Values tool now has a progress bar that shows how many cells are NaN</li>
+        </ul>
+    </li>
+    <li><b>Melt/unpivot data:</b> Preview Table of the Melted/pivoted dataframe while using the MeltData Dialog. Allows
+        for seeing the new data table before it is committed</li>
+    <li><b>Database connections:</b>
+        <ul>
+            <li>Profiles in Database Connection to avoid re-entering the same information all the time. Save and load
+                profiles to get access to a prieviously connected database</li>
+            <li>Use Raw URI strings to establish a connection to a database</li>
+        </ul>
+    </li>
+    <li><b>Google Sheets connections:</b> History to google sheets import. The app will now remember the sheet_id last
+        used to prevent re-entering the same details</li>
+    <li><b>Colormap picker:</b>
+        <ul>
+            <li>Categorised Colormaps: Colormaps are now grouped by type</li>
+            <li>Reversing colormaps: Colormaps can be reversed using the "Reverse Colormap" checkbox</li>
+            <li>Improved filtering: The search function has now been improved.</li>
+        </ul>
+    </li>
+    <li><b>Table customisation:</b>
+        <ul>
+            <li>Floating point precision to control the number of decimal places for floating-point numbers</li>
+            <li>Conditional formatting using a rule builder to highlight cells based on numerical rules</li>
+        </ul>
+    </li>
+    <li><b>Filter & Subset creation:</b>
+        <ul>
+            <li>Data Type Aware inputs: Better widgets based on the data type instead of an arbitrary box</li>
+            <li>Nested conditions: Chain queries using different conditionals (eg A AND B OR C)</li>
+            <li>Null Checks: Adds a "Is Null" and "Is Not Null" to check for NaN values in dataset.</li>
+        </ul>
+    </li>
+    <li><b>Script editor:</b>
+        <ul>
+            <li>Insert code snippets: Common complemtary code snippets from a menu allows for adding snippets of code to
+                enhance your plot</li>
+            <li>Variable explorer: A side panel with info and column names for the current active dataframe to assist in
+                using the code editor.</li>
+            <li>Find and Replace: Search and replace words in the editor</li>
+            <li>Autocompletion: A basic auto-completion of python keywords and builtin functions when typing.</li>
+        </ul>
+    </li>
+    </li>
 </ul>
 <br>
 <p style="color: #7f8c8d; font-style: italic;">Need help? Check the Help menu for documentation and tutorials.</p>

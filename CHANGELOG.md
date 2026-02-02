@@ -4,21 +4,70 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## Unreleashed
+### Added
+- **Aggregate Data**
+    - Aggregate multiple columns per grouping with a function
+    - Date grouping to aggregate datetime data
+    - Preview table for aggregated data in the dialog. View the result of data aggregation before committing to it.
+- **Calculate Column**
+    - Math, Trigonometry and String functions to be used in the Calculate Column dialog.
+- **Detect Outliers**
+    - A histogram to view distribution of data when checking for outliers using the Detect Outliers toolbox
+    - Clipping outliers from data based on the threshold instead of just removing all rows.
+- **Fill Missing**
+    - Fill Missing Values now allows for grouping. Fill values in a column based on a grouping of another column
+    - Fill Missing Values tool now has a progress bar that shows how many cells are NaN
+- **Melt data**
+    - Preview Table of the Melted/pivoted dataframe while using the MeltData Dialog. Allows for seeing the new data table before it is committed
+- **Database Connections**
+    - Profiles in Database Connection to avoid re-entering the same information all the time. Save and load profiles to get access to a prieviously connected database.
+    - Use Raw URI strings to establish a connection to a database
+- **Google Sheets Import**
+    - History to google sheets import. The app will now remember the sheet_id last used to prevent re-entering the same details
+- **Colormap picker**
+    - Categorised Colormaps: Colormaps are now grouped by type
+    - Reversing colormaps: Colormaps can be reversed using the "Reverse Colormap" checkbox
+    - Improved filtering: The search function has now been improved.
+- **Table Customisation**
+    - Floating point precision to control the number of decimal places for floating-point numbers
+    - Conditional formatting using a rule builder to highlight cells based on numerical rules
+- **Filter and Subset Creation**
+    - Data Type Aware inputs: Better widgets based on the data type instead of an arbitrary box
+    - Nested conditions: Chain queries using different conditionals (eg ```A AND B OR C```)
+    - Null Checks: Adds a "Is Null" and "Is Not Null" to check for NaN values in dataset.
+- **Script Editor**
+    - Insert code snippets: Common complemtary code snippets from a menu allows for adding snippets of code to enhance your plot
+    - Variable explorer: A side panel with info and column names for the current active dataframe to assist in using the code editor.
+    - Find and Replace: Search and replace words in the editor
+    - Autocompletion: A basic auto-completion of python keywords and builtin functions when typing.
+- **Pivot table**
+    - Added pivot table creation from regular table format.
+- **Merge datasets**
+    - Added a dialog for merging / joining two datasets
+- **Binning/Discretization**
+    - Added support for binning numerical data into groups.
+### Changed
+- The expression field in Calculate Column Dialog now uses the CodeEditor styling for better syntax highlighting
+- Stdout and Stderr from the python code editor will now send to an widget inside the editor instead of just the the system terminal.
+### Fixed
+- Wrong buttons used in Melt Dialog
+- Text issue for a label in the Database Connection dialog
+- Issue where RadioButton did not change styling when checked/unchecked.
+- Popup bug when an item in a combobox was clicked the focus changed causing a crash.
+
 ## v0.0.6
 ### Added
 - Added EPS, TIFF, PS, RAW bitmap and RGBA as options for file formats when saving figure. 
 - Drag manually added annotations around the plot canvas.
-
 ### Changed
 - DPI settings are now located in the dialog when exporting/saving the figure as an image.
-
 ### Fixed
 - Issue where changing DPI, figure height or width would result in a canvas that was too large to view on screen.
 - Issue where the overlay graphics for the current active subplot did not draw correctly and was offset by lower bbox.
 - Bug where clearing a plot would result in an empty plot when recreating the same plot using the same parameters.
 - Bug where checking "Auto Annotate Points" would result in unremoveable annotations as they would persist after unchecking.
 - Bug where adding a manual annotation, moving it and then recreate the plot would duplicate the annotation
-
 ### Removed
 - DPI settings from plotting interface.
 
