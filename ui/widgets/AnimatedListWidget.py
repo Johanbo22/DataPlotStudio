@@ -1,38 +1,19 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QListWidget
+from ui.widgets.mixins import HoverFocusAnimationMixin
+from ui.theme import ThemeColors
 
 
-class DataPlotStudioListWidget(QListWidget):
+class DataPlotStudioListWidget(HoverFocusAnimationMixin, QListWidget):
     """New lsitwidget styling"""
 
     def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self._base_border_color = QColor("#c2c2c2")
-        self._hover_border_color = QColor("#0078d7")
-        self._animated_color = self._base_border_color
-
-        self.enter_animation = QPropertyAnimation(self, b"animated_border_color")
-        self.enter_animation.setDuration(150)
-        self.enter_animation.setEndValue(self._hover_border_color)
-        self.enter_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-        self.leave_animation = QPropertyAnimation(self, b"animated_border_color")
-        self.leave_animation.setDuration(150)
-        self.leave_animation.setEndValue(self._base_border_color)
-        self.leave_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
+        QListWidget.__init__(self, parent)
+        HoverFocusAnimationMixin.__init__(
+            self,
+            base_color=ThemeColors.LIST_BORDER_BASE
+        )
         self._update_stylesheet(self._base_border_color)
-
-    @pyqtProperty(QColor)
-    def animated_border_color(self) -> QColor:
-        return self._animated_color
-
-    @animated_border_color.setter
-    def animated_border_color(self, color: QColor) -> None:
-        self._animated_color = color
-        self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
         self.setStyleSheet(f"""
@@ -51,23 +32,10 @@ class DataPlotStudioListWidget(QListWidget):
                 background-color: #f0f0f0; 
             }}
             QListWidget::item:selected {{
-                background-color: #0078d7; 
+                background-color: {self._focus_border_color.name()}; 
                 color: #ffffff; 
             }}
             QListWidget::item:selected:hover {{
                 background-color: #005fa3; 
             }}
         """)
-
-    def enterEvent(self, event) -> None:
-        if self.isEnabled():
-            self.leave_animation.stop()
-            self.enter_animation.setStartValue(self.animated_border_color)
-            self.enter_animation.start()
-        super().enterEvent(event)
-
-    def leaveEvent(self, event) -> None:
-        self.enter_animation.stop()
-        self.leave_animation.setStartValue(self.animated_border_color)
-        self.leave_animation.start()
-        super().leaveEvent(event)

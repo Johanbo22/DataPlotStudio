@@ -1,34 +1,15 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QComboBox
+from ui.widgets.mixins import HoverFocusAnimationMixin
 
 
-class DataPlotStudioComboBox(QComboBox):
+class DataPlotStudioComboBox(HoverFocusAnimationMixin, QComboBox):
     """A Combobox with animated borders and arrow"""
     def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self._base_border_color = QColor("#a0a0a0")
-        self._hover_border_color = QColor("#707070")
-        self._focus_border_color = QColor("#0078d7")
-
-        self._animated_color = self._base_border_color
-        self._is_focussed = False
-
-        self.animation = QPropertyAnimation(self, b"animated_border_color")
-        self.animation.setDuration(150)
-        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        QComboBox.__init__(self, parent)
+        HoverFocusAnimationMixin.__init__(self)
 
         self._update_stylesheet(self._base_border_color)
-
-    @pyqtProperty(QColor)
-    def animated_border_color(self) -> QColor:
-        return self._animated_color
-
-    @animated_border_color.setter
-    def animated_border_color(self, color: QColor) -> None:
-        self._animated_color = color
-        self._update_stylesheet(color)
 
     def _update_stylesheet(self, color: QColor) -> None:
         arrow_icon_path = "icons/ui_styling/arrow-down-to-line.svg"
@@ -65,26 +46,17 @@ class DataPlotStudioComboBox(QComboBox):
             }}
         """)
 
-    def _animate_to(self, color: QColor) -> None:
-        self.animation.stop()
-        self.animation.setEndValue(color)
-        self.animation.start()
-
+    # an override for combobox
     def enterEvent(self, event) -> None:
         if not self._is_focussed and not self.view().isVisible():
             self._animate_to(self._hover_border_color)
-        super().enterEvent(event)
-
+        QComboBox.enterEvent(self, event)
+    
     def leaveEvent(self, event) -> None:
         if not self._is_focussed and not self.view().isVisible():
             self._animate_to(self._base_border_color)
-        super().leaveEvent(event)
-
-    def focusInEvent(self, event) -> None:
-        self._is_focussed = True
-        self._animate_to(self._focus_border_color)
-        super().focusInEvent(event)
-
+        QComboBox.leaveEvent(self, event)
+    
     def focusOutEvent(self, event) -> None:
         self._is_focussed = False
         if not self.view().isVisible():
@@ -93,7 +65,7 @@ class DataPlotStudioComboBox(QComboBox):
             else:
                 self._animate_to(self._base_border_color)
         if event is not None:
-            super().focusOutEvent(event)
+            QComboBox.focusOutEvent(self, event)
 
     def showPopup(self):
         self._is_focussed = True

@@ -16,3 +16,4 @@ dataplot_script.py
 dataplot_session.log
 tests/
 .ruff_cache
+review.md
