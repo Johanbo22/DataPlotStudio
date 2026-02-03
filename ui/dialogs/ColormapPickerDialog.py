@@ -1,12 +1,10 @@
 import matplotlib
 import matplotlib.pyplot as plt
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSize, Qt, QSettings
 from PyQt6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPixmap
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout
 
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
+from ui.widgets import DataPlotStudioCheckBox, DataPlotStudioLineEdit, DataPlotStudioListWidget
 
 
 class ColormapPickerDialog(QDialog):
@@ -72,6 +70,38 @@ class ColormapPickerDialog(QDialog):
                 self.list_widget.scrollToItem(valid_items[0])
         
         self._filter_items("")
+    
+    def accept(self) -> None:
+        """An override to accept() to save a selected colormap to Settings"""
+        # First we get the basename of the colormap
+        # Without _r 
+        # Use the list as reference?
+        base_name = None
+        selected_items = self.list_widget.selectedItems()
+        
+        if selected_items and selected_items[0].data(Qt.ItemDataRole.UserRole) != "header":
+            base_name = selected_items[0].text()
+        
+        ## Save the basename to the setings history.
+        # the reverse checkbox is a separate colormap
+        if base_name:
+            self._save_recent_colormap(base_name)
+        
+        super().accept()
+    
+    def _save_recent_colormap(self, name: str) -> None:
+        """Saves the colormap to the QSettings history"""
+        settings = QSettings("DataPlotStudio", "ColormapPicker")
+        recents = settings.value("recent_colormaps", [], type=list)
+        
+        if name in recents:
+            recents.remove(name)
+        
+        recents.insert(0, name)
+        
+        # Keep only 5
+        recents = recents[:5]
+        settings.setValue("recent_colormaps", recents)
 
     def _populate_colormaps(self) -> None:
         """Populates the list with colormaps"""
@@ -97,6 +127,15 @@ class ColormapPickerDialog(QDialog):
             item.setBackground(QBrush(QColor("#FFFFFF")))
             item.setSizeHint(QSize(0, 25))
             self.list_widget.addItem(item)
+        
+        settings = QSettings("DataPlotStudio", "ColormapPicker")
+        recents = settings.value("recent_colormaps", [], type=list)
+        valid_recents = [r for r in recents if r in all_maps]
+        
+        if valid_recents:
+            add_header("Recently Used")
+            for name in valid_recents:
+                self._add_colormap_item(name)
 
         for category, maps_list in self.COLORMAP_CATEGORIES.items():
             available_in_cat = [m for m in maps_list if m in all_maps]
