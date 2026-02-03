@@ -490,33 +490,35 @@ class CodeExporter:
         g_marker = self._get_cfg(ctx['config'], "advanced.global_marker", {})
         size = g_marker.get('size', 6)
         
-        kw = []
+        kw_base = [f"s={size}**2", f"alpha={ctx['alpha']}"]
+        
+        marker = self._clean_value(g_marker.get('shape', 'o'))
+        if marker != "'None'": kw_base.append(f"marker={marker}")
+        
+        edge = self._clean_value(g_marker.get('edge_color'))
+        if edge != "'Auto'": kw_base.append(f"edgecolors={edge}")
+        
+        c = self._clean_value(g_marker.get('color'))
+        if c != "'Auto'": kw_base.append(f"c={c}")
+
         if ctx['hue'] != "None":
             x_var, y_var = (ctx['x'], ctx['y']) if not ctx['flip'] else (ctx['y'], ctx['x'])
-            kw.append(f"data=df, x={x_var}, y={y_var}")
+            kw = [f"data=df, x={x_var}, y={y_var}"]
             kw.append(f"hue={ctx['hue']}, palette={ctx['palette']}")
             kw.append(f"s={size}**2, alpha={ctx['alpha']}, ax=ax")
-            
-            marker = self._clean_value(g_marker.get('shape', 'o'))
             if marker != "'None'": kw.append(f"marker={marker}")
             
             lines.append(f"    sns.scatterplot({', '.join(kw)})")
         else:
-            x_var, y_var = (f"df[{ctx['x']}]", f"df[{ctx['y']}]") if not ctx['flip'] else (f"df[{ctx['y']}]", f"df[{ctx['x']}]")
-            kw.append(f"x={x_var}, y={y_var}")
-            kw.append(f"label={ctx['y']}")
-            kw.append(f"s={size}**2, alpha={ctx['alpha']}")
+            lines.append(f"    for col in {ctx['ys']}:")
             
-            marker = self._clean_value(g_marker.get('shape', 'o'))
-            if marker != "'None'": kw.append(f"marker={marker}")
+            x_var, y_var = (f"df[{ctx['x']}]", "df[col]") if not ctx['flip'] else ("df[col]", f"df[{ctx['x']}]")
             
-            edge = self._clean_value(g_marker.get('edge_color'))
-            if edge != "'Auto'": kw.append(f"edgecolors={edge}")
+            kw = kw_base.copy()
+            kw.insert(0, f"x={x_var}, y={y_var}")
+            kw.append("label=col")
             
-            c = self._clean_value(g_marker.get('color'))
-            if c != "'Auto'": kw.append(f"c={c}")
-
-            lines.append(f"    ax.scatter({', '.join(kw)})")
+            lines.append(f"        ax.scatter({', '.join(kw)})")
 
         return lines
     
@@ -804,7 +806,60 @@ class CodeExporter:
         lines = []
         if self._get_cfg(config, "legend.enabled", False):
             loc = self._clean_value(self._get_cfg(config, "legend.location", "best"))
-            lines.append(f"    ax.legend(loc={loc})")
+            
+            # Handle dual-axis legend
+            if self._get_cfg(config, "basic.secondary_y_enabled"):
+                lines.append("    # Combine legends from both axes")
+                lines.append("    h1, l1 = ax.get_legend_handles_labels()")
+                lines.append("    try: h2, l2 = ax2.get_legend_handles_labels()")
+                lines.append("    except NameError: h2, l2 = [], []")
+                lines.append(f"    ax.legend(h1+h2, l1+l2, loc={loc})")
+            else:
+                lines.append(f"    ax.legend(loc={loc})")
+        return lines
+
+    def _generate_secondary_plot(self, config: Dict[str, Any], x_col: str) -> List[str]:
+        """Generate code for secondary y axis"""
+        lines = []
+        if not self._get_cfg(config, "basic.secondary_y_enabled"):
+            return lines
+        
+        sec_y = self._clean_value(self._get_cfg(config, "basic.secondary_y_column"))
+        if sec_y == "'None'" or sec_y == "None":
+            return lines
+        
+        sec_type = self._get_cfg(config, "basic.secondary_plot_type", "Line")
+        flip = self._get_cfg(config, "axes.flip_axes", False)
+        
+        lines.append("\n    # --- Secondary Axis ---")
+        if flip:
+            lines.append("    ax2 = ax.twiny()")
+        else:
+            lines.append("    ax2 = ax.twinx()")
+        
+        kwargs = f"label={sec_y}"
+        x_data = f"df[{x_col}]"
+        y_data = f"df[{sec_y}]"
+        
+        if sec_type == "Line":
+            if flip: lines.append(f"    ax2.plot({y_data}, {x_data}, {kwargs}, linestyle='--')")
+            else:    lines.append(f"    ax2.plot({x_data}, {y_data}, {kwargs}, linestyle='--')")
+            
+        elif sec_type == "Bar":
+            if flip: lines.append(f"    ax2.barh({x_data}, {y_data}, {kwargs}, alpha=0.5, height=0.4)")
+            else:    lines.append(f"    ax2.bar({x_data}, {y_data}, {kwargs}, alpha=0.5)")
+            
+        elif sec_type == "Scatter":
+            if flip: lines.append(f"    ax2.scatter({y_data}, {x_data}, {kwargs}, marker='D')")
+            else:    lines.append(f"    ax2.scatter({x_data}, {y_data}, {kwargs}, marker='D')")
+            
+        elif sec_type == "Area":
+            if flip: lines.append(f"    ax2.fill_betweenx({x_data}, 0, {y_data}, {kwargs}, alpha=0.3)")
+            else:    lines.append(f"    ax2.fill_between({x_data}, 0, {y_data}, {kwargs}, alpha=0.3)")
+        
+        if flip: lines.append(f"    ax2.set_xlabel({sec_y})")
+        else:    lines.append(f"    ax2.set_ylabel({sec_y})")
+        
         return lines
     
     def _generate_plot_code(self, df: pd.DataFrame, plot_config: Dict[str, Any]) -> str:
@@ -812,7 +867,7 @@ class CodeExporter:
 
         x_col = self._clean_value(self._get_cfg(plot_config, "basic.x_column"))
         y_cols_raw = self._get_cfg(plot_config, "basic.y_columns", [])
-        hue = self._get_cfg(plot_config, "basc.hue_column")
+        hue = self._get_cfg(plot_config, "basic.hue_column")
         palette = self._get_cfg(plot_config, "appearance.figure.palette", "deep")
 
         lines = [
@@ -829,6 +884,9 @@ class CodeExporter:
 
         # Plot dispatch
         lines.extend(self._generate_plot_dispatch(plot_config, x_col, y_cols_raw, hue, palette))
+        
+        # Secondary axes
+        lines.extend(self._generate_secondary_plot(plot_config, x_col))
 
         # Add scatter analysis 
         if self._get_cfg(plot_config, "plot_type") == "Scatter":
