@@ -17,3 +17,4 @@ dataplot_session.log
 tests/
 .ruff_cache
 review.md
+whats_new_template.html

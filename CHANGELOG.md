@@ -4,7 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
-## Unreleashed
+## v0.0.8
+### Added:
+- HoverFocusAnimationMixin class to handle border animations
+- ThemeColors for a centralised widget color system
+- New toggle switch widget to complement the checkbox system.
+- Persistent history of the last 5 selected colormaps with a "Recently used" header.
+- Landing Page: Added links to view bug fixes and version release notes from the welcome screen.
+### Changed
+- Widgets in dialogs, tabs etc.
+### Removed
+- Individual widget styling and animations.
+
+
+## v0.0.7
 ### Added
 - **Aggregate Data**
     - Aggregate multiple columns per grouping with a function
