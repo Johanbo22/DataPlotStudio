@@ -58,7 +58,6 @@ class PlotTab(PlotTabUI):
         self.script_sync_timer.setInterval(500)
         self.script_sync_timer.timeout.connect(self._perform_script_sync)
         self.current_plot_type_name = "Line"
-        self._last_plot_signature = None
         self.dragged_annotation = None
         self.ignore_next_click = False
         
@@ -167,6 +166,11 @@ class PlotTab(PlotTabUI):
         self.refresh_theme_list()
         if hasattr(self, 'dpi_spin'):
             self.dpi_spin.setVisible(False)
+        
+        # Caching
+        self._last_data_signature = None
+        self._last_viz_signature = None
+        self._cached_active_df = None
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
@@ -1493,29 +1497,53 @@ class PlotTab(PlotTabUI):
         
         plot_type = self.current_plot_type_name
 
-        # Do a collection of params to cache to the plot signature.
-        generation_params = [
+        data_params = [
             id(active_df),
             active_df.shape,
             plot_type,
             x_col,
             tuple(y_cols) if y_cols else None,
-            hue,
             subset_name,
+            quick_filter
+        ]
+        current_data_signature = tuple(data_params)
+        processed_df = None
+        
+        if (hasattr(self, "_last_data_signature") and self._last_data_signature == current_data_signature and hasattr(self, "_cached_active_df") and self._cached_active_df is not None):
+            processed_df = self._cached_active_df
+        else:
+            processed_df = active_df.copy()
+            if quick_filter:
+                processed_df = self._apply_quick_filter(processed_df, quick_filter)
+                if processed_df is None:
+                    return
+            
+            processed_df = self._sample_data_if_needed(processed_df, plot_type)
+            self._convert_datetime_columns(processed_df, x_col, y_cols)
+            self._cached_active_df = processed_df
+            self._last_data_signature = current_data_signature
+        
+        viz_params = [
+            current_data_signature,
+            hue,
             current_subplot_index,
             self.flip_axes_check.isChecked(),
             self.palette_combo.currentText(),
-            self.style_combo.currentText()
+            self.style_combo.currentText(),
+            self.secondary_y_check.isChecked(),
+            self.secondary_y_column.currentText(),
+            self.secondary_plot_type_combo.currentText()
         ]
+
         # Plot specific params
         if plot_type == "Histogram":
-            generation_params.extend([
+            viz_params.extend([
                 self.histogram_bins_spin.value(),
                 self.histogram_show_kde_check.isChecked(),
                 self.histogram_show_normal_check.isChecked()
             ])
         elif plot_type == "Pie":
-            generation_params.extend([
+            viz_params.extend([
                 self.pie_start_angle_spin.value(),
                 self.pie_explode_check.isChecked(),
                 self.pie_explode_distance_spin.value(),
@@ -1523,18 +1551,18 @@ class PlotTab(PlotTabUI):
                 self.pie_show_percentages_check.isChecked()
             ])
         elif plot_type == "Scatter":
-            generation_params.extend([
+            viz_params.extend([
                 self.regression_line_check.isChecked(),
                 self.confidence_interval_check.isChecked(),
                 self.error_bars_combo.currentText(),
                 self.confidence_level_spin.value()
             ])
         elif plot_type == "Bar":
-            generation_params.extend([
+            viz_params.extend([
                 self.bar_width_spin.value()
             ])
         elif plot_type == "GeoSpatial":
-            generation_params.extend([
+            viz_params.extend([
                 self.geo_scheme_combo.currentText(),
                 self.geo_k_spin.value(),
                 self.geo_boundary_check.isChecked(),
@@ -1546,35 +1574,27 @@ class PlotTab(PlotTabUI):
                 self.geo_use_divider_check.isChecked()
             ])
         
-        current_signature = tuple(generation_params)
-
-        keep_data = (self._last_plot_signature == current_signature) and not self.use_plotly_check.isChecked()
-        self._last_plot_signature = current_signature
+        current_viz_signature = tuple(viz_params)
         
+        # Determine if we need to redraw
+        redraw_needed = True
+        if (hasattr(self, '_last_viz_signature') and self._last_viz_signature == current_viz_signature and not self.use_plotly_check.isChecked()):
+            redraw_needed = False
+        self._last_viz_signature = current_viz_signature
+
         active_df = active_df.copy()
-        # Apply a quick filter if set
-        if quick_filter:
-            active_df = self._apply_quick_filter(active_df, quick_filter)
-            if active_df is None:
-                return
 
         # Handle the plotly backend
         if self.use_plotly_check.isChecked():
             self._generate_plotly_plot(active_df, plot_type, x_col, y_cols, hue)
             return
-
-        if not keep_data:
-            # Sample data if needed
-            active_df = self._sample_data_if_needed(active_df, plot_type)
-            
-            #Convert datetime columns
-            self._convert_datetime_columns(active_df, x_col, y_cols)
-        else:
-            self.status_bar.log("Using cached data to render plot", "INFO")
+        
+        if not redraw_needed:
+            self.status_bar.log("Using cached plot visualization", "INFO")
 
         # Generate main plot
         self._generate_main_plot(
-            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=keep_data
+            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=not redraw_needed
         )
     
     def _apply_quick_filter(self, df: pd.DataFrame, query: str) -> Optional[pd.DataFrame]:
