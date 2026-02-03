@@ -15,18 +15,21 @@ from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
 import traceback
 import shutil
+from ui.widgets import (
+    AutoResizingStackedWidget,
+    DataPlotStudioButton,
+    DataPlotStudioCheckBox,
+    DataPlotStudioComboBox,
+    DataPlotStudioDoubleSpinBox,
+    DataPlotStudioGroupBox,
+    DataPlotStudioLineEdit,
+    DataPlotStudioSpinBox,
+    DataPlotStudioTabWidget,
+    QuickFilterEdit,
+    HelpIcon,
+    DataPlotStudioToggleSwitch
+)
 
-from ui.widgets.AutoResizingStackedWidget import AutoResizingStackedWidget
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-from ui.widgets.AnimatedDoubleSpinBox import DataPlotStudioDoubleSpinBox
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
-from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
-from ui.widgets.QuickFilterEdit import QuickFilterEdit
-from ui.widgets.HelpIcon import HelpIcon
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     WEB_ENGINE_AVAILABLE = True
@@ -229,16 +232,16 @@ class PlotTabUI(QWidget):
         plot_type_layout.addWidget(self.plot_type)
 
         #checkbox for addings ubplots
-        self.add_subplots_check = DataPlotStudioCheckBox("Add subplots")
+        self.add_subplots_check = DataPlotStudioToggleSwitch("Add subplots")
         self.add_subplots_check.setChecked(False)
         plot_type_layout.addWidget(self.add_subplots_check)
 
-        self.use_plotly_check = DataPlotStudioCheckBox("Use Plotly backend")
+        self.use_plotly_check = DataPlotStudioToggleSwitch("Use Plotly backend")
         self.use_plotly_check.setChecked(False)
         self.use_plotly_check.setToolTip("Switch to the Plotly backend")
         plot_type_layout.addWidget(self.use_plotly_check)
 
-        self.use_subset_check = DataPlotStudioCheckBox("Use Subset")
+        self.use_subset_check = DataPlotStudioToggleSwitch("Use Subset")
         self.use_subset_check.setChecked(False)
         plot_type_layout.addWidget(self.use_subset_check)
         
@@ -274,11 +277,11 @@ class PlotTabUI(QWidget):
 
         #shareing axes boxes
         share_axes_layout = QHBoxLayout()
-        self.subplot_sharex_check = DataPlotStudioCheckBox("Share X-axis")
+        self.subplot_sharex_check = DataPlotStudioToggleSwitch("Share X-axis")
         self.subplot_sharex_check.setToolTip("Share X-axis limits and ticks across all subplots")
         share_axes_layout.addWidget(self.subplot_sharex_check)
 
-        self.subplot_sharey_check = DataPlotStudioCheckBox("Share Y-axis")
+        self.subplot_sharey_check = DataPlotStudioToggleSwitch("Share Y-axis")
         self.subplot_sharey_check.setToolTip("Share Y-axis limits and ticks across all subplots")
         share_axes_layout.addWidget(self.subplot_sharey_check)
 
@@ -304,7 +307,7 @@ class PlotTabUI(QWidget):
         subplot_layout.addLayout(active_subplot_layout)
 
         #DataFreeze
-        self.freeze_data_check = DataPlotStudioCheckBox("Freeze Data Selection for Subplots")
+        self.freeze_data_check = DataPlotStudioToggleSwitch("Freeze Data Selection for Subplots")
         self.freeze_data_check.setToolTip("If checked, the current data columns selected will be preserved for the subplots.\nUncheck to update the data for the active subplot")
         subplot_layout.addWidget(self.freeze_data_check)
 
@@ -331,7 +334,7 @@ class PlotTabUI(QWidget):
         y_label_layout.addStretch()
 
         #toggle between two and more ycols
-        self.multi_y_check = DataPlotStudioCheckBox("Multiple Y Columns")
+        self.multi_y_check = DataPlotStudioToggleSwitch("Multiple Y Columns")
         self.multi_y_check.setChecked(False)
         y_label_layout.addWidget(self.multi_y_check)
         data_layout.addLayout(y_label_layout)
@@ -367,7 +370,7 @@ class PlotTabUI(QWidget):
         #secondary y-axis section
         data_layout.addSpacing(10)
         secondary_y_layout = QHBoxLayout()
-        self.secondary_y_check = DataPlotStudioCheckBox("Secondary Y-Axis")
+        self.secondary_y_check = DataPlotStudioToggleSwitch("Secondary Y-Axis")
         self.secondary_y_check.setToolTip("Enabled a secondary Y-axis on the right side of the plot")
         secondary_y_layout.addWidget(self.secondary_y_check)
         data_layout.addLayout(secondary_y_layout)
@@ -527,7 +530,7 @@ class PlotTabUI(QWidget):
         #latex rendering
         self.has_latex: bool = shutil.which("latex") is not None
         latex_layout = QHBoxLayout()
-        self.usetex_checkbox = DataPlotStudioCheckBox("Enable Latex Rendering")
+        self.usetex_checkbox = DataPlotStudioToggleSwitch("Enable Latex Rendering")
         self.usetex_checkbox.setChecked(False)
         self.usetext_help = HelpIcon("latex_rendering")
         self.usetext_help.clicked.connect(self.show_help_dialog)
@@ -554,7 +557,7 @@ class PlotTabUI(QWidget):
         title_group = DataPlotStudioGroupBox("Title Options")
         title_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         title_layout = QVBoxLayout()
-        self.title_check = DataPlotStudioCheckBox("Show Title")
+        self.title_check = DataPlotStudioToggleSwitch("Show Title")
         self.title_check.setChecked(True)
         title_layout.addWidget(self.title_check)
         title_group.setLayout(title_layout)
@@ -596,7 +599,7 @@ class PlotTabUI(QWidget):
         xlabel_group = DataPlotStudioGroupBox("X Label Options")
         xlabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         xlabel_layout = QVBoxLayout()
-        self.xlabel_check = DataPlotStudioCheckBox("Show X Label")
+        self.xlabel_check = DataPlotStudioToggleSwitch("Show X Label")
         self.xlabel_check.setChecked(True)
         xlabel_layout.addWidget(self.xlabel_check)
         xlabel_group.setLayout(xlabel_layout)
@@ -628,7 +631,7 @@ class PlotTabUI(QWidget):
         ylabel_group = DataPlotStudioGroupBox("Y Label Options")
         ylabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         ylabel_layout = QVBoxLayout()
-        self.ylabel_check = DataPlotStudioCheckBox("Show Y Label")
+        self.ylabel_check = DataPlotStudioToggleSwitch("Show Y Label")
         self.ylabel_check.setChecked(True)
         ylabel_layout.addWidget(self.ylabel_check)
         ylabel_group.setLayout(ylabel_layout)
@@ -717,7 +720,7 @@ class PlotTabUI(QWidget):
         spines_layout.addSpacing(10)
 
         #edit spines individually
-        self.individual_spines_check = DataPlotStudioCheckBox("Customize spines individually")
+        self.individual_spines_check = DataPlotStudioToggleSwitch("Customize spines individually")
         self.individual_spines_check.setChecked(False)
         self.individual_spines_check.setToolTip("Enabled to set visibility, width and color of the four spines individually")
         spines_layout.addWidget(self.individual_spines_check)
@@ -731,7 +734,7 @@ class PlotTabUI(QWidget):
         top_spine_group = DataPlotStudioGroupBox("Top Spine")
         top_spine_layout = QVBoxLayout()
 
-        self.top_spine_visible_check = DataPlotStudioCheckBox("Show Top Spine")
+        self.top_spine_visible_check = DataPlotStudioToggleSwitch("Show Top Spine")
         self.top_spine_visible_check.setChecked(True)
         top_spine_layout.addWidget(self.top_spine_visible_check)
 
@@ -757,7 +760,7 @@ class PlotTabUI(QWidget):
         bottom_spine_group = DataPlotStudioGroupBox("Bottom Spine")
         bottom_spine_layout = QVBoxLayout()
         
-        self.bottom_spine_visible_check = DataPlotStudioCheckBox("Show Bottom Spine")
+        self.bottom_spine_visible_check = DataPlotStudioToggleSwitch("Show Bottom Spine")
         self.bottom_spine_visible_check.setChecked(True)
         bottom_spine_layout.addWidget(self.bottom_spine_visible_check)
         
@@ -783,7 +786,7 @@ class PlotTabUI(QWidget):
         left_spine_group = DataPlotStudioGroupBox("Left Spine")
         left_spine_layout = QVBoxLayout()
         
-        self.left_spine_visible_check = DataPlotStudioCheckBox("Show Left Spine")
+        self.left_spine_visible_check = DataPlotStudioToggleSwitch("Show Left Spine")
         self.left_spine_visible_check.setChecked(True)
         left_spine_layout.addWidget(self.left_spine_visible_check)
         
@@ -809,7 +812,7 @@ class PlotTabUI(QWidget):
         right_spine_group = DataPlotStudioGroupBox("Right Spine")
         right_spine_layout = QVBoxLayout()
         
-        self.right_spine_visible_check = DataPlotStudioCheckBox("Show Right Spine")
+        self.right_spine_visible_check = DataPlotStudioToggleSwitch("Show Right Spine")
         self.right_spine_visible_check.setChecked(True)
         right_spine_layout.addWidget(self.right_spine_visible_check)
         
@@ -888,7 +891,7 @@ class PlotTabUI(QWidget):
         # OTHER SETTI
         
         figure_size_layout.addWidget(QLabel("Layout:"))
-        self.tight_layout_check = DataPlotStudioCheckBox("Tight Layout")
+        self.tight_layout_check = DataPlotStudioToggleSwitch("Tight Layout")
         self.tight_layout_check.setChecked(True)
         figure_size_layout.addWidget(self.tight_layout_check)
         
@@ -920,17 +923,17 @@ class PlotTabUI(QWidget):
         xaxis_limit_layout = QVBoxLayout()
 
         xaxis_limit_layout.addWidget(QLabel("X-axis - Auto Limit:"))
-        self.x_auto_check = DataPlotStudioCheckBox("Auto")
+        self.x_auto_check = DataPlotStudioToggleSwitch("Auto")
         self.x_auto_check.setChecked(True)
         xaxis_limit_layout.addWidget(self.x_auto_check)
         xaxis_limit_group.setLayout(xaxis_limit_layout)
 
-        self.x_invert_axis_check = DataPlotStudioCheckBox("Invert X-axis")
+        self.x_invert_axis_check = DataPlotStudioToggleSwitch("Invert X-axis")
         self.x_invert_axis_check.setChecked(False)
         self.x_invert_axis_check.setToolTip("Reverses the direction of data on the x-axis")
         xaxis_limit_layout.addWidget(self.x_invert_axis_check)
 
-        self.x_top_axis_check = DataPlotStudioCheckBox("Move X-axis to top")
+        self.x_top_axis_check = DataPlotStudioToggleSwitch("Move X-axis to top")
         self.x_top_axis_check.setChecked(False)
         self.x_top_axis_check.setToolTip("Moves the x-axis ticks and labels to the top of the plot")
         xaxis_limit_layout.addWidget(self.x_top_axis_check)
@@ -973,7 +976,7 @@ class PlotTabUI(QWidget):
         # X-axis minor ticks
         #visibility of the ticks
         
-        self.x_show_minor_ticks_check = DataPlotStudioCheckBox("Show Minor X-axis Ticks")
+        self.x_show_minor_ticks_check = DataPlotStudioToggleSwitch("Show Minor X-axis Ticks")
         self.x_show_minor_ticks_check.setChecked(False)
         self.x_show_minor_ticks_check.setToolTip("Display the minor tick marks and labels on the x-axis")
         xaxis_limit_layout.addWidget(self.x_show_minor_ticks_check)
@@ -1034,11 +1037,11 @@ class PlotTabUI(QWidget):
         yaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         yaxis_limit_layout = QVBoxLayout()
         yaxis_limit_layout.addWidget(QLabel("Y-axis - Auto Limit:"))
-        self.y_auto_check = DataPlotStudioCheckBox("Auto")
+        self.y_auto_check = DataPlotStudioToggleSwitch("Auto")
         self.y_auto_check.setChecked(True)
         yaxis_limit_layout.addWidget(self.y_auto_check)
 
-        self.y_invert_axis_check = DataPlotStudioCheckBox("Invert Y-axis")
+        self.y_invert_axis_check = DataPlotStudioToggleSwitch("Invert Y-axis")
         self.y_invert_axis_check.setChecked(False)
         self.y_invert_axis_check.setToolTip("Reverses the direction of data on the y-axis")
         yaxis_limit_layout.addWidget(self.y_invert_axis_check)
@@ -1079,7 +1082,7 @@ class PlotTabUI(QWidget):
         yaxis_limit_layout.addSpacing(5)
         #YAXIS minors
         #visibility
-        self.y_show_minor_ticks_check = DataPlotStudioCheckBox("Show Y-axis Minor Ticks")
+        self.y_show_minor_ticks_check = DataPlotStudioToggleSwitch("Show Y-axis Minor Ticks")
         self.y_show_minor_ticks_check.setChecked(False)
         self.y_show_minor_ticks_check.setToolTip("Display the minor tick marks and labels on yhe y-axis")
         yaxis_limit_layout.addWidget(self.y_show_minor_ticks_check)
@@ -1138,7 +1141,7 @@ class PlotTabUI(QWidget):
         flip_axes_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
         flip_axes_layout = QVBoxLayout()
 
-        self.flip_axes_check = DataPlotStudioCheckBox("Flip Axis (Swap X and Y axis)")
+        self.flip_axes_check = DataPlotStudioToggleSwitch("Flip Axis (Swap X and Y axis)")
         self.flip_axes_check.setChecked(False)
         flip_axes_layout.addWidget(self.flip_axes_check)
 
@@ -1150,7 +1153,7 @@ class PlotTabUI(QWidget):
         datetime_format_layout = QVBoxLayout()
 
         #enable custom datetimeformatting
-        self.custom_datetime_check = DataPlotStudioCheckBox("Enable Custom formatting of DateTime Axis")
+        self.custom_datetime_check = DataPlotStudioToggleSwitch("Enable Custom formatting of DateTime Axis")
         self.custom_datetime_check.setChecked(False)
         datetime_format_layout.addWidget(self.custom_datetime_check)
 
@@ -1306,7 +1309,7 @@ class PlotTabUI(QWidget):
         legend_group = DataPlotStudioGroupBox("Legend")
         legend_layout = QVBoxLayout()
         
-        self.legend_check = DataPlotStudioCheckBox("Show Legend")
+        self.legend_check = DataPlotStudioToggleSwitch("Show Legend")
         self.legend_check.setChecked(False)
         legend_layout.addWidget(self.legend_check)
         
@@ -1364,15 +1367,15 @@ class PlotTabUI(QWidget):
         self.box_styling_group.setVisible(False)
         box_styling_layout = QVBoxLayout()
         
-        self.legend_frame_check = DataPlotStudioCheckBox("Show Frame")
+        self.legend_frame_check = DataPlotStudioToggleSwitch("Show Frame")
         self.legend_frame_check.setChecked(True)
         box_styling_layout.addWidget(self.legend_frame_check)
         
-        self.legend_fancybox_check = DataPlotStudioCheckBox("Fancy Box (Rounded Corners)")
+        self.legend_fancybox_check = DataPlotStudioToggleSwitch("Fancy Box (Rounded Corners)")
         self.legend_fancybox_check.setChecked(True)
         box_styling_layout.addWidget(self.legend_fancybox_check)
         
-        self.legend_shadow_check = DataPlotStudioCheckBox("Show Shadow")
+        self.legend_shadow_check = DataPlotStudioToggleSwitch("Show Shadow")
         self.legend_shadow_check.setChecked(False)
         box_styling_layout.addWidget(self.legend_shadow_check)
         
@@ -1418,7 +1421,7 @@ class PlotTabUI(QWidget):
         grid_group = DataPlotStudioGroupBox("Gridlines")
         grid_layout = QVBoxLayout()
 
-        self.grid_check = DataPlotStudioCheckBox("Show Gridlines") # set visible in docs
+        self.grid_check = DataPlotStudioToggleSwitch("Show Gridlines") # set visible in docs
         grid_layout.addWidget(self.grid_check)
 
         grid_layout.addSpacing(10)
@@ -1455,7 +1458,7 @@ class PlotTabUI(QWidget):
         grid_layout.addWidget(self.global_grid_group)
 
         # INDEPENDENTA AXIS
-        self.independent_grid_check = DataPlotStudioCheckBox("Enable Independent Axis Customization")
+        self.independent_grid_check = DataPlotStudioToggleSwitch("Enable Independent Axis Customization")
         self.independent_grid_check.setChecked(False)
         grid_layout.addWidget(self.independent_grid_check)
 
@@ -1471,7 +1474,7 @@ class PlotTabUI(QWidget):
         x_major_group = DataPlotStudioGroupBox("X-axis Major Gridlines")
         x_major_layout = QVBoxLayout()
 
-        self.x_major_grid_check = DataPlotStudioCheckBox("Show X major gridlines")
+        self.x_major_grid_check = DataPlotStudioToggleSwitch("Show X major gridlines")
         self.x_major_grid_check.setChecked(True)
         x_major_layout.addWidget(self.x_major_grid_check)
 
@@ -1515,7 +1518,7 @@ class PlotTabUI(QWidget):
         x_minor_layout = QVBoxLayout()
 
         #check
-        self.x_minor_grid_check = DataPlotStudioCheckBox("Show minor X-axis Gridlines")
+        self.x_minor_grid_check = DataPlotStudioToggleSwitch("Show minor X-axis Gridlines")
         self.x_minor_grid_check.setChecked(False)
         x_minor_layout.addWidget(self.x_minor_grid_check)
 
@@ -1570,7 +1573,7 @@ class PlotTabUI(QWidget):
         y_major_layout = QVBoxLayout()
 
         #check
-        self.y_major_grid_check = DataPlotStudioCheckBox("Show Major Y-axis Gridlines")
+        self.y_major_grid_check = DataPlotStudioToggleSwitch("Show Major Y-axis Gridlines")
         self.y_major_grid_check.setChecked(True)
         y_major_layout.addWidget(self.y_major_grid_check)
 
@@ -1618,7 +1621,7 @@ class PlotTabUI(QWidget):
         y_minor_layout = QVBoxLayout()
 
         #check
-        self.y_minor_grid_check = DataPlotStudioCheckBox("Show Y Minor Gridlines")
+        self.y_minor_grid_check = DataPlotStudioToggleSwitch("Show Y Minor Gridlines")
         self.y_minor_grid_check.setChecked(False)
         y_minor_layout.addWidget(self.y_minor_grid_check)
 
@@ -1702,7 +1705,7 @@ class PlotTabUI(QWidget):
         line_layout = QVBoxLayout()
 
         #multi line toggle
-        self.multiline_custom_check = DataPlotStudioCheckBox("Enable per-line customization")
+        self.multiline_custom_check = DataPlotStudioToggleSwitch("Enable per-line customization")
         self.multiline_custom_check.setChecked(False)
         line_layout.addWidget(self.multiline_custom_check)
 
@@ -1764,11 +1767,11 @@ class PlotTabUI(QWidget):
         histogram_layout.addWidget(self.histogram_bins_spin)
 
         #normal distribution curve
-        self.histogram_show_normal_check = DataPlotStudioCheckBox("Overlay a Normal Distribution Curve")
+        self.histogram_show_normal_check = DataPlotStudioToggleSwitch("Overlay a Normal Distribution Curve")
         self.histogram_show_normal_check.setChecked(False)
         histogram_layout.addWidget(self.histogram_show_normal_check)
 
-        self.histogram_show_kde_check = DataPlotStudioCheckBox("Overlay Kernel Density Estimate")
+        self.histogram_show_kde_check = DataPlotStudioToggleSwitch("Overlay Kernel Density Estimate")
         self.histogram_show_kde_check.setChecked(False)
         histogram_layout.addWidget(self.histogram_show_kde_check)
 
@@ -1780,7 +1783,7 @@ class PlotTabUI(QWidget):
         bar_layout = QVBoxLayout()
 
         # toggle for more bars to customize
-        self.multibar_custom_check = DataPlotStudioCheckBox("Enable per-bar customization")
+        self.multibar_custom_check = DataPlotStudioToggleSwitch("Enable per-bar customization")
         self.multibar_custom_check.setChecked(False)
         bar_layout.addWidget(self.multibar_custom_check)
 
@@ -1843,20 +1846,20 @@ class PlotTabUI(QWidget):
         self.scatter_group = DataPlotStudioGroupBox("Scatter Plot Analysis")
         scatter_layout = QVBoxLayout()
 
-        self.regression_line_check = DataPlotStudioCheckBox("Show Linear Regresssion Line")
+        self.regression_line_check = DataPlotStudioToggleSwitch("Show Linear Regresssion Line")
         scatter_layout.addWidget(self.regression_line_check)
 
-        self.confidence_interval_check = DataPlotStudioCheckBox("Show 95% confidence interval")
+        self.confidence_interval_check = DataPlotStudioToggleSwitch("Show 95% confidence interval")
         scatter_layout.addWidget(self.confidence_interval_check)
 
-        self.show_r2_check = DataPlotStudioCheckBox("Show R² score")
+        self.show_r2_check = DataPlotStudioToggleSwitch("Show R² score")
         self.show_r2_check.setChecked(False)
         scatter_layout.addWidget(self.show_r2_check)
 
-        self.show_rmse_check = DataPlotStudioCheckBox("Show Root Mean Square Error (RMSE)")
+        self.show_rmse_check = DataPlotStudioToggleSwitch("Show Root Mean Square Error (RMSE)")
         scatter_layout.addWidget(self.show_rmse_check)
 
-        self.show_equation_check = DataPlotStudioCheckBox("Show Regression Equation")
+        self.show_equation_check = DataPlotStudioToggleSwitch("Show Regression Equation")
         scatter_layout.addWidget(self.show_equation_check)
 
         scatter_layout.addWidget(QLabel("Confidence Level (%):"))
@@ -1879,7 +1882,7 @@ class PlotTabUI(QWidget):
         self.pie_group = DataPlotStudioGroupBox("Pie Chart Properties")
         pie_layout = QVBoxLayout()
 
-        self.pie_show_percentages_check = DataPlotStudioCheckBox("Show % on slices")
+        self.pie_show_percentages_check = DataPlotStudioToggleSwitch("Show % on slices")
         self.pie_show_percentages_check.setChecked(False)
         pie_layout.addWidget(self.pie_show_percentages_check)
 
@@ -1889,7 +1892,7 @@ class PlotTabUI(QWidget):
         self.pie_start_angle_spin.setValue(0)
         pie_layout.addWidget(self.pie_start_angle_spin)
 
-        self.pie_explode_check = DataPlotStudioCheckBox("Explode First Slice")
+        self.pie_explode_check = DataPlotStudioToggleSwitch("Explode First Slice")
         self.pie_explode_check.setChecked(False)
         pie_layout.addWidget(self.pie_explode_check)
 
@@ -1900,7 +1903,7 @@ class PlotTabUI(QWidget):
         self.pie_explode_distance_spin.setSingleStep(0.05)
         pie_layout.addWidget(self.pie_explode_distance_spin)
 
-        self.pie_shadow_check = DataPlotStudioCheckBox("Add Shadow")
+        self.pie_shadow_check = DataPlotStudioToggleSwitch("Add Shadow")
         self.pie_shadow_check.setChecked(False)
         pie_layout.addWidget(self.pie_shadow_check)
 
@@ -2046,7 +2049,7 @@ class PlotTabUI(QWidget):
         auto_annotate_group = DataPlotStudioGroupBox("Annotate Data Points")
         auto_annotate_layout = QVBoxLayout()
 
-        self.auto_annotate_check = DataPlotStudioCheckBox("Annotate All points")
+        self.auto_annotate_check = DataPlotStudioToggleSwitch("Annotate All points")
         self.auto_annotate_check.setToolTip("Automatically set text labels to all data points")
         auto_annotate_layout.addWidget(self.auto_annotate_check)
 
@@ -2089,7 +2092,7 @@ class PlotTabUI(QWidget):
         textbox_bg_layout.addWidget(self.textbox_bg_label)
         text_box_layout.addLayout(textbox_bg_layout)
         
-        self.textbox_enable_check = DataPlotStudioCheckBox("Enable Text Box")
+        self.textbox_enable_check = DataPlotStudioToggleSwitch("Enable Text Box")
         text_box_layout.addWidget(self.textbox_enable_check)
 
         text_box_group.setLayout(text_box_layout)
@@ -2101,7 +2104,7 @@ class PlotTabUI(QWidget):
         table_group = DataPlotStudioGroupBox("Data Table")
         table_layout = QVBoxLayout()
 
-        self.table_enable_check = DataPlotStudioCheckBox("Show Data Table on plot")
+        self.table_enable_check = DataPlotStudioToggleSwitch("Show Data Table on plot")
         self.table_enable_check.setChecked(False)
         table_layout.addWidget(self.table_enable_check)
 
@@ -2123,7 +2126,7 @@ class PlotTabUI(QWidget):
         table_layout.addLayout(table_controls_layout)
 
         table_settings_layout = QHBoxLayout()
-        self.table_auto_font_size_check = DataPlotStudioCheckBox("Auto Font-Size")
+        self.table_auto_font_size_check = DataPlotStudioToggleSwitch("Auto Font-Size")
         self.table_auto_font_size_check.setChecked(False)
         self.table_auto_font_size_check.setEnabled(False)
         table_settings_layout.addWidget(self.table_auto_font_size_check)
@@ -2194,7 +2197,7 @@ class PlotTabUI(QWidget):
         proj_layout.addSpacing(10)
 
         #Basemap
-        self.geo_basemap_check = DataPlotStudioCheckBox("Add background Basemap")
+        self.geo_basemap_check = DataPlotStudioToggleSwitch("Add background Basemap")
         self.geo_basemap_check.setToolTip("Overlay data on top of a web map tile.\nRequires an internet connection")
         proj_layout.addWidget(self.geo_basemap_check)
 
@@ -2239,20 +2242,20 @@ class PlotTabUI(QWidget):
         geo_legend_group = DataPlotStudioGroupBox("Map Legend and Axes")
         geo_legend_layout = QVBoxLayout()
 
-        self.geo_legend_check = DataPlotStudioCheckBox("Show Map Legend")
+        self.geo_legend_check = DataPlotStudioToggleSwitch("Show Map Legend")
         self.geo_legend_loc_combo = DataPlotStudioComboBox()
         self.geo_legend_loc_combo.addItems(["vertical", "horizontal"])
         geo_legend_layout.addWidget(self.geo_legend_loc_combo)
 
-        self.geo_use_divider_check = DataPlotStudioCheckBox("Use Divider")
+        self.geo_use_divider_check = DataPlotStudioToggleSwitch("Use Divider")
         self.geo_use_divider_check.setToolTip("Use mpl_toolkits divider to align legend")
         geo_legend_layout.addWidget(self.geo_use_divider_check)
 
-        self.geo_cax_check = DataPlotStudioCheckBox("Plot on Separate CAX")
+        self.geo_cax_check = DataPlotStudioToggleSwitch("Plot on Separate CAX")
         self.geo_cax_check.setToolTip("Plot legend/colorbar on a separate axis")
         geo_legend_layout.addWidget(self.geo_cax_check)
 
-        self.geo_axis_off_check = DataPlotStudioCheckBox("Turn Off Axis")
+        self.geo_axis_off_check = DataPlotStudioToggleSwitch("Turn Off Axis")
         self.geo_axis_off_check.setChecked(False)
         geo_legend_layout.addWidget(self.geo_axis_off_check)
 
@@ -2289,7 +2292,7 @@ class PlotTabUI(QWidget):
         boundary_group = DataPlotStudioGroupBox("Boundary Customization")
         boundary_layout = QVBoxLayout()
 
-        self.geo_boundary_check = DataPlotStudioCheckBox("Plot Boundary Only")
+        self.geo_boundary_check = DataPlotStudioToggleSwitch("Plot Boundary Only")
         boundary_layout.addWidget(self.geo_boundary_check)
 
         boundary_layout.addWidget(QLabel("Edge Color:"))

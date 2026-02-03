@@ -1,10 +1,7 @@
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-
-
+from ui.widgets import DataPlotStudioToggleSwitch, DataPlotStudioSpinBox
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFontComboBox, QFormLayout, QLabel, QTabWidget, QVBoxLayout, QWidget
 
-from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
 
 
 class SettingsDialog(QDialog):
@@ -26,7 +23,7 @@ class SettingsDialog(QDialog):
         appearance_layout = QFormLayout()
         appearance_layout.setSpacing(15)
 
-        self.dark_mode_check = DataPlotStudioCheckBox("Enable Dark Mode")
+        self.dark_mode_check = DataPlotStudioToggleSwitch("Enable Dark Mode")
         self.dark_mode_check.setChecked(self.current_settings.get("dark_mode", False))
         self.dark_mode_check.setToolTip("Toggle between dark and light themes")
         appearance_layout.addRow(QLabel("Theme:"), self.dark_mode_check)

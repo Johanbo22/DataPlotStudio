@@ -12,6 +12,9 @@ from .AnimatedSpinBox import DataPlotStudioSpinBox
 from .AnimatedTabWidget import DataPlotStudioTabWidget
 from .ColormapButton import ColormapButton
 from .HelpIcon import HelpIcon
+from .ToggleSwitch import DataPlotStudioToggleSwitch
+from .AutoResizingStackedWidget import AutoResizingStackedWidget
+from .QuickFilterEdit import QuickFilterEdit
 
 __all__ = [
     "DataPlotStudioButton",
@@ -28,4 +31,7 @@ __all__ = [
     "DataPlotStudioTabWidget",
     "ColormapButton",
     "HelpIcon",
+    "DataPlotStudioToggleSwitch",
+    "AutoResizingStackedWidget",
+    "QuickFilterEdit"
     ]

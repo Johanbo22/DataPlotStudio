@@ -2,14 +2,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogBu
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt
 
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-from ui.widgets.AnimatedDoubleSpinBox import DataPlotStudioDoubleSpinBox
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
-from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
-from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioSpinBox, DataPlotStudioTabWidget, DataPlotStudioToggleSwitch
 
 class TableCustomizationDialog(QDialog):
     def __init__(self, current_settings: dict, parent: QWidget | None = None):
@@ -45,7 +38,7 @@ class TableCustomizationDialog(QDialog):
         vbox = QVBoxLayout()
 
         hbox_alt = QHBoxLayout()
-        self.alternating_check = DataPlotStudioCheckBox("Alternating Row Colors")
+        self.alternating_check = DataPlotStudioToggleSwitch("Alternating Row Colors")
         self.alternating_check.setChecked(self.settings.get("alternating_rows", True))
         self.alternating_check.toggled.connect(self.toggle_alt_color_button)
         vbox.addWidget(self.alternating_check)
@@ -64,7 +57,7 @@ class TableCustomizationDialog(QDialog):
 
         self.toggle_alt_color_button(self.alternating_check.isChecked())
 
-        self.grid_check = DataPlotStudioCheckBox("Show Grid Lines")
+        self.grid_check = DataPlotStudioToggleSwitch("Show Grid Lines")
         self.grid_check.setChecked(self.settings.get("show_grid", True))
         vbox.addWidget(self.grid_check)
 
@@ -75,11 +68,11 @@ class TableCustomizationDialog(QDialog):
         header_group = DataPlotStudioGroupBox("Headers")
         header_vbox = QVBoxLayout()
 
-        self.horizontal_header_check = DataPlotStudioCheckBox("Show Horizontal Headers")
+        self.horizontal_header_check = DataPlotStudioToggleSwitch("Show Horizontal Headers")
         self.horizontal_header_check.setChecked(self.settings.get("show_h_headers", True))
         header_vbox.addWidget(self.horizontal_header_check)
 
-        self.vertical_header_check = DataPlotStudioCheckBox("Show Vertical Headers (Index)")
+        self.vertical_header_check = DataPlotStudioToggleSwitch("Show Vertical Headers (Index)")
         self.vertical_header_check.setChecked(self.settings.get("show_v_header", True))
         header_vbox.addWidget(self.vertical_header_check)
 
@@ -123,7 +116,7 @@ class TableCustomizationDialog(QDialog):
         text_group = DataPlotStudioGroupBox("Text Display")
         text_vbox = QVBoxLayout()
 
-        self.word_wrap_check = DataPlotStudioCheckBox("Word Wrap Long Text")
+        self.word_wrap_check = DataPlotStudioToggleSwitch("Word Wrap Long Text")
         self.word_wrap_check.setChecked(self.settings.get("word_wrap", False))
         text_vbox.addWidget(self.word_wrap_check)
 

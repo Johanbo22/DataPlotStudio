@@ -125,7 +125,7 @@ class MeltDialog(QDialog):
         #buttons
         button_layout = QHBoxLayout()
 
-        preview_button = DataPlotStudioButton("Update_Preview")
+        preview_button = DataPlotStudioButton("Update Preview")
         preview_button.clicked.connect(self.update_preview)
         button_layout.addWidget(preview_button)
 
