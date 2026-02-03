@@ -120,6 +120,9 @@ class PlotEngine:
     
     def create_figure(self, figsize=(10, 6), dpi=100) -> Figure:
         """Create a new matplotlib figure"""
+        # Closing the previous figure to prevent references to past figures.
+        if self.current_figure is not None:
+            plt.close(self.current_figure)
         self.current_figure = Figure(figsize=figsize, dpi=dpi)
         self.setup_layout(1, 1)
         return self.current_figure

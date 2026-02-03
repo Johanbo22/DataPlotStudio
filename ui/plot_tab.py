@@ -3631,6 +3631,9 @@ class PlotTab(PlotTabUI):
             fig_result, ax_result = create_plot_func(df_active)
 
             old_fig = self.plot_engine.current_figure
+            # Closing the previous figure to prevent references to past figures.
+            if old_fig is not None:
+                plt.close(old_fig)
             self.plot_engine.current_figure = fig_result
             self.plot_engine.current_ax = ax_result
 
