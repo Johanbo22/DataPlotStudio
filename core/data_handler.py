@@ -321,7 +321,7 @@ class DataHandler:
                         decimal=decimal,
                         thousands=thousands,
                         encoding="utf-8",
-                        on_bad_lines="skip",
+                        on_bad_lines="error",
                         engine="python",
                     )
 
@@ -329,9 +329,12 @@ class DataHandler:
                 last_error = GoogleSheetsImportError
 
             if df is None or len(df) == 0:
-                message = "The sheet appears to be empty or inaccessible."
+                if last_error:
+                    raise ValueError(f"Google Sheet Import Failed: {str(last_error)}")
+                
+                message = "The sheet appears to be empty or inaccessible"
                 if sheet_name and not gid:
-                    message += f"\n\nNote: Please verify the sheet name '{sheet_name}' matches exactly (case-sensitive)."
+                    message += f"\n\nNote: Please verify the sheet name '{sheet_name}' matches exactly"
                 raise ValueError(message)
 
             self.df = df
