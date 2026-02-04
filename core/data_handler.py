@@ -459,12 +459,15 @@ class DataHandler:
                     try:
                         value = int(value)
                     except ValueError:
-                        pass
+                        try:
+                            value = int(float(value))
+                        except ValueError:
+                            raise ValueError(f"Value: '{value}' is not a valid integer for column '{column_name}'")
                 elif pd.api.types.is_float_dtype(column_datatype):
                     try:
                         value = float(value)
                     except ValueError:
-                        pass
+                        raise ValueError(f"Value '{value}' is not a valid float for column '{column_name}'")
                 elif pd.api.types.is_bool_dtype(column_datatype):
                     if isinstance(value, str):
                         value = value.lower() in ("true", "1", "t", "yes", "y")

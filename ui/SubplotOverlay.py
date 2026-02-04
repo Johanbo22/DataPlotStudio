@@ -42,16 +42,23 @@ class SubplotOverlay(QWidget):
         """CAlled when the animation is finished to remove text but retain border values"""
         self.label_widget.hide()
 
-    def update_info(self, text, geometry):
-        """Updater for text and geometry when information is changed"""
-        self.label_widget.setText(text)
-        self.label_widget.show()
+    def update_info(self, text: str, geometry: tuple[int, int, int, int], is_resize: bool = False):
+        """
+        Updater for text and geometry when information is changed
+        Args:
+            text (str): The text to display in the overlay
+            geometry (tuple[int, int, int, int]): The geometry (x, y, w, h) for the overlay
+            is_resize (bool): Flag indicating if the update is triggered by a resize event
+        """
         self.setGeometry(*geometry)
-        self.show()
+        if not is_resize:
+            self.label_widget.setText(text)
+            self.label_widget.show()
+            self.show()
 
-        self.opacity_effect.setOpacity(1.0)
-        self.fade_animation.stop()
-        self.fade_animation.start()
+            self.opacity_effect.setOpacity(1.0)
+            self.fade_animation.stop()
+            self.fade_animation.start()
 
     def paintEvent(self, event):
         """Draw a blue border around the subplot for the user to see"""

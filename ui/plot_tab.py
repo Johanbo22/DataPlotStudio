@@ -420,17 +420,17 @@ class PlotTab(PlotTabUI):
             self._update_overlay()
             self.status_bar.log(f"Active subplot set to: {index + 1}", "INFO")
     
-    def _update_overlay(self):
+    def _update_overlay(self, is_resize: bool = False):
         """Recalculate geometry and overlay widgets"""
         geometry = self.plot_engine.get_active_axis_geometry()
 
         if geometry:
             x, y, w, h = geometry
             current_text = self.active_subplot_combo.currentText()
-            self.selection_overlay.update_info(current_text, (x, y, w, h))
+            self.selection_overlay.update_info(current_text, (x, y, w, h), is_resize=is_resize)
     
     def on_canvas_resize(self, event):
-        self._update_overlay()
+        self._update_overlay(is_resize=True)
         self._setup_plot_figure(clear=False)
         self.canvas.draw_idle()
 
