@@ -365,23 +365,43 @@ class PlotEngine:
         if not secondary_y or secondary_y not in df.columns:
             return None
         
-        ax2 = self.current_ax.twinx()
-        self.secondary_ax = ax2
-
-        if secondary_plot_type == "Line":
-            ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}")
-        elif secondary_plot_type == "Bar":
-            ax2.bar(df[x], df[secondary_y], alpha=0.3, label=f"{secondary_y}")
-        elif secondary_plot_type == "Scatter":
-            ax2.scatter(df[x], df[secondary_y], label=f"{secondary_y}")
-        elif secondary_plot_type == "Area":
-            ax2.fill_between(df[x], 0, df[secondary_y], alpha=0.2, label=f"{secondary_y}")
+        horizontal = kwargs.get("horizontal", False)
+        if horizontal:
+            # for horizontal we create a new x-axis
+            ax2 = self.current_ax.twiny()
+            self.secondary_ax = ax2
+            
+            if secondary_plot_type == "Line":
+                ax2.plot(df[secondary_y], df[x], label=f"{secondary_y}")
+            elif secondary_plot_type == "Bar":
+                ax2.barh(df[x], df[secondary_y], label=f"{secondary_y}")
+            elif secondary_plot_type == "Scatter":
+                ax2.scatter(df[secondary_y], df[x], label=f"{secondary_y}")
+            elif secondary_plot_type == "Area":
+                ax2.fill_between(df[x], 0, df[secondary_y], label=f"{secondary_y}")
+            else:
+                ax2.plot(df[secondary_y], df[x], label=f"{secondary_y}")
+            
+            ax2.set_xlabel(secondary_y)
+            ax2.tick_params(axis="x")
         else:
-            ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}", linestyle="--")
-        
-        ax2.set_ylabel(secondary_y)
-        ax2.tick_params(axis="y")
+            ax2 = self.current_ax.twinx()
+            self.secondary_ax = ax2
 
+            if secondary_plot_type == "Line":
+                ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}")
+            elif secondary_plot_type == "Bar":
+                ax2.bar(df[x], df[secondary_y], label=f"{secondary_y}")
+            elif secondary_plot_type == "Scatter":
+                ax2.scatter(df[x], df[secondary_y], label=f"{secondary_y}")
+            elif secondary_plot_type == "Area":
+                ax2.fill_between(df[x], 0, df[secondary_y], label=f"{secondary_y}")
+            else:
+                ax2.plot(df[x], df[secondary_y], label=f"{secondary_y}")
+            
+            ax2.set_ylabel(secondary_y)
+            ax2.tick_params(axis="y")
+        
         return ax2
 
     def _consolidate_legends(self, ax1, ax2):
@@ -540,8 +560,8 @@ class PlotEngine:
                 sns.barplot(data=df, x=x, y=y[0], hue=hue, ax=self.current_ax, picker=True, **kwargs)
         
         ax2 = None
-        if secondary_y and not horizontal:
-            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, **kwargs)
+        if secondary_y:
+            ax2 = self._handle_secondary_axis(df, x, secondary_y, secondary_plot_type, horizontal=horizontal, **kwargs)
 
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
 
@@ -1310,7 +1330,7 @@ class PlotEngine:
             )
         
         if plot_tab.title_check.isChecked():
-            title_to_use = plot_tab.title_input.text() if plot_tab.title_input.text() else plot_tab.plot_type.currentText()
+            title_to_use = plot_tab.title_input.text() if plot_tab.title_input.text() else plot_tab.plot_type.currentIndex()
             self.current_ax.set_title(
                 title_to_use,
                 fontsize=plot_tab.title_size_spin.value(),

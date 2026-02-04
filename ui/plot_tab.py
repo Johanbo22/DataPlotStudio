@@ -297,7 +297,7 @@ class PlotTab(PlotTabUI):
             for plot_name in plot_names:
                 if plot_name in self.plot_engine.AVAILABLE_PLOTS:
                     icon_key = self.plot_engine.AVAILABLE_PLOTS[plot_name]
-                    icon_path = get_resource_path("icons/plot_tab/plots/{icon_key}.png")
+                    icon_path = get_resource_path(f"icons/plot_tab/plots/{icon_key}.png")
 
                     item = QListWidgetItem(QIcon(icon_path), plot_name)
                     item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
