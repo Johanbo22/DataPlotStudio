@@ -1,17 +1,11 @@
-from flask.config import T
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-
-
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QStackedWidget, QDateEdit, QSizePolicy, QWidget
-from PyQt6.QtCore import QDate
+from PyQt6.QtCore import QDate, QThreadPool
+from flask.cli import F
 import pandas as pd
 
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-from ui.widgets.AnimatedDoubleSpinBox import DataPlotStudioDoubleSpinBox
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
+from ui.workers import FilterWorker
+from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioCheckBox
 
 
 class FilterAdvancedDialog(QDialog):
@@ -26,6 +20,7 @@ class FilterAdvancedDialog(QDialog):
         self.data_handler = data_handler
         self.columns = list(self.data_handler.df.columns) if self.data_handler.df is not None else []
         self.filters = []
+        self.thread_pool = QThreadPool.globalInstance()
         self.init_ui()
 
     def init_ui(self):
@@ -281,7 +276,24 @@ class FilterAdvancedDialog(QDialog):
                     if isinstance(val, str) and not val.strip():
                         QMessageBox.warning(self, "Validation Error", "Please enter a value for all active filters")
                         return
+        
+        self.setEnabled(False)
+        
+        filter_config = self.get_filters()
+        
+        worker = FilterWorker(self.data_handler, filter_config)
+        worker.signals.finished.connect(self.on_filter_finished)
+        worker.signals.error.connect(self.on_filter_error)
+        self.thread_pool.start(worker)
+    
+    def on_filter_finished(self, result_df):
+        self.data_handler.df = result_df
+        self.setEnabled(True)
         self.accept()
+    
+    def on_filter_error(self, error):
+        self.setEnabled(True)
+        QMessageBox.critical(self, "Filter error", f"An error occurred during filtering:\n{str(error)}")
 
     def get_filters(self):
         """Return active filters with logical operator"""

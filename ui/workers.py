@@ -20,7 +20,47 @@ class WorkerSignals(QObject):
     error = pyqtSignal(Exception)
     log = pyqtSignal(str)
     progress = pyqtSignal(int, str)
+    
+class AggregationWorker(QRunnable):
+    """Worker for performing data aggregation"""
+    def __init__(self, data_handler: DataHandler, group_by: list, agg_config: dict, date_grouping: dict):
+        super().__init__()
+        self.data_handler = data_handler
+        self.group_by = group_by
+        self.agg_config = agg_config
+        self.date_grouping = date_grouping
+        self.signals = WorkerSignals()
+    
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Preparing Aggregation...")
+            result_df = self.data_handler.preview_aggregation(group_by=self.group_by, agg_config=self.agg_config, date_grouping=self.date_grouping, limit=None)
+            
+            self.signals.progress.emit(100, "Aggregation complete")
+            self.signals.finished.emit(result_df)
+        except Exception as Error:
+            self.signals.error.emit(Error)
 
+class FilterWorker(QRunnable):
+    """Worker for applying filters"""
+    
+    def __init__(self, data_handler: DataHandler, filter_config: dict):
+        super().__init__()
+        self.data_handler = data_handler
+        self.filter_config = filter_config
+        self.signals = WorkerSignals()
+    
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Applying filters...")
+            
+            result_df = self.data_handler.apply_filter(self.filter_config)
+            self.signals.progress.emit(100, "Filtering complete")
+            self.signals.finished.emit(result_df)
+        except Exception as Error:
+            self.signals.error.emit(Error)
 
 class FileImportWorker(QRunnable):
     """The worker thread for importing files"""

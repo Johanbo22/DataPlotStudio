@@ -147,9 +147,7 @@ class DataHandler:
             elif extension == ".csv":
                 con = connect()
                 try:
-                    return con.execute(
-                        f"SELECT * FROM read_csv_auto('{path.as_posix()}')"
-                    ).df()
+                    return con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).df()
                 except Exception as DuckDBError:
                     print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
                     return pd.read_csv(filepath)
@@ -158,9 +156,7 @@ class DataHandler:
             elif extension == ".txt":
                 con = connect()
                 try:
-                    return con.execute(
-                        f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\\t')"
-                    ).df()
+                    return con.execute("SELECT * FROM read_csv_auto(?, delim='\\t')", [path.as_posix()]).df()
                 except Exception as DuckDBError:
                     print(
                         f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas"
@@ -205,8 +201,7 @@ class DataHandler:
                 con = connect(database=":memory:", read_only=False)
                 try:
                     self.df = con.execute(
-                        f"SELECT * FROM read_csv_auto('{path.as_posix()}')"
-                    ).df()
+                        "SELECT * FROM read_csv_auto(?)", [path.as_posix()]).df()
                 except Exception as ImportFileError:
                     print(
                         f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas"
@@ -218,8 +213,7 @@ class DataHandler:
                 con = connect(database=":memory:", read_only=False)
                 try:
                     self.df = con.execute(
-                        f"SELECT * FROM read_csv_auto('{path.as_posix()}', delim='\t')"
-                    ).df()
+                        "SELECT * FROM read_csv_auto(?, delim='\t')", [path.as_posix()]).df()
                 except Exception as ImportFileError:
                     print(
                         f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas"
@@ -553,8 +547,9 @@ class DataHandler:
             self._save_state()
             
             if advanced_filters:
-                query_parts = []
-                for item in advanced_filters:
+                query_parts: List[str] = []
+                query_params: Dict[str, Any] = {}
+                for i, item in enumerate(advanced_filters):
                     logic = item.get("operator", "")
                     col = item["column"]
                     cond = item["condition"]
@@ -568,11 +563,13 @@ class DataHandler:
                     elif cond == "Is Not Null":
                         clause = f"`{col}`.notna()"
                     else:
-                        if isinstance(val, str):
-                            val_str = val.replace("'", "\\'")
-                            clause = f"`{col}` {cond} '{val_str}'"
+                        param_key = f"val_{i}"
+                        query_params[param_key] = val
+                        
+                        if cond == "contains":
+                            clause = f"`{col}`.astype(str).str.contains(@query_params['{param_key}'], na=False)"
                         else:
-                            clause = f"`{col}` {cond} {val}"
+                            clause = f"`{col}` {cond} @query_params['{param_key}']"
                     
                     if logic:
                         query_parts.append(f" {logic.lower()} ")
@@ -643,6 +640,15 @@ class DataHandler:
         
         except Exception as FilterDataError:
             raise Exception(f"Error filtering data: {str(FilterDataError)}")
+    
+    def apply_filter(self, filter_config: Dict[str, Any]) -> pd.DataFrame:
+        if not isinstance(filter_config, dict):
+            raise ValueError("Filter configueration must be a dictionary")
+        if filter_config.get("logic") == "COMPLEX":
+            filters = filter_config.get("filters", [])
+            return self.filter_data(advanced_filters=filters)
+        
+        return self.df
 
     def create_computed_column(
         self, new_column_name: str, expression: str

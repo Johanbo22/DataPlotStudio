@@ -1,6 +1,3 @@
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-
-
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog,
@@ -14,13 +11,11 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QTableWidgetItem,
 )
-from PyQt6.QtCore import Qt
-
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
+from PyQt6.QtCore import Qt, QThreadPool
+from flask.config import T
+from ui.widgets import DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioComboBox, DataPlotStudioListWidget
 import pandas as pd
+from ui.workers import AggregationWorker
 
 
 class AggregationDialog(QDialog):
@@ -29,6 +24,8 @@ class AggregationDialog(QDialog):
     def __init__(self, data_handler, parent=None):
         super().__init__(parent)
         self.data_handler = data_handler
+        self.thread_pool = QThreadPool.globalInstance()
+        self.result_df = None
         self.setWindowTitle("Aggregate Data")
         self.setModal(True)
         self.resize(900, 700)
@@ -329,7 +326,7 @@ class AggregationDialog(QDialog):
 
     def validate_and_accept(self):
         """Validate selections before accepting"""
-        group_cols, agg_config, _ = self.get_current_config()
+        group_cols, agg_config, date_grouping = self.get_current_config()
 
         if not group_cols:
             QMessageBox.warning(
@@ -365,8 +362,26 @@ class AggregationDialog(QDialog):
                 "Please enter a name for the aggregation you want to save.",
             )
             return
-
+        
+        self.setEnabled(False)
+        self.button_add.setEnabled(False)
+        self.button_remove.setEnabled(False)
+        
+        worker = AggregationWorker(self.data_handler, group_cols,agg_config, date_grouping)
+        worker.signals.finished.connect(self.on_aggregation_finished)
+        worker.signals.error.connect(self.on_aggregation_error)
+        self.thread_pool.start(worker)
+    
+    def on_aggregation_finished(self, result_df):
+        self.result_df = result_df
+        self.setEnabled(True)
         self.accept()
+    
+    def on_aggregation_error(self, error):
+        self.setEnabled(True)
+        self.button_add.setEnabled(True)
+        self.button_remove.setEnabled(True)
+        QMessageBox.critical(self, "Aggregation Error", f"An error occurred:\n{str(error)}")
 
     def get_aggregation_config(self):
         """Return the aggregation config"""
