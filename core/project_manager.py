@@ -1,6 +1,5 @@
 # core/project_manager.py
 import xml.etree.ElementTree as XMLET
-import pickle
 from pathlib import Path
 from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
@@ -57,8 +56,7 @@ class ProjectManager:
                 dataframe = save_data.pop("data", None)
             
             if dataframe is not None:
-                with open(data_filepath, "wb") as data_file:
-                    pickle.dump(dataframe, data_file)
+                dataframe.to_parquet(data_filepath, engine="pyarrow", index=True)
                 save_data["data_file"] = data_filepath.name
             else:
                 if data_filepath.exists():
@@ -103,8 +101,7 @@ class ProjectManager:
                 if not data_filepath.exists():
                     raise FileNotFoundError(f"No data file for this project could be found: {data_filepath}")
                 
-                with open(data_filepath, "rb") as data_file:
-                    dataframe = pickle.load(data_file)
+                dataframe = pd.read_parquet(data_filepath, engine="pyarrow")
                 
                 project_data["data"] = dataframe
                 del project_data["data_file"]
