@@ -7,6 +7,7 @@ from ui.dialogs import SettingsDialog, AboutDialog
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
+from core.resource_loader import get_resource_path
 
 from PyQt6.QtGui import QCloseEvent, QFont, QIcon
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
@@ -20,7 +21,7 @@ class DataPlotStudio(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"DataPlotStudio - v{APPLICATION_VERSION}")
-        self.setWindowIcon(QIcon(r"icons\DPS_icon.ico"))
+        self.setWindowIcon(QIcon(get_resource_path("icons/DPS_icon.ico")))
 
         # Initialize the core managers
         self.project_manager = ProjectManager()
@@ -134,7 +135,7 @@ class DataPlotStudio(QMainWindow):
         if settings["dark_mode"]:
             base_css = self.get_dark_theme()
         else:
-            base_css = self.load_stylesheet("styles/style.css")
+            base_css = self.load_stylesheet("ui/styles/style.css")
         
         different_css = base_css + f"""
             QWidget {{
@@ -149,9 +150,9 @@ class DataPlotStudio(QMainWindow):
         QApplication.instance().setStyleSheet(different_css)
     
     def get_dark_theme(self):
-        return self.load_stylesheet("styles/dark_theme.css")
+        return self.load_stylesheet("ui/styles/dark_theme.css")
     
     @classmethod
     def load_stylesheet(cls, relative_path: str) -> str:
-        path = Path(__file__).parent / relative_path
+        path = Path(get_resource_path(relative_path))
         return path.read_text(encoding="utf-8")

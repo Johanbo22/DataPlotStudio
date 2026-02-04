@@ -1,5 +1,6 @@
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QCheckBox
+from core.resource_loader import get_resource_path
 from ui.widgets.mixins import HoverFocusAnimationMixin
 
 
@@ -14,7 +15,7 @@ class DataPlotStudioCheckBox(HoverFocusAnimationMixin, QCheckBox):
         self._update_stylesheet(self._base_border_color)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        icon = "icons/ui_styling/checkmark.svg"
+        icon = get_resource_path("icons/ui_styling/checkmark.svg").replace("\\", "/")
         self.setStyleSheet(f"""
             QCheckBox {{
                 spacing: 5px;

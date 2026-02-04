@@ -12,6 +12,7 @@ from PyQt6.QtGui import QIcon
 import pandas as pd
 from pathlib import Path
 
+from core.resource_loader import get_resource_path
 from ui.widgets import (
     DataPlotStudioButton,
     DataPlotStudioComboBox,
@@ -46,7 +47,7 @@ class MergeDialog(QDialog):
         self.file_label.setStyleSheet("color: #666; font-style: italic;")
         
         self.browse_button = DataPlotStudioButton("Browse...", parent=self)
-        self.browse_button.setIcon(QIcon("icons/menu_bar/folder-open.svg"))
+        self.browse_button.setIcon(QIcon(get_resource_path("icons/menu_bar/folder-open.svg")))
         self.browse_button.clicked.connect(self.browse_file)
         
         file_layout.addWidget(self.file_label, 1)

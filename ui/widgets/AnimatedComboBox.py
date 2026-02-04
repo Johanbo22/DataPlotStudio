@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QComboBox, QToolButton, QCompleter
+from core.resource_loader import get_resource_path
 from ui.widgets.mixins import HoverFocusAnimationMixin
 
 
@@ -35,7 +36,7 @@ class DataPlotStudioComboBox(HoverFocusAnimationMixin, QComboBox):
         
         # Setup a clear button
         self._clear_button: QToolButton = QToolButton(self)
-        self._clear_button.setIcon(QIcon("icons/clean.svg")) # TODO: Update this icon
+        self._clear_button.setIcon(QIcon(get_resource_path("icons/clean.svg"))) # TODO: Update this icon
         self._clear_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._clear_button.setStyleSheet("border: none; background: transparent; padding: 0px;")
         self._clear_button.setToolTip("Clear selection")
@@ -58,7 +59,7 @@ class DataPlotStudioComboBox(HoverFocusAnimationMixin, QComboBox):
         self._clear_button.move(x_pos, y_pos)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        arrow_icon_path = "icons/ui_styling/arrow-down-to-line.svg"
+        arrow_icon_path = get_resource_path("icons/ui_styling/arrow-down-to-line.svg").replace("\\", "/")
 
         self.setStyleSheet(f"""
             QComboBox {{

@@ -6,6 +6,7 @@ from pathlib import Path
 import traceback
 
 
+from core.resource_loader import get_resource_path
 from resources.version import APPLICATION_VERSION, SCRIPT_FILE_NAME, LOG_FILE_NAME
 from core.subset_manager import SubsetManager
 from ui.workers import FileImportWorker, GoogleSheetsImportWorker
@@ -55,7 +56,7 @@ class MainWindow(QWidget):
         self.tabs = DataPlotStudioTabWidget()
 
         # Data tab
-        data_icon = QIcon("icons/data_explorer.png")
+        data_icon = QIcon(get_resource_path("icons/data_explorer.png"))
         data_explorer_name = "Data Explorer"
         self.data_tab = DataTab(self.data_handler, self.status_bar, self.subset_manager)
 
@@ -69,7 +70,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.data_tab, data_icon, data_explorer_name)
 
         # Plot tab
-        plot_icon = QIcon("icons/plot.png")
+        plot_icon = QIcon(get_resource_path("icons/plot.png"))
         plot_tab_name = "Plot Studio"
         self.plot_tab = PlotTab(self.data_handler, self.status_bar)
         self.tabs.addTab(self.plot_tab, plot_icon, plot_tab_name)
@@ -86,9 +87,9 @@ class MainWindow(QWidget):
         self.data_tab.set_plot_tab(self.plot_tab)
         self.tabs.currentChanged.connect(self._on_tab_changed)
 
-    def _on_tab_changed(self, index) -> None:
+    def _on_tab_changed(self, index: int) -> None:
         """Handle tab change events"""
-        if index == 1:
+        if self.tabs.widget(index) == self.plot_tab:
             self.plot_tab.refresh_subset_list()
 
     def new_project(self):
@@ -541,7 +542,7 @@ class MainWindow(QWidget):
             self.status_bar.log("Nothing to redo")
     
     def zoom_in(self) -> None:
-        if not self.tabs.currentIndex() == 1:
+        if self.tabs.currentWidget() != self.plot_tab:
             QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
         
         fig = self.plot_tab.plot_engine.current_figure
@@ -551,7 +552,7 @@ class MainWindow(QWidget):
         self.status_bar.log("Zoomed in")
     
     def zoom_out(self) -> None:
-        if not self.tabs.currentIndex() == 1:
+        if self.tabs.currentWidget() != self.plot_tab:
             QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
         
         fig = self.plot_tab.plot_engine.current_figure

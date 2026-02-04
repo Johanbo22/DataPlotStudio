@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
 from resources.version import APPLICATION_VERSION, PROJECT_EXTENSION, DATA_EXTENSION
+from defusedxml import ElementTree as SafeXMLET
 
 class ProjectManager:
     
@@ -88,10 +89,10 @@ class ProjectManager:
             raise FileNotFoundError(f"Project file cannot be found at: {filepath}")
         
         try:
-            tree = XMLET.parse(filepath)
+            tree = SafeXMLET.parse(filepath)
             root = tree.getroot()
 
-            #convert
+            #converts
             project_data = self._xml_to_dict(root)
 
             #also load datafile

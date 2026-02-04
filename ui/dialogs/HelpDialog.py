@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 import os
 import sys
 import importlib.util
+from core.resource_loader import get_resource_path
 
 class HelpDialog(QDialog):
     """Dialog window do display help content"""
@@ -45,7 +46,7 @@ class HelpDialog(QDialog):
             sys.path.insert(0, project_root)
         
         clean_filename = f"{str(topic_id).lower()}.py"
-        anim_path = os.path.join(project_root, "resources", "help_animations", clean_filename)
+        anim_path = get_resource_path(os.path.join(project_root, "resources", "help_animations", clean_filename))
 
         animation_widget = self._load_animation(topic_id, anim_path)
         layout.addWidget(animation_widget, alignment=Qt.AlignmentFlag.AlignCenter)

@@ -1,4 +1,5 @@
 from tkinter import N
+from core.resource_loader import get_resource_path
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
@@ -24,7 +25,7 @@ class DatabaseConnectionDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Import from Database")
-        self.setWindowIcon(QIcon("icons/menu_bar/database.svg"))
+        self.setWindowIcon(QIcon(get_resource_path("icons/menu_bar/database.svg")))
         self.setMinimumWidth(900)
         self.resize(100, 600)
 
@@ -474,7 +475,7 @@ class DatabaseConnectionDialog(QDialog):
         icon_path = icon_map.get(db_type, "")
 
         if not Path(icon_path).exists():
-            icon_path = "icons/menu_bar/database.svg"
+            icon_path = get_resource_path("icons/menu_bar/database.svg")
         
         if Path(icon_path).exists():
             pixmap = QPixmap(icon_path)

@@ -1,6 +1,7 @@
 # core/plot_engine.py
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+import matplotlib
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -341,7 +342,7 @@ class PlotEngine:
             return None
         
         try:
-            cmap = plt.get_cmap(cmap_name)
+            cmap = matplotlib.colormaps[cmap_name]
             return [cmap(i) for i in np.linspace(0, 1, n_colors)]
         except:
             return None

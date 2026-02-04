@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QFont, QKeySequence
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from core.resource_loader import get_resource_path
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.AnimatedSlider import DataPlotStudioSlider
 from ui.widgets.ColormapButton import ColormapButton
@@ -81,37 +82,37 @@ class PlotTabUI(QWidget):
         
         #TAB 1: BASIC 
         basic_tab = self._create_basic_tab()
-        basic_tab_icon = QIcon("icons/plot_tab/customization_tabs/general.png")
+        basic_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/general.png"))
         self.custom_tabs.addTab(basic_tab, basic_tab_icon, "General")
         
         # TAB 2: APPEARANCE
         appearance_tab = self._create_appearance_tab()
-        appearance_tab_icon = QIcon("icons/plot_tab/customization_tabs/appearance.png")
+        appearance_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/appearance.png"))
         self.custom_tabs.addTab(appearance_tab, appearance_tab_icon, "Appearance")
         
         # TAB 3: AXES 
         axes_tab = self._create_axes_tab()
-        axes_tab_icon = QIcon("icons/plot_tab/customization_tabs/axis.png")
+        axes_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/axis.png"))
         self.custom_tabs.addTab(axes_tab, axes_tab_icon, "Axes")
         
         # TAB 4: LEGENDand GRID 
         legend_tab = self._create_legend_tab()
-        legend_tab_icon = QIcon("icons/plot_tab/customization_tabs/gridlines.png")
+        legend_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/gridlines.png"))
         self.custom_tabs.addTab(legend_tab, legend_tab_icon, "Legend and Grid")
         
         # TAB 5: ADVANCED (customi)
         advanced_tab = self._create_advanced_tab()
-        advanced_tab_icon = QIcon("icons/plot_tab/customization_tabs/customization.png")
+        advanced_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/customization.png"))
         self.custom_tabs.addTab(advanced_tab, advanced_tab_icon, "Customization") 
         
         #  TAB 6: ANNOTATIONS 
         annotations_tab = self._create_annotations_tab()
-        annotations_tab_icon = QIcon("icons/plot_tab/customization_tabs/annotation.png")
+        annotations_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/annotation.png"))
         self.custom_tabs.addTab(annotations_tab, annotations_tab_icon, "Annotations")
 
         # TAB 7. GEO
         geospatial_tab = self._create_geospatial_tab()
-        geospatial_tab_icon = QIcon("icons/plot_tab/customization_tabs/geospatial.png")
+        geospatial_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/geospatial.png"))
         self.custom_tabs.addTab(geospatial_tab, geospatial_tab_icon, "GeoSpatial")
         
         right_layout.addWidget(self.custom_tabs, 1)
@@ -130,7 +131,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.plot_button.setMinimumHeight(40)
-        self.plot_button.setIcon(QIcon("icons/generate_plot.png"))
+        self.plot_button.setIcon(QIcon(get_resource_path("icons/generate_plot.png")))
         self.plot_button.setShortcut(QKeySequence("Ctrl+Return"))
         button_layout.addWidget(self.plot_button)
 
@@ -145,7 +146,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.save_plot_button.setMinimumHeight(40)
-        self.save_plot_button.setIcon(QIcon("icons/menu_bar/save.svg"))
+        self.save_plot_button.setIcon(QIcon(get_resource_path("icons/menu_bar/save.svg")))
         self.save_plot_button.setToolTip("Export the current plot to PNG, PDF or SVG")
         button_layout.addWidget(self.save_plot_button)
         
@@ -160,7 +161,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.clear_button.setMinimumHeight(40)
-        self.clear_button.setIcon(QIcon("icons/clean.svg"))
+        self.clear_button.setIcon(QIcon(get_resource_path("icons/clean.svg")))
         button_layout.addWidget(self.clear_button)
         
         self.editor_button = DataPlotStudioButton(
@@ -174,7 +175,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.editor_button.setMinimumHeight(40)
-        self.editor_button.setIcon(QIcon("icons/ui_styling/file-code-corner.svg"))
+        self.editor_button.setIcon(QIcon(get_resource_path("icons/ui_styling/file-code-corner.svg")))
         self.editor_button.setToolTip("Open the code editor to view/write python code for the plot.")
         button_layout.addWidget(self.editor_button)
         

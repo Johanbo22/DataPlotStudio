@@ -9,6 +9,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.plot_engine import PlotEngine
 from core.data_handler import DataHandler
+from core.resource_loader import get_resource_path
 from ui.SubplotOverlay import SubplotOverlay
 from ui.status_bar import StatusBar
 from core.code_exporter import CodeExporter
@@ -296,7 +297,7 @@ class PlotTab(PlotTabUI):
             for plot_name in plot_names:
                 if plot_name in self.plot_engine.AVAILABLE_PLOTS:
                     icon_key = self.plot_engine.AVAILABLE_PLOTS[plot_name]
-                    icon_path = f"icons/plot_tab/plots/{icon_key}.png"
+                    icon_path = get_resource_path("icons/plot_tab/plots/{icon_key}.png")
 
                     item = QListWidgetItem(QIcon(icon_path), plot_name)
                     item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
@@ -2858,7 +2859,8 @@ class PlotTab(PlotTabUI):
         """Clear the plot"""
         self.plot_engine.clear_plot()
 
-        self._last_plot_signature = None
+        self._last_data_signature = None
+        self._last_viz_signature = None
 
         self.subplot_rows_spin.blockSignals(True)
         self.subplot_cols_spin.blockSignals(True)
@@ -2967,7 +2969,7 @@ class PlotTab(PlotTabUI):
         # secondary y config
         sec_y_enabled = config.get("secondary_y_enabled", False)
         self.secondary_y_check.setChecked(sec_y_enabled)
-        self._toggle_secondary_inputs(sec_y_enabled)
+        self._toggle_secondary_input(sec_y_enabled)
         if sec_y_enabled:
             self.secondary_y_column.setCurrentText(config.get("secondary_y_column", ""))
             self.secondary_plot_type_combo.setCurrentText(config.get("secondary_plot_type", "Line"))

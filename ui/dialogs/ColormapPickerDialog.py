@@ -106,7 +106,7 @@ class ColormapPickerDialog(QDialog):
     def _populate_colormaps(self) -> None:
         """Populates the list with colormaps"""
         try:
-            all_maps = set([m for m in matplotlib.colormaps() if not m.endswith("_r")])
+            all_maps = set([m for m in matplotlib.colormaps if not m.endswith("_r")])
         except Exception:
             all_maps = {"viridis", "plasma", "inferno", "magma"}
         
@@ -171,11 +171,8 @@ class ColormapPickerDialog(QDialog):
         painter = QPainter(pixmap)
 
         try:
-            try:
-                colormap = matplotlib.colormaps[colormap_name]
-            except Exception:
-                colormap = plt.get_cmap(colormap_name)
-
+            colormap = matplotlib.colormaps[colormap_name]
+            
             gradient = QLinearGradient(0, 0, width, 0)
             steps = 40
             for i in range(steps + 1):
