@@ -1,6 +1,7 @@
 # core/data_handler.py
 from duckdb import connect
 import pandas as pd
+import keyword
 import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -664,6 +665,19 @@ class DataHandler:
             raise ValueError("No data loaded")
 
         try:
+            if not new_column_name or not str(new_column_name).strip():
+                raise ValueError("New column name cannot be empty")
+            
+            clean_name = str(new_column_name).strip()
+            if clean_name in self.df.columns:
+                raise ValueError(f"Column '{clean_name}' already exists")
+            
+            if keyword.iskeyword(clean_name):
+                raise ValueError(f"'{clean_name}' is a reserved Python keyword and cannot be used a column name")
+            
+            if "`" in clean_name:
+                raise ValueError("Column names cannot contain backticks (`)")
+            
             self._save_state()
 
             # Using padnas eval for arithmetic expressions
@@ -1073,6 +1087,30 @@ class DataHandler:
             elif action == "rename_column":
                 old_name = kwargs.get("old_name")
                 new_name = kwargs.get("new_name")
+                
+                # First validate exisitence of the target column
+                if old_name not in self.df.columns:
+                    raise ValueError(f"Column '{old_name}' does not exist in the dataset.")
+                
+                # Validate if the new name is empty
+                if not new_name or not str(new_name).strip():
+                    raise ValueError("New column name cannot be empty or whitespace only.")
+                
+                clean_new_name = str(new_name).strip()
+                
+                # Check for duplicate names
+                if clean_new_name != old_name and clean_new_name in self.df.columns:
+                    raise ValueError(f"Column '{clean_new_name}' already exists in the dataset.")
+                
+                # Validate reserved keywords to avoid code generation from column name
+                if keyword.iskeyword(clean_new_name):
+                    raise ValueError(f"'{clean_new_name}' is a reserved Python keyword and cannot be used as a column name.")
+                
+                #Validating special characters that break pandas query() and eval()
+                # backticks are not allowed as they are used for escape sequences
+                if "`" in clean_new_name:
+                    raise ValueError("Column names cannot contain backticks (`).")
+                
                 self.df = self.df.rename(columns={old_name: new_name})
             elif action == "change_data_type":
                 column = kwargs.get("column")

@@ -1,5 +1,6 @@
 # ui/dialogs/ComputedColumnDialog.py
 import ast
+import keyword
 import re
 from PyQt6.QtWidgets import (
     QDialog,
@@ -233,6 +234,12 @@ class ComputedColumnDialog(QDialog):
 
         if not name:
             QMessageBox.warning(self, "Validation Error", "Please enter a column name")
+            return
+        if keyword.iskeyword(name):
+            QMessageBox.warning(self, "Validation Error", f"'{name}' is a reserved Python keyword and cannot be used as a column name.")
+            return
+        if "`" in name:
+            QMessageBox.warning(self, "Validation Error", "Column names cannot contain backticks")
             return
         if not name.isidentifier():
             QMessageBox.warning(

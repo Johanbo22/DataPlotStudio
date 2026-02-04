@@ -1,3 +1,4 @@
+import keyword
 from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
 
 
@@ -63,12 +64,20 @@ class RenameColumnDialog(QDialog):
         """Validate new name before accepting"""
         new_name = self.new_name_input.text().strip()
 
-        if not new_name:
-            QMessageBox.warning(self, "Validation Error", "Please enter a new column name")
+        if not new_name or not str(new_name).strip():
+            QMessageBox.warning(self, "Validation Error", "New column name cannot be empty or whitespace only.")
             return
 
         if new_name == self.column_name:
             QMessageBox.warning(self, "Validation Error", "New name must be different from current name")
+            return
+        
+        if keyword.iskeyword(new_name):
+            QMessageBox.warning(self, "Validation Error", f"'{new_name}' is a reserved Python keyword and cannot be used as a column name.")
+            return
+        
+        if "`" in new_name:
+            QMessageBox.warning(self, "Validation Error", "Column names cannot contain backticks (`).")
             return
 
         self.accept()
