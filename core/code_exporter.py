@@ -56,9 +56,7 @@ class CodeExporter:
     def _clean_value(self, value: Any) -> str:
         """Helper to format values for insertion into code."""
         if isinstance(value, str):
-            # Escape single quotes and backslashes
-            cleaned = value.replace("\\", "\\\\").replace("'", "\\'")
-            return f"'{cleaned}'"
+            return repr(value)
         if value is None:
             return "None"
         # Handle dicts for line/bar customizations
@@ -133,7 +131,7 @@ class CodeExporter:
             
         else:
             # It's a local file import
-            filepath_str = f"r'{data_filepath}'".replace("\\", "\\\\")
+            filepath_str = self._clean_value(data_filepath)
             lines.append(f"    filepath = {filepath_str}")
             lines.append("    print(f'Loading data from {{filepath}}...')")
             ext = Path(data_filepath).suffix.lower()
@@ -175,6 +173,12 @@ class CodeExporter:
                     col = self._clean_value(op['column'])
                     cond = op['condition']
                     val = op['value'] # Get raw value
+                    # Validate conditions with a whitelist of
+                    # allowed filter operations
+                    allowed_ops = {"==", "!=", ">", "<", ">=", "<=", "contains", "in"}
+                    if cond not in allowed_ops:
+                        lines.append(f"    # Warning: Skipping unsafe/unknown filter condition '{cond}'")
+                        continue
                     
                     # Try to auto-convert numeric, but fall back to string
                     val_str = self._clean_value(val)
@@ -321,7 +325,7 @@ class CodeExporter:
 
 
         lines.append("    except Exception as e:")
-        lines.append("        print(f'Failed to add scatter analysis: {{e}}')")
+        lines.append(f"        print(f'Failed to add scatter analysis: {{e}}')")
         lines.append("        traceback.print_exc()")
         
         return lines
