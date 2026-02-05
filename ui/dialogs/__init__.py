@@ -23,6 +23,7 @@ from .SearchResultsDialog import SearchResultsDialog
 from .PivotDialog import PivotDialog
 from .MergeDialog import MergeDialog
 from .BinningDialog import BinningDialog
+from .ComputedColumnDialog import ComputedColumnDialog
 
 __all__ = [
     "AggregationDialog",
@@ -49,5 +50,6 @@ __all__ = [
     "SearchResultsDialog",
     "PivotDialog",
     "MergeDialog",
-    "BinningDialog"
+    "BinningDialog",
+    "ComputedColumnDialog"
 ]

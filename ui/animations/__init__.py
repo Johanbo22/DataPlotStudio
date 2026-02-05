@@ -16,6 +16,11 @@ from .DropMissingValueAnimation import DropMissingValueAnimation
 from .FillMissingValuesAnimation import FillMissingValuesAnimation
 from .OutlierDetectionAnimation import OutlierDetectionAnimation
 from .EditModeToggleAnimation import EditModeToggleAnimation
+from .DropColumnAnimation import DropColumnAnimation
+from .RenameColumnAnimation import RenameColumnAnimation
+from .DataTypeChangeAnimation import DataTypeChangeAnimation
+from .AggregationAnimation import AggregationAnimation
+from .MeltDataAnimation import MeltDataAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -34,5 +39,10 @@ __all__ = [
     "RemoveRowAnimation",
     "DropMissingValueAnimation",
     "FillMissingValuesAnimation",
-    "EditModeToggleAnimation"
+    "EditModeToggleAnimation",
+    "DropColumnAnimation",
+    "RenameColumnAnimation",
+    "DataTypeChangeAnimation",
+    "AggregationAnimation",
+    "MeltDataAnimation"
 ]
