@@ -183,6 +183,12 @@ class DataTableModel(QAbstractTableModel):
         if self._data is None:
             return
         
+        # Validate column index to prevent error on empty dataframe
+        # Suppresses sorting errors for index -1 is out of bounds when 
+        # creating a new project with 0x0 row/cols
+        if column < 0 or column >= len(self._data.columns):
+            return
+        
         self.layoutAboutToBeChanged.emit()
 
         try:

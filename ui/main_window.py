@@ -97,6 +97,11 @@ class MainWindow(QWidget):
         if self._confirm_discard_changes():
             self.project_manager.new_project()
             self.clear_all()
+            
+            # Create an empty dataframe (0x0) to start the table view
+            # Forces an update of the UI to switch from the welcome screen to project screen
+            self.data_handler.create_empty_dataframe(0, 0)
+            self.data_tab.refresh_data_view()
             self.status_bar.log("New Project Created")
     
     def open_project(self) -> None:
@@ -132,6 +137,9 @@ class MainWindow(QWidget):
             self.subset_manager.import_subsets(project_data["subsets"])
             self.data_tab.refresh_active_subsets()
             self.plot_tab.refresh_subset_list()
+        
+        # Automatically generate the plot based on the loaded configs
+        self.plot_tab.generate_plot()
         
         self.unsaved_changes = False
 
