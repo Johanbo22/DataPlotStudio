@@ -174,7 +174,6 @@ QScrollBar:vertical {
     background: #f0f0f0;
     width: 15px;
     margin: 15px 0 15px 0;
-    /* Top/bottom buttons */
 }
 
 QScrollBar::handle:vertical {
@@ -231,7 +230,35 @@ QScrollBar::sub-line:horizontal {
     subcontrol-position: left;
 }
 
-/* --- Dialogs (for dialogs.py) --- */
+QScrollBar::up-arrow:vertical,
+QScrollBar::down-arrow:vertical {
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::up-arrow:vertical {
+    image: url(icons/ui_styling/arrow-big-up.svg)
+}
+
+QScrollBar::down-arrow:vertical {
+    image: url(icons/ui_styling/arrow-big-down.svg)
+}
+
+QScrollBar::left-arrow:horizontal,
+QScrollBar::right-arrow:horizontal {
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::left-arrow:horizontal {
+    image: url(icons/ui_styling/arrow-big-left.svg);
+}
+
+QScrollBar::right-arrow:horizontal {
+    image: url(icons/ui_styling/arrow-big-right.svg);
+}
+
+/* --- Dialogs --- */
 QDialog {
     background-color: #fdfdfd;
 }
