@@ -1,4 +1,5 @@
 # ui/data_tab.py
+import re
 import traceback
 from PyQt6.QtWidgets import (
     QWidget,
@@ -25,9 +26,11 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QEasingCurve,
     pyqtSignal,
+    QThreadPool
 )
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 
+from core import data_handler
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
 from core.resource_loader import get_resource_path
@@ -81,6 +84,7 @@ from ui.animations import (
     EditModeToggleAnimation,
     FileImportAnimation
 )
+from ui.workers import GoogleSheetsImportWorker
 
 
 class DataTab(QWidget):
@@ -2615,107 +2619,99 @@ class DataTab(QWidget):
 
     def refresh_google_sheets_data(self):
         """Refresh data from the last imported Google Sheet document"""
-        try:
-            print("DEBUG: Attempting to refresh Google Sheets")
-            print(f"DEBUG: Sheet ID: {self.data_handler.last_gsheet_id}")
-            print(f"DEBUG: Sheet Name: {self.data_handler.last_gsheet_name}")
-            print(f"DEBUG: Delimiter: '{self.data_handler.last_gsheet_delimiter}'")
-            print(f"DEBUG: Decimal: '{self.data_handler.last_gsheet_decimal}'")
-            print(f"DEBUG: Thousands: '{self.data_handler.last_gsheet_thousands}'")
-            print(f"DEBUG: Has import: {self.data_handler.has_google_sheets_import()}")
-
-            if not self.data_handler.has_google_sheets_import():
-                QMessageBox.warning(
-                    self, "No Import History", "No Google Sheets import data found"
-                )
-                return
-
-            progress_dialog = ProgressDialog(
-                title="Refreshing Google Sheets data",
-                message=f"Reconnecting to {self.data_handler.last_gsheet_id}",
-            )
-            progress_dialog.show()
-            progress_dialog.update_progress(10, "Establishing connection")
-            QApplication.processEvents()
-
-            rows_before = (
-                len(self.data_handler.df) if self.data_handler.df is not None else 0
-            )
-            print(f"DEBUG: Rows before refresh: {rows_before}")
-
-            progress_dialog.update_progress(
-                30, f"Downloading data from: '{self.data_handler.last_gsheet_id}'"
-            )
-            QApplication.processEvents()
-
-            print("DEBUG: Calling refresh_google_sheets()...")
-            self.data_handler.refresh_google_sheets()
-            print("DEBUG: refresh_google_sheets() completed successfully")
-
-            progress_dialog.update_progress(70, "Processing data")
-            QApplication.processEvents()
-
-            print("DEBUG: Refreshing data view...")
-            self.refresh_data_view()
-            print("DEBUG: Data view refreshed")
-
-            progress_dialog.update_progress(100, "Complete")
-            QTimer.singleShot(300, progress_dialog.accept)
-
-            rows_after = len(self.data_handler.df)
-            rows_diff = rows_after - rows_before
-            diff_text = f"+{rows_diff}" if rows_diff > 0 else str(rows_diff)
-
-            print(f"DEBUG: Rows after refresh: {rows_after}")
-            print(f"DEBUG: Row difference: {diff_text}")
-
-            sheet_identifier = (
-                self.data_handler.last_gsheet_name
-                or f"GID: {self.data_handler.last_gsheet_gid}"
-            )
-
-            # loogg
-            self.status_bar.log_action(
-                f"Refreshed Google sheets data: {self.data_handler.last_gsheet_id}",
-                details={
-                    "sheet_name": sheet_identifier,
-                    "sheed_id": self.data_handler.last_gsheet_id,
-                    "rows_before": rows_before,
-                    "rows_after": rows_after,
-                    "rows_changed": rows_diff,
-                    "operation": "refresh_google_sheets",
-                },
-                level="SUCCESS",
-            )
-            QMessageBox.information(
-                self,
-                "Refresh Complete",
-                f"Google Sheets data refreshed successfully\n\n"
-                f"Sheet: {sheet_identifier}\n"
-                f"Rows: {rows_after:,} ({diff_text})\n"
-                f"Columns: {len(self.data_handler.df.columns)}",
-            )
-        except Exception as RefreshGoogleSheetsDataError:
-            print(
-                f"DEBUG: Exception occurred during refresh: {type(RefreshGoogleSheetsDataError).__name__}"
-            )
-            print(f"DEBUG: Exception message: {str(RefreshGoogleSheetsDataError)}")
-            print(f"DEBUG: Traceback:\n{traceback.format_exc()}")
-            if "progress_dialog" in locals() and progress_dialog:
-                progress_dialog.accept()
+        if not self.data_handler.has_google_sheets_import():
+            QMessageBox.warning(self, "No Import History", "No Google Sheets import data found")
+            return
+        
+        # Retrieve the stored information
+        sheet_id = self.data_handler.last_gsheet_id
+        sheet_name = self.data_handler.last_gsheet_name
+        delimiter = self.data_handler.last_gsheet_delimiter
+        decimal = self.data_handler.last_gsheet_decimal
+        thousands = self.data_handler.last_gsheet_thousands
+        gid = self.data_handler.last_gsheet_gid
+        
+        thousands_param = (None if thousands in [None, "None", ""] else thousands)
+        
+        self.progress_dialog = ProgressDialog(
+            title="Refreshing Google Sheets data",
+            message=f"Reconnecting to {sheet_id}",
+            parent=self
+        )
+        self.progress_dialog.setModal(True)
+        self.progress_dialog.show()
+        
+        self.rows_before_refresh = (len(self.data_handler.df) if self.data_handler.df is not None else 0)
+        
+        worker = GoogleSheetsImportWorker(
+            self.data_handler,
+            sheet_id,
+            sheet_name,
+            delimiter,
+            decimal,
+            thousands_param,
+            gid
+        )
+        
+        worker.signals.progress.connect(self.progress_dialog.update_progress)
+        worker.signals.finished.connect(self.on_refresh_google_sheets_finished)
+        worker.signals.error.connect(self.on_refresh_google_sheets_error)
+        
+        QThreadPool.globalInstance().start(worker)
+        
+    def on_refresh_google_sheets_finished(self, df):
+        """Handle the successful refresh completion from worker"""
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
+        
+        rows_after = len(df)
+        rows_diff = rows_after - self.rows_before_refresh
+        diff_text = f"+{rows_diff}" if rows_diff > 0 else str(rows_diff)
+        
+        self.refresh_data_view()
+        
+        sheet_identifier = self.data_handler.last_gsheet_name or f"GID: {self.data_handler.last_gsheet_gid}"
+        
+        self.status_bar.log_action(
+            f"Refreshed Google Sheets data: {self.data_handler.last_gsheet_id}",
+            details={
+                "sheet_name": sheet_identifier,
+                "sheet_id": self.data_handler.last_gsheet_id,
+                "rows_before": self.rows_before_refresh,
+                "rows_after": rows_after,
+                "rows_changed": rows_diff,
+                "operation": "refresh_google_sheets"
+            },
+            level="SUCCESS"
+        )
+        QMessageBox.information(
+            self,
+            "Refresh Complete",
+            f"Google Sheets data refreshed successfully\n\n"
+            f"Sheet: {sheet_identifier}\n"
+            f"Rows: {rows_after:,} ({diff_text})\n"
+            f"Columns: {len(df.columns)}",
+        )
+    
+    def on_refresh_google_sheets_error(self, error: Exception):
+        """Handle refresh failure from worker"""
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
+        
+        print(f"DEBUG: Refresh failed: {str(error)}")
+        if hasattr(self, "status_bar"):
             self.status_bar.log(
-                f"Failed to refresh Google Sheet Data: {str(RefreshGoogleSheetsDataError)}",
-                "ERROR",
+                f"Failed to refresh Google Sheets Data: {str(error)}", "ERROR"
             )
-            QMessageBox.critical(
-                self,
-                "Refresh Failed",
-                f"Failed to refresh Google Sheets data:\n\n{str(RefreshGoogleSheetsDataError)}\n\n"
-                "Please check:\n"
-                "• Internet connection\n"
-                "• Sheet is still shared publicly\n"
-                "• Sheet name has not changed",
-            )
+        QMessageBox.critical(
+        self,
+        "Refresh Failed",
+        f"Failed to refresh Google Sheets data:\n\n{str(error)}\n\n"
+        "Please check:\n"
+        "• Internet connection\n"
+        "• Sheet is still shared publicly\n"
+        "• Sheet name has not changed",
+        )
 
     def open_melt_dialog(self):
         """Opens the melt data dialog"""
