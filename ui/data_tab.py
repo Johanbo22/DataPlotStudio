@@ -69,9 +69,9 @@ from ui.widgets import (
     DataPlotStudioGroupBox,
     DataPlotStudioLineEdit,
     DataPlotStudioTabWidget,
-    HelpIcon,
-    DataOperationsPanel
+    HelpIcon
 )
+from ui.components.data_operations_panel import DataOperationsPanel
 from ui.LandingPage import LandingPage
 from ui.dialogs.ComputedColumnDialog import ComputedColumnDialog
 

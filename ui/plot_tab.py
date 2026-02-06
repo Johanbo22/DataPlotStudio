@@ -37,6 +37,7 @@ from typing import Optional
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.dialogs.PlotExportDialog import PlotExportDialog
 from ui.dialogs.ThemeEditorDialog import ThemeEditorDialog
+from core.plot_config_manager import PlotConfigManager
 
 
 class PlotTab(PlotTabUI):
@@ -61,6 +62,7 @@ class PlotTab(PlotTabUI):
         self.current_plot_type_name = "Line"
         self.dragged_annotation = None
         self.ignore_next_click = False
+        self.config_manager = PlotConfigManager(self)
         
         # These are now defined in the UI base 
         self.bg_color = "white"
@@ -146,12 +148,9 @@ class PlotTab(PlotTabUI):
         #
         self._populate_plot_toolbox()
 
-        # Connect all signals to their logic methods
-        self._connect_signals()
 
         self.selection_overlay = SubplotOverlay(self.canvas)
         self.canvas.mpl_connect("resize_event", self.on_canvas_resize)
-
         self.canvas.mpl_connect("pick_event", self.on_pick)
         
         # Load initial data
@@ -172,10 +171,25 @@ class PlotTab(PlotTabUI):
         self._last_data_signature = None
         self._last_viz_signature = None
         self._cached_active_df = None
+        
+        # Connect all signals to their logic methods
+        self._connect_signals()
+
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
-        
+        self._connect_main_controls()
+        self._connect_basic_tab_signals()
+        self._connect_appearance_tab_signals()
+        self._connect_axes_tab_signals()
+        self._connect_legend_grid_tab_signals()
+        self._connect_advanced_tab_signals()
+        self._connect_annotation_tab_signals()
+        self._connect_geospatial_tab_signals()
+        self._connect_theme_controls()
+    
+    def _connect_main_controls(self) -> None:
+        """Connect the main action buttons and canvas events"""
         #  Main Buttons 
         self.plot_button.clicked.connect(self.generate_plot)
         self.editor_button.clicked.connect(self.open_script_editor)
@@ -189,8 +203,9 @@ class PlotTab(PlotTabUI):
 
         #editor sync
         self.x_column.currentTextChanged.connect(self._sync_script_if_open)
-        
-        #  Tab 1: Basic 
+    
+    def _connect_basic_tab_signals(self) -> None:
+        """Connect signals for the General tab """
         self.multi_y_check.stateChanged.connect(self.toggle_multi_y)
         self.select_all_y_btn.clicked.connect(self.select_all_y_columns)
         self.clear_all_y_btn.clicked.connect(self.clear_all_y_columns)
@@ -201,8 +216,9 @@ class PlotTab(PlotTabUI):
         self.use_subset_check.stateChanged.connect(self.use_subset)
         self.use_plotly_check.stateChanged.connect(self.toggle_plotly_backend)
         self.secondary_y_check.stateChanged.connect(lambda state: self._toggle_secondary_input(bool(state)))
-        
-        #  Tab 2:- Appearance 
+    
+    def _connect_appearance_tab_signals(self) -> None:
+        """Connect signals for the Appearance tab"""
         self.individual_spines_check.stateChanged.connect(self.toggle_individual_spines)
         self.global_spine_color_button.clicked.connect(self.choose_global_spine_color)
         self.top_spine_color_button.clicked.connect(self.choose_top_spine_color)
@@ -216,8 +232,9 @@ class PlotTab(PlotTabUI):
         self.face_color_button.clicked.connect(self.choose_face_color)
         self.width_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
         self.height_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
-        
-        #  Tab 3: Axes 
+    
+    def _connect_axes_tab_signals(self) -> None:
+        """Connect signals for the Axes tab"""
         self.x_auto_check.stateChanged.connect(lambda: self.x_min_spin.setEnabled(not self.x_auto_check.isChecked()))
         self.x_auto_check.stateChanged.connect(lambda: self.x_max_spin.setEnabled(not self.x_auto_check.isChecked()))
         self.y_auto_check.stateChanged.connect(lambda: self.y_min_spin.setEnabled(not self.y_auto_check.isChecked()))
@@ -226,7 +243,8 @@ class PlotTab(PlotTabUI):
         self.x_datetime_format_combo.currentTextChanged.connect(self.on_x_datetime_format_changed)
         self.y_datetime_format_combo.currentTextChanged.connect(self.on_y_datetime_format_changed)
         
-        #  Tab 4: Legend & Grid 
+    def _connect_legend_grid_tab_signals(self) -> None:
+        """Connect signals for the Legend and Grid tab"""
         self.legend_check.stateChanged.connect(self.on_legend_toggle)
         self.legend_bg_button.clicked.connect(self.choose_legend_bg_color)
         self.legend_edge_button.clicked.connect(self.choose_legend_edge_color)
@@ -243,7 +261,8 @@ class PlotTab(PlotTabUI):
         self.y_minor_grid_color_button.clicked.connect(self.choose_y_minor_grid_color)
         self.y_minor_grid_alpha_slider.valueChanged.connect(lambda v: self.y_minor_grid_alpha_label.setText(f"{v}%"))
         
-        #  Tab 5: Advanced 
+    def _connect_advanced_tab_signals(self) -> None:
+        """Connect signals for the customization tab"""
         self.multiline_custom_check.stateChanged.connect(self.toggle_line_selector)
         self.line_selector_combo.currentTextChanged.connect(self.on_line_selected)
         self.line_color_button.clicked.connect(self.choose_line_color)
@@ -258,7 +277,8 @@ class PlotTab(PlotTabUI):
         self.save_bar_custom_button.clicked.connect(self.save_bar_customization)
         self.alpha_slider.valueChanged.connect(lambda v: self.alpha_label.setText(f"{v}%"))
         
-        #  Tab 6: Annotations 
+    def _connect_annotation_tab_signals(self) -> None:
+        """Connect signals for the Annotations tab"""
         self.annotation_color_button.clicked.connect(self.choose_annotation_color)
         self.auto_annotate_check.clicked.connect(self.toggle_auto_annotate)
         self.add_annotation_button.clicked.connect(self.add_annotation)
@@ -268,15 +288,18 @@ class PlotTab(PlotTabUI):
         self.table_enable_check.stateChanged.connect(self.toggle_table_controls)
         self.table_auto_font_size_check.stateChanged.connect(self.toggle_table_font_controls)
 
-        #tab 7 geospatial
+    def _connect_geospatial_tab_signals(self) -> None:
+        """Connect signals for the Geospatial tab"""
         self.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
 
-        # Theme contrsol
+    def _connect_theme_controls(self) -> None:
+        """Connect signals for Theme management"""
         self.load_theme_button.clicked.connect(self.apply_selected_theme)
         self.save_theme_button.clicked.connect(self.save_custom_theme)
         self.edit_theme_button.clicked.connect(self.edit_custom_theme)
         self.delete_theme_button.clicked.connect(self.delete_custom_theme)
+        self.refresh_theme_list()
 
     def _populate_plot_toolbox(self):
         while self.plot_type.count() > 0:
@@ -2919,597 +2942,16 @@ class PlotTab(PlotTabUI):
     
     def load_config(self, config: dict) -> None:
         """Load plot configuration"""
-        self.current_config = config
-
         try:
-            #Load the intial plottype 
-            if "plot_type" in config:
-                self.plot_type.blockSignals(True)
-                self._select_plot_in_toolbox(config["plot_type"])
-                self.plot_type.blockSignals(False)
-                self.on_plot_type_changed(config["plot_type"])
-            
-            #Load sections
-            if "basic" in config: self._load_basic_config(config["basic"])
-            if "appearance" in config: self._load_appearance_config(config["appearance"])
-            if "axes" in config: self._load_axes_config(config["axes"])
-            if "legend" in config: self._load_legend_config(config["legend"])
-            if "grid" in config: self._load_grid_config(config["grid"])
-            if "advanced" in config: self._load_advanced_config(config["advanced"])
-            if "annotations" in config: self._load_annotations_config(config["annotations"])
-
-            self.status_bar.log("Plot Config Loaded", "INFO")
-        
+            self.config_manager.load_config(config)
+            self.status_bar.log("Plot Config loaded", "INFO")
         except Exception as LoadConfigError:
-            self.status_bar.log(f"Error loading plot config from saved project: {str(LoadConfigError)}", "ERROR")
+            self.status_bar.log(f"Error loading plot config from saved project: {str(LoadConfigError)}")
             traceback.print_exc()
 
-    def _load_basic_config(self, config: dict):
-        self.x_column.setCurrentText(config.get("x_column", ""))
-        self.quick_filter_input.setText(config.get("quick_filter", ""))
-
-        # Multi Y config
-        multi_y = config.get("multi_y_checked", False)
-        self.multi_y_check.setChecked(multi_y)
-        self.toggle_multi_y()
-
-        y_cols = config.get("y_columns") or []
-        if multi_y:
-            self.y_columns_list.clearSelection()
-            for i in range(self.y_columns_list.count()):
-                item = self.y_columns_list.item(i)
-                if item.text() in y_cols:
-                    item.setSelected(True)
-        else:
-            if y_cols:
-                self.y_column.setCurrentText(y_cols[0])
-        
-        self.hue_column.setCurrentText(config.get("hue_column", "None"))
-
-        # secondary y config
-        sec_y_enabled = config.get("secondary_y_enabled", False)
-        self.secondary_y_check.setChecked(sec_y_enabled)
-        self._toggle_secondary_input(sec_y_enabled)
-        if sec_y_enabled:
-            self.secondary_y_column.setCurrentText(config.get("secondary_y_column", ""))
-            self.secondary_plot_type_combo.setCurrentText(config.get("secondary_plot_type", "Line"))
-
-        # Subsets
-        use_subset = config.get("use_subset", False)
-        self.use_subset_check.setChecked(use_subset)
-        if use_subset:
-            subset_name = config.get("subset_name")
-            if subset_name:
-                index = self.subset_combo.findData(subset_name)
-                if index >= 0:
-                    self.subset_combo.setCurrentIndex(index)
-        self.use_subset()
-    
-    def _load_appearance_config(self, config: dict):
-        # Font
-        if "font_family" in config:
-            self.font_family_combo.setCurrentFont(QFont(config["font_family"]))
-        self.usetex_checkbox.setChecked(config.get("usetext", False))
-
-        # Title
-        title_conf = config.get("title", {})
-        self.title_check.setChecked(title_conf.get("enabled", False))
-        self.title_input.setText(title_conf.get("text", ""))
-        self.title_size_spin.setValue(title_conf.get("size", 12))
-        self.title_weight_combo.setCurrentText(title_conf.get("weight", "normal"))
-        self.title_position_combo.setCurrentText(title_conf.get("location", "center"))
-
-        # Labels
-        x_label_conf = config.get("xlabel", {})
-        self.xlabel_check.setChecked(x_label_conf.get("enabled", False))
-        self.xlabel_input.setText(x_label_conf.get("text", ""))
-        self.xlabel_size_spin.setValue(x_label_conf.get("size", 10))
-        self.xlabel_weight_combo.setCurrentText(x_label_conf.get("weight", "normal"))
-
-        y_label_conf = config.get("xlabel", {})
-        self.ylabel_check.setChecked(y_label_conf.get("enabled", False))
-        self.ylabel_input.setText(y_label_conf.get("text", ""))
-        self.ylabel_size_spin.setValue(y_label_conf.get("size", 10))
-        self.ylabel_weight_combo.setCurrentText(y_label_conf.get("weight", "normal"))
-
-        # Spines
-        spines = config.get("spines", {})
-        for side, ctrl_check, width_spin, color_attr, btn in [
-            ("top", self.top_spine_visible_check, self.top_spine_width_spin, "top_spine_color", self.top_spine_color_button),
-            ("bottom", self.bottom_spine_visible_check, self.bottom_spine_width_spin, "bottom_spine_color", self.bottom_spine_color_button),
-            ("left", self.left_spine_visible_check, self.left_spine_width_spin, "left_spine_color", self.left_spine_color_button),
-            ("right", self.right_spine_visible_check, self.right_spine_width_spin, "right_spine_color", self.right_spine_color_button)
-        ]:
-            if side in spines:
-                s_conf = spines[side]
-                ctrl_check.setChecked(s_conf.get("visible", True))
-                width_spin.setValue(s_conf.get("width", 1.0))
-                color = s_conf.get("color", "black")
-                setattr(self, color_attr, color)
-                btn.updateColors(base_color_hex=color)
-        
-        # Figure settings
-        fig_conf = config.get("figure", {})
-        self.width_spin.setValue(fig_conf.get("width", 10))
-        self.height_spin.setValue(fig_conf.get("height", 6))
-        self.dpi_spin.setValue(fig_conf.get("dpi", 100))
-
-        if "bg_color" in fig_conf:
-            self.bg_color = fig_conf["bg_color"] or "white"
-            self.bg_color_label.setText(self.bg_color)
-            self.bg_color_button.updateColors(base_color_hex=self.bg_color)
-        
-        if "face_facecolor" in fig_conf:
-            self.face_color = fig_conf["face_facecolor"] or "white"
-            self.face_color_label.setText(self.face_color)
-            self.face_color_button.updateColors(self.face_color)
-        
-        self.palette_combo.setCurrentText(fig_conf.get("palette", "viridis"))
-        self.tight_layout_check.setChecked(fig_conf.get("tight_layout", True))
-        self.style_combo.setCurrentText(fig_conf.get("style", "default"))
-    
-    def _load_axes_config(self, config: dict):
-        # X axis
-        x_conf = config.get("x_axis", {})
-        self.x_auto_check.setChecked(x_conf.get("auto_limits", True))
-        self.x_invert_axis_check.setChecked(x_conf.get("invert", False))
-        self.x_top_axis_check.setChecked(x_conf.get("top_axis", False))
-        self.x_min_spin.setValue(x_conf.get("min", 0.0))
-        self.x_max_spin.setValue(x_conf.get("max", 1.0))
-        self.xtick_label_size_spin.setValue(x_conf.get("tick_label_size", 10))
-        self.xtick_rotation_spin.setValue(x_conf.get("tick_rotation", 0))
-        self.x_max_ticks_spin.setValue(x_conf.get("max_ticks", 10))
-        self.x_show_minor_ticks_check.setChecked(x_conf.get("minor_ticks_enabled", False))
-        self.x_major_tick_direction_combo.setCurrentText(x_conf.get("major_tick_direction", "out"))
-        self.x_major_tick_width_spin.setValue(x_conf.get("major_tick_width", 0.8))
-        self.x_minor_tick_direction_combo.setCurrentText(x_conf.get("minor_tick_direction", "out"))
-        self.x_minor_tick_width_spin.setValue(x_conf.get("minor_tick_width", 0.6))
-        self.x_scale_combo.setCurrentText(x_conf.get("scale", "linear"))
-        self.x_display_units_combo.setCurrentText(x_conf.get("display_units", "None"))
-
-        # Y Axis
-        y_conf = config.get("y_axis", {})
-        self.y_auto_check.setChecked(y_conf.get("auto_limits", True))
-        self.y_invert_axis_check.setChecked(y_conf.get("invert", False))
-        self.y_min_spin.setValue(y_conf.get("min", 0.0))
-        self.y_max_spin.setValue(y_conf.get("max", 1.0))
-        self.ytick_label_size_spin.setValue(y_conf.get("tick_label_size", 10))
-        self.ytick_rotation_spin.setValue(y_conf.get("tick_rotation", 0))
-        self.y_max_ticks_spin.setValue(y_conf.get("max_ticks", 10))
-        self.y_show_minor_ticks_check.setChecked(y_conf.get("minor_ticks_enabled", False))
-        self.y_major_tick_direction_combo.setCurrentText(y_conf.get("major_tick_direction", "out"))
-        self.y_major_tick_width_spin.setValue(y_conf.get("major_tick_width", 0.8))
-        self.y_minor_tick_direction_combo.setCurrentText(y_conf.get("minor_tick_direction", "out"))
-        self.y_minor_tick_width_spin.setValue(y_conf.get("minor_tick_width", 0.6))
-        self.y_scale_combo.setCurrentText(y_conf.get("scale", "linear"))
-        self.y_display_units_combo.setCurrentText(y_conf.get("display_units", "None"))
-
-        self.flip_axes_check.setChecked(config.get("flip_axes", False))
-
-        # Datetime
-        dt_conf = config.get("datetime", {})
-        self.custom_datetime_check.setChecked(dt_conf.get("enabled", False))
-        self.x_datetime_format_combo.setCurrentText(dt_conf.get("x_format_preset", "Auto"))
-        self.x_custom_datetime_input.setText(dt_conf.get("x_format_custom", ""))
-        self.y_datetime_format_combo.setCurrentText(dt_conf.get("y_format_preset", "Auto"))
-        self.y_custom_datetime_format_input.setText(dt_conf.get("y_format_custom", ""))
-        self.toggle_datetime_format()
-
-    def _load_legend_config(self, config: dict):
-        self.legend_check.setChecked(config.get("enabled", True))
-        self.legend_loc_combo.setCurrentText(config.get("location", "best"))
-        self.legend_title_input.setText(config.get("title", ""))
-        self.legend_size_spin.setValue(config.get("font_size", 10))
-        self.legend_columns_spin.setValue(config.get("columns", 1))
-        self.legend_colspace_spin.setValue(config.get("column_spacing", 0.5))
-        self.legend_frame_check.setChecked(config.get("frame", True))
-        self.legend_fancybox_check.setChecked(config.get("fancy_box", True))
-        self.legend_shadow_check.setChecked(config.get("shadow", False))
-        self.legend_edge_width_spin.setValue(config.get("edge_width", 0.8))
-        
-        self.legend_bg_color = config.get("bg_color") or "white"
-        self.legend_bg_label.setText(self.legend_bg_color)
-        self.legend_bg_button.updateColors(base_color_hex=self.legend_bg_color)
-        
-        self.legend_edge_color = config.get("edge_clor") or "black"
-        self.legend_edge_label.setText(self.legend_edge_color)
-        self.legend_edge_button.updateColors(base_color_hex=self.legend_edge_color)
-        
-        alpha = config.get("alpha", 0.8)
-        self.legend_alpha_slider.setValue(int(alpha * 100))
-
-        self.on_legend_toggle()
-
-    def _load_grid_config(self, config: dict):
-        self.grid_check.setChecked(config.get("enabled", False))
-        self.independent_grid_check.setChecked(config.get("independent_axes", False))
-
-        # Global settings
-        glob = config.get("global", {})
-        self.grid_which_type_combo.setCurrentText(glob.get("which", "major"))
-        self.grid_axis_combo.setCurrentText(glob.get("axis", "both"))
-        self.global_grid_alpha_slider.setValue(int(glob.get("alpha", 0.5) * 100))
-
-        # A function to color buttons correctly
-        def load_grid_section(prefix, conf):
-            getattr(self, f"{prefix}_grid_check").setChecked(conf.get("enabled", False))
-            getattr(self, f"{prefix}_grid_style_combo").setCurrentText(conf.get("style", "-"))
-            getattr(self, f"{prefix}_grid_linewidth_spin").setValue(conf.get("width", 0.8))
-            getattr(self, f"{prefix}_grid_alpha_slider").setValue(int(conf.get("alpha", 0.5) * 100))
-
-            color = conf.get("color", "gray")
-            setattr(self, f"{prefix}_grid_color", color)
-            getattr(self, f"{prefix}_grid_color_label").setText(color)
-            getattr(self, f"{prefix}_grid_color_button").updateColors(base_color_hex=color)
-        
-        if "x_major" in config: load_grid_section("x_major", config["x_major"])
-        if "x_minor" in config: load_grid_section("x_minor", config["x_minor"])
-        if "y_major" in config: load_grid_section("y_major", config["y_major"])
-        if "y_minor" in config: load_grid_section("y_minor", config["y_minor"])
-        
-        self.on_grid_toggle()
-    
-    def _load_advanced_config(self, config: dict):
-        self.multiline_custom_check.setChecked(config.get("multi_line_custom", False))
-        self.line_customizations = config.get("line_customizations", {})
-        
-        gl = config.get("global_line") or {}
-        self.linewidth_spin.setValue(gl.get("width", 1.5))
-        
-        # Reverse map linestyle
-        style_map = {'-': 'Solid', '--': 'Dashed', '-.': 'Dash-dot', ':': 'Dotted', 'None': 'None'}
-        self.linestyle_combo.setCurrentText(style_map.get(gl.get("style", "-"), "Solid"))
-        
-        self.line_color = gl.get("color") or "blue"
-        self.line_color_label.setText(self.line_color)
-        self.line_color_button.updateColors(base_color_hex=self.line_color)
-        
-        gm = config.get("global_marker") or {}
-        self.marker_combo.setCurrentText(gm.get("shape", "None"))
-        self.marker_size_spin.setValue(gm.get("size", 6))
-        self.marker_edge_width_spin.setValue(gm.get("edge_width", 1.0))
-        
-        self.marker_color = gm.get("color") or "blue"
-        self.marker_color_label.setText(self.marker_color)
-        self.marker_color_button.updateColors(base_color_hex=self.marker_color)
-        
-        self.marker_edge_color = gm.get("edge_color") or "black"
-        self.marker_edge_label.setText(self.marker_edge_color)
-        self.marker_edge_button.updateColors(base_color_hex=self.marker_edge_color)
-        
-        self.multibar_custom_check.setChecked(config.get("multi_bar_custom", False))
-        self.bar_customizations = config.get("bar_customizations", {})
-        
-        gb = config.get("global_bar") or {}
-        self.bar_width_spin.setValue(gb.get("width", 0.8))
-        self.bar_edge_width_spin.setValue(gb.get("edge_width", 1.0))
-        
-        self.bar_color = gb.get("color") or "blue"
-        self.bar_color_label.setText(self.bar_color)
-        self.bar_color_button.updateColors(base_color_hex=self.bar_color)
-        
-        self.bar_edge_color = gb.get("edge_color") or "black"
-        self.bar_edge_label.setText(self.bar_edge_color)
-        self.bar_edge_button.updateColors(base_color_hex=self.bar_edge_color)
-        
-        hist = config.get("histogram") or {}
-        self.histogram_bins_spin.setValue(hist.get("bins", 30))
-        self.histogram_show_normal_check.setChecked(hist.get("show_normal", False))
-        self.histogram_show_kde_check.setChecked(hist.get("show_kde", False))
-        
-        self.alpha_slider.setValue(int(config.get("global_alpha", 1.0) * 100))
-        
-        scat = config.get("scatter") or {}
-        self.regression_line_check.setChecked(scat.get("show_regression", False))
-        self.confidence_interval_check.setChecked(scat.get("show_ci", False))
-        self.show_r2_check.setChecked(scat.get("show_r2", False))
-        self.show_rmse_check.setChecked(scat.get("show_rmse", False))
-        self.show_equation_check.setChecked(scat.get("show_equation", False))
-        self.error_bars_combo.setCurrentText(scat.get("error_bars", "None"))
-        self.confidence_level_spin.setValue(scat.get("ci_level", 95))
-        
-        pie = config.get("pie") or {}
-        self.pie_show_percentages_check.setChecked(pie.get("show_percentages", True))
-        self.pie_start_angle_spin.setValue(pie.get("start_angle", 0))
-        self.pie_explode_check.setChecked(pie.get("explode_first", False))
-        self.pie_explode_distance_spin.setValue(pie.get("explode_distance", 0.1))
-        self.pie_shadow_check.setChecked(pie.get("shadow", False))
-
-        self.toggle_line_selector()
-        self.toggle_bar_selector()
-
-    def _load_annotations_config(self, config: dict):
-        # Text Annotations
-        self.annotations = config.get("text_annotations") or []
-        self.annotations_list.clear()
-        for ann in self.annotations:
-            self.annotations_list.addItem(f"{ann['text']} @ ({ann['x']:.2f}, {ann['y']:.2f})")
-            
-        # Textbox
-        tb = config.get("textbox") or {}
-        self.textbox_enable_check.setChecked(tb.get("enabled", False))
-        self.textbox_content.setText(tb.get("content", ""))
-        self.textbox_position_combo.setCurrentText(tb.get("position", "upper right"))
-        self.textbox_style_combo.setCurrentText(tb.get("style", "Rounded"))
-        
-        self.textbox_bg_color = tb.get("bg_color") or "white"
-        self.textbox_bg_label.setText(self.textbox_bg_color)
-        self.textbox_bg_button.updateColors(base_color_hex=self.textbox_bg_color)
-        
-        # Table
-        tab = config.get("table") or {}
-        self.table_enable_check.setChecked(tab.get("enabled", False))
-        self.table_type_combo.setCurrentText(tab.get("type", "Summary Stats"))
-        self.table_location_combo.setCurrentText(tab.get("location", "bottom"))
-        self.table_auto_font_size_check.setChecked(tab.get("auto_font_size", True))
-        self.table_font_size_spin.setValue(tab.get("fontsize", 10))
-        self.table_scale_spin.setValue(tab.get("scale", 1.2))
-        
-        self.toggle_table_controls()
-
-    
     def get_config(self) -> Dict[str, Any]:
         """Get current plot configuration"""
-        config = {
-            "version": 1.0,
-            "plot_type": self.current_plot_type_name,
-            "basic": self._get_basic_config(),
-            "appearance": self._get_appearance_config(),
-            "axes": self._get_axes_config(),
-            "legend": self._get_legend_config(),
-            "grid": self._get_grid_config(),
-            "advanced": self._get_advanced_config(),
-            "annotations": self._get_annotations_config()
-        }
-        return config
-
-    def _get_basic_config(self) -> Dict[str, Any]:
-        """Config for the General Tab"""
-        return {
-            "x_column": self.x_column.currentText(),
-            "y_columns": self.get_selected_y_columns(),
-            "multi_y_checked": self.multi_y_check.isChecked(),
-            "hue_column": self.hue_column.currentText(),
-            "use_subset": self.use_subset_check.isChecked(),
-            "subset_name": self.subset_combo.currentData(),
-            "secondary_y_enabled": self.secondary_y_check.isChecked(),
-            "secondary_y_column": self.secondary_y_column.currentText(),
-            "secondary_plot_type": self.secondary_plot_type_combo.currentText(),
-            "quick_filter": self.quick_filter_input.text()
-        }
-
-    def _get_appearance_config(self) -> Dict[str, Any]:
-        """Config for the appearance tab"""
-        return {
-            "font_family": self.font_family_combo.currentFont().family(),
-            "usetex": self.usetex_checkbox.isChecked(),
-            "title": {
-                "enabled": self.title_check.isChecked(),
-                "text": self.title_input.text(),
-                "size": self.title_size_spin.value(),
-                "weight": self.title_weight_combo.currentText(),
-                "location": self.title_position_combo.currentText(),
-            },
-            "xlabel": {
-                "enabled": self.xlabel_check.isChecked(),
-                "text": self.xlabel_input.text(),
-                "size": self.xlabel_size_spin.value(),
-                "weight": self.xlabel_weight_combo.currentText(),
-            },
-            "ylabel": {
-                "enabled": self.ylabel_check.isChecked(),
-                "text": self.ylabel_input.text(),
-                "size": self.ylabel_size_spin.value(),
-                "weight": self.ylabel_weight_combo.currentText(),
-            },
-            "spines": {
-                "top": {
-                    "visible": self.top_spine_visible_check.isChecked(),
-                    "width": self.top_spine_width_spin.value(),
-                    "color": self.top_spine_color,
-                },
-                "bottom": {
-                    "visible": self.bottom_spine_visible_check.isChecked(),
-                    "width": self.bottom_spine_width_spin.value(),
-                    "color": self.bottom_spine_color,
-                },
-                "left": {
-                    "visible": self.left_spine_visible_check.isChecked(),
-                    "width": self.left_spine_width_spin.value(),
-                    "color": self.left_spine_color,
-                },
-                "right": {
-                    "visible": self.right_spine_visible_check.isChecked(),
-                    "width": self.right_spine_width_spin.value(),
-                    "color": self.right_spine_color,
-                },
-            },
-            "figure": {
-                "width": self.width_spin.value(),
-                "height": self.height_spin.value(),
-                "dpi": self.dpi_spin.value(),
-                "bg_color": self.bg_color,
-                "face_facecolor": self.face_color,
-                "palette": self.palette_combo.currentText(),
-                "tight_layout": self.tight_layout_check.isChecked(),
-                "style": self.style_combo.currentText(),
-            }
-        }
-    
-    def _get_axes_config(self) -> Dict[str, Any]:
-        """Get config from axes tab"""
-        return {
-            "x_axis": {
-                "auto_limits": self.x_auto_check.isChecked(),
-                "invert": self.x_invert_axis_check.isChecked(),
-                "top_axis": self.x_top_axis_check.isChecked(),
-                "min": self.x_min_spin.value(),
-                "max": self.x_max_spin.value(),
-                "tick_label_size": self.xtick_label_size_spin.value(),
-                "tick_rotation": self.xtick_rotation_spin.value(),
-                "max_ticks": self.x_max_ticks_spin.value(),
-                "minor_ticks_enabled": self.x_show_minor_ticks_check.isChecked(),
-                "major_tick_direction": self.x_major_tick_direction_combo.currentText(),
-                "major_tick_width": self.x_major_tick_width_spin.value(),
-                "minor_tick_direction": self.x_minor_tick_direction_combo.currentText(),
-                "minor_tick_width": self.x_minor_tick_width_spin.value(),
-                "scale": self.x_scale_combo.currentText(),
-                "display_units": self.x_display_units_combo.currentText()
-            },
-            "y_axis": {
-                "auto_limits": self.y_auto_check.isChecked(),
-                "invert": self.y_invert_axis_check.isChecked(),
-                "min": self.y_min_spin.value(),
-                "max": self.y_max_spin.value(),
-                "tick_label_size": self.ytick_label_size_spin.value(),
-                "tick_rotation": self.ytick_rotation_spin.value(),
-                "max_ticks": self.y_max_ticks_spin.value(),
-                "minor_ticks_enabled": self.y_show_minor_ticks_check.isChecked(),
-                "major_tick_direction": self.y_major_tick_direction_combo.currentText(),
-                "major_tick_width": self.y_major_tick_width_spin.value(),
-                "minor_tick_direction": self.y_minor_tick_direction_combo.currentText(),
-                "minor_tick_width": self.y_minor_tick_width_spin.value(),
-                "scale": self.y_scale_combo.currentText(),
-                "display_units": self.y_display_units_combo.currentText()
-            },
-            "flip_axes": self.flip_axes_check.isChecked(),
-            "datetime": {
-                "enabled": self.custom_datetime_check.isChecked(),
-                "x_format_preset": self.x_datetime_format_combo.currentText(),
-                "x_format_custom": self.x_custom_datetime_input.text(),
-                "y_format_preset": self.y_datetime_format_combo.currentText(),
-                "y_format_custom": self.y_custom_datetime_format_input.text(),
-            }
-        }
-    
-    def _get_legend_config(self) -> Dict[str, Any]:
-        """Get the legend config"""
-        return {
-            "enabled": self.legend_check.isChecked(),
-            "location": self.legend_loc_combo.currentText(),
-            "title": self.legend_title_input.text(),
-            "font_size": self.legend_size_spin.value(),
-            "columns": self.legend_columns_spin.value(),
-            "column_spacing": self.legend_colspace_spin.value(),
-            "frame": self.legend_frame_check.isChecked(),
-            "fancy_box": self.legend_fancybox_check.isChecked(),
-            "shadow": self.legend_shadow_check.isChecked(),
-            "bg_color": self.legend_bg_color,
-            "edge_clor": self.legend_edge_color,
-            "edge_width": self.legend_edge_width_spin.value(),
-            "alpha": self.legend_alpha_slider.value() / 100.0,
-        }
-    
-    def _get_grid_config(self) -> Dict[str, Any]:
-        """Get config for the grid"""
-        return {
-            "enabled": self.grid_check.isChecked(),
-            "independent_axes": self.independent_grid_check.isChecked(),
-            "global": {
-                "which": self.grid_which_type_combo.currentText(),
-                "axis": self.grid_axis_combo.currentText(),
-                "alpha": self.global_grid_alpha_slider.value() / 100.0,
-            },
-            "x_major": {
-                "enabled": self.x_major_grid_check.isChecked(),
-                "style": self.x_major_grid_style_combo.currentText(),
-                "width": self.x_major_grid_linewidth_spin.value(),
-                "color": self.x_major_grid_color,
-                "alpha": self.x_major_grid_alpha_slider.value() / 100.0,
-            },
-            "x_minor": {
-                "enabled": self.x_minor_grid_check.isChecked(),
-                "style": self.x_minor_grid_style_combo.currentText(),
-                "width": self.x_minor_grid_linewidth_spin.value(),
-                "color": self.x_minor_grid_color,
-                "alpha": self.x_minor_grid_alpha_slider.value() / 100.0,
-            },
-            "y_major": {
-                "enabled": self.y_major_grid_check.isChecked(),
-                "style": self.y_major_grid_style_combo.currentText(),
-                "width": self.y_major_grid_linewidth_spin.value(),
-                "color": self.y_major_grid_color,
-                "alpha": self.y_major_grid_alpha_slider.value() / 100.0,
-            },
-            "y_minor": {
-                "enabled": self.y_minor_grid_check.isChecked(),
-                "style": self.y_minor_grid_style_combo.currentText(),
-                "width": self.y_minor_grid_linewidth_spin.value(),
-                "color": self.y_minor_grid_color,
-                "alpha": self.y_minor_grid_alpha_slider.value() / 100.0,
-            },
-        }
-    
-    def _get_advanced_config(self) -> Dict[str, Any]:
-        """Get config for customization and other elemenst from advanced tab"""
-        linestyle_map = {'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':', 'None': 'None'}
-        return {
-            "multi_line_custom": self.multiline_custom_check.isChecked(),
-            "line_customizations": self.line_customizations,
-            "global_line": {
-                "width": self.linewidth_spin.value(),
-                "style": linestyle_map.get(self.linestyle_combo.currentText(), "-"),
-                "color": self.line_color,
-            },
-            "global_marker": {
-                "shape": self.marker_combo.currentText(),
-                "size": self.marker_size_spin.value(),
-                "color": self.marker_color,
-                "edge_color": self.marker_edge_color,
-                "edge_width": self.marker_edge_width_spin.value(),
-            },
-            "multi_bar_custom": self.multibar_custom_check.isChecked(),
-            "bar_customizations": self.bar_customizations,
-            "global_bar": {
-                "width": self.bar_width_spin.value(),
-                "color": self.bar_color,
-                "edge_color": self.bar_edge_color,
-                "edge_width": self.bar_edge_width_spin.value(),
-            },
-            "histogram": {
-                "bins": self.histogram_bins_spin.value(),
-                "show_normal": self.histogram_show_normal_check.isChecked(),
-                "show_kde": self.histogram_show_kde_check.isChecked(),
-            },
-            "global_alpha": self.alpha_slider.value() / 100.0,
-            "scatter": {
-                "show_regression": self.regression_line_check.isChecked(),
-                "show_ci": self.confidence_interval_check.isChecked(),
-                "show_r2": self.show_r2_check.isChecked(),
-                "show_rmse": self.show_rmse_check.isChecked(),
-                "show_equation": self.show_equation_check.isChecked(),
-                "error_bars": self.error_bars_combo.currentText(),
-                "ci_level": self.confidence_level_spin.value(),
-            },
-            "pie": {
-                "show_percentages": self.pie_show_percentages_check.isChecked(),
-                "start_angle": self.pie_start_angle_spin.value(),
-                "explode_first": self.pie_explode_check.isChecked(),
-                "explode_distance": self.pie_explode_distance_spin.value(),
-                "shadow": self.pie_shadow_check.isChecked(),
-            },
-        }
-    
-    def _get_annotations_config(self) -> Dict[str, Any]:
-        """Get config for annotationsa nd txtbox"""
-        return {
-            "text_annotations": self.annotations,
-            "textbox": {
-                "enabled": self.textbox_enable_check.isChecked(),
-                "content": self.textbox_content.text(),
-                "position": self.textbox_position_combo.currentText(),
-                "style": self.textbox_style_combo.currentText(),
-                "bg_color": self.textbox_bg_color,
-            },
-            "table": {
-                "enabled": self.table_enable_check.isChecked(),
-                "type": self.table_type_combo.currentText(),
-                "location": self.table_location_combo.currentText(),
-                "auto_font_size": self.table_auto_font_size_check.isChecked(),
-                "fontsize": self.table_font_size_spin.value(),
-                "scale": self.table_scale_spin.value()
-            }
-        }
+        return self.config_manager.get_config()
 
     def clear(self) -> None:
         """Clear all plot data"""
@@ -3748,11 +3190,11 @@ class PlotTab(PlotTabUI):
             with open(filepath, "r") as file:
                 theme_config = json.load(file)
             
-            if "appearance" in theme_config: self._load_appearance_config(theme_config["appearance"])
-            if "axes" in theme_config: self._load_axes_config(theme_config["axes"])
-            if "legend" in theme_config: self._load_legend_config(theme_config["legend"])
-            if "grid" in theme_config: self._load_grid_config(theme_config["grid"])
-            if "advanced" in theme_config: self._load_advanced_config(theme_config["advanced"])
+            if "appearance" in theme_config: self.config_manager._load_appearance_config(theme_config["appearance"])
+            if "axes" in theme_config: self.config_manager._load_axes_config(theme_config["axes"])
+            if "legend" in theme_config: self.config_manager._load_legend_config(theme_config["legend"])
+            if "grid" in theme_config: self.config_manager._load_grid_config(theme_config["grid"])
+            if "advanced" in theme_config: self.config_manager._load_advanced_config(theme_config["advanced"])
 
             self.status_bar.log(f"Theme '{self.theme_combo.currentText()}' applied", "SUCCESS")
 

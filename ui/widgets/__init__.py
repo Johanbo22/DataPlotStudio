@@ -15,7 +15,6 @@ from .HelpIcon import HelpIcon
 from .ToggleSwitch import DataPlotStudioToggleSwitch
 from .AutoResizingStackedWidget import AutoResizingStackedWidget
 from .QuickFilterEdit import QuickFilterEdit
-from .data_operations_panel import DataOperationsPanel
 
 __all__ = [
     "DataPlotStudioButton",
@@ -35,5 +34,4 @@ __all__ = [
     "DataPlotStudioToggleSwitch",
     "AutoResizingStackedWidget",
     "QuickFilterEdit",
-    "DataOperationsPanel"
     ]
