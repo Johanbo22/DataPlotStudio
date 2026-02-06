@@ -1,8 +1,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView
 )
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    from ui.controllers.data_tab_controller import DataTabController
 
 from core.resource_loader import get_resource_path
 from ui.widgets import (
@@ -15,7 +17,7 @@ class DataOperationsPanel(QWidget):
     """
     Operations panel for the data tab
     """
-    def __init__(self, parent=None, controller=None):
+    def __init__(self, parent=None, controller: Optional["DataTabController"] = None):
         super().__init__(parent)
         self.controller = controller
         self.init_ui()

@@ -21,6 +21,7 @@ from .RenameColumnAnimation import RenameColumnAnimation
 from .DataTypeChangeAnimation import DataTypeChangeAnimation
 from .AggregationAnimation import AggregationAnimation
 from .MeltDataAnimation import MeltDataAnimation
+from .DataFilterAnimation import DataFilterAnimation
 
 __all__ = [
     "OverlayAnimationEngine",
@@ -44,5 +45,6 @@ __all__ = [
     "RenameColumnAnimation",
     "DataTypeChangeAnimation",
     "AggregationAnimation",
-    "MeltDataAnimation"
+    "MeltDataAnimation",
+    "DataFilterAnimation"
 ]
