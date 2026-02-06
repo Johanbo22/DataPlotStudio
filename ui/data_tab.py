@@ -72,6 +72,7 @@ from ui.widgets import (
     HelpIcon
 )
 from ui.components.data_operations_panel import DataOperationsPanel
+from ui.components.statistics_generator import StatisticsGenerator
 from ui.LandingPage import LandingPage
 from ui.dialogs.ComputedColumnDialog import ComputedColumnDialog
 
@@ -110,6 +111,7 @@ class DataTab(QWidget):
         self.subset_manager = subset_manager
         self.aggregation_manager = AggregationManager()
         self.help_manager = HelpManager()
+        self.stats_generator = StatisticsGenerator()
         self.plot_tab = None
         self.data_table = None
         self.stats_text = None
@@ -969,7 +971,7 @@ class DataTab(QWidget):
         """Update statistics display"""
         if self.data_handler.df is None:
             return
-
+        
         try:
             info = self.data_handler.get_data_info()
             df = self.data_handler.df
@@ -978,229 +980,11 @@ class DataTab(QWidget):
                 f"<p style='color: red;'>Error loading data info: {str(UpdateStatisticsError)}</p>"
             )
             return
-
-        try:
-            css_file_path = Path(get_resource_path("resources/statistics_style.css"))
-            html_path = Path(get_resource_path("resources/template.html"))
-
-            if not css_file_path:
-                raise FileNotFoundError(
-                    f"Missing CSS resource file: {css_file_path.resolve()}"
-                )
-            css_content = css_file_path.read_text(encoding="UTF-8")
-
-            if not html_path:
-                raise FileNotFoundError(
-                    f"Missing HTML resource file: {html_path.resolve()}"
-                )
-            html_template = html_path.read_text(encoding="UTF-8")
-
-        except Exception as LoadHTMLError:
-            error_msg = f"Failed to load CSS/HTML templates: {str(LoadHTMLError)}"
-            self.stats_text.setHtml(f"<p style='color: red;'>{error_msg}</p>")
-            self.status_bar.log(error_msg, "ERROR")
-            traceback.print_exc()
-            return
-
-        body_html = ""
-
-        body_html += "<h2>Dataset Overview</h2>"
-        body_html += "<div class='info-box'>"
-        body_html += f"<div class='info-item'><span class='info-label'>Total Rows:</span> <span class='info-value'>{info.get('shape', [0])[0]:,}</span></div>"
-        body_html += f"<div class='info-item'><span class='info-label'>Total Columns:</span> <span class='info-value'>{len(info.get('columns', []))}</span></div>"
-
-        # memory
-        try:
-            total_memory_bytes = df.memory_usage(deep=True).sum()
-            total_memory = total_memory_bytes / 1024
-
-            if total_memory > 1024:
-                memory_str = f"{total_memory / 1024:.2f} MB"
-            else:
-                memory_str = f"{total_memory:.2f} KB"
-        except Exception:
-            memory_str = "N/A"
-
-        body_html += f"<div class='info-item'><span class='info-label'>Memory Usage:</span> <span class='info-value'>{memory_str}</span></div>"
-
-        try:
-            total_missing = sum(info.get("missing_values", {}).values())
-        except:
-            total_missing = 0
-        body_html += f"<div class='info-item'><span class='info-label'>Total Missing Values:</span> <span class='info-value'>{total_missing:,}</span></div>"
-        body_html += "</div>"
-
-        # colinfo
-        body_html += "<h2>Column Information</h2>"
-        body_html += "<table>"
-        body_html += "<tr><th>Column Name</th><th>Data Type</th><th>Non-Null Count</th><th>Missing Values</th><th>Missing %</th></tr>"
-
-        total_rows = info.get("shape", [0])[0]
-        for col in info.get("columns", []):
-            try:
-                dtype = str(info.get("dtypes", {}).get(col, "Unknown"))
-                missing = info.get("missing_values", {}).get(col, 0)
-                non_null = total_rows - missing
-                missing_pct = (missing / total_rows * 100) if total_rows > 0 else 0
-
-                row_class = ""
-                if missing_pct > 50:
-                    row_class = "style='background-color: #ffebee;'"
-                elif missing_pct > 20:
-                    row_class = "style='background-color: #fff9c4;'"
-
-                body_html += f"<tr {row_class}>"
-                body_html += f"<td><strong>{col}</strong></td>"
-                body_html += f"<td>{dtype}</td>"
-                body_html += f"<td class='numeric-col'>{non_null:,}</td>"
-                body_html += f"<td class='numeric-col'>{missing:,}</td>"
-                body_html += f"<td class='numeric-col'>{missing_pct:.1f}%</td>"
-                body_html += "</tr>"
-            except Exception:
-                continue
-
-        body_html += "</table>"
-
-        # wwarning fr misisng values
-        if total_missing > 0:
-            high_missing_cols = [
-                col
-                for col, missing in info.get("missing_values", {}).items()
-                if missing > 0
-            ]
-
-            if high_missing_cols:
-                body_html += "<div class='warning'>"
-                body_html += f"<strong>Warning:</strong> {len(high_missing_cols)} column(s) contain missing values. "
-                body_html += "Consider using data cleaning operations."
-                body_html += "</div>"
-
-        try:
-            numeric_df = df.select_dtypes(
-                include=["int64", "int32", "float64", "float32"]
-            )
-
-            if len(numeric_df.columns) > 0:
-                body_html += "<h2>Descriptive Statistics (Numeric Columns)</h2>"
-
-                df_describe = numeric_df.describe()
-
-                body_html += "<table>"
-                body_html += "<tr><th>Statistics</th>"
-                for col in df_describe.columns:
-                    body_html += f"<th>{col}</th>"
-                body_html += "</tr>"
-
-                stats_labels = {
-                    "count": "Count",
-                    "mean": "Mean",
-                    "std": "Standard Deviation",
-                    "min": "Minimum",
-                    "25%": "25th Percentile",
-                    "50%": "Median",
-                    "75%": "75th Percentile",
-                    "max": "Maximum",
-                }
-
-                for stat in df_describe.index:
-                    body_html += (
-                        f"<tr><td><strong>{stats_labels.get(stat, stat)}</strong></td>"
-                    )
-                    for col in df_describe.columns:
-                        value = df_describe.loc[stat, col]
-                        if stat == "count":
-                            body_html += f"<td class='numeric-col'>{int(value):,}</td>"
-                        else:
-                            body_html += f"<td class='numeric-col'>{value:.4f}</td>"
-                    body_html += "</tr>"
-
-                body_html += "</table>"
-        except Exception as UpdateNumericalStatisticsError:
-            body_html += f"<div class='warning'>Unable to calculate numeric statistics: {str(UpdateNumericalStatisticsError)}</div>"
-
-        # correlation matrix
-        try:
-            numeric_df = df.select_dtypes(
-                include=["int64", "int32", "float64", "float32"]
-            )
-
-            if len(numeric_df.columns) > 1:
-                body_html += "<h2>Correlation Matrix</h2>"
-                corr = numeric_df.corr()
-
-                body_html += "<table>"
-                body_html += "<tr><th></th>"
-                for col in corr.columns:
-                    body_html += f"<th>{col}</th>"
-                body_html += "</tr>"
-
-                for idx in corr.index:
-                    body_html += f"<tr><td><strong>{idx}</strong></td>"
-                    for col in corr.columns:
-                        value = corr.loc[idx, col]
-
-                        # color coding
-                        if abs(value) >= 0.8 and idx != col:
-                            cell_style = "background-color: #c8e6c9; font-weight: bold;"
-                        elif abs(value) >= 0.5 and idx != col:
-                            cell_style = "background-color: #fff9c4;"
-                        elif idx == col:
-                            cell_style = "background-color: #e3f2fd;"
-                        else:
-                            cell_style = ""
-
-                        body_html += f"<td class='numeric-col' style='{cell_style}'>{value:.3f}</td>"
-                    body_html += "</tr>"
-
-                body_html += "</table>"
-
-                body_html += "<div class='info-box'>"
-                body_html += "<strong>Legend:</strong> "
-                body_html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
-                body_html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
-                body_html += "</div>"
-        except Exception as UpdateCorrelationMatrixError:
-            body_html += f"<div class='warning'>Unable to calculate correlation matrix: {str(UpdateCorrelationMatrixError)}</div>"
-
-        # categorical stats
-        try:
-            categorical_df = df.select_dtypes(include=["object", "category"])
-
-            if len(categorical_df.columns) > 0:
-                body_html += "<h2>Categorical Column Statistics</h2>"
-                body_html += "<table>"
-                body_html += "<tr><th>Column</th><th>Unique Values</th><th>Most Common</th><th>Frequency</th></tr>"
-
-                for col in categorical_df.columns:
-                    try:
-                        unique_count = df[col].nunique()
-                        value_counts = df[col].value_counts()
-
-                        if len(value_counts) > 0:
-                            most_common = str(value_counts.index[0])
-                            most_common_freq = value_counts.iloc[0]
-
-                            body_html += "<tr>"
-                            body_html += f"<td><strong>{col}</strong></td>"
-                            body_html += f"<td class='numeric-col'>{unique_count}</td>"
-                            body_html += f"<td>{most_common}</td>"
-                            body_html += (
-                                f"<td class='numeric-col'>{most_common_freq:,}</td>"
-                            )
-                            body_html += "</tr>"
-                    except:
-                        #
-                        continue
-
-                body_html += "</table>"
-        except Exception as UpdateCategoricalStatisticsError:
-            body_html += f"<div class='warning'>Unable to calculate categorical statistics: {str(UpdateCategoricalStatisticsError)}</div>"
-
-        final_html = html_template.format(
-            css_content=css_content, body_content=body_html
-        )
+        
+        # Generate HTML
+        final_html = self.stats_generator.generate_html(df, info)
         self.stats_text.setHtml(final_html)
-
+        
         self.stats_animation = QPropertyAnimation(self.stats_opacity_effect, b"opacity")
         self.stats_animation.setDuration(500)
         self.stats_animation.setStartValue(0.0)
