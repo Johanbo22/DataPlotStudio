@@ -329,100 +329,106 @@ class DataTab(QWidget):
     def refresh_data_view(self, reload_model: bool = True):
         """Refresh the data table and statistics"""
         if self.data_handler.df is None:
-            if hasattr(self, "left_stack"):
-                self.left_stack.setCurrentIndex(0)
-
-            if hasattr(self, "data_table") and self.data_table is not None:
-                self.data_table.setModel(None)
-
-            if hasattr(self, "stats_text") and self.stats_text is not None:
-                self.stats_text.clear()
-
-            if hasattr(self, "data_source_refresh_button"):
-                self.data_source_refresh_button.setVisible(False)
-
-            self.status_bar.set_data_source("")
-            self.status_bar.set_view_contex("", "normal")
-
+            self._handle_empty_data_view()
             return
-
+        
         if hasattr(self, "left_stack"):
             self.left_stack.setCurrentIndex(1)
-
+        
+        # UI updaters
+        self._update_data_model(reload_model)
+        self._update_edit_triggers()
+        self._update_column_selectors()
+        self.update_statistics()
+        self._update_data_source_status()
+        self._update_subsets_status()
+        self._update_history_list()
+        
+        self.status_bar.log(f"Data loaded: {self.data_handler.df.shape[0]} rows, {self.data_handler.df.shape[1]} columns")
+    
+    def _handle_empty_data_view(self) -> None:
+        """Clears the UI when no data is loaded"""
+        if hasattr(self, "left_stack"):
+            self.left_stack.setCurrentIndex(0)
+        
+        if hasattr(self, "data_table") and self.data_table is not None:
+            self.data_table.setModel(None)
+        
+        if hasattr(self, "stats_text") and self.stats_text is not None:
+            self.stats_text.clear()
+            
+        if hasattr(self, "data_source_refresh_button"):
+            self.data_source_refresh_button.setVisible(False)
+        
+        self.status_bar.set_data_source("")
+        self.status_bar.set_view_contex("", "normal")
+    
+    def _update_data_model(self, reload_model: bool) -> None:
+        """Updates the table model and restores sorting states"""
+        if not reload_model:
+            return
+        
         df = self.data_handler.df
-
-        # Update table
-        if reload_model:
-            self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
-            self.data_table.setSortingEnabled(False)
-            self.data_table.setModel(self.model)
-
-            header = self.data_table.horizontalHeader()
-            header.blockSignals(True)
-
-            if self.data_handler.sort_state:
-                col_name, ascending = self.data_handler.sort_state
-                try:
-                    col_index = list(df.columns).index(col_name)
-                    order = (
-                        Qt.SortOrder.AscendingOrder
-                        if ascending
-                        else Qt.SortOrder.DescendingOrder
-                    )
-                    header.setSortIndicator(col_index, order)
-                except ValueError:
-                    header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
-            else:
+        self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
+        self.data_table.setSortingEnabled(False)
+        self.data_table.setModel(self.model)
+        
+        header = self.data_table.horizontalHeader()
+        header.blockSignals(True)
+        
+        if self.data_handler.sort_state:
+            col_name, ascending = self.data_handler.sort_state
+            try:
+                col_index = list(df.columns).index(col_name)
+                order = (Qt.SortOrder.AscendingOrder if ascending else Qt.SortOrder.DescendingOrder)
+                header.setSortIndicator(col_index, order)
+            except ValueError:
                 header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
-
-            header.blockSignals(False)
-            self.data_table.setSortingEnabled(True)
-
+        else:
+            header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+        
+        header.blockSignals(False)
+        self.data_table.setSortingEnabled(True)
+    
+    def _update_edit_triggers(self) -> None:
+        """Sets the table edit triggers based on the editing state"""
         if self.is_editing:
-            self.data_table.setEditTriggers(
-                QTableView.EditTrigger.DoubleClicked
-                | QTableView.EditTrigger.AnyKeyPressed
-            )
+            self.data_table.setEditTriggers(QTableView.EditTrigger.DoubleClicked | QTableView.EditTrigger.AnyKeyPressed)
         else:
             self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
-
-        # Update column selectors
+            
+    def _update_column_selectors(self) -> None:
+        """Updates column selection boxes"""
+        df = self.data_handler.df
         columns = list(df.columns)
         panel = self.operations_panel
+        
         panel.filter_column.clear()
         panel.filter_column.addItems(columns)
         panel.column_list.clear()
         panel.column_list.addItems(columns)
-
-        # Update the sort col combo
+        
         if hasattr(panel, "sort_column_combo"):
             current_sort = panel.sort_column_combo.currentText()
             panel.sort_column_combo.clear()
             panel.sort_column_combo.addItems(columns)
             if current_sort and current_sort in columns:
                 panel.sort_column_combo.setCurrentText(current_sort)
-            elif (
-                self.data_handler.sort_state
-                and self.data_handler.sort_state[0] in columns
-            ):
+            elif (self.data_handler.sort_state and self.data_handler.sort_state[0] in columns):
                 panel.sort_column_combo.setCurrentText(self.data_handler.sort_state[0])
-
-        # Update subset column combo if it exists
+        
         if hasattr(panel, "subset_column_combo"):
             try:
                 panel.subset_column_combo.clear()
                 panel.subset_column_combo.addItems(columns)
-            except Exception as RefreshDataViewError:
-                print(
-                    f"Warning: Could not update subset column combo: {RefreshDataViewError}"
-                )
-
+            except Exception as Error:
+                print(f"Warning: Could not update subset columns: {str(Error)}")
+        
         if self.plot_tab:
             self.plot_tab.update_column_combo()
-
-        # Update statistics
-        self.update_statistics()
-
+    
+    def _update_data_source_status(self) -> None:
+        """Updates the status bar and refreshes butotns based on datat source"""
         if self.data_handler.has_google_sheets_import():
             self.data_source_refresh_button.setVisible(True)
             display_name = self.data_handler.last_gsheet_name
@@ -434,69 +440,74 @@ class DataTab(QWidget):
                 file_name = Path(self.data_handler.file_path).name
             except Exception:
                 file_name = str(self.data_handler.file_path)
-
-            self.status_bar.set_data_source(f"Local file: {file_name}")
+            
+            self.status_bar.set_data_source(f"Local File: {file_name}")
             self.data_source_refresh_button.setVisible(False)
         else:
             self.status_bar.set_data_source("New")
             self.data_source_refresh_button.setVisible(False)
-
+    
+    def _update_subsets_status(self) -> None:
+        """Refreshes subset info and updates status bar"""
         try:
             if hasattr(self, "subset_manager"):
                 self.subset_manager.clear_cache()
             if hasattr(self, "active_subsets_list"):
                 self.controller.refresh_active_subsets()
-        except Exception as RefreshSubsetInDataViewError:
-            print(f"Warning: Could not refresh subsets: {RefreshSubsetInDataViewError}")
-
+        except Exception as Error:
+            print(f"Warning: Could not refresh subsets: {Error}")
+        
         inserted_name = getattr(self.data_handler, "inserted_subset_name", None)
         agg_name = getattr(self.data_handler, "viewing_aggregation_name", None)
-
+        
         if agg_name:
             self.status_bar.set_view_contex(f"Viewing Aggregation: {agg_name}")
         elif inserted_name:
             self.status_bar.set_view_contex(f"Viewing Subset: {inserted_name}")
-
-        if hasattr(panel, "history_list"):
-            panel.history_list.clear()
-
-            history_information = self.data_handler.get_history_info()
-            history_operations = history_information["history"]
-            current_index = history_information["current_index"]
-
-            initial_item = QListWidgetItem("0. Initial Data")
-            initial_item.setData(Qt.ItemDataRole.UserRole, 0)
-
-            if current_index == 0:
-                initial_item.setFont(QFont("Arial", 9, QFont.Weight.Bold))
-                initial_item.setForeground(Qt.GlobalColor.black)
-                initial_item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
-
-            panel.history_list.addItem(initial_item)
-
-            for i, operation in enumerate(history_operations):
-                history_index = i + 1
-                operation_text = self._format_operation_text(operation)
-                item = QListWidgetItem(f"{history_index}. {operation_text}")
-                item.setData(Qt.ItemDataRole.UserRole, history_index)
-
-                if history_index == current_index:
-                    item.setFont(QFont("Arial", 9, QFont.Weight.Bold))
-                    item.setForeground(Qt.GlobalColor.black)
-                    item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
-                    item.setBackground(Qt.GlobalColor.white)
-                elif history_index > current_index:
-                    item.setForeground(Qt.GlobalColor.gray)
-                    font = item.font()
-                    font.setItalic(True)
-                    item.setFont(font)
-
-                panel.history_list.addItem(item)
-
-            if panel.history_list.count() > 0:
-                panel.history_list.scrollToItem(panel.history_list.item(current_index))
-
-        self.status_bar.log(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+    
+    def _update_history_list(self) -> None:
+        """Updates the history list"""
+        panel = self.operations_panel
+        if not hasattr(panel, "history_list"):
+            return
+        
+        panel.history_list.clear()
+        
+        history_information = self.data_handler.get_history_info()
+        history_operations = history_information["history"]
+        current_index = history_information["current_index"]
+        
+        initial_item = QListWidgetItem("0. Initial Data")
+        initial_item.setData(Qt.ItemDataRole.UserRole, 0)
+        
+        if current_index == 0:
+            initial_item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
+            initial_item.setForeground(Qt.GlobalColor.black)
+            initial_item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
+        
+        panel.history_list.addItem(initial_item)
+        
+        for i, operation in enumerate(history_operations):
+            history_index = i + 1
+            operation_text = self._format_operation_text(operation)
+            item = QListWidgetItem(f"{history_index}. {operation_text}")
+            item.setData(Qt.ItemDataRole.UserRole, history_index)
+            
+            if history_index == current_index:
+                item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
+                item.setForeground(Qt.GlobalColor.black)
+                item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
+                item.setBackground(Qt.GlobalColor.white)
+            elif history_index > current_index:
+                item.setForeground(Qt.GlobalColor.gray)
+                font = item.font()
+                font.setItalic(True)
+                item.setFont(font)
+            
+            panel.history_list.addItem(item)
+        
+        if panel.history_list.count() > 0:
+            panel.history_list.scrollToItem(panel.history_list.item(current_index))
 
     def get_subset_manager(self):
         """
