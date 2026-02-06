@@ -1,5 +1,6 @@
 import traceback
 from typing import TYPE_CHECKING
+import weakref
 
 from PyQt6.QtWidgets import (
     QMessageBox,
@@ -60,7 +61,7 @@ class DataTabController:
     def __init__(self, data_handler: DataHandler, status_bar: "StatusBar", view: "DataTab", subset_manager: SubsetManager):
         self.data_handler = data_handler
         self.status_bar = status_bar
-        self.view = view
+        self._view = weakref.ref(view)
         self.subset_manager = subset_manager
         
         # Managers
@@ -68,6 +69,10 @@ class DataTabController:
         self.help_manager = HelpManager()
         
         self.rows_before_refresh = 0
+        
+    @property
+    def view(self) -> "DataTab":
+        return self._view()
     
     def create_new_dataset(self):
         """Creates a new empty dataset"""
@@ -339,9 +344,7 @@ class DataTabController:
         """Apply filter to data"""
         try:
             # Accessing widgets from the view's operations panel
-            column = self.view.operations_panel.filter_column.currentText()
-            condition = self.view.operations_panel.filter_condition.currentText()
-            value = self.view.operations_panel.filter_value.text()
+            column, condition, value = self.view.operations_panel.get_filter_parameters()
 
             try:
                 if "." in value:
@@ -415,15 +418,14 @@ class DataTabController:
         if self.data_handler.df is None:
             return
 
-        selected_items = self.view.operations_panel.column_list.selectedItems()
-        if not selected_items:
+        cols_to_drop = self.view.operations_panel.get_selected_columns()
+        if not cols_to_drop:
             self.status_bar.log("No columns selected to drop", "WARNING")
             QMessageBox.warning(
                 self.view, "Selection Error", "Please select at least one column to drop"
             )
             return
 
-        cols_to_drop = [item.text() for item in selected_items]
         msg = f"Are you sure you want to drop {len(cols_to_drop)} column(s)?\n\n"
         msg += ", ".join(cols_to_drop[:5])
         if len(cols_to_drop) > 5:
@@ -468,13 +470,13 @@ class DataTabController:
 
     def rename_column(self):
         """Rename selected column"""
-        selected_items = self.view.operations_panel.column_list.selectedItems()
+        selected_columns = self.view.operations_panel.get_selected_columns()
 
-        if not selected_items:
+        if not selected_columns:
             self.status_bar.log("No column selected", "WARNING")
             return
 
-        old_name = selected_items[0].text()
+        old_name = selected_columns[0]
 
         dialog = RenameColumnDialog(old_name, self.view)
         if dialog.exec():
@@ -545,12 +547,12 @@ class DataTabController:
             QMessageBox.warning(self.view, "No data", "Please load data first")
             return
 
-        selected_items = self.view.operations_panel.column_list.selectedItems()
-        if not selected_items:
+        selected_columns = self.view.operations_panel.get_selected_columns()
+        if not selected_columns:
             self.status_bar.log("No Column Selected", "WARNING")
             return
 
-        if len(selected_items) > 1:
+        if len(selected_columns) > 1:
             QMessageBox.warning(
                 self.view,
                 "Selection Error",
@@ -558,9 +560,9 @@ class DataTabController:
             )
             return
 
-        column = selected_items[0].text()
+        column = selected_columns[0]
 
-        type_str = self.view.operations_panel.type_combo.currentText()
+        type_str = self.view.operations_panel.get_target_datatype()
 
         # mapping the datatypes
         if type_str.startswith("string"):
@@ -628,12 +630,12 @@ class DataTabController:
         if self.data_handler.df is None:
             QMessageBox.warning(self.view, "No data", "Please load data first")
 
-        selected_items = self.view.operations_panel.column_list.selectedItems()
-        if not selected_items:
+        selected_columns = self.view.operations_panel.get_selected_columns()
+        if not selected_columns:
             self.status_bar.log("No Column Selected", "WARNING")
             return
 
-        if len(selected_items) > 1:
+        if len(selected_columns) > 1:
             QMessageBox.warning(
                 self.view,
                 "Selection Error",
@@ -641,8 +643,8 @@ class DataTabController:
             )
             return
 
-        column = selected_items[0].text()
-        selected_operation = self.view.operations_panel.text_operation_combo.currentText()
+        column = selected_columns[0]
+        selected_operation = self.view.operations_panel.get_text_operation()
 
         operation_map = {
             "Trim Whitespace": "strip",
@@ -798,27 +800,17 @@ class DataTabController:
 
     def refresh_saved_agg_list(self):
         """Refreshes the list of saved aggs"""
-        saved_agg_list = self.view.operations_panel.saved_agg_list
-        if not saved_agg_list:
-            return
-
         try:
-            saved_agg_list.clear()
-
             agg_names = self.aggregation_manager.list_aggregations()
-            if not agg_names:
-                placeholder = QListWidgetItem("(No saved aggregations)")
-                placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
-                saved_agg_list.addItem(placeholder)
-                return
-
-            for name in agg_names:
-                agg = self.aggregation_manager.get_aggregation(name)
-                if agg:
-                    item_text = f"{name} ({agg.row_count} rows)"
-                    item = QListWidgetItem(item_text)
-                    item.setData(Qt.ItemDataRole.UserRole, name)
-                    saved_agg_list.addItem(item)
+            data_list = []
+            
+            if agg_names:
+                for name in agg_names:
+                    agg = self.aggregation_manager.get_aggregation(name)
+                    if agg:
+                        data_list.append((name, agg.row_count))
+            
+            self.view.operations_panel.update_saved_aggregation_list(data_list)
         except Exception as RefreshAggregationListError:
             print(
                 f"Warning: Could not refresh aggregation list: {str(RefreshAggregationListError)}"
@@ -826,22 +818,14 @@ class DataTabController:
 
     def on_saved_agg_selected(self, item):
         """Handle selection of saved aggs"""
-        if not item or not item.data(Qt.ItemDataRole.UserRole):
-            self.view.operations_panel.view_agg_btn.setEnabled(False)
-            self.view.operations_panel.delete_agg_btn.setEnabled(False)
-            return
-
-        self.view.operations_panel.view_agg_btn.setEnabled(True)
-        self.view.operations_panel.delete_agg_btn.setEnabled(True)
+        enabled = (item is not None and item.data(Qt.ItemDataRole.UserRole) is not None)
+        self.view.operations_panel.set_aggregation_buttons_enabled(enabled)
 
     def view_saved_aggregations(self):
         """View the current selected agg in the table"""
-        saved_agg_list = self.view.operations_panel.saved_agg_list
-        item = saved_agg_list.currentItem()
-        if not item or not item.data(Qt.ItemDataRole.UserRole):
+        agg_name = self.view.operations_panel.get_selected_saved_aggregation()
+        if not agg_name:
             return
-
-        agg_name = item.data(Qt.ItemDataRole.UserRole)
 
         try:
             agg_df = self.aggregation_manager.get_aggregation_df(agg_name)
@@ -890,12 +874,9 @@ class DataTabController:
 
     def delete_saved_aggregation(self):
         """Delete a saved aggregation"""
-        saved_agg_list = self.view.operations_panel.saved_agg_list
-        item = saved_agg_list.currentItem()
-        if not item or not item.data(Qt.ItemDataRole.UserRole):
+        agg_name = self.view.operations_panel.get_selected_saved_aggregation()
+        if not agg_name:
             return
-
-        agg_name = item.data(Qt.ItemDataRole.UserRole)
 
         reply = QMessageBox.question(
             self.view,
@@ -908,8 +889,7 @@ class DataTabController:
         if reply == QMessageBox.StandardButton.Yes:
             if self.aggregation_manager.delete_aggregation(agg_name):
                 self.refresh_saved_agg_list()
-                self.view.operations_panel.view_agg_btn.setEnabled(False)
-                self.view.operations_panel.delete_agg_btn.setEnabled(False)
+                self.view.operations_panel.set_aggregation_buttons_enabled(False)
                 self.status_bar.log(f"Deleted aggregation: {agg_name}", "SUCCESS")
 
     def open_melt_dialog(self):
@@ -1056,11 +1036,11 @@ class DataTabController:
             QMessageBox.warning(self.view, "No data", "Please load data first")
             return
 
-        column = self.view.operations_panel.sort_column_combo.currentText()
+        column, order_text = self.view.operations_panel.get_sort_parameters()
         if not column:
             return
 
-        ascending = self.view.operations_panel.sort_order_combo.currentText() == "Ascending"
+        ascending = (order_text == "Ascending")
 
         try:
             col_index = list(self.data_handler.df.columns).index(column)
@@ -1091,14 +1071,13 @@ class DataTabController:
             QMessageBox.warning(self.view, "No Data", "Please load data first")
             return
         
-        subset_column_combo = self.view.operations_panel.subset_column_combo
-        if not subset_column_combo:
+        column = self.view.operations_panel.get_quick_subset_column()
+        if not column:
             QMessageBox.warning(
                 self.view, "Feature Not Available", "Subset feature not fully initialized"
             )
             return
 
-        column = subset_column_combo.currentText()
         if not column:
             QMessageBox.warning(self.view, "No Column Selected", "Please select a column")
             return
@@ -1150,12 +1129,8 @@ class DataTabController:
 
     def refresh_active_subsets(self):
         """Refresh the list of active subsets"""
-        active_subsets_list = self.view.operations_panel.active_subsets_list
-        if not active_subsets_list:
-            return
-
         try:
-            active_subsets_list.clear()
+            subset_data = []
 
             if self.data_handler.df is not None:
                 for name in self.subset_manager.list_subsets():
@@ -1171,23 +1146,16 @@ class DataTabController:
                 row_text = (
                     f"{subset.row_count} rows" if subset.row_count > 0 else "? rows"
                 )
-                item = QListWidgetItem(f"{name} ({row_text} rows)")
-                item.setData(Qt.ItemDataRole.UserRole, name)
-                active_subsets_list.addItem(item)
+                subset_data.append((name, row_text))
+            self.view.operations_panel.update_active_subsets_list(subset_data)
         except Exception as RefreshSubsetListError:
             print(f"Warning: Could not refresh subset list: {RefreshSubsetListError}")
 
     def view_subset_quick(self):
         """Quick view of selected subset"""
-        active_subsets_list = self.view.operations_panel.active_subsets_list
-        if not active_subsets_list:
+        name = self.view.operations_panel.get_selected_active_subset()
+        if not name:
             return
-
-        item = active_subsets_list.currentItem()
-        if not item:
-            return
-
-        name = item.data(Qt.ItemDataRole.UserRole)
 
         try:
             subset_df = self.subset_manager.apply_subset(self.data_handler.df, name)
@@ -1252,17 +1220,14 @@ class DataTabController:
             return
 
         # get the selected subset
-        active_subsets_list = self.view.operations_panel.active_subsets_list
-        item = active_subsets_list.currentItem()
-        if not item:
+        subset_name = self.view.operations_panel.get_selected_active_subset()
+        if not subset_name:
             QMessageBox.warning(
                 self.view,
                 "None selected",
                 "Please select a subset to apply to current data view",
             )
             return
-
-        subset_name = item.data(Qt.ItemDataRole.UserRole)
 
         reply = QMessageBox.question(
             self.view,
@@ -1294,13 +1259,7 @@ class DataTabController:
 
             self.view.refresh_data_view()
 
-            self.view.operations_panel.injection_status_label.setText(
-                f"Status: Working with a subset: '{subset_name}'"
-            )
-            self.view.operations_panel.injection_status_label.setStyleSheet(
-                "color: #e74c3c; font-weight: bold; padding: 5px;"
-                "background-color: #ffe5e5; border-radius: 3px;"
-            )
+            self.view.operations_panel.set_injection_status_ui(is_subset_active=True, subset_name=subset_name)
             self.view.operations_panel.restore_original_btn.setEnabled(True)
             self.view.operations_panel.inject_subset_tbn.setEnabled(False)
 
@@ -1359,13 +1318,7 @@ class DataTabController:
 
             self.view.refresh_data_view()
 
-            self.view.operations_panel.injection_status_label.setText("Status: Working with original data")
-            self.view.operations_panel.injection_status_label.setStyleSheet(
-                "color: #27ae60; font-weight: bold; padding: 5px; "
-                "background-color: #ecf0f1; border-radius: 3px;"
-            )
-            self.view.operations_panel.restore_original_btn.setEnabled(False)
-            self.view.operations_panel.inject_subset_tbn.setEnabled(True)
+            self.view.operations_panel.set_injection_status_ui(is_subset_active=False)
 
             self.status_bar.log_action(
                 f"Restored original DataFrame (from subset '{subset_name}')",
@@ -1441,15 +1394,7 @@ class DataTabController:
                 self.data_handler.pre_agg_view_df = None
 
             if hasattr(self.view, "operations_panel"):
-                self.view.operations_panel.injection_status_label.setText(
-                    "Status: Working with original data"
-                )
-                self.view.operations_panel.injection_status_label.setStyleSheet(
-                    "color: #27ae60; font-weight: bold; padding: 5px;"
-                    "background-color: #ecf0f1; border-radius: 3px;"
-                )
-                self.view.operations_panel.restore_original_btn.setEnabled(False)
-                self.view.operations_panel.inject_subset_tbn.setEnabled(True)
+                self.view.operations_panel.set_injection_status_ui(is_subset_active=False)
 
             rows_after = (
                 len(self.data_handler.df) if self.data_handler.df is not None else 0
@@ -1517,12 +1462,7 @@ class DataTabController:
             self.data_handler.jump_to_history_index(target_index)
             self.view.refresh_data_view()
 
-            history_list = self.view.operations_panel.history_list
-            for i in range(history_list.count()):
-                list_item = history_list.item(i)
-                if list_item.data(Qt.ItemDataRole.UserRole) == target_index:
-                    history_list.setCurrentItem(list_item)
-                    break
+            self.view.operations_panel.select_history_item_by_index(target_index)
 
         except Exception as HistoryError:
             self.status_bar.log(f"Failed to go to state: {str(HistoryError)}", "ERROR")

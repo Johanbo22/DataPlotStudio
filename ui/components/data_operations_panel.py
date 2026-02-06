@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView, QListWidgetItem
 )
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -475,6 +476,8 @@ class DataOperationsPanel(QWidget):
         if self.controller:
             merge_button.clicked.connect(self.controller.open_merge_dialog)
         self.merge_help = HelpIcon("merge_data")
+        if self.controller:
+            self.merge_help.clicked.connect(self.controller.show_help_dialog)
         merge_layout.addWidget(merge_button)
         merge_layout.addWidget(self.merge_help)
         transform_layout.addLayout(merge_layout)        
@@ -702,3 +705,133 @@ class DataOperationsPanel(QWidget):
 
         history_icon = QIcon(get_resource_path("icons/data_operations/view.png"))
         self.ops_tabs.addTab(history_tab, history_icon, "History")
+    
+    ###### Getters for widgets
+    def get_filter_parameters(self) -> tuple[str, str, str]:
+        """
+        Retrieves the current configuration for data filtering.
+        Returns:
+            tuple: (column_name, condition_operator, filter_value)
+        """
+        return (
+            self.filter_column.currentText(),
+            self.filter_condition.currentText(),
+            self.filter_value.text()
+        )
+    
+    def get_selected_columns(self) -> list[str]:
+        """
+        Retrieves a list of names for the currently selected columns in the column list
+        """
+        return [item.text() for item in self.column_list.selectedItems()]
+    
+    def get_target_datatype(self) -> str:
+        """Retrieves the currently selected data type for conversion"""
+        return self.type_combo.currentText()
+    
+    def get_text_operation(self) -> str:
+        """Retrieve the currently selected text manipulation operation"""
+        return self.text_operation_combo.currentText()
+    
+    def get_sort_parameters(self) -> tuple[str, str]:
+        """
+        Retrieves the sort configuration
+        Returns:
+            tuple: (column_name, sort_order_string)
+        """
+        return (
+            self.sort_column_combo.currentText(),
+            self.sort_order_combo.currentText()
+        )
+    
+    def get_quick_subset_column(self) -> str:
+        """Retrieve the selected column name for auto-creating subsets"""
+        return self.subset_column_combo.currentText()
+    
+    def get_selected_saved_aggregation(self) -> Optional[str]:
+        """Retrieve the name of the currently selected saved aggregation"""
+        item = self.saved_agg_list.currentItem()
+        if item:
+            return item.data(Qt.ItemDataRole.UserRole)
+        return None
+    
+    def get_selected_active_subset(self) -> Optional[str]:
+        """Retrieve the name of cthe currently selected active subset"""
+        item = self.active_subsets_list.currentItem()
+        if item:
+            return item.data(Qt.ItemDataRole.UserRole)
+        return None
+    
+    def get_selected_history_index(self) -> Optional[int]:
+        """Retrieve the selected history state index"""
+        item = self.history_list.currentItem()
+        if item:
+            return item.data(Qt.ItemDataRole.UserRole)
+        return None
+    
+    #####_UI updaters
+    
+    def update_saved_aggregation_list(self, aggregations: list[tuple[str, int]]) -> None:
+        """
+        Updates the saved aggregations list widget with new data
+        Args:
+            aggregations: List of tuples containing (name, row_count)
+        """
+        self.saved_agg_list.clear()
+        if not aggregations:
+            placeholder = QListWidgetItem("No saved aggregations")
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.saved_agg_list.addItem(placeholder)
+            return
+        
+        for name, row_count in aggregations:
+            item_text = f"{name} ({row_count}) rows"
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.ItemDataRole.UserRole, name)
+            self.saved_agg_list.addItem(item)
+    
+    def set_aggregation_buttons_enabled(self, enabled: bool) -> None:
+        self.view_agg_btn.setEnabled(enabled)
+        self.delete_agg_btn.setEnabled(enabled)
+    
+    def update_active_subsets_list(self, subsets: list[tuple[str, str]]) -> None:
+        """
+        Update the active subsets list widget.
+        Args:
+            subsets: List of tuples containing (name, display_text_for_rows)
+        """
+        self.active_subsets_list.clear()
+        for name, row_text in subsets:
+            item = QListWidgetItem(f"{name} ({row_text})")
+            item.setData(Qt.ItemDataRole.UserRole, name)
+            self.active_subsets_list.addItem(item)
+    
+    def set_injection_status_ui(self, is_subset_active: bool, subset_name: str = "") -> None:
+        """
+        Update the UI elements related to subset injection status.
+        Args:
+            is_subset_active: True if a subset is currently injected.
+            subset_name: Name of the subset (only used if is_subset_active is True).
+        """
+        if is_subset_active:
+            self.injection_status_label.setText(f"Status: Working with a subset: '{subset_name}'")
+            self.injection_status_label.setStyleSheet(
+                "color: #e74c3c; font-weight: bold; padding: 5px; background-color: #ffe5e5; border-radius: 3px;"
+            )
+            self.restore_original_btn.setEnabled(True)
+            self.inject_subset_tbn.setEnabled(False)
+        else:
+            self.injection_status_label.setText("Status: Working with original data")
+            self.injection_status_label.setStyleSheet(
+                "color: #27ae60; font-weight: bold; padding: 5px; background-color: #ecf0f1; border-radius: 3px;"
+            )
+            self.restore_original_btn.setEnabled(False)
+            self.inject_subset_tbn.setEnabled(True)
+    
+    def select_history_item_by_index(self, target_index: int) -> None:
+        """Select the history item corresponding to the given index."""
+        for i in range(self.history_list.count()):
+            list_item = self.history_list.item(i)
+            if list_item.data(Qt.ItemDataRole.UserRole) == target_index:
+                self.history_list.setCurrentItem(list_item)
+                break
