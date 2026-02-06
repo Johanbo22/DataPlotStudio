@@ -67,7 +67,7 @@ class DataTableModel(QAbstractTableModel):
                     return int(val)
 
                 if isinstance(val, (float, np.floating)):
-                    return f"{val:.{self.float_precision}}"
+                    return f"{val:.{self.float_precision}f}"
 
                 s_val = str(val)
                 if len(s_val) > 64:
