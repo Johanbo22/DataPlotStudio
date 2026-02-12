@@ -21,6 +21,7 @@ from PyQt6.QtCore import (
     pyqtSignal
 )
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
+import numpy as np
 
 from core.data_handler import DataHandler
 from core.resource_loader import get_resource_path
@@ -286,13 +287,24 @@ class DataTab(QWidget):
 
         search_text_lower = str(search_text).lower()
 
-        for row_index in range(df.shape[0]):
-            for column_index in range(df.shape[1]):
-                value = str(df.iloc[row_index, column_index])
-                if search_text_lower in value.lower():
-                    matches.append(
-                        (row_index, column_index, df.columns[column_index], value)
-                    )
+        if not df.empty:
+            # Convert all data to strings
+            # 
+            df_str = df.astype(str)
+            mask = df_str.apply(lambda col: col.str.contains(search_text_lower, case=False, regex=False)).to_numpy()
+            
+            row_indices, col_indices = np.where(mask)
+            
+            if len(row_indices) > 0:
+                matched_cols = df.columns[col_indices]
+                matched_values = df_str.to_numpy()[row_indices, col_indices]
+                
+                matches = list(zip(
+                    row_indices.tolist(),
+                    col_indices.tolist(),
+                    matched_cols.tolist(),
+                    matched_values.tolist()
+                ))
 
         if not matches:
             QMessageBox.information(
