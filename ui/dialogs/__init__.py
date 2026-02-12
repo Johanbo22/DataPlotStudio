@@ -24,6 +24,7 @@ from .PivotDialog import PivotDialog
 from .MergeDialog import MergeDialog
 from .BinningDialog import BinningDialog
 from .ComputedColumnDialog import ComputedColumnDialog
+from .PlotExportDialog import PlotExportDialog
 
 __all__ = [
     "AggregationDialog",
@@ -51,5 +52,6 @@ __all__ = [
     "PivotDialog",
     "MergeDialog",
     "BinningDialog",
-    "ComputedColumnDialog"
+    "ComputedColumnDialog",
+    "PlotExportDialog"
 ]

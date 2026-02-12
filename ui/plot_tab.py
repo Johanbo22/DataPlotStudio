@@ -46,10 +46,10 @@ if TYPE_CHECKING:
 class PlotTab(PlotTabUI):
     """Tab for creating and customizing plots"""
     
-    def __init__(self, view: "PlotSettingsPanel", data_handler: DataHandler, status_bar: StatusBar, subset_manager=None) -> None:
+    def __init__(self, data_handler: DataHandler, status_bar: StatusBar, subset_manager=None) -> None:
         super().__init__()
         
-        self.view: PlotSettingsPanel = view
+        self.view: PlotSettingsPanel = None
         self.data_handler: DataHandler = data_handler
         self.status_bar: StatusBar = status_bar
         self.subset_manager = subset_manager
@@ -147,6 +147,8 @@ class PlotTab(PlotTabUI):
         toolbar = NavigationToolbar(canvas, self)
         
         self.init_ui(canvas, toolbar)
+        
+        self.view = self.settings_panel
         
         #populate box in general tab with icons
         #
