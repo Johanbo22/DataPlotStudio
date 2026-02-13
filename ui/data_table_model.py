@@ -38,6 +38,11 @@ class DataTableModel(QAbstractTableModel):
         """Updates the conditional formatting rules and refreshes the dtable"""
         self.conditional_rules = rules
         self.layoutChanged.emit()
+    
+    def set_highlighted_rows(self, rows: set) -> None:
+        """Updates the highlighed rows and triggers a layout refresh on display changes"""
+        self.highlighted_rows = set(rows) if rows else set()
+        self.layoutChanged.emit()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """Returns the number of rows in a dataframe"""

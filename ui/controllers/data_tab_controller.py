@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem
 )
 from PyQt6.QtCore import Qt, QThreadPool
+from duckdb import duplicate
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -199,6 +200,46 @@ class DataTabController:
     def remove_duplicates(self) -> None:
         """Remove duplicate rows"""
         if self.data_handler.df is None: return
+        if getattr(self, "_preview_msg_box", None) is not None:
+            self._preview_msg_box.close()
+        try:
+            df = self.data_handler.df
+            
+            duplicate_indices = set(i for i, is_dup in enumerate(df.duplicated(keep="first")) if is_dup)
+            
+            if not duplicate_indices:
+                QMessageBox.information(self.view, "No Duplicates", "No duplicate rows found in the dataset.")
+                return
+            
+            if self.view.data_table.model() is not None:
+                self.view.data_table.model().set_highlighted_rows(duplicate_indices)
+            
+            self._preview_msg_box = QMessageBox(self.view)
+            self._preview_msg_box.setIcon(QMessageBox.Icon.Question)
+            self._preview_msg_box.setWindowTitle("Confirm Removal")
+            self._preview_msg_box.setText(f"Found {len(duplicate_indices)} duplicate row(s) (highlighted in red)\nReview the table, then choose whether to remove or keep them.")
+            self._preview_msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            self._preview_msg_box.setWindowModality(Qt.WindowModality.NonModal)
+            
+            def handle_response(button):
+                if self.view.data_table.model() is not None:
+                    self.view.data_table.model().set_highlighted_rows(set())
+                
+                if self._preview_msg_box.standardButton(button) == QMessageBox.StandardButton.Yes:
+                    self._execute_remove_duplicates()
+                else:
+                    self.status_bar.log("Remove duplicates operation cancelled.", "INFO")
+                
+                self._preview_msg_box.deleteLater()
+                self._preview_msg_box = None
+            
+            self._preview_msg_box.buttonClicked.connect(handle_response)
+            self._preview_msg_box.show()
+            
+        except Exception as RemoveDuplicatesError:
+            self.status_bar.log(f"Failed to prepare duplicate preview {str(RemoveDuplicatesError)}", "ERROR")
+    
+    def _execute_remove_duplicates(self) -> None:
         try:
             before = len(self.data_handler.df)
             self.data_handler.clean_data("drop_duplicates")
@@ -230,6 +271,45 @@ class DataTabController:
     def drop_missing(self):
         """Drop rows with missing values"""
         if self.data_handler.df is None: return
+        if getattr(self, "_preview_msg_box", None) is not None:
+            self._preview_msg_box.close()
+        try:
+            df = self.data_handler.df
+            
+            missing_indices = set(i for i, has_missing in enumerate(df.isnull().any(axis=1)) if has_missing)
+            
+            if not missing_indices:
+                QMessageBox.information(self.view, "No Missing Values", "No rows with missing values found in the dataset.")
+                return
+            if self.view.data_table.model() is not None:
+                self.view.data_table.model().set_highlighted_rows(missing_indices)
+            
+            self._preview_msg_box = QMessageBox(self.view)
+            self._preview_msg_box.setIcon(QMessageBox.Icon.Question)
+            self._preview_msg_box.setWindowTitle("Confirm Removal")
+            self._preview_msg_box.setText(f"Found {len(missing_indices)} row(s) with missing values (highlighted in red).\nReview the table, then choose whether to remove them.")
+            self._preview_msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            self._preview_msg_box.setWindowModality(Qt.WindowModality.NonModal)
+            
+            def handle_response(button):
+                if self.view.data_table.model() is not None:
+                    self.view.data_table.model().set_highlighted_rows(set())
+                    
+                if self._preview_msg_box.standardButton(button) == QMessageBox.StandardButton.Yes:
+                    self._execute_drop_missing()
+                else:
+                    self.status_bar.log("Drop missing values operation cancelled.", "INFO")
+                
+                self._preview_msg_box.deleteLater()
+                self._preview_msg_box = None
+
+            self._preview_msg_box.buttonClicked.connect(handle_response)
+            self._preview_msg_box.show()
+            
+        except Exception as DropMissingError:
+            self.status_bar.log(f"Failed to prepare missing values preview: {str(DropMissingError)}", "ERROR")
+    
+    def _execute_drop_missing(self) -> None:
         try:
             before = len(self.data_handler.df)
             self.data_handler.clean_data("drop_missing")
@@ -250,15 +330,13 @@ class DataTabController:
             )
             self.dropmissing_animation = DropMissingValueAnimation(
                 parent=None, message="Drop Missing Values"
-            )
-            self.dropmissing_animation.start(target_widget=self.view)
+            ).start(target_widget=self.view)
         except Exception as DropMissingError:
             self.status_bar.log(
                 f"Failed to drop missing values: {str(DropMissingError)}", "ERROR"
             )
-            self.failed_animation = FailedAnimation("Failed to Drop Missing values")
-            self.failed_animation.start(target_widget=self.view)
-    
+            self.failed_animation = FailedAnimation("Failed to Drop Missing values").start(target_widget=self.view)
+            
     def fill_missing(self):
         """Fill missing values"""
         if self.data_handler.df is None:
