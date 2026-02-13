@@ -1,11 +1,13 @@
 # core/project_manager.py
-import xml.etree.ElementTree as XMLET
 from pathlib import Path
 from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
 from resources.version import APPLICATION_VERSION, PROJECT_EXTENSION, DATA_EXTENSION
-from defusedxml import ElementTree as SafeXMLET
+import zipfile
+import json
+import sqlite3
+import tempfile
 
 class ProjectManager:
     
@@ -35,152 +37,125 @@ class ProjectManager:
         if filepath is None:
             filepath, _ = QFileDialog.getSaveFileName(
                 None,
-                "Save Project",
+                "Save Project Package",
                 "",
-                f"DataPlotStudio Files (*{self.PROJECT_EXTENSION});;All Files (*)"
+                f"DataPlotStudio Portable Files (*{self.PROJECT_EXTENSION});;All Files (*)"
             )
             if not filepath:
-                raise Exception("Save cancelled")
+                raise Exception(f"Save cancelled")
         
-        filepath = Path(filepath)
-        if not filepath.suffix == self.PROJECT_EXTENSION:
-            filepath = filepath.with_suffix(self.PROJECT_EXTENSION)
+        filepath_obj = Path(filepath)
+        if not filepath_obj.suffix == ".dps":
+            filepath_obj = filepath_obj.with_suffix(".dps")
         
-        data_filepath = filepath.with_suffix(self.DATA_EXTENSION)
-
         try:
             save_data: Dict[str, Any] = project_data.copy()
-            dataframe: Optional[pd.DataFrame] = None
-
-            if "data" in save_data and isinstance(save_data["data"], pd.DataFrame):
-                dataframe = save_data.pop("data", None)
+            dataframe: Optional[pd.DataFrame] = save_data.pop("data", None) if isinstance(save_data.get("data"), pd.DataFrame) else None
             
-            if dataframe is not None:
-                dataframe.to_parquet(data_filepath, engine="pyarrow", index=True)
-                save_data["data_file"] = data_filepath.name
-            else:
-                if data_filepath.exists():
-                    data_filepath.unlink()
-                if "data_file" in save_data:
-                    del save_data["data_file"]
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_dir_path = Path(temp_dir)
+                
+                # First we archive the raw data using parquet serialization
+                if dataframe is not None:
+                    dataframe.to_parquet(temp_dir_path / "data.parquet", engine="pyarrow", index=True)
+                
+                # Then archive plot configerations which are .json files
+                plot_config_path = temp_dir_path / "plot_config.json"
+                with open(plot_config_path, "w", encoding="utf-8") as config_file:
+                    json.dump(save_data.get("plot_config", {}), config_file, indent=4)
+                
+                # Then archive the total operation log which also a .json file'
+                operations_path = temp_dir_path / "operations_log.json"
+                with open(operations_path, "w", encoding="utf-8") as operations_file:
+                    json.dump(save_data.get("operations", []), operations_file, indent=4)
+                
+                # Create a metadata for the session states as a SQLITE database
+                db_path = temp_dir_path / "session.db"
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE session_metadata (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                """)
+                metadata = save_data.get("metadata", {})
+                for key, value in metadata.items():
+                    cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (str(key), str(value)))
+                conn.commit()
+                conn.close()
+                
+                # last we compress all files into a .dps package
+                with zipfile.ZipFile(filepath_obj, "w", zipfile.ZIP_DEFLATED) as zip_package:
+                    for file_to_zip in temp_dir_path.iterdir():
+                        zip_package.write(file_to_zip, arcname=file_to_zip.name)
             
-            #root XML
-            root = XMLET.Element("DPSProject")
-            self._dict_to_xml(root, save_data)
-            tree = XMLET.ElementTree(root)
-
-            if hasattr(XMLET, "indent"):
-                XMLET.indent(tree, space="    ", level=0)
-            tree.write(filepath, encoding="utf-8", xml_declaration=True)
-
-            self.current_project_path = filepath
-            return str(filepath)
+            self.current_project_path = filepath_obj
+            return str(filepath_obj)
         
         except Exception as SaveProjectError:
-            raise Exception(f"Error saving current project: {str(SaveProjectError)}")
-
+            raise Exception(f"Error packaging project files: {str(SaveProjectError)}")
     
     def load_project(self, filepath: str) -> Dict[str, Any]:
-        filepath = Path(filepath)
-
-        if not filepath.exists():
-            raise FileNotFoundError(f"Project file cannot be found at: {filepath}")
+        filepath_obj = Path(filepath)
+        
+        if not filepath_obj.exists():
+            raise FileNotFoundError(f"Project package file cannot be found at: {filepath_obj}")
         
         try:
-            tree = SafeXMLET.parse(filepath)
-            root = tree.getroot()
-
-            #converts
-            project_data = self._xml_to_dict(root)
-
-            #also load datafile
-            if "data_file" in project_data:
-                data_filename = project_data["data_file"]
-                data_filepath = filepath.parent / data_filename
-
-                if not data_filepath.exists():
-                    raise FileNotFoundError(f"No data file for this project could be found: {data_filepath}")
+            project_data: Dict[str, Any] = {
+                "metadata": {},
+                "data": None,
+                "plot_config": {},
+                "operations": []
+            }
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_dir_path = Path(temp_dir)
                 
-                dataframe = pd.read_parquet(data_filepath, engine="pyarrow")
+                with zipfile.ZipFile(filepath_obj, "r") as zip_package:
+                    zip_package.extractall(temp_dir_path)
                 
-                project_data["data"] = dataframe
-                del project_data["data_file"]
+                # First restore the raw data
+                data_path = temp_dir_path / "data.parquet"
+                if data_path.exists():
+                    project_data["data"] = pd.read_parquet(data_path, engine="pyarrow")
+                
+                # Second restore plot configs
+                plot_config_path = temp_dir_path / "plot_config.json"
+                if plot_config_path.exists():
+                    with open(plot_config_path, "r", encoding="utf-8") as config_file:
+                        project_data["plot_config"] = json.load(config_file)
+                
+                # Then restore the operations log
+                operations_path = temp_dir_path / "operations_log.json"
+                if operations_path.exists():
+                    with open(operations_path, "r", encoding="utf-8") as operations_file:
+                        project_data["operations"] = json.load(operations_file)
+                
+                # Restore session from database
+                db_path = temp_dir_path / "session.db"
+                if db_path.exists():
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT key, value FROM session_metadata")
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        project_data["metadata"][row[0]] = row[1]
+                    conn.close()
             
-            if "operations" not in project_data or project_data["operations"] is None:
-                project_data["operations"] = []
-            elif not isinstance(project_data["operations"], list):
-                project_data["operations"] = [project_data["operations"]]
-            
-            self.current_project_path = filepath
+            self.current_project_path = filepath_obj
             self.project_data = project_data
             return project_data
         
         except Exception as LoadProjectError:
-            raise Exception(f"Error loading current project: {str(LoadProjectError)}")
-    
-    def _dict_to_xml(self, parent: XMLET.Element, data: Dict[str, Any]) -> None:
-        """Convert dict to XML tree"""
-        for key, value in data.items():
-            if isinstance(value, dict):
-                child = XMLET.SubElement(parent, key)
-                self._dict_to_xml(child, value)
-            
-            elif isinstance(value, list):
-                child = XMLET.SubElement(parent, key)
-                for item in value:
-                    item_element = XMLET.SubElement(child, "item")
-                    if isinstance(item, dict):
-                        self._dict_to_xml(item_element, item)
-                    else:
-                        item_element.text = str(item)
-            
-            elif value is None:
-                XMLET.SubElement(parent, key).text = "None"
-            else:
-                XMLET.SubElement(parent, key).text = str(value)
-    
-    def _xml_to_dict(self, element: XMLET.Element) -> Any:
-        """convert XML to dict"""
-        children = list(element)
-        if not children:
-            return self._parse_value(element.text)
-        
-        if all(child.tag == "item" for child in children):
-            return [self._xml_to_dict(child) for child in children]
-        
-        result = {}
-        for child in children:
-            result[child.tag] = self._xml_to_dict(child)
-        return result
-    
-    def _parse_value(self, value: Optional[str]) -> Any:
-        """Parsing string vals to native vals"""
-        if value is None or value == "None":
-            return None
-        if value.lower() == "true":
-            return True
-        if value.lower() == "false":
-            return False
-        
-        try:
-            return int(value)
-        except ValueError:
-            pass
-
-        try:
-            return float(value)
-        except ValueError:
-            pass
-
-        return value
-
+            raise Exception(f"Error extracting files to load project: {LoadProjectError}")
     
     def open_project_dialog(self) -> Optional[str]:
         filepath, _ = QFileDialog.getOpenFileName(
             None,
             "Open Project",
             "",
-            f"DataPlot Studio Files (*{self.PROJECT_EXTENSION});;All Files (*)"
+            f"DataPlotStudio Portable Files (*{self.PROJECT_EXTENSION});;All Files (*)"
         )
         return filepath if filepath else None
     
