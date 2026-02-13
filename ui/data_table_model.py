@@ -4,11 +4,14 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 from PyQt6.QtGui import QColor
 from typing import Any
 from ui.status_bar import StatusBar
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from core.data_handler import DataHandler
 
 class DataTableModel(QAbstractTableModel):
     """ table for the data Table"""
 
-    def __init__(self, data_handler, editable=False, parent=None, highlighted_rows=None, float_precision=2, conditional_rules=None):
+    def __init__(self, data_handler: "DataHandler", editable: bool=False, parent: Any=None, highlighted_rows: list[int] | None=None, float_precision: int = 2, conditional_rules: list[dict[str, Any]] | None = None):
         super().__init__(parent)
         self.data_handler = data_handler
         self._data = self.data_handler.df
@@ -16,13 +19,15 @@ class DataTableModel(QAbstractTableModel):
         self.highlighted_rows = set(highlighted_rows) if highlighted_rows else set()
         self.float_precision = float_precision
         self.conditional_rules = conditional_rules if conditional_rules else []
+        
+        # Buffer sizes for lazy-loading
+        self._chunk_size: int = 1000
+        self._data_buffer: dict[int, pd.DataFrame] = {}
 
         if self._data is not None:
             self._is_numeric = [
                 pd.api.types.is_numeric_dtype(dtype) for dtype in self._data.dtypes
             ]
-        else:
-            self._is_numeric = []
     
     def set_float_precision(self, precision: int):
         """Updates the floating point precision and refreshes the datble"""
@@ -50,36 +55,53 @@ class DataTableModel(QAbstractTableModel):
         """Returns le data"""
         if not index.isValid() or self._data is None:
             return None
-
+        
+        row: int = index.row()
+        col: int = index.column()
+        
+        # We determine the chunk index to use a cached subset of the dataframe
+        # this is to stop the frequent .iat calls on large datasets
+        chunk_index: int = row // self._chunk_size
+        
+        if chunk_index not in self._data_buffer:
+            # Maintain a strict buffer size of 5
+            if len(self._data_buffer) >= 5:
+                oldest_chunk_key: int = next(iter(self._data_buffer))
+                del self._data_buffer[oldest_chunk_key]
+            
+            start_idx: int = chunk_index * self._chunk_size
+            end_idx: int = start_idx + self._chunk_size
+            self._data_buffer[chunk_index] = self._data.iloc[start_idx:end_idx]
+        
+        try:
+            val: Any = self._data_buffer[chunk_index].iat[row % self._chunk_size, col]
+        except Exception:
+            return None
+        
         if role == Qt.ItemDataRole.DisplayRole:
             try:
-                row = index.row()
-                col = index.column()
-                val = self._data.iat[row, col]
-
                 if pd.isna(val):
                     return "NaN"
-
+                
                 if isinstance(val, (bool, np.bool_)):
                     return str(val)
-
+                
                 if isinstance(val, (int, np.integer)):
                     return int(val)
-
+                
                 if isinstance(val, (float, np.floating)):
                     return f"{val:.{self.float_precision}f}"
-
-                s_val = str(val)
+                
+                s_val: str = str(val)
                 if len(s_val) > 64:
                     return s_val[:64] + "..."
                 return s_val
 
             except Exception:
                 return None
-
+        
         elif role == Qt.ItemDataRole.EditRole:
             try:
-                val = self._data.iat[index.row(), index.column()]
                 if pd.isna(val):
                     return ""
                 return str(val)
@@ -88,17 +110,16 @@ class DataTableModel(QAbstractTableModel):
         
         elif role == Qt.ItemDataRole.ForegroundRole:
             try:
-                val = self._data.iat[index.row(), index.column()]
                 if isinstance(val, (int, float, np.number)) and not pd.isna(val):
                     for rule in self.conditional_rules:
-                        operator = rule.get("operator")
-                        target = rule.get("value")
-                        color = rule.get("color")
+                        operator: str = rule.get("operator", "")
+                        target: float = rule.get("value", 0.0)
+                        color: str = rule.get("color", "#000000")
                         
-                        match = False
-                        if operator == "<": 
+                        match: bool = False
+                        if operator == "<":
                             match = val < target
-                        elif operator == ">": 
+                        elif operator == ">":
                             match = val > target
                         elif operator == "=":
                             match = val == target
@@ -112,16 +133,15 @@ class DataTableModel(QAbstractTableModel):
             except Exception:
                 pass
             return None
-
+        
         elif role == Qt.ItemDataRole.BackgroundRole:
             if index.row() in self.highlighted_rows:
-                return QColor("#FFCCCC")
-            
+                return QColor("#ffcccc")
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             if index.column() < len(self._is_numeric) and self._is_numeric[index.column()]:
                 return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignCenter
-
+        
         return None
     
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
@@ -134,6 +154,7 @@ class DataTableModel(QAbstractTableModel):
             column = index.column()
             
             self.data_handler.update_cell(row, column, value)
+            self._data_buffer.clear()
 
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
             return True
@@ -197,6 +218,7 @@ class DataTableModel(QAbstractTableModel):
 
             self.data_handler.sort_data(col_name, ascending)
             self._data = self.data_handler.df
+            self._data_buffer.clear()
         except Exception as SortError:
             print(f"Error sorting data: {str(SortError)}")
             self.status_bar = StatusBar()
