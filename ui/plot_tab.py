@@ -1,12 +1,13 @@
 # ui/plot_tab.py
 
 from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog
-from PyQt6.QtCore import QTimer, QSize, Qt
+from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QColor, QFont
 import json
 import os
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.widgets import SpanSelector
 from core.plot_engine import PlotEngine
 from core.data_handler import DataHandler
 from core.resource_loader import get_resource_path
@@ -45,6 +46,8 @@ if TYPE_CHECKING:
 
 class PlotTab(PlotTabUI):
     """Tab for creating and customizing plots"""
+    
+    brush_selection_made = pyqtSignal(set)
     
     def __init__(self, data_handler: DataHandler, status_bar: StatusBar, subset_manager=None) -> None:
         super().__init__()
@@ -158,6 +161,7 @@ class PlotTab(PlotTabUI):
         self.selection_overlay = SubplotOverlay(self.canvas)
         self.canvas.mpl_connect("resize_event", self.on_canvas_resize)
         self.canvas.mpl_connect("pick_event", self.on_pick)
+        self.canvas.mpl_connect("draw_event", self._on_draw_event)
         
         # Load initial data
         self.update_column_combo()
@@ -180,7 +184,57 @@ class PlotTab(PlotTabUI):
         
         # Connect all signals to their logic methods
         self._connect_signals()
-
+    
+    def _on_draw_event(self, event) -> None:
+        """Handle canvas draw to link data points """
+        if not self.plot_engine.current_ax:
+            return
+        
+        if getattr(self, "span_selector", None) is not None:
+            if self.span_selector.ax == self.plot_engine.current_ax:
+                return
+            else:
+                self.span_selector = None
+        
+        self._setup_brush_and_link()
+    
+    def _setup_brush_and_link(self) -> None:
+        """Sets up the Matplotlib SpanSelector"""
+        if not self.plot_engine.current_ax:
+            return
+        
+        # Only supported plots for now:
+        supported_plots = ["Histogram", "Scatter", "Line", "Stem", "Stairs"]
+        if self.current_plot_type_name not in supported_plots:
+            self.span_selector = None
+            return
+        
+        def on_select(xmin: float, xmax: float) -> None:
+            self._handle_brush_selection(xmin, xmax)
+        
+        self.span_selector = SpanSelector(
+            self.plot_engine.current_ax,
+            on_select,
+            "horizontal",
+            useblit=True,
+            props=dict(alpha=0.3, facecolor="#e74c3c"),
+            interactive=True
+        )
+    
+    def _handle_brush_selection(self, xmin: float, xmax: float) -> None:
+        """Filters and highlights rows based on selection"""
+        df = self.get_active_dataframe()
+        x_col = self.view.x_column.currentText()
+        
+        if not x_col or x_col not in df.columns:
+            return
+        
+        mask = (df[x_col] >= xmin) & (df[x_col] <= xmax)
+        selected_indices = set(df[mask].index)
+        
+        if selected_indices:
+            self.brush_selection_made.emit(selected_indices)
+            self.status_bar.log(f"Selected {len(selected_indices)} points. Switching to Data Explorer to view", "INFO")
 
     def _connect_signals(self) -> None:
         """Connect all UI widget signals to their logic"""
@@ -306,6 +360,19 @@ class PlotTab(PlotTabUI):
         self.view.edit_theme_button.clicked.connect(self.edit_custom_theme)
         self.view.delete_theme_button.clicked.connect(self.delete_custom_theme)
         self.refresh_theme_list()
+    
+    def showEvent(self, event) -> None:
+        """Triggered on tab visibility. Clears selectons from plot"""
+        super().showEvent(event)
+        
+        if getattr(self, "span_selector", None) is not None:
+            if hasattr(self.span_selector, "clear"):
+                self.span_selector.clear()
+            elif hasattr(self.span_selector, "set_visible"):
+                self.span_selector.set_visible(False)
+            
+            if hasattr(self, "canvas") and self.canvas is not None:
+                self.canvas.draw_idle()
 
     def _populate_plot_toolbox(self):
         while self.view.plot_type.count() > 0:

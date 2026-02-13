@@ -73,12 +73,29 @@ class MainWindow(QWidget):
         plot_icon = QIcon(get_resource_path("icons/plot.png"))
         plot_tab_name = "Plot Studio"
         self.plot_tab = PlotTab(self.data_handler, self.status_bar)
+        self.plot_tab.brush_selection_made.connect(self._on_brush_selection_made)
         self.tabs.addTab(self.plot_tab, plot_icon, plot_tab_name)
 
         layout.addWidget(self.tabs)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.setLayout(layout)
+        
+    @pyqtSlot(set)
+    def _on_brush_selection_made(self, indices: set) -> None:
+        """Handle the selection from PlotTab and hightlight data in the table"""
+        if self.data_tab.data_table.model() is not None:
+            self.data_tab.data_table.model().set_highlighted_rows(indices)
+            
+            data_tab_index = self.tabs.indexOf(self.data_tab)
+            if data_tab_index != 1:
+                self.tabs.setCurrentIndex(data_tab_index)
+            
+            if indices:
+                first_index = min(indices)
+                model_index = self.data_tab.data_table.model().index(first_index, 0)
+                self.data_tab.data_table.scrollTo(model_index)
+                self.status_bar.log(f"Highlighted {len(indices)} selected rows in Data Explorer", "SUCCESS")
     
     def _connect_subset_managers(self) -> None:
         """Connect the subset manager used in both DataTab and PlotTab"""
