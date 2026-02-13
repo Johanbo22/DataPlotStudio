@@ -1544,3 +1544,78 @@ class DataTabController:
 
         except Exception as HistoryError:
             self.status_bar.log(f"Failed to go to state: {str(HistoryError)}", "ERROR")
+    
+    def run_statistical_test_from_selection(self) -> None:
+        """Handles the selection of columns and triggers a statistical test"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+        
+        _, selected_columns = self.view.get_selection_state()
+        
+        if len(selected_columns) != 2:
+            QMessageBox.warning(
+                self.view, 
+                "Selection Error", 
+                "Please select exactly two columns in the table to run a statistical comparison."
+            )
+            return
+        
+        col1, col2 = selected_columns
+        import pandas as pd
+        # verify that both columns are numeric
+        if not pd.api.types.is_numeric_dtype(self.data_handler.df[col1]) or not pd.api.types.is_numeric_dtype(self.data_handler.df[col2]):
+            QMessageBox.warning(
+                self.view,
+                "Type Error",
+                "Both selected columns must be strictly numeric to perform these statistical tests."
+            )
+            return
+        
+        test_type, ok = QInputDialog.getItem(
+            self.view,
+            "Select Statistical Test",
+            f"Select test to run between '{col1}' and '{col2}':",
+            ["pearson", "t-test", "anova"],
+            0,
+            False
+        )
+        
+        if ok and test_type:
+            try:
+                results =self.data_handler.run_statistical_test(test_type, col1, col2)
+                
+                stat_val = results['statistic']
+                p_val = results['p_value']
+                test_name = results['test']
+                interpretation = results['interpretation']
+                html_result = f"""
+                <div style='margin-bottom: 15px; padding: 15px; border: 1px solid #bdc3c7; border-radius: 6px; background-color: #f8f9fa;'>
+                    <h3 style='margin-top: 0; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 5px;'>{test_name}</h3>
+                    <p><b>Compared Columns:</b> <span style='color: #2980b9;'>{col1}</span> vs <span style='color: #2980b9;'>{col2}</span></p>
+                    <table style='width: 100%; margin-bottom: 10px;'>
+                        <tr>
+                            <td><b>Test Statistic:</b> {stat_val:.4f}</td>
+                            <td><b>P-Value:</b> {p_val:.4e}</td>
+                        </tr>
+                    </table>
+                    <div style='background-color: #e8f4f8; padding: 10px; border-left: 4px solid #3498db; border-radius: 3px;'>
+                        <b>Interpretation:</b><br>
+                        {interpretation}
+                    </div>
+                </div>
+                """
+                current_html = self.view.test_results_text.toHtml()
+                if "Statistical Test Suite" in current_html and "How to run a statistical test:" in current_html:
+                    self.view.test_results_text.clear()
+                    
+                self.view.test_results_text.append(html_result)
+                
+                self.view.data_tabs.setCurrentWidget(self.view.test_results_text)
+                self.status_bar.log(
+                    f"Ran {test_name} on '{col1}' and '{col2}' (p={p_val:.4e})", 
+                    "SUCCESS"
+                )
+            except Exception as StatisticalTestError:
+                QMessageBox.critical(self.view, "Error", f"Failed to run statistical test:\n{str(StatisticalTestError)}")
+                self.status_bar.log(f"Statistical test failed: {str(StatisticalTestError)}", "ERROR")

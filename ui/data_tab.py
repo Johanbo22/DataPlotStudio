@@ -204,6 +204,12 @@ class DataTab(QWidget):
         self.stats_text.setGraphicsEffect(self.stats_opacity_effect)
         stats_icon = QIcon(get_resource_path("icons/data_stats.png"))
         self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
+        
+        self.test_results_text = QTextEdit()
+        self.test_results_text.setReadOnly(True)
+        self.set_test_results_greeting()
+        test_result_icon = QIcon(get_resource_path("icons/data_operations/calculator.svg"))
+        self.data_tabs.addTab(self.test_results_text, test_result_icon, "Test Results")
 
         data_view_layout.addWidget(self.data_tabs, 1)
 
@@ -571,6 +577,8 @@ class DataTab(QWidget):
         """Clear the data tab"""
         self.data_table.setModel(None)
         self.stats_text.clear()
+        if hasattr(self, "test_results_text"):
+            self.set_test_results_greeting()
 
         self.data_source_refresh_button.setVisible(False)
         self.status_bar.set_data_source("")
@@ -637,6 +645,7 @@ class DataTab(QWidget):
 
         menu.addSeparator()
         settings_action = menu.addAction("Table Settings...")
+        stats_test_action = menu.addAction("Run Statistical Test...")
 
         action = menu.exec(self.data_table.viewport().mapToGlobal(position))
 
@@ -646,6 +655,8 @@ class DataTab(QWidget):
             self.data_table.resizeRowsToContents()
         elif action == settings_action:
             self.open_table_customization()
+        elif action == stats_test_action:
+            self.controller.run_statistical_test_from_selection()
 
     def open_table_customization(self):
         """Opens the settings dialog for the table customzation"""
@@ -732,3 +743,29 @@ class DataTab(QWidget):
             selected_columns = []
         
         return selected_rows, selected_columns
+    
+    def set_test_results_greeting(self):
+        """Sets the initial instructions for the Test Results tab"""
+        greeting_html = """
+        <div style='padding: 20px; text-align: center; color: #34495e; font-family: sans-serif;'>
+            <h2 style='color: #2c3e50; margin-bottom: 10px;'>Statistical Test Suite</h2>
+            <p style='font-size: 14px; margin-bottom: 20px;'>Welcome to the DataPlotStudio Statistical Test Results panel</p>
+            <div style='background-color: #ecf0f1; border-radius: 8px; padding: 15px; text-align: left; display: inline-block; border-left: 5px solid #3498db;'>
+                <h4 style='margin-top: 0; color: #2980b9;'>How to run a statistical test:</h4>
+                <ol style='margin-bottom: 0; padding-left: 20px;'>
+                    <li style='margin-bottom: 8px;'>Go to the <b>Data Table</b> tab.</li>
+                    <li style='margin-bottom: 8px;'><b>Right-click</b> to open the context menu.</li>
+                    <li style='margin-bottom: 8px;'>Select the <b>Table Settings...</b> option.</li>
+                    <li style='margin-bottom: 8px;'>Select the <b>Behavior</b> option.</li>
+                    <li style='margin-bottom: 8px;'>Under <b>Selection Behavior</b> choose the <b>Select columns</b> option.</li>
+                    <li style='margin-bottom: 8px;'>Return to the table.</li>
+                    <li style='margin-bottom: 8px;'>Select exactly <b>two numeric columns</b>.</li>
+                    <li style='margin-bottom: 8px;'><b>Right-click</b> on the table to open the context menu.</li>
+                    <li>Select <b>Run Statistical Test...</b> and choose your desired test.</li>
+                </ol>
+            </div>
+            <p style='margin-top: 20px; font-size: 13px; color: #7f8c8d;'>Your test results and interpretations will appear here.</p>
+        </div>
+        """
+        if hasattr(self, 'test_results_text') and self.test_results_text is not None:
+            self.test_results_text.setHtml(greeting_html)

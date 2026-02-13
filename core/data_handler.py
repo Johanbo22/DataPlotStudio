@@ -534,6 +534,65 @@ class DataHandler:
             "memory_usage": self.df.memory_usage(deep=True).to_dict(),
         }
         return info
+    
+    def run_statistical_test(self, test_type: str, col1: str, col2: str) -> Dict[str, Any]:
+        """
+        Run statistical test on two numeric columns
+        Supporting: T-Test, ANOVA, Pearson Correlation Test
+        """
+        if self.df is None:
+            raise ValueError("No data loaded to perform any statistical tests")
+        
+        if not stats:
+            raise ImportError("The 'scipy' library is not installed. Scipy is required to perform any statistical tests")
+        
+        if col1 not in self.df.columns or col2 not in self.df.columns:
+            raise ValueError(f"Columns: '{col1}' or '{col2}' not found in the dataset")
+        
+        # We drop nan values to ensure valid tests
+        data = self.df[[col1, col2]].dropna()
+        
+        if data.empty:
+            raise ValueError("Insufficient data to perform test after dropping missing values")
+        
+        if test_type == "t-test":
+            stat, p_val = stats.ttest_ind(data[col1], data[col2])
+            test_name = "Independent T-Test"
+            sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
+            interpretation = (
+                f"The T-Test compares the means of the two columns. "
+                f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}' "
+                f"at the typical 5% significance level (alpha = 0.05)."
+            )
+        elif test_type == "anova":
+            stat, p_val = stats.f_oneway(data[col1], data[col2])
+            test_name = "One-Way ANOVA"
+            sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
+            interpretation = (
+                f"ANOVA tests if the means of the groups are equal. "
+                f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}'. "
+                f"(Note: for two groups, this is mathematically equivalent to the Independent T-Test)."
+            )
+        elif test_type == "pearson":
+            stat, p_val = stats.pearsonr(data[col1], data[col2])
+            test_name = "Pearson Correlation"
+            sig = "significant" if p_val < 0.05 else "not significant"
+            strength = "strong" if abs(stat) >= 0.7 else "moderate" if abs(stat) >= 0.3 else "weak"
+            direction = "positive" if stat > 0 else "negative"
+            interpretation = (
+                f"Pearson measures the linear relationship between the two variables. "
+                f"The correlation coefficient (r = {stat:.4f}) indicates a <b>{strength} {direction}</b> relationship. "
+                f"The p-value ({p_val:.4e}) shows this correlation is <b>{sig}</b>."
+            )
+        else:
+            raise ValueError(f"Unrecognized test type: {test_type}")
+        
+        return {
+            "test": test_name,
+            "statistic": float(stat),
+            "p_value": float(p_val),
+            "interpretation": interpretation
+        }
 
     def filter_data(self, column: str = None, condition: str = None, value: Any = None, advanced_filters: List[Dict] = None) -> pd.DataFrame:
         """Filter data based on conditions. Both single column filter and multi-conditional filters
