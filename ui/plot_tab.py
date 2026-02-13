@@ -37,6 +37,7 @@ from matplotlib.collections import PathCollection
 from typing import Optional
 
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
+from ui.widgets.ColorBlindnessEffect import ColorBlindnessEffect
 from ui.dialogs.PlotExportDialog import PlotExportDialog
 from ui.dialogs.ThemeEditorDialog import ThemeEditorDialog
 from core.plot_config_manager import PlotConfigManager
@@ -71,7 +72,6 @@ class PlotTab(PlotTabUI):
         self.ignore_next_click = False
         self.config_manager = PlotConfigManager(self)
         
-        # These are now defined in the UI base 
         self.bg_color = "white"
         self.face_color = "white"
 
@@ -292,6 +292,8 @@ class PlotTab(PlotTabUI):
         self.view.face_color_button.clicked.connect(self.choose_face_color)
         self.view.width_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
         self.view.height_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
+        self.view.colorblind_check.stateChanged.connect(self.update_colorblind_simulation)
+        self.view.colorblind_type_combo.currentTextChanged.connect(self.update_colorblind_simulation)
     
     def _connect_axes_tab_signals(self) -> None:
         """Connect signals for the Axes tab"""
@@ -1029,6 +1031,17 @@ class PlotTab(PlotTabUI):
             self.face_color = color.name()
             self.view.face_color_label.setText(self.face_color)
             self.view.face_color_button.updateColors(base_color_hex=self.face_color)
+    
+    def update_colorblind_simulation(self) -> None:
+        """Applies or removes the SVG filter effect from canvas"""
+        if self.view.colorblind_check.isChecked():
+            sim_type = self.view.colorblind_type_combo.currentText()
+            effect = ColorBlindnessEffect(sim_type)
+            self.canvas.setGraphicsEffect(effect)
+            self.status_bar.log(f"Color blindness mode enabled: {sim_type}", "INFO")
+        else:
+            self.canvas.setGraphicsEffect(None)
+            self.status_bar.log("Color blindess mode disabled", "INFO")
 
     def toggle_line_selector(self) -> None:
         """Show/enable line selection"""

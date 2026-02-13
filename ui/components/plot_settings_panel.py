@@ -773,6 +773,26 @@ class PlotSettingsPanel(QWidget):
         self.palette_combo = ColormapButton(parent=self)
         self.palette_combo.setToolTip("Click to search and select a colormap")
         figure_size_layout.addWidget(self.palette_combo)
+        
+        # Accessibility
+        accessibility_group = DataPlotStudioGroupBox("Accessibility")
+        accessibility_layout = QVBoxLayout()
+        
+        self.colorblind_check = DataPlotStudioToggleSwitch("Enabled Color Blindness Mode")
+        self.colorblind_check.setToolTip("Applies an SVG filter to simulate color-blindness on the canvas")
+        accessibility_layout.addWidget(self.colorblind_check)
+        
+        self.colorblind_type_combo = DataPlotStudioComboBox()
+        self.colorblind_type_combo.addItems([
+            "Protanopia (No Red)",
+            "Deuteranopia (No Green)",
+            "Tritanopia (No Blue)",
+            "Achromatopsia (Monochromacy)"
+        ])
+        accessibility_layout.addWidget(self.colorblind_type_combo)
+        
+        accessibility_group.setLayout(accessibility_layout)
+        scroll_layout.addWidget(accessibility_group)
 
         # OTHER SETTI
 
