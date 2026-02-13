@@ -19,6 +19,7 @@ from ui.widgets import (
     DataPlotStudioGroupBox,
     DataPlotStudioLineEdit
 )
+from ui.widgets.VennDiagramWidget import VennDiagramWidget
 from core.data_handler import DataHandler
 
 class MergeDialog(QDialog):
@@ -69,14 +70,17 @@ class MergeDialog(QDialog):
             "Right: Keep all rows from the new file\n"
             "Outer: Keep all rows from both"
         )
+        self.join_type_combo.currentIndexChanged.connect(lambda: self.update_preview())
         config_layout.addRow("Join Type", self.join_type_combo)
         
         # Keys
         self.left_on_combo = DataPlotStudioComboBox()
         self.left_on_combo.addItems(list(self.data_handler.df.columns))
+        self.left_on_combo.currentIndexChanged.connect(lambda: self.update_preview())
         config_layout.addRow("Join On (Current Data)", self.left_on_combo)
         
         self.right_on_combo = DataPlotStudioComboBox()
+        self.right_on_combo.currentIndexChanged.connect(lambda: self.update_preview())
         config_layout.addRow("Join On (New Data)", self.right_on_combo)
         
         # Suffixes
@@ -95,6 +99,9 @@ class MergeDialog(QDialog):
         self.config_group.setLayout(config_layout)
         layout.addWidget(self.config_group)
         
+        self.venn_widget = VennDiagramWidget()
+        layout.addWidget(self.venn_widget)
+        
         layout.addStretch()
         
         # Buttons
@@ -111,6 +118,7 @@ class MergeDialog(QDialog):
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
+        self.update_preview()
     
     def browse_file(self):
         filepath, _ = QFileDialog.getOpenFileName(self, "Select Data file to merge", "", "Data Files (*.csv *.xlsx *.xls *.json *.txt);;All Files (*)")
@@ -128,11 +136,46 @@ class MergeDialog(QDialog):
                 
                 self.config_group.setEnabled(True)
                 self.merge_button.setEnabled(True)
+                current_cols = set(self.data_handler.df.columns)
+                for col in self.right_df.columns:
+                    if col in current_cols:
+                        self.right_on_combo.setCurrentText(col)
+                        self.left_on_combo.setCurrentText(col)
+                        break
+                self.update_preview()
             except Exception as Error:
                 QMessageBox.critical(self, "Load Error", f"Failed to load file:\n{str(Error)}")
                 self.right_df = None
                 self.config_group.setEnabled(False)
                 self.merge_button.setEnabled(False)
+                self.update_preview()
+    
+    def update_preview(self, *args):
+        left_count = len(self.data_handler.df) if self.data_handler.df is not None else 0
+        right_count = len(self.right_df) if self.right_df is not None else 0
+        join_type = self.join_type_combo.currentText().lower()
+        result_count = 0
+        
+        if (self.right_df is not None and self.left_on_combo.currentText() and self.right_on_combo.currentText()):
+            left_col = self.left_on_combo.currentText()
+            right_col = self.right_on_combo.currentText()
+            
+            try:
+                l_subset = self.data_handler.df[[left_col]].copy()
+                r_subset = self.right_df[[right_col]].copy()
+                l_subset[left_col] = l_subset[left_col].astype(str)
+                r_subset[right_col] = r_subset[right_col].astype(str)
+                
+                l_subset.rename(columns={left_col: "key"}, inplace=True)
+                r_subset.rename(columns={right_col: "key"}, inplace=True)
+                
+                merged_preview = pd.merge(l_subset, r_subset, on="key", how=join_type)
+                result_count = len(merged_preview)
+            except Exception as error:
+                result_count = 0
+                print(f"Preview merge failed: {error}")
+        
+        self.venn_widget.set_data(join_type, left_count, right_count, result_count)
     
     def validate_and_accept(self):
         if self.right_df is None:
