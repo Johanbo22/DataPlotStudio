@@ -1,18 +1,22 @@
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    from ui.plot_tab import PlotTab
+    from ui.components.plot_settings_panel import PlotSettingsPanel
 from PyQt6.QtGui import QFont
+from resources.version import APPLICATION_VERSION
 
 class PlotConfigManager:
     """
     Manages the extraction and loading of plot configurations and themes
     For usage in the PlotTab and redirects of main plotting engine.
     """
-    def __init__(self, plot_tab_instance) -> None:
+    def __init__(self, plot_tab_instance: Union["PlotTab", "PlotSettingsPanel"]) -> None:
         self.pt = plot_tab_instance
     
     def get_config(self) -> Dict[str, Any]:
         """Get the current plot configuration"""
         config = {
-            "version": 1.0,
+            "version": APPLICATION_VERSION,
             "plot_type": self.pt.current_plot_type_name,
             "basic": self._get_basic_config(),
             "appearance": self._get_appearance_config(),
@@ -20,7 +24,8 @@ class PlotConfigManager:
             "legend": self._get_legend_config(),
             "grid": self._get_grid_config(),
             "advanced": self._get_advanced_config(),
-            "annotations": self._get_annotations_config()
+            "annotations": self._get_annotations_config(),
+            "geospatial": self._get_geospatial_config()
         }
         return config
     
@@ -39,6 +44,7 @@ class PlotConfigManager:
             if "grid" in config: self._load_grid_config(config["grid"])
             if "advanced" in config: self._load_advanced_config(config["advanced"])
             if "annotations" in config: self._load_annotations_config(config["annotations"])
+            if "geospatial" in config: self._load_geospatial_config(config["geospatial"])
 
         except Exception as Error:
             raise Error
@@ -74,13 +80,26 @@ class PlotConfigManager:
             "secondary_y_enabled": self.pt.secondary_y_check.isChecked(),
             "secondary_y_column": self.pt.secondary_y_column.currentText(),
             "secondary_plot_type": self.pt.secondary_plot_type_combo.currentText(),
-            "quick_filter": self.pt.quick_filter_input.text()
+            "quick_filter": self.pt.quick_filter_input.text(),
+            "use_plotly": self.pt.use_plotly_check.isChecked(),
+            "subplots": {
+                "enabled": self.pt.add_subplots_check.isChecked(),
+                "rows": self.pt.subplot_rows_spin.value(),
+                "cols": self.pt.subplot_cols_spin.value(),
+                "sharex": self.pt.subplot_sharex_check.isChecked(),
+                "sharey": self.pt.subplot_sharey_check.isChecked(),
+                "freeze_data": self.pt.freeze_data_check.isChecked()
+            }
         }
 
     def _get_appearance_config(self) -> Dict[str, Any]:
         return {
             "font_family": self.pt.font_family_combo.currentFont().family(),
             "usetex": self.pt.usetex_checkbox.isChecked(),
+            "colorblind": {
+                "enabled": self.pt.colorblind_check.isChecked(),
+                "type": self.pt.colorblind_type_combo.currentText()
+            },
             "title": {
                 "enabled": self.pt.title_check.isChecked(),
                 "text": self.pt.title_input.text(),
@@ -101,6 +120,9 @@ class PlotConfigManager:
                 "weight": self.pt.ylabel_weight_combo.currentText(),
             },
             "spines": {
+                "individual": self.pt.individual_spines_check.isChecked(),
+                "global_width": self.pt.global_spine_width_spin.value(),
+                "global_color": self.pt.global_spine_color,
                 "top": {
                     "visible": self.pt.top_spine_visible_check.isChecked(),
                     "width": self.pt.top_spine_width_spin.value(),
@@ -287,6 +309,10 @@ class PlotConfigManager:
     def _get_annotations_config(self) -> Dict[str, Any]:
         return {
             "text_annotations": self.pt.annotations,
+            "auto_annotate": {
+                "enabled": self.pt.auto_annotate_check.isChecked(),
+                "column": self.pt.auto_annotate_col_combo.currentText()
+            },
             "textbox": {
                 "enabled": self.pt.textbox_enable_check.isChecked(),
                 "content": self.pt.textbox_content.text(),
@@ -303,7 +329,37 @@ class PlotConfigManager:
                 "scale": self.pt.table_scale_spin.value()
             }
         }
-    
+
+    def _get_geospatial_confi(self) -> Dict[str, Any]:
+        return {
+            "target_crs": self.pt.geo_target_crs_input.text(),
+            "basemap": {
+                "enabled": self.pt.geo_basemap_check.isChecked(),
+                "source": self.pt.geo_basemap_style_combo.currentText()
+            },
+            "choropleth": {
+                "scheme": self.pt.geo_scheme_combo.currentText(),
+                "k": self.pt.geo_k_spin.value()
+            },
+            "legend": {
+                "enabled": self.pt.geo_legend_check.isChecked(),
+                "location": self.pt.geo_legend_loc_combo.currentText(),
+                "use_divider": self.pt.geo_use_divider_check.isChecked(),
+                "cax_enabled": self.pt.geo_cax_check.isChecked(),
+                "axis_off": self.pt.geo_axis_off_check.isChecked()
+            },
+            "missing_data": {
+                "label": self.pt.geo_missing_label_input.text(),
+                "color": self.pt.geo_missing_color,
+                "hatch": self.pt.geo_hatch_combo.currentText()
+            },
+            "boundary": {
+                "enabled": self.pt.geo_boundary_check.isChecked(),
+                "color": self.pt.geo_edge_color,
+                "linewidth": self.pt.geo_linewidth_spin.value()
+            }
+        }
+
     def _load_basic_config(self, config: dict):
         self.pt.x_column.setCurrentText(config.get("x_column", ""))
         self.pt.quick_filter_input.setText(config.get("quick_filter", ""))
@@ -345,12 +401,28 @@ class PlotConfigManager:
                     self.pt.subset_combo.setCurrentIndex(index)
         self.pt.use_subset()
         
+        # Plotly and Subplots
+        self.pt.use_plotly_check.setChecked(config.get("use_plotly", False))
+        
+        sub_conf = config.get("subplots", {})
+        self.pt.add_subplots_check.setChecked(sub_conf.get("enabled", False))
+        self.pt.subplot_rows_spin.setValue(sub_conf.get("rows", 1))
+        self.pt.subplot_cols_spin.setValue(sub_conf.get("cols", 1))
+        self.pt.subplot_sharex_check.setChecked(sub_conf.get("sharex", False))
+        self.pt.subplot_sharey_check.setChecked(sub_conf.get("sharey", False))
+        self.pt.freeze_data_check.setChecked(sub_conf.get("freeze_data", False))
+        
     def _load_appearance_config(self, config: dict):
         # Font
         if "font_family" in config:
             self.pt.font_family_combo.setCurrentFont(QFont(config["font_family"]))
         self.pt.usetex_checkbox.setChecked(config.get("usetext", False))
 
+        # Colorblind mode
+        cb_conf = config.get("colorblind", {})
+        self.pt.colorblind_check.setChecked(cb_conf.get("enabled", False))
+        self.pt.colorblind_type_combo.setCurrentText(cb_conf.get("type", "Protanopia (No Red)"))
+        
         # Title
         title_conf = config.get("title", {})
         self.pt.title_check.setChecked(title_conf.get("enabled", False))
@@ -366,7 +438,7 @@ class PlotConfigManager:
         self.pt.xlabel_size_spin.setValue(x_label_conf.get("size", 10))
         self.pt.xlabel_weight_combo.setCurrentText(x_label_conf.get("weight", "normal"))
 
-        y_label_conf = config.get("xlabel", {})
+        y_label_conf = config.get("ylabel", {})
         self.pt.ylabel_check.setChecked(y_label_conf.get("enabled", False))
         self.pt.ylabel_input.setText(y_label_conf.get("text", ""))
         self.pt.ylabel_size_spin.setValue(y_label_conf.get("size", 10))
@@ -374,6 +446,15 @@ class PlotConfigManager:
 
         # Spines
         spines = config.get("spines", {})
+        self.pt.individual_spines_check.setChecked(spines.get("individual", False))
+        self.pt.global_spine_width_spin.setValue(spines.get("global_width", 1.0))
+        
+        g_color = spines.get("global_color", "black")
+        self.pt.global_spine_color = g_color
+        if hasattr(self.pt, "global_spine_color_label"):
+            self.pt.global_spine_color_label.setText(g_color)
+            self.pt.global_spine_color_button.updateColors(base_color_hex=g_color)
+
         for side, ctrl_check, width_spin, color_attr, btn in [
             ("top", self.pt.top_spine_visible_check, self.pt.top_spine_width_spin, "top_spine_color", self.pt.top_spine_color_button),
             ("bottom", self.pt.bottom_spine_visible_check, self.pt.bottom_spine_width_spin, "bottom_spine_color", self.pt.bottom_spine_color_button),
@@ -584,7 +665,12 @@ class PlotConfigManager:
         self.pt.annotations_list.clear()
         for ann in self.pt.annotations:
             self.pt.annotations_list.addItem(f"{ann['text']} @ ({ann['x']:.2f}, {ann['y']:.2f})")
-            
+        
+        # Auto annotations
+        auto_ann = config.get("auto_annotate") or {}
+        self.pt.auto_annotate_check.setChecked(auto_ann.get("enabled", False))
+        self.pt.auto_annotate_col_combo.setCurrentText(auto_ann.get("column", "Default (Y-value)"))
+        
         # Textbox
         tb = config.get("textbox") or {}
         self.pt.textbox_enable_check.setChecked(tb.get("enabled", False))
@@ -606,3 +692,37 @@ class PlotConfigManager:
         self.pt.table_scale_spin.setValue(tab.get("scale", 1.2))
         
         self.pt.toggle_table_controls()
+    
+    def _load_geospatial_config(self, config: dict) -> None:
+        self.pt.geo_target_crs_input.setText(config.get("target_crs", ""))
+        
+        bmap = config.get("basemap", {})
+        self.pt.geo_basemap_check.setChecked(bmap.get("enabled", False))
+        self.pt.geo_basemap_style_combo.setCurrentText(bmap.get("source", "OpenStreetMap"))
+        
+        choro = config.get("choropleth", {})
+        self.pt.geo_scheme_combo.setCurrentText(choro.get("scheme", "None"))
+        self.pt.geo_k_spin.setValue(choro.get("k", 5))
+        
+        leg = config.get("legend", {})
+        self.pt.geo_legend_check.setChecked(leg.get("enabled", False))
+        self.pt.geo_legend_loc_combo.setCurrentText(leg.get("location", "vertical"))
+        self.pt.geo_use_divider_check.setChecked(leg.get("use_divider", False))
+        self.pt.geo_cax_check.setChecked(leg.get("cax_enabled", False))
+        self.pt.geo_axis_off_check.setChecked(leg.get("axis_off", False))
+        
+        missing = config.get("missing_data", {})
+        self.pt.geo_missing_label_input.setText(missing.get("label", ""))
+        self.pt.geo_missing_color = missing.get("color", "lightgray")
+        if hasattr(self.pt, "geo_missing_color_label"):
+            self.pt.geo_missing_color_label.setText(self.pt.geo_missing_color)
+            self.pt.geo_missing_color_btn.updateColors(base_color_hex=self.pt.geo_missing_color)
+        self.pt.geo_hatch_combo.setCurrentText(missing.get("hatch", "None"))
+        
+        bound = config.get("boundary", {})
+        self.pt.geo_boundary_check.setChecked(bound.get("enabled", False))
+        self.pt.geo_edge_color = bound.get("color", "black")
+        if hasattr(self.pt, "geo_edge_color_label"):
+            self.pt.geo_edge_color_label.setText(self.pt.geo_edge_color)
+            self.pt.geo_edge_color_btn.updateColors(base_color_hex=self.pt.geo_edge_color)
+        self.pt.geo_linewidth_spin.setValue(bound.get("linewidth", 1.0))
