@@ -16,13 +16,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from PyQt6.QtCore import Qt
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
+from PyQt6.QtGui import QTextCursor
+from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit, DataPlotStudioGroupBox, DataPlotStudioListWidget
 from ui.dialogs.CodeEditor import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
-
 
 class ComputedColumnDialog(QDialog):
     """Dialog for computing and creating new columns"""
@@ -124,7 +121,7 @@ class ComputedColumnDialog(QDialog):
 
         insert_column_info = QLabel("Available Columns:")
         insert_column_info.setStyleSheet(
-            "color: 666; font-weight: bold; font-size: 9pt;"
+            "color: #666; font-weight: bold; font-size: 9pt;"
         )
         insert_column_info.setWordWrap(True)
         column_layout.addWidget(insert_column_info)
@@ -205,13 +202,21 @@ class ComputedColumnDialog(QDialog):
                 item = QTreeWidgetItem(parent)
                 item.setText(0, func)
 
-    def insert_function(self, item, column):
+    def insert_function(self, item: QTreeWidgetItem, column: int):
         """Insert the selected function into the expression"""
         if item.childCount() > 0:
             return
 
         func_text = item.text(0)
+        if not func_text.endswith(")"):
+            func_text += "()"
+        
         self.insert_text(func_text)
+        
+        if func_text.endswith("()"):
+            cursor = self.expression_input.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, 1)
+            self.expression_input.setTextCursor(cursor)
 
     def insert_text(self, text):
         """Insert the text at the current cursor position and refocus"""
