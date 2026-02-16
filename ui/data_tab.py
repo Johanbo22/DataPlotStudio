@@ -379,7 +379,7 @@ class DataTab(QWidget):
             self.data_source_refresh_button.setVisible(False)
         
         self.status_bar.set_data_source("")
-        self.status_bar.set_view_contex("", "normal")
+        self.status_bar.set_view_context("", "normal")
     
     def _update_data_model(self, reload_model: bool) -> None:
         """Updates the table model and restores sorting states"""
@@ -479,9 +479,9 @@ class DataTab(QWidget):
         agg_name = getattr(self.data_handler, "viewing_aggregation_name", None)
         
         if agg_name:
-            self.status_bar.set_view_contex(f"Viewing Aggregation: {agg_name}")
+            self.status_bar.set_view_context(f"Viewing Aggregation: {agg_name}")
         elif inserted_name:
-            self.status_bar.set_view_contex(f"Viewing Subset: {inserted_name}")
+            self.status_bar.set_view_context(f"Viewing Subset: {inserted_name}")
     
     def _update_history_list(self) -> None:
         """Updates the history list"""
@@ -582,7 +582,7 @@ class DataTab(QWidget):
 
         self.data_source_refresh_button.setVisible(False)
         self.status_bar.set_data_source("")
-        self.status_bar.set_view_contex("", "normal")
+        self.status_bar.set_view_context("", "normal")
 
     def _format_operation_text(self, operation: dict) -> str:
         """Formatter for operation dict back to better text handling"""
@@ -682,7 +682,7 @@ class DataTab(QWidget):
             "font_family": current_font.family(),
             "font_size": current_font_size,
             "word_wrap": self.data_table.wordWrap(),
-            "selection_behavio": self.data_table.selectionBehavior(),
+            "selection_behavior": self.data_table.selectionBehavior(),
             "float_precision": self.current_precision,
             "conditional_rules": self.current_formatting_rules
         }
@@ -703,8 +703,8 @@ class DataTab(QWidget):
                 self.data_table.setPalette(palette)
             self.data_table.setShowGrid(settings["show_grid"])
 
-            self.data_table.horizontalHeader().setVisible(settings["show_h_header"])
-            self.data_table.verticalHeader().setVisible(settings["show_v_header"])
+            self.data_table.horizontalHeader().setVisible(settings["show_h_headers"])
+            self.data_table.verticalHeader().setVisible(settings["show_v_headers"])
 
             font = QFont(settings["font_family"])
             font.setPointSize(settings["font_size"])

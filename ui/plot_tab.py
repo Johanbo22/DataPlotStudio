@@ -2515,7 +2515,7 @@ class PlotTab(PlotTabUI):
                 legend.get_frame().set_linewidth(self.view.legend_edge_width_spin.value())
             
             #set title
-            if self.legend_title_input.text().strip():
+            if self.view.legend_title_input.text().strip():
                 legend.set_title(self.view.legend_title_input.text().strip())
             
             # apply font
@@ -2727,8 +2727,8 @@ class PlotTab(PlotTabUI):
             self.plot_engine.current_ax.tick_params(
                 axis="x",
                 which="minor",
-                direction=self.x_minor_tick_direction_combo.currentText(),
-                width=self.x_minor_tick_width_spin.value()
+                direction=self.view.x_minor_tick_direction_combo.currentText(),
+                width=self.view.x_minor_tick_width_spin.value()
             )
         
         if self.view.y_show_minor_ticks_check.isChecked():
@@ -2736,8 +2736,8 @@ class PlotTab(PlotTabUI):
             self.plot_engine.current_ax.tick_params(
                 axis="y",
                 which="minor",
-                direction=self.y_minor_tick_direction_combo.currentText(),
-                width=self.y_minor_tick_width_spin.value()
+                direction=self.view.y_minor_tick_direction_combo.currentText(),
+                width=self.view.y_minor_tick_width_spin.value()
             )
         
         # add formatts if user specified
@@ -2758,8 +2758,8 @@ class PlotTab(PlotTabUI):
 
         
         #rotation
-        plt.setp(self.plot_engine.current_ax.get_xticklabels(), rotation=self.xtick_rotation_spin.value())
-        plt.setp(self.plot_engine.current_ax.get_yticklabels(), rotation=self.ytick_rotation_spin.value())
+        plt.setp(self.plot_engine.current_ax.get_xticklabels(), rotation=self.view.xtick_rotation_spin.value())
+        plt.setp(self.plot_engine.current_ax.get_yticklabels(), rotation=self.view.ytick_rotation_spin.value())
 
         #axiss inversion
         if self.view.x_invert_axis_check.isChecked():
@@ -2965,7 +2965,7 @@ class PlotTab(PlotTabUI):
         is_enabled = bool(enabled)
 
         self.view.secondary_y_column.setEnabled(is_enabled)
-        if hasattr(self, "secondary_plot_type_combo"):
+        if hasattr(self.view, "secondary_plot_type_combo"):
             self.view.secondary_plot_type_combo.setEnabled(is_enabled)
     
     def load_config(self, config: dict) -> None:
