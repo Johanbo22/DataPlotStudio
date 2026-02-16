@@ -1,7 +1,4 @@
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-
-
+from ui.widgets import DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioButton, DataPlotStudioLineEdit
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -13,17 +10,13 @@ from PyQt6.QtWidgets import (
 )
 import pandas as pd
 
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-
-
 class FillMissingDialog(QDialog):
     """Dialog for the user to manipulate their data using the fill missing tool"""
 
-    def __init__(self, columns: list[str], df: pd.DataFrame = None, parent=None):
+    def __init__(self, columns: list[str], df: pd.DataFrame = None, parent: QWidget = None) -> None:
         super().__init__(parent)
-        self.columns = columns
-        self.df = df
+        self.columns: list[str] = columns
+        self.df: pd.DataFrame = df
         self.setWindowTitle("Fill Missing Values")
         self.setModal(True)
         self.resize(400, 300)
@@ -148,12 +141,12 @@ class FillMissingDialog(QDialog):
 
         self.update_stats()
 
-    def on_method_change(self, text):
+    def on_method_change(self, text: str):
         """Show or hide the value intput box"""
-        is_static = "Static Value" in text
+        is_static: bool = "Static Value" in text
         self.value_group.setVisible(is_static)
 
-        is_interpol = "Interpolation" in text
+        is_interpol: bool = "Interpolation" in text
         if is_static or is_interpol:
             self.group_check.setChecked(False)
             self.group_check.setEnabled(False)
@@ -171,25 +164,28 @@ class FillMissingDialog(QDialog):
             self.stats_frame.setVisible(False)
             return
 
-        col = self.column_combo.currentText()
+        col: str = self.column_combo.currentText()
         total_rows = len(self.df)
 
         if total_rows == 0:
             return
 
-        missing_count = 0
+        missing_count: int = 0
+        percentage: float = 0.0
         if col == "All Columns":
             missing_count = self.df.isnull().sum().sum()
-            total_cells = self.df.size
-            percentage = (missing_count / total_cells) * 100
+            total_cells: int = self.df.size
+            if total_cells > 0:
+                percentage = (missing_count / total_cells) * 100
             self.stats_label.setText(
-                f"Total Missing Values: {missing_count:,} / {total_cells:,} ({percentage:.1f})%"
+                f"Total Missing Values: {missing_count:,} / {total_cells:,} ({percentage:.1f}%)"
             )
             self.missing_progress.setMaximum(total_cells)
         else:
             if col in self.df.columns:
-                missing_count = self.df[col].isnull().sum()
-                percentage = (missing_count / total_rows) * 100
+                missing_count = int(self.df[col].isnull().sum())
+                if total_rows > 0:
+                    percentage = (missing_count / total_rows) * 100
                 self.stats_label.setText(
                     f"Missing in '{col}': {missing_count:,} / {total_rows:,} ({percentage:.1f}%)"
                 )
@@ -197,17 +193,28 @@ class FillMissingDialog(QDialog):
         
         self.missing_progress.setValue(int(missing_count))
 
-        if percentage == 0:
-            self.missing_progress.setStyleSheet(self.missing_progress.styleSheet().replace("#ff5252", "#4caf50"))
-        elif percentage < 10:
-            self.missing_progress.setStyleSheet(self.missing_progress.styleSheet().replace("#4caf50", "#ffb74d"))
-        else:
-            self.missing_progress.setStyleSheet(self.missing_progress.styleSheet().replace("#4caf50", "#ff5252"))
+        chunk_color: str = "#4caf50"
+        if percentage > 0 and percentage < 10:
+            chunk_color = "#ffb74d"
+        elif percentage >= 10:
+            chunk_color = "#ff5252"
+        
+        self.missing_progress.setStyleSheet(f"""
+            QProgressBar {{
+                border: 1px solid #444;
+                border-radius: 3px;
+                background-color: #333;
+                height: 8px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {chunk_color};
+            }}
+        """)
 
-    def get_config(self):
+    def get_config(self) -> dict[str, str | None]:
         """Get the user selection"""
-        text = self.method_combo.currentText()
-        method = "ffill"
+        text: str = self.method_combo.currentText()
+        method: str = "ffill"
 
         if "Forward" in text:
             method = "ffill"
@@ -225,10 +232,12 @@ class FillMissingDialog(QDialog):
             method = "median"
         elif "Mode" in text:
             method = "mode"
+            
+        final_value: str | None = self.value_input.text().strip() if "Static" in text else None
 
         return {
             "column": self.column_combo.currentText(),
             "method": method,
-            "value": self.value_input.text(),
+            "value": final_value,
             "group_by": self.group_combo.currentText() if self.group_check.isChecked() else None
         }
