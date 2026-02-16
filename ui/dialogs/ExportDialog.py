@@ -1,5 +1,3 @@
-from xml.etree.ElementInclude import include
-from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import (
     QDialog,
@@ -18,29 +16,29 @@ from PyQt6.QtWidgets import (
 )
 import pandas as pd
 import traceback
+from typing import Optional, List, Any, Dict
 
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
-from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
-from ui.widgets.AnimatedRadioButton import DataPlotStudioRadioButton
+from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioRadioButton, DataPlotStudioCheckBox
 
 
 class ExportDialog(QDialog):
     """Dialog for exporting data"""
 
-    def __init__(self, parent=None, data_handler=None, selected_rows=None, selected_columns=None):
+    def __init__(self, parent: Optional[QWidget] = None, data_handler=None, selected_rows=None, selected_columns=None):
         super().__init__(parent)
         self.setWindowTitle("Export Data")
         self.setModal(True)
         self.resize(700, 600)
 
         self.data_handler = data_handler
-        self.selected_rows = selected_rows if selected_rows is not None else []
-        self.pre_selected_columns = selected_columns if selected_columns is not None else []
+        self.selected_rows: List[int] = selected_rows if selected_rows is not None else []
+        self.pre_selected_columns: List[str] = selected_columns if selected_columns is not None else []
 
-        self.has_row_selection = len(self.selected_rows) > 0
-        self.has_col_selection = len(self.pre_selected_columns) > 0
+        self.has_row_selection: bool = len(self.selected_rows) > 0
+        self.has_col_selection: bool = len(self.pre_selected_columns) > 0
+        
+        self.to_clipboard: bool = False
+        self.filepath: Optional[str] = None
 
         self.available_columns = []
         if self.data_handler and self.data_handler.df is not None:
@@ -116,7 +114,7 @@ class ExportDialog(QDialog):
                 else:
                     item.setSelected(False)
         else:
-            self.column_list.addItem("No Columns availale")
+            self.column_list.addItem("No Columns available")
             self.column_list.setEnabled(False)
             self.cols_radio_specific.setEnabled(False)
         
@@ -211,7 +209,7 @@ class ExportDialog(QDialog):
         else:
             self.description_label.setText("")
     
-    def _get_export_data(self):
+    def _get_export_data(self) -> Optional[pd.DataFrame]:
         """Get the dataframe current selection"""
         if not self.data_handler or self.data_handler.df is None:
             return None
@@ -221,14 +219,19 @@ class ExportDialog(QDialog):
         if self.rows_radio_selected.isChecked() and self.selected_rows:
             try:
                 df = df.iloc[self.selected_rows]
-            except Exception as Error:
-                print(f"Error slciing rows: {Error}")
+            except IndexError as error:
+                QMessageBox.warning(self, "Selection Error", f"Error slicing selected rows. They may be out of bounds.\n{str(error)}")
+                return None
+            except Exception as error:
+                QMessageBox.critical(self, "Slicing Error", f"An unexpected error occurred while filtering rows:\n{str(error)}")
+                return None
         
         if self.cols_radio_specific.isChecked():
             selected_cols = [item.text() for item in self.column_list.selectedItems()]
-            if selected_cols:
-                df = df[selected_cols]
-        
+            if not selected_cols:
+                QMessageBox.warning(self, "No Columns Selected", "You have selected 'Specific Columns' but no columns are highlighted. Please select at least one column.")
+                return None
+            df = df[selected_cols]
         return df
 
     def on_clipboard_clicked(self):
@@ -252,7 +255,6 @@ class ExportDialog(QDialog):
                     return
             except Exception as ClipboardError:
                 QMessageBox.critical(self, "Error", f"Failed to copy to clipboard: {str(ClipboardError)}")
-                traceback.print_exc()
                 return
         
         self.accept()
@@ -278,35 +280,35 @@ class ExportDialog(QDialog):
             f"export{default_ext}",
             file_filter
         )
+        if not filepath:
+            return
+        self.filepath = filepath
+        if self.data_handler:
+            try:
+                df_to_export = self._get_export_data()
+                if df_to_export is not None:
+                    include_index = self.include_index_check.isChecked()
 
-        if filepath:
-            self.filepath = filepath
-            if self.data_handler:
-                try:
-                    df_to_export = self._get_export_data()
-                    if df_to_export is not None:
-                        include_index = self.include_index_check.isChecked()
-
-                        if export_format == "CSV":
-                            df_to_export.to_csv(filepath, index=include_index)
-                        elif export_format == "XLSX":
-                            df_to_export.to_excel(filepath, index=include_index)
-                        elif export_format == "JSON":
-                            orient = "columns" if include_index else "records"
-                            df_to_export.to_json(filepath, orient=orient, indent=4)
-                        QMessageBox.information(self, "Success", f"Data exported to {filepath}")
-                except Exception as Error:
-                    QMessageBox.critical(self, "Export Error", f"Failed to export data: {str(Error)}")
-                    return
-            self.accept()
+                    if export_format == "CSV":
+                        df_to_export.to_csv(filepath, index=include_index)
+                    elif export_format == "XLSX":
+                        df_to_export.to_excel(filepath, index=include_index)
+                    elif export_format == "JSON":
+                        orient = "columns" if include_index else "records"
+                        df_to_export.to_json(filepath, orient=orient, indent=4)
+                        
+                    QMessageBox.information(self, "Success", f"Data exported to {filepath}")
+            except Exception as Error:
+                QMessageBox.critical(self, "Export Error", f"Failed to export data: {str(Error)}")
+                return
 
     def get_export_config(self):
         """Return export configuration"""
         config = {
             'format': self.format_combo.currentText().lower(),
-            'filepath': getattr(self, 'filepath', None),
+            'filepath': self.filepath,
             'include_index': self.include_index_check.isChecked(),
-            'to_clipboard': getattr(self, 'to_clipboard', False),
+            'to_clipboard': self.to_clipboard,
             'selected_rows_only': self.rows_radio_selected.isChecked(),
             'specific_columns': self.cols_radio_specific.isChecked(),
             'selected_columns': [item.text() for item in self.column_list.selectedItems()]
