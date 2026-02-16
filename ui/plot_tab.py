@@ -1483,6 +1483,8 @@ class PlotTab(PlotTabUI):
 
         description = self.plot_engine.PLOT_DESCRIPTIONS.get(plot_type, "")
         self.view.description_label.setText(description)
+        
+        self.view.custom_tabs.setTabVisible(6, plot_type == "GeoSpatial")
 
         line_plots = ["Line", "Area", "Step", "Stairs"]
         bar_plots = ["Bar", "Count Plot", "Stem"]
@@ -1622,6 +1624,7 @@ class PlotTab(PlotTabUI):
         
         if (hasattr(self, "_last_data_signature") and self._last_data_signature == current_data_signature and hasattr(self, "_cached_active_df") and self._cached_active_df is not None):
             processed_df = self._cached_active_df
+            self.status_bar.log("Using cached data for plotting", "INFO")
         else:
             processed_df = active_df.copy()
             if quick_filter:
@@ -1634,74 +1637,12 @@ class PlotTab(PlotTabUI):
             self._cached_active_df = processed_df
             self._last_data_signature = current_data_signature
         
-        viz_params = [
-            current_data_signature,
-            hue,
-            current_subplot_index,
-            self.view.flip_axes_check.isChecked(),
-            self.view.palette_combo.currentText(),
-            self.view.style_combo.currentText(),
-            self.view.secondary_y_check.isChecked(),
-            self.view.secondary_y_column.currentText(),
-            self.view.secondary_plot_type_combo.currentText()
-        ]
-
-        # Plot specific params
-        if plot_type == "Histogram":
-            viz_params.extend([
-                self.view.histogram_bins_spin.value(),
-                self.view.histogram_show_kde_check.isChecked(),
-                self.view.histogram_show_normal_check.isChecked()
-            ])
-        elif plot_type == "Pie":
-            viz_params.extend([
-                self.view.pie_start_angle_spin.value(),
-                self.view.pie_explode_check.isChecked(),
-                self.view.pie_explode_distance_spin.value(),
-                self.view.pie_shadow_check.isChecked(),
-                self.view.pie_show_percentages_check.isChecked()
-            ])
-        elif plot_type == "Scatter":
-            viz_params.extend([
-                self.view.regression_line_check.isChecked(),
-                self.view.confidence_interval_check.isChecked(),
-                self.view.error_bars_combo.currentText(),
-                self.view.confidence_level_spin.value()
-            ])
-        elif plot_type == "Bar":
-            viz_params.extend([
-                self.view.bar_width_spin.value()
-            ])
-        elif plot_type == "GeoSpatial":
-            viz_params.extend([
-                self.view.geo_scheme_combo.currentText(),
-                self.view.geo_k_spin.value(),
-                self.view.geo_boundary_check.isChecked(),
-                self.view.geo_basemap_check.isChecked() if hasattr(self, 'geo_basemap_check') else None,
-                self.view.geo_axis_off_check.isChecked(),
-                self.view.geo_cax_check.isChecked(),
-                self.view.geo_legend_check.isChecked(),
-                self.view.geo_legend_loc_combo.currentText(),
-                self.view.geo_use_divider_check.isChecked()
-            ])
-        
-        current_viz_signature = tuple(viz_params)
-        
-        # Determine if we need to redraw
         redraw_needed = True
-        if (hasattr(self, '_last_viz_signature') and self._last_viz_signature == current_viz_signature and not self.view.use_plotly_check.isChecked()):
-            redraw_needed = False
-        self._last_viz_signature = current_viz_signature
-
-        active_df = active_df.copy()
 
         # Handle the plotly backend
         if self.view.use_plotly_check.isChecked():
             self._generate_plotly_plot(active_df, plot_type, x_col, y_cols, hue)
             return
-        
-        if not redraw_needed:
-            self.status_bar.log("Using cached plot visualization", "INFO")
 
         # Generate main plot
         self._generate_main_plot(
