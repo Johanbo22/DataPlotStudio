@@ -7,6 +7,7 @@ import re
 from core.resource_loader import get_resource_path
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
+from core.markdown_parser import parse_changelog
 
 class ChangelogViewer(QDialog):
     """
@@ -171,98 +172,18 @@ class LandingPage(QWidget):
             self.show_changelog_popup("Version History", mode="history")
         
     def show_changelog_popup(self, title: str, mode: str):
-        changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
-        
+        changelog_path = Path(get_resource_path("CHANGELOG.md"))
+        if not changelog_path.exists():
+            changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
+            
         if not changelog_path.exists():
             content = "<h3 style='color:red'>CHANGELOG.md not found</h3>"
         else:
             try:
                 raw_text = changelog_path.read_text(encoding="utf-8")
-                content = self.parse_changelog(raw_text, mode)
+                content = parse_changelog(raw_text, mode, APPLICATION_VERSION)
             except Exception as Error:
                 content = f"<h3 style='color:red'>Error reading changelog</h3><p>{str(Error)}</p>"
         
         dialog = ChangelogViewer(title, content, self)
         dialog.exec()
-    
-    def parse_changelog(self, text: str, mode: str) -> str:
-        """
-        Markdown to HTML parser
-        mode="fixes": Extracts fixed and changed sections
-        mode="history": Extracts all sections
-        """
-        html_output = "<style>h2 {color: #2c3e50;} h3 {color: #2980b9;} ul {line-height: 1.6;}</style>"
-        
-        sections = re.split(r'(^|\n)## ', text)
-        sections = [section for section in sections if section.strip()]
-        
-        if not sections:
-            return "<p>No changelog data found.</p>"
-
-        valid_versions = []
-        for section in sections:
-            if section.startswith("#"):
-                continue
-            valid_versions.append(section)
-        
-        if not valid_versions:
-            return "<p>No version information found.</p>"
-        
-        latest_section = valid_versions[0]
-        past_sections = valid_versions[1:]
-        
-        if mode == "fixes":
-            html_output += f"<h2>Latest Changes & Fixes - {APPLICATION_VERSION}</h2>"
-            
-            sub_sections = re.split(r'(^|\n)### ', latest_section)
-            found_relevant = False
-            
-            for sub in sub_sections:
-                header_match = re.match(r'([A-Za-z ]+)', sub)
-                if header_match:
-                    header = header_match.group(1).strip()
-                    if header in ["Fixed", "Changed"]:
-                        found_relevant = True
-                        body = sub[len(header):].strip()
-                        html_output += f"<h3>{header}</h3>"
-                        html_output += self._markdown_list_to_html(body)
-            
-            if not found_relevant:
-                html_output += "<p>No bug fixes or changes listed for the latest version.</p>"
-        
-        elif mode == "history":
-            html_output += "<h2>Version History</h2>"
-            if not past_sections:
-                html_output += "<p>No past versions found.</p>"
-                
-            for version_text in past_sections:
-                lines = version_text.split('\n')
-                version_title = lines[0].strip()
-                html_output += f"<hr><h3>{version_title}</h3>"
-                
-                body = "\n".join(lines[1:])
-                body = re.sub(r'### (.*?)\n', r'<h4>\1</h4>\n', body)
-                html_output += self._markdown_list_to_html(body)
-
-        return html_output
-    
-    def _markdown_list_to_html(self, text: str):
-        lines = text.split("\n")
-        html = "<ul>"
-        in_list = False
-        
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("- ") or stripped.startswith("* "):
-                content = stripped[2:]
-                content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content)
-                html += f"<li>{content}</li>"
-                in_list = True
-            elif in_list and not stripped:
-                pass
-            else:
-                if stripped:
-                    html += f"<p>{stripped}</p>"
-        
-        html += "</ul>"
-        return html
