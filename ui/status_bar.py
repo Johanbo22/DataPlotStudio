@@ -24,6 +24,11 @@ class StatusBar(QStatusBar):
         self.log_history: list[str] = []
         self.action_timeout = 2 
         self.last_action_time = None
+        
+        # Message queue for the typerwrite animation
+        # Should prevent stuttering on multiple calls 
+        self.message_queue: list[tuple[str, str]] = []
+        self.is_typing: bool = False
 
         #Timer effect for type
         self.typewriter_timer = QTimer()
@@ -131,7 +136,7 @@ class StatusBar(QStatusBar):
         """Set the logger instance"""
         self.logger = logger
     
-    def log(self, message: str, level: str = "INFO", action_type: str = None) -> None:
+    def log(self, message: str, level: str = "INFO", action_type: str = None, log_to_file: bool = True) -> None:
         """Log a message to the terminal"""
         timestamp: str = datetime.now().strftime("%H:%M:%S")
         
@@ -150,16 +155,16 @@ class StatusBar(QStatusBar):
 
         # Store the log in the history
         self.log_history.append(f'<span style="color:{color}">{log_message}</span>')
-
-        self.terminal.setText(log_message)
-        self.terminal.setStyleSheet(f"QLineEdit {{background-color: transparent; color: {color}; font-family: Consolas, monospace; font-size: 11px; border: none; padding: 0 5px;}}") 
+        
         self.status_label.setText("Ready" if level in ("SUCCESS", "INFO") else "Warning" if level == "WARNING" else "Error")
         self.status_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px;")
-
-        self._start_typing(log_message)
+        
+        self.message_queue.append((log_message, color))
+        if not self.is_typing:
+            self._process_next_message()
 
         #log to file logger if available
-        if self.logger:
+        if log_to_file and self.logger:
             if level == "INFO":
                 self.logger.info(message)
             elif level == "SUCCESS":
@@ -171,6 +176,19 @@ class StatusBar(QStatusBar):
         else:
             print(f"Warning: logger not present. Message not logged: {message}")
     
+    def _process_next_message(self) -> None:
+        """Process the next messsage in the queue to animation"""
+        if not self.message_queue:
+            self.is_typing = False
+            self.typewriter_timer.stop()
+            return
+        
+        self.is_typing = True
+        log_message, color = self.message_queue.pop(0)
+        
+        self.terminal.setStyleSheet(f"QLineEdit {{background-color: transparent; color: {color}; font-family: Consolas, monospace; font-size: 11px; border: none; padding: 0 5px;}}")
+        self._start_typing(log_message)
+    
     def _start_typing(self, text: str) -> None:
         """Initialize the typewriter effect"""
         self.typewriter_timer.stop()
@@ -181,9 +199,7 @@ class StatusBar(QStatusBar):
     
     def _type_next_char(self) -> None:
         if self.current_anim_index < len(self.current_anim_text):
-            chunk_size = 1
-            if len(self.current_anim_text) > 50:
-                chunk_size = 2
+            chunk_size: int = max(1, len(self.current_anim_text) // 50)
 
             end_index = min(self.current_anim_index + chunk_size, len(self.current_anim_text))
 
@@ -191,7 +207,7 @@ class StatusBar(QStatusBar):
             self.terminal.setText(current_text)
             self.current_anim_index = end_index
         else:
-            self.typewriter_timer.stop()
+            self._process_next_message()
     
     def log_action(self, action: str, details: dict = None, level:str = "SUCCESS") -> None:
         """log actions"""
@@ -208,7 +224,7 @@ class StatusBar(QStatusBar):
             detailed_message += f" | {', '.join(detail_parts)}"
         
         #show statusbarmsg 
-        self.log(status_message, level)
+        self.log(status_message, level, log_to_file=False)
 
         # log detailed
         if self.logger and details:
@@ -223,7 +239,7 @@ class StatusBar(QStatusBar):
 
     def update_data_stats(self, df) -> None:
         """Update the status bar widget to show dataframe dimensions"""
-        if df is not None:
+        if df is not None and hasattr(df, "shape") and len(df.shape) == 2:
             rows, cols = df.shape
             self.stats_label.setText(f"Rows: {rows:,} | Columns: {cols}")
         else:
@@ -281,7 +297,7 @@ class StatusBar(QStatusBar):
             self.source_label.clear()
             self.source_label.hide()
     
-    def set_view_contex(self, context_text: str, context_type: str = "subset") -> None:
+    def set_view_context(self, context_text: str, context_type: str = "subset") -> None:
         """update the view context label to match current viewing"""
         if not context_text or context_type == "normal":
             self.view_context_label.clear()
