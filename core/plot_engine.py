@@ -1342,6 +1342,7 @@ class PlotEngine:
         try:
             import numpy as np
             from scipy import stats
+            from scipy.optimize import curve_fit
 
             df = plot_tab.data_handler.df
 
@@ -1351,6 +1352,12 @@ class PlotEngine:
 
             # Remove NaN/inf values from both columns
             mask = np.isfinite(df[x_col]) & np.isfinite(df[y_col])
+            
+            # Identify regression type
+            reg_type = plot_tab.regression_type_combo.currentText() if hasattr(plot_tab, "regression_type_combo") else "Linear"
+            if reg_type == "Logarithmic":
+                mask = mask & (df[x_col] > 0)
+            
             x_data = df.loc[mask, x_col].values
             y_data = df.loc[mask, y_col].values
 
@@ -1358,13 +1365,59 @@ class PlotEngine:
                 plot_tab.status_bar.log("Not enough data points to perform regressional analysis", "WARNING")
                 return
             
-            # perform linreg
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
-
-            # generate regression line
             x_line = np.linspace(x_data.min(), x_data.max(), 100)
-            y_line = slope * x_line + intercept
-
+            equation_str = ""
+            
+            if reg_type == "Polynomial":
+                deg = plot_tab.poly_degree_spin.value() if hasattr(plot_tab, "poly_degree_spin") else 2
+                coeffs = np.polyfit(x_data, y_data, deg)
+                poly_func = np.poly1d(coeffs)
+                y_pred_all = poly_func(x_data)
+                y_line = poly_func(x_line)
+                
+                terms = []
+                for i, c in enumerate(coeffs):
+                    power = deg - i
+                    if power == 0:
+                        terms.append(f"{c:.2e}")
+                    elif power == 1:
+                        terms.append(f"{c:.2e}x")
+                    else:
+                        terms.append(f"{c:.2e}x^{power}")
+                equation_str = " + ".join(terms).replace("+ -", "- ")
+            
+            elif reg_type == "Exponential":
+                def exp_func(x, a, b):
+                    return a * np.exp(b * x)
+                try:
+                    popt, _ = curve_fit(exp_func, x_data, y_data, p0=(1, 1e-6), maxfev=10000)
+                    y_pred_all = exp_func(x_data, *popt)
+                    y_line = exp_func(x_line, *popt)
+                    equation_str = f"{popt[0]:.2e} * exp({popt[1]:.2e} * x)"
+                except RuntimeError:
+                    plot_tab.status_bar.log("Exponential fit failed to converge", "ERROR")
+                    return
+            
+            elif reg_type == "Logarithmic":
+                def log_func(x, a, b):
+                    return a + b * np.log(x)
+                try:
+                    popt, _ = curve_fit(log_func, x_data, y_data)
+                    y_pred_all = log_func(x_data, *popt)
+                    y_line = log_func(x_line, *popt)
+                    equation_str = f"{popt[0]:.2e} + {popt[1]:.2e} * ln(x)"
+                except RuntimeError:
+                    plot_tab.status_bar.log("Logarithmic fit failed to converge", "ERROR")
+                    return
+            else:
+                slope, intercept, _, _, _ = stats.linregress(x_data, y_data)
+                y_pred_all = slope * x_data + intercept
+                y_line = slope * x_line + intercept
+                equation_str = f"{slope:.4f}x {'+' if intercept >= 0 else '-'} {abs(intercept):.4f}"
+            
+            ss_res = np.sum((y_data - y_pred_all)**2)
+            ss_tot = np.sum((y_data - np.mean(y_data))**2)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
 
             # plot regression line
             if plot_tab.regression_line_check.isChecked():
@@ -1372,7 +1425,7 @@ class PlotEngine:
                 reg_line = self.current_ax.plot(
                     *plot_args, 
                     color="red", linestyle="-", linewidth=2, 
-                    label="Linear Fit", alpha=0.5
+                    label=f"{reg_type} Fit", alpha=0.5
                 )[0]
                 reg_line.set_gid("regression_line")
             
@@ -1390,7 +1443,7 @@ class PlotEngine:
                 se_line = residual_std * np.sqrt(1/n + (x_line - x_mean)**2 / np.sum((x_data - x_mean)**2))
 
                 from scipy.stats import t as t_dist
-                t_val = t_dist.ppf((1 + confidence) / 2, n - 2)
+                t_val = t_dist.ppf((1 + confidence) / 2, max(1, n - 2))
                 margin = t_val * se_line
                 
                 fill_args = (x_line, y_line - margin, y_line + margin) if not flipped else (y_line - margin, y_line + margin, x_line)
@@ -1408,24 +1461,19 @@ class PlotEngine:
                 ci_poly.set_gid("confidence_interval")
 
             # calculate rmse
-            y_pred = slope * x_data + intercept
-            rmse = np.sqrt(np.mean((y_data - y_pred)**2))
+            rmse = np.sqrt(np.mean((y_data - y_pred_all)**2))
 
             #b uild stats text
             stats_text = []
             
             eq_x_label = "y" if flipped else "x"
             eq_y_label = "x" if flipped else "y"
-
-
             if plot_tab.show_equation_check.isChecked():
-                if intercept >= 0:
-                    stats_text.append(f'{eq_y_label} = {slope:.4f}{eq_x_label} + {intercept:.4f}')
-                else:
-                    stats_text.append(f'{eq_y_label} = {slope:.4f}{eq_x_label} - {abs(intercept):.4f}')
+                formatted_eq = equation_str.replace('x', eq_x_label)
+                stats_text.append(f'{eq_y_label} = {formatted_eq}')
             
             if plot_tab.show_r2_check.isChecked():
-                stats_text.append(f"R² = {r_value**2:.4f}")
+                stats_text.append(f"R² = {r_squared:.4f}")
             
             if plot_tab.show_rmse_check.isChecked():
                 stats_text.append(f"RMSE = {rmse:.4f}")
@@ -1442,7 +1490,6 @@ class PlotEngine:
             error_bar_type = plot_tab.error_bars_combo.currentText()
             if error_bar_type == "Standard Deviation":
                 # calculate residuals
-                y_pred_all = slope * x_data + intercept
                 residuals = y_data - y_pred_all
 
                 # calculate std in bins
@@ -1481,7 +1528,6 @@ class PlotEngine:
                         )
             
             elif error_bar_type == "Standard Error":
-                y_pred_all = slope * x_data + intercept
                 residuals = y_data - y_pred_all
                 residual_std = np.sqrt(np.sum(residuals**2) / (len(x_data) - 2))
 
@@ -1504,7 +1550,7 @@ class PlotEngine:
                 )
 
             plot_tab.status_bar.log(
-                f"✓ Regression: R²={r_value**2:.4f}, RMSE={rmse:.4f}, slope={slope:.4f}, p={p_value:.4e}",
+                f"✓ Regression ({reg_type}): R²={r_squared:.4f}, RMSE={rmse:.4f}",
                 "SUCCESS"
             )
         

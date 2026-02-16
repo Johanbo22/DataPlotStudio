@@ -1758,6 +1758,27 @@ class PlotSettingsPanel(QWidget):
 
         self.regression_line_check = DataPlotStudioToggleSwitch("Show Linear Regresssion Line")
         scatter_layout.addWidget(self.regression_line_check)
+        
+        # Regression curve type
+        scatter_layout.addWidget(QLabel("Regression Type:"))
+        self.regression_type_combo = DataPlotStudioComboBox()
+        self.regression_type_combo.addItems(["Linear", "Polynomial", "Exponential", "Logarithmic"])
+        scatter_layout.addWidget(self.regression_type_combo)
+        
+        self.poly_degree_label = QLabel("Polynomial Degree:")
+        scatter_layout.addWidget(self.poly_degree_label)
+        self.poly_degree_spin = DataPlotStudioSpinBox()
+        self.poly_degree_spin.setRange(2, 10)
+        self.poly_degree_spin.setValue(2)
+        scatter_layout.addWidget(self.poly_degree_spin)
+        
+        def _toggle_poly_degree():
+            is_poly = self.regression_type_combo.currentText() == "Polynomial"
+            self.poly_degree_label.setVisible(is_poly)
+            self.poly_degree_spin.setVisible(is_poly)
+        
+        self.regression_type_combo.currentTextChanged.connect(_toggle_poly_degree)
+        _toggle_poly_degree()
 
         self.confidence_interval_check = DataPlotStudioToggleSwitch("Show 95% confidence interval")
         scatter_layout.addWidget(self.confidence_interval_check)

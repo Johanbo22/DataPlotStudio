@@ -218,7 +218,8 @@ class PlotTab(PlotTabUI):
             "horizontal",
             useblit=True,
             props=dict(alpha=0.3, facecolor="#e74c3c"),
-            interactive=True
+            interactive=True,
+            button=3
         )
     
     def _handle_brush_selection(self, xmin: float, xmax: float) -> None:
