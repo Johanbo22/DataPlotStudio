@@ -109,6 +109,10 @@ class MenuBar(QMenuBar):
         self.export_data_action = QAction(QIcon(get_resource_path("icons/menu_bar/file-up.svg")), self.tr("&Export Data"), parent)
         self.export_data_action.setToolTip(self.tr("Export the current data view into a new file"))
         export_menu.addAction(self.export_data_action)
+        
+        self.export_sheets_action = QAction(QIcon(get_resource_path("icons/menu_bar/google-sheets-logo-icon.svg")), self.tr("Export to Google &Sheets"), parent)
+        self.export_sheets_action.setToolTip(self.tr("Export the current data directly to a cloud Google Sheet"))
+        export_menu.addAction(self.export_sheets_action)
 
         
         # Help Menu

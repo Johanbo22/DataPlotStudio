@@ -76,6 +76,7 @@ class DataPlotStudio(QMainWindow):
         self.menu_bar.export_code.triggered.connect(self.main_widget.export_code)
         self.menu_bar.export_logs.triggered.connect(self.main_widget.export_logs)
         self.menu_bar.export_data_action.triggered.connect(self.main_widget.export_data_dialog)
+        self.menu_bar.export_sheets_action.triggered.connect(self.main_widget.export_google_sheets)
 
         # Edit menu
         self.menu_bar.undo_action.triggered.connect(self.main_widget.undo)

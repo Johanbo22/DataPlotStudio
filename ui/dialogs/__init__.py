@@ -25,6 +25,7 @@ from .MergeDialog import MergeDialog
 from .BinningDialog import BinningDialog
 from .ComputedColumnDialog import ComputedColumnDialog
 from .PlotExportDialog import PlotExportDialog
+from .GoogleSheetsExportDialog import GoogleSheetsExportDialog
 
 __all__ = [
     "AggregationDialog",
@@ -53,5 +54,6 @@ __all__ = [
     "MergeDialog",
     "BinningDialog",
     "ComputedColumnDialog",
-    "PlotExportDialog"
+    "PlotExportDialog",
+    "GoogleSheetsExportDialog"
 ]

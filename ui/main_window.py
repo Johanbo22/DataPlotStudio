@@ -18,7 +18,7 @@ from core.code_exporter import CodeExporter
 from core.logger import Logger
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
-from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog)
+from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog)
 from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 
 class MainWindow(QWidget):
@@ -551,6 +551,45 @@ class MainWindow(QWidget):
                 except Exception as ExportDataError:
                     QMessageBox.critical(self, "Error", f"Failed to export data: {str(ExportDataError)}")
                     traceback.print_exc()
+    
+    def export_google_sheets(self) -> None:
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "Warning", "No data loaded. Please load data before attempting an export.")
+            return
+        
+        dialog = GoogleSheetsExportDialog(self)
+        if dialog.exec():
+            credentials_path, sheet_id, sheet_name = dialog.get_inputs()
+            
+            self.status_bar.show_progress(True)
+            self.status_bar.set_progress(20)
+            self.progress_dialog = ProgressDialog(
+                title="Google Sheets Export", 
+                message="Authenticating and uploading data...", 
+                parent=self
+            )
+            self.progress_dialog.show()
+            QApplication.processEvents()
+            try:
+                success: bool = self.data_handler.export_google_sheets(
+                    credentials_path=credentials_path,
+                    sheet_id=sheet_id,
+                    sheet_name=sheet_name
+                )
+                if success:
+                    self.status_bar.set_progress(100)
+                    self.progress_dialog.update_progress(100, "Upload Complete")
+                    QMessageBox.information(self, "Export Successful", f"Data was successfully pushed to worksheet: '{sheet_name}'.")
+                    self.status_bar.log_action("Exported data to Google Sheets", level="SUCCESS", details={"sheet_id": sheet_id})
+            
+            except Exception as ExportSheetsError:
+                QMessageBox.critical(self, "Export Error", f"An error occurred during export:\n\n{str(ExportSheetsError)}")
+                traceback.print_exc()
+            finally:
+                self.status_bar.show_progress(False)
+                if self.progress_dialog:
+                    self.progress_dialog.accept()
+                    self.progress_dialog = None
     
     def undo(self) -> None:
         if self.data_handler.undo():

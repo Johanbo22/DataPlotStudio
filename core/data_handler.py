@@ -1331,6 +1331,50 @@ class DataHandler:
                     self.df.to_json(filepath, orient="records", indent=4)
         except Exception as ExportDataError:
             raise Exception(f"Error exporting data: {str(ExportDataError)}")
+        
+    def export_google_sheets(self, credentials_path: str, sheet_id: str, sheet_name: str = "Sheet1") -> bool:
+        """Exports the current DataFrame to a specified Google Sheet """
+        if self.df is None:
+            raise ValueError("No data loaded to export.")
+        
+        try:
+            import gspread
+            from google.oauth2.service_account import Credentials
+            from gspread.auth import service_account
+            
+            api_scopes: List[str] = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"
+            ]
+            
+            client = service_account(filename=credentials_path, scopes=api_scopes)
+            spreadsheet = client.open_by_key(sheet_id)
+            
+            try:
+                worksheet = spreadsheet.worksheet(sheet_name)
+            except gspread.exceptions.WorksheetNotFound:
+                required_rows: int = len(self.df) + 100
+                required_cols: int = len(self.df.columns) + 10
+                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=str(required_rows, cols=str(required_cols)))
+            
+            sanitized_df: pd.DataFarme = self.df.fillna("")
+            
+            export_payload: List[List[Any]] = [sanitized_df.columns.values.tolist()] + sanitized_df.values.tolist()
+            
+            worksheet.clear()
+            worksheet.update(values=export_payload, range_name="A1")
+            
+            self.operation_log.append({
+                "type": "export_google_sheets",
+                "sheet_id": sheet_id,
+                "sheet_name": sheet_name
+            })
+            return True
+        
+        except ImportError:
+            raise ImportError(f"The gspread library is required to export to Google Sheets.\nPlease install it first.")
+        except Exception as ExportError:
+            raise Exception(f"Failed to export data to Google Sheets:\n{str(ExportError)}")
 
     def get_data_source_info(self) -> Dict[str, Any]:
         """Get info about the data source"""
