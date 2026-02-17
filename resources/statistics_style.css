@@ -1,7 +1,7 @@
 body {
     font-family: 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif;
     padding: 20px;
-    background-color: #ffffff;
+    background-color: transparent;
     color: #333333;
 }
 
@@ -24,6 +24,13 @@ table {
     border: 1px solid #e0e0e0;
 }
 
+th,
+td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: none;
+}
+
 th {
     background-color: #34495e;
     color: #ffffff;
@@ -44,7 +51,7 @@ tr:nth-child(even) {
 }
 
 .info-box {
-    background-color: #f0f4f8;
+    background-color: transparent;
     border-left: 5px solid #3498db;
     padding: 15px;
     margin-bottom: 25px;

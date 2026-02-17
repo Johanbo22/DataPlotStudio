@@ -199,6 +199,7 @@ class DataTab(QWidget):
         # Statistics Tab
         self.stats_text = QTextEdit()
         self.stats_text.setReadOnly(True)
+        self.stats_text.setStyleSheet("background-color: transparent; border: none;")
 
         self.stats_opacity_effect = QGraphicsOpacityEffect(self.stats_text)
         self.stats_text.setGraphicsEffect(self.stats_opacity_effect)
@@ -207,6 +208,8 @@ class DataTab(QWidget):
         
         self.test_results_text = QTextEdit()
         self.test_results_text.setReadOnly(True)
+        self.test_results_text.setStyleSheet("background-color: transparent; border: none;")
+        
         self.set_test_results_greeting()
         test_result_icon = QIcon(get_resource_path("icons/data_operations/calculator.svg"))
         self.data_tabs.addTab(self.test_results_text, test_result_icon, "Test Results")
@@ -747,10 +750,10 @@ class DataTab(QWidget):
     def set_test_results_greeting(self):
         """Sets the initial instructions for the Test Results tab"""
         greeting_html = """
-        <div style='padding: 20px; text-align: center; color: #34495e; font-family: sans-serif;'>
+        <div style='padding: 20px; text-align: center; color: #34495e; font-family: sans-serif; background-color: transparent;'>
             <h2 style='color: #2c3e50; margin-bottom: 10px;'>Statistical Test Suite</h2>
             <p style='font-size: 14px; margin-bottom: 20px;'>Welcome to the DataPlotStudio Statistical Test Results panel</p>
-            <div style='background-color: #ecf0f1; border-radius: 8px; padding: 15px; text-align: left; display: inline-block; border-left: 5px solid #3498db;'>
+            <div style='background-color: transparent; border-radius: 8px; padding: 15px; text-align: left; display: inline-block; border-left: 5px solid #3498db;'>
                 <h4 style='margin-top: 0; color: #2980b9;'>How to run a statistical test:</h4>
                 <ol style='margin-bottom: 0; padding-left: 20px;'>
                     <li style='margin-bottom: 8px;'>Go to the <b>Data Table</b> tab.</li>
