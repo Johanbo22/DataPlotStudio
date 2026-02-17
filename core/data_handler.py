@@ -1,5 +1,6 @@
 # core/data_handler.py
 from duckdb import connect
+from glm import mul
 import pandas as pd
 import keyword
 import numpy as np
@@ -1025,6 +1026,221 @@ class DataHandler:
             return self.df
         except Exception as MergeDataError:
             raise Exception(f"Merge operation failed: {str(MergeDataError)}")
+    
+    def _fill_missing(self, **kwargs) -> None:
+        """Method to to fill missing values in the datafr4ame"""
+        method = kwargs.get("method", "ffill")
+        column = kwargs.get("column", "All Columns")
+        fill_value = kwargs.get("value", None)
+        group_by = kwargs.get("group_by", None) 
+        
+        if column == "All Columns" or column is None:
+            target_cols = self.df.columns
+        else:
+            target_cols = [column]
+        
+        if group_by and group_by in self.df.columns:
+            for col in target_cols:
+                if col == group_by:
+                    continue
+                if method in ["mean", "median"] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                    continue
+                
+                if method == "mean":
+                    self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("mean"))
+                elif method == "median":
+                    self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("median"))
+                elif method == "mode":
+                    self.df[col] = self.df.groupby(group_by)[col].transform(
+                        lambda x: x.fillna(x.mode().iloc[0] if not x.mode().empty else x)
+                    )
+                elif method == "ffill":
+                    self.df[col] = self.df.groupby(group_by)[col].ffill()
+                elif method == "bfill":
+                    self.df[col] = self.df.groupby(group_by)[col].bfill()
+        else:
+            if method == "static_value":
+                for col in target_cols:
+                    val_to_use = fill_value
+                    if pd.api.types.is_numeric_dtype(self.df[col]) and isinstance(fill_value, str):
+                        try:
+                            if "." in fill_value:
+                                val_to_use = float(fill_value)
+                            else:
+                                val_to_use = int(fill_value)
+                        except ValueError:
+                            pass
+                    self.df[col] = self.df[col].fillna(val_to_use)
+            elif method in ["mean", "median", "mode"]:
+                for col in target_cols:
+                    if method in ["mean", "median"] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                        continue
+                    if method == "mean":
+                        fill_val = self.df[col].mean()
+                    elif method == "median":
+                        fill_val = self.df[col].median()
+                    elif method == "mode":
+                        modes = self.df[col].mode()
+                        fill_val = modes[0] if not modes.empty else None
+                    
+                    if fill_val is not None:
+                        self.df[col] = self.df[col].fillna(fill_val)
+            elif method in ["ffill", "bfill"]:
+                for col in target_cols:
+                    self.df[col] = self.df[col].fillna(method=method)
+            elif method in ["linear", "time"]:
+                if method == "time" and not isinstance(self.df.index, pd.DatatimeIndex):
+                    raise ValueError("Time interpolation requires the dataframe to be a DatetimeINdex")
+                for col in target_cols:
+                    if pd.api.types.is_numeric_dtype(self.df[col]):
+                        self.df[col] = self.df[col].interpolate(method=method)
+    
+    def _drop_column(self, **kwargs) -> None:
+        """Method to remove specific columns from the dataframe"""
+        cols_to_drop = []
+        if "columns" in kwargs:
+            val = kwargs["columns"]
+            if isinstance(val, list):
+                cols_to_drop.extend(val)
+            else:
+                cols_to_drop.append(val)
+        if "column" in kwargs:
+            cols_to_drop.append(kwargs["column"])
+        cols_to_drop = list(set(cols_to_drop))
+        
+        if cols_to_drop:
+            self.df = self.df.drop(columns=cols_to_drop)
+            if self.sort_state and self.sort_state[0] in cols_to_drop:
+                self.sort_state = None
+        
+    def _rename_column(self, **kwargs) -> None:
+        """Method to rename a column"""
+        old_name = kwargs.get("old_name")
+        new_name = kwargs.get("new_name")
+        
+        if old_name not in self.df.columns:
+            raise ValueError(f"Column '{old_name}' does not exist in the dataset")
+        if not new_name or not str(new_name).strip():
+            raise ValueError("New column name cannot be empty or whitespace only.")
+        
+        clean_new_name = str(new_name).strip()
+        
+        if clean_new_name != old_name and clean_new_name in self.df.columns:
+            raise ValueError(f"Column: '{clean_new_name}' already exists in the dataset")
+        if keyword.iskeyword(clean_new_name):
+            raise ValueError(f"'{clean_new_name}' is a reserved Python keyword and cannot be used as a column name")
+        if "`" in clean_new_name:
+            raise ValueError(f"Column names cannot contain backticks (`)")
+        
+        self.df = self.df.rename(columns={old_name: new_name})
+    
+    def _change_data_type(self, **kwargs) -> None:
+        """Method to change the data type of a target columns"""
+        column = kwargs.get("column")
+        new_type = kwargs.get("new_type")
+        
+        if not column or not new_type:
+            raise ValueError("Column and new data type are needed to change data type")
+        
+        if new_type == "string":
+            self.df[column] = self.df[column].astype(pd.StringDtype())
+        elif new_type == "int":
+            self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
+            self.df[column] = self.df[column].astype(pd.Int64Dtype())
+        elif new_type == "float":
+            self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
+            self.df[column] = self.df[column].astype(pd.Float64Dtype())
+        elif new_type == "category":
+            self.df[column] = self.df[column].astype("category")
+        elif new_type == "datetime":
+            self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
+        else:
+            raise ValueError(f"Unsupported data type conversion: {new_type}")
+    
+    def _text_manipulation(self, **kwargs) -> None:
+        """Method to apply string manipulation operations to text columns"""
+        column = kwargs.get("column")
+        operation = kwargs.get("operation")
+        
+        if not column and not operation:
+            raise ValueError("Column and operation are required for text manipulation")
+        
+        if column not in self.df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        
+        try:
+            if not hasattr(self.df[column], str):
+                raise TypeError("Column does not support string operations")
+            
+            if operation == "lower":
+                self.df[column] = self.df[column].str.lower()
+            elif operation == "upper":
+                self.df[column] = self.df[column].str.upper()
+            elif operation == "title":
+                self.df[column] = self.df[column].str.title()
+            elif operation == "capitalize":
+                self.df[column] = self.df[column].str.capitalize()
+            elif operation == "strip":
+                self.df[column] = self.df[column].str.strip()
+            elif operation == "ulstripr":
+                self.df[column] = self.df[column].str.lstrip()
+            elif operation == "rstrip":
+                self.df[column] = self.df[column].str.rstrip()
+            else:
+                raise ValueError(f"Unsupported text operation: {operation}")
+        except (AttributeError, TypeError):
+            raise ValueError(f"Column '{column}' is not a text column. Please convert it to 'string' first using 'Change Data Type'")
+    
+    def _remove_rows(self, **kwargs) -> None:
+        """Method to drop row indicies"""
+        rows_to_remove = kwargs.get("rows")
+        if rows_to_remove:
+            self.df = self.df.drop(index=rows_to_remove).reset_index(drop=True)
+    
+    def _clip_outliers(self, **kwargs) -> None:
+        """Method to clip outliers in numeric columns"""
+        method = kwargs.get("method")
+        columns = kwargs.get("columns")
+        
+        if not method or not columns:
+            raise ValueError("Method and columns are required for clipping outliers")
+        
+        if method == "z_score":
+            threshold = kwargs.get("threshold", 3.0)
+            if not stats:
+                raise ImportError("Scipy is not installed. Scipy is required for Z-Score")
+            for col in columns:
+                if col in self.df.columns and pd.api.types.is_numeric_dtype(self.df[col]):
+                    col_data = self.df[col].dropna()
+                    if col_data.empty:
+                        continue
+                    mean = col_data.mean()
+                    std = col_data.std()
+                    upper_bound = mean + threshold * std
+                    lower_bound = mean - threshold * std
+                    
+                    self.df[col] = self.df[col].clip(lower=lower_bound, upper=upper_bound)
+        elif method == "iqr":
+            multiplier = kwargs.get("multiplier", 1.5)
+            for col in columns:
+                if col in self.df.columns and pd.api.types.is_numeric_dtype(self.df[col]):
+                    Q1 = self.df[col].quantile(0.25)
+                    Q3 = self.df[col].quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower_bound = Q1 - multiplier * IQR
+                    upper_bound = Q3 + multiplier * IQR
+                    
+                    self.df[col] = self.df[col].clip(lower=lower_bound, upper=upper_bound)
+        else:
+            raise ValueError(f"Clipping is not supported for method: {method}")
+    
+    def _duplicate_column(self, **kwargs) -> None:
+        """Method to duplicate a column"""
+        col = kwargs.get("column")
+        new_col = kwargs.get("new_column")
+        if col not in self.df.columns:
+            raise ValueError(f"Column '{col}' not found")
+        self.df[new_col] = self.df[col].copy()
 
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
@@ -1032,278 +1248,39 @@ class DataHandler:
             raise ValueError("No data loaded")
 
         try:
-            # Save state efore changes
+            # Save state before changes
             self._save_state()
 
+            # Execute the appropriate cleaning action
             if action == "drop_duplicates":
                 self.df = self.df.drop_duplicates()
             elif action == "drop_missing":
                 self.df = self.df.dropna()
             elif action == "fill_missing":
-                method = kwargs.get("method", "ffill")
-                column = kwargs.get("column", "All Columns")
-                fill_value = kwargs.get("value", None)
-                group_by = kwargs.get("group_by", None)
-
-                if column == "All Columns" or column is None:
-                    target_cols = self.df.columns
-                else:
-                    target_cols = [column]
-
-                if group_by and group_by in self.df.columns:
-                    for col in target_cols:
-                        if col == group_by:
-                            continue
-                        if method in [
-                            "mean",
-                            "median",
-                        ] and not pd.api.types.is_numeric_dtype(self.df[col]):
-                            continue
-
-                        if method == "mean":
-                            self.df[col] = self.df[col].fillna(
-                                self.df.groupby(group_by)[col].transform("mean")
-                            )
-                        elif method == "median":
-                            self.df[col] = self.df[col].fillna(
-                                self.df.groupby(group_by)[col].transform("median")
-                            )
-                        elif method == "mode":
-                            self.df[col] = self.df.groupby(group_by)[col].transform(
-                                lambda x: x.fillna(x.mode().iloc[0])
-                                if not x.mode().empty
-                                else x
-                            )
-                        elif method == "ffill":
-                            self.df[col] = self.df.groupby(group_by)[col].ffill()
-                        elif method == "bfill":
-                            self.df[col] = self.df.groupby(group_by)[col].bfill()
-                else:
-                    if method == "static_value":
-                        for col in target_cols:
-                            val_to_use = fill_value
-                            if pd.api.types.is_numeric_dtype(
-                                self.df[col]
-                            ) and isinstance(fill_value, str):
-                                try:
-                                    if "." in fill_value:
-                                        val_to_use = float(fill_value)
-                                    else:
-                                        val_to_use = int(fill_value)
-                                except ValueError:
-                                    pass
-
-                            self.df[col] = self.df[col].fillna(val_to_use)
-
-                    elif method in ["mean", "median", "mode"]:
-                        for col in target_cols:
-                            if method in [
-                                "mean",
-                                "median",
-                            ] and not pd.api.types.is_numeric_dtype(self.df[col]):
-                                continue
-                            if method == "mean":
-                                fill_val = self.df[col].mean()
-                            elif method == "median":
-                                fill_val = self.df[col].median()
-                            elif method == "mode":
-                                modes = self.df[col].mode()
-                                fill_val = modes[0] if not modes.empty else None
-
-                            if fill_val is not None:
-                                self.df[col] = self.df[col].fillna(fill_val)
-
-                    elif method in ["ffill", "bfill"]:
-                        for col in target_cols:
-                            self.df[col] = self.df[col].fillna(method=method)
-                    elif method in ["linear", "time"]:
-                        if method == "time" and not isinstance(
-                            self.df.index, pd.DatetimeIndex
-                        ):
-                            raise ValueError(
-                                "Time interpolation requires the DataFrame index to be a DatetimeIndex"
-                            )
-
-                        for col in target_cols:
-                            if pd.api.types.is_numeric_dtype(self.df[col]):
-                                self.df[col] = self.df[col].interpolate(method=method)
+                self._fill_missing(**kwargs)
             elif action == "drop_column":
-                cols_to_drop = []
-                if "columns" in kwargs:
-                    val = kwargs["columns"]
-                    if isinstance(val, list):
-                        cols_to_drop.extend(val)
-                    else:
-                        cols_to_drop.append(val)
-                if "column" in kwargs:
-                    cols_to_drop.append(kwargs["column"])
-                    cols_to_drop = list(set(cols_to_drop))
-
-                if cols_to_drop:
-                    self.df = self.df.drop(columns=cols_to_drop)
-                    if self.sort_state and self.sort_state[0] in cols_to_drop:
-                        self.sort_state = None
+                self._drop_column(**kwargs)
             elif action == "rename_column":
-                old_name = kwargs.get("old_name")
-                new_name = kwargs.get("new_name")
-                
-                # First validate exisitence of the target column
-                if old_name not in self.df.columns:
-                    raise ValueError(f"Column '{old_name}' does not exist in the dataset.")
-                
-                # Validate if the new name is empty
-                if not new_name or not str(new_name).strip():
-                    raise ValueError("New column name cannot be empty or whitespace only.")
-                
-                clean_new_name = str(new_name).strip()
-                
-                # Check for duplicate names
-                if clean_new_name != old_name and clean_new_name in self.df.columns:
-                    raise ValueError(f"Column '{clean_new_name}' already exists in the dataset.")
-                
-                # Validate reserved keywords to avoid code generation from column name
-                if keyword.iskeyword(clean_new_name):
-                    raise ValueError(f"'{clean_new_name}' is a reserved Python keyword and cannot be used as a column name.")
-                
-                #Validating special characters that break pandas query() and eval()
-                # backticks are not allowed as they are used for escape sequences
-                if "`" in clean_new_name:
-                    raise ValueError("Column names cannot contain backticks (`).")
-                
-                self.df = self.df.rename(columns={old_name: new_name})
-            elif action == "duplicate_column":
-                col = kwargs.get("column")
-                new_col = kwargs.get("new_column")
-                if col not in self.df.columns:
-                    raise ValueError(f"Column '{col}' not found")
-                self.df[new_col] = self.df[col].copy()
-                
+                self._rename_column(**kwargs)
             elif action == "change_data_type":
-                column = kwargs.get("column")
-                new_type = kwargs.get("new_type")
-
-                if not column or not new_type:
-                    raise ValueError(
-                        "Column and new_type are need to change change_type"
-                    )
-
-                if new_type == "string":
-                    self.df[column] = self.df[column].astype(pd.StringDtype())
-                elif new_type == "int":
-                    # convert errors to NaN
-                    self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
-                    self.df[column] = self.df[column].astype(pd.Int64Dtype())
-                elif new_type == "float":
-                    # convert errors to NaN
-                    self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
-                    self.df[column] = self.df[column].astype(pd.Float64Dtype())
-                elif new_type == "category":
-                    self.df[column] = self.df[column].astype("category")
-                elif new_type == "datetime":
-                    # convert errors to NaT
-                    self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
-                else:
-                    raise ValueError(f"Unsupported data type conversion: {new_type}")
-
+                self._change_data_type(**kwargs)
             elif action == "text_manipulation":
-                column = kwargs.get("column")
-                operation = kwargs.get("operation")
-
-                if not column and not operation:
-                    raise ValueError(
-                        "Column and operaton are required for text manipulation"
-                    )
-
-                if column not in self.df.columns:
-                    raise ValueError(f"Column '{column}' not found")
-
-                try:
-                    if not hasattr(self.df[column], "str"):
-                        raise TypeError("Column does not support string operations")
-
-                    if operation == "lower":
-                        self.df[column] = self.df[column].str.lower()
-                    elif operation == "upper":
-                        self.df[column] = self.df[column].str.upper()
-                    elif operation == "title":
-                        self.df[column] = self.df[column].str.title()
-                    elif operation == "capitalize":
-                        self.df[column] = self.df[column].str.capitalize()
-                    elif operation == "strip":
-                        self.df[column] = self.df[column].str.strip()
-                    elif operation == "lstrip":
-                        self.df[column] = self.df[column].str.lstrip()
-                    elif operation == "rstrip":
-                        self.df[column] = self.df[column].str.rstrip()
-                    else:
-                        raise ValueError(f"Unsupported text operation: {operation}")
-
-                except (AttributeError, TypeError):
-                    raise ValueError(
-                        f"Column '{column}' is not a text column. Please convert it to 'string' first using 'Change Data Type'"
-                    )
-
+                self._text_manipulation(**kwargs)
             elif action == "remove_rows":
-                rows_to_remove = kwargs.get("rows")
-                if rows_to_remove:
-                    self.df = self.df.drop(index=rows_to_remove).reset_index(drop=True)
-
+                self._remove_rows(**kwargs)
             elif action == "clip_outliers":
-                method = kwargs.get("method")
-                columns = kwargs.get("columns")
-
-                if not method or not columns:
-                    raise ValueError(
-                        "Method and columns are required for clipping outliers"
-                    )
-
-                if method == "z_score":
-                    threshold = kwargs.get("threshold", 3.0)
-                    if not stats:
-                        raise ImportError(
-                            "Scipy is not installed. Scipy is required for Z-score"
-                        )
-
-                    for col in columns:
-                        if col in self.df.columns and pd.api.types.is_numeric_dtype(
-                            self.df[col]
-                        ):
-                            col_data = self.df[col].dropna()
-                            if col_data.empty:
-                                continue
-                            mean = col_data.mean()
-                            std = col_data.std()
-                            upper_bound = mean + threshold * std
-                            lower_bound = mean - threshold * std
-
-                            self.df[col] = self.df[col].clip(
-                                lower=lower_bound, upper=upper_bound
-                            )
-                elif method == "iqr":
-                    multiplier = kwargs.get("multiplier", 1.5)
-                    for col in columns:
-                        if col in self.df.columns and pd.api.types.is_numeric_dtype(
-                            self.df[col]
-                        ):
-                            Q1 = self.df[col].quantile(0.25)
-                            Q3 = self.df[col].quantile(0.75)
-                            IQR = Q3 - Q1
-                            lower_bound = Q1 - multiplier * IQR
-                            upper_bound = Q1 + multiplier * IQR
-
-                            self.df[col] = self.df[col].clip(
-                                lower=lower_bound, upper=upper_bound
-                            )
-                else:
-                    raise ValueError(f"Clipping is not supported for method: {method}")
+                self._clip_outliers(**kwargs)
+            elif action == "duplicate_column":
+                self._duplicate_column(**kwargs)
+            else:
+                raise ValueError(f"Unsupported cleaning action requested: {action}")
 
             log_entry = {"type": action, **kwargs}
             self.operation_log.append(log_entry)
 
-            print(
-                f"DEBUG: clean_data({action}) completed. Undo stack: {len(self.undo_stack)}"
-            )
+            print(f"DEBUG: clean_data({action}) completed. Undo stack: {len(self.undo_stack)}")
             return self.df
+            
         except Exception as CleanDataError:
             raise Exception(f"Error cleaning data: {str(CleanDataError)}")
 
