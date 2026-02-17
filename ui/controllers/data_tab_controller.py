@@ -418,7 +418,51 @@ class DataTabController:
                 },
                 level="SUCCESS",
             )
-            
+    
+    def apply_normalization(self) -> None:
+        """Apply the selected normalization method to the selected colymn"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+        
+        selected_columns = self.view.operations_panel.get_selected_columns()
+        if not selected_columns:
+            self.status_bar.log("No columns selected for normalization", "WARNING")
+            QMessageBox.warning(self.view, "Selection Error", "Please Select at least one column from the table to normalize")
+            return
+        
+        method_display = self.view.operations_panel.get_normalization_method()
+        if method_display.startswith("Min-Max"):
+            method = "min_max"
+        elif method_display.startswith("Standard"):
+            method = "standard"
+        elif method_display.startswith("Median"):
+            method = "quantile"
+        else:
+            method = "min_max"
+        try:
+            self.data_handler.clean_data("normalize", columns=selected_columns, method=method)
+            self.view.refresh_data_view()
+            self.status_bar.log_action(
+                f"Applied {method_display} to {len(selected_columns)} column(s)",
+                details={
+                    "columns": selected_columns,
+                    "method": method,
+                    "operation": "normalize_data"
+                },
+                level="SUCCESS"
+            )
+            QMessageBox.information(
+                self.view,
+                "Success",
+                f"Successfully applied {method_display} to:\n{', '.join(selected_columns)}"
+            )
+        except TypeError as type_err:
+            self.status_bar.log(f"Normalization type error: {str(type_err)}", "ERROR")
+            QMessageBox.critical(self.view, "Type Error", str(type_err))
+        except Exception as NormError:
+            self.status_bar.log(f"Normalization failed: {str(NormError)}", "ERROR")
+            QMessageBox.critical(self.view, "Normalization Error", f"Failed to normalize data:\n{str(NormError)}")
     def apply_filter(self):
         """Apply filter to data"""
         try:

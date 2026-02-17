@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from typing import TYPE_CHECKING, Optional
+
+from matplotlib.pylab import normal
 if TYPE_CHECKING:
     from ui.controllers.data_tab_controller import DataTabController
 
@@ -429,6 +431,38 @@ class DataOperationsPanel(QWidget):
         
         binning_group.setLayout(binning_layout)
         column_layout.addWidget(binning_group)
+        
+        column_layout.addSpacing(10)
+        
+        norm_group = DataPlotStudioGroupBox("Data Normalization and Scaling")
+        norm_layout = QVBoxLayout()
+        
+        norm_info = QLabel("Scale numeric data to a standard range or distribution")
+        norm_info.setWordWrap(True)
+        norm_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        norm_layout.addWidget(norm_info)
+        
+        self.norm_method_combo = DataPlotStudioComboBox()
+        self.norm_method_combo.addItems(["Min-Max Scaling", "Standard Scaling", "Median Scaling"])
+        norm_layout.addWidget(self.norm_method_combo)
+        
+        norm_button_layout = QHBoxLayout()
+        norm_button = DataPlotStudioButton("Apply Scaling", parent=self)
+        norm_button.setIcon(QIcon(get_resource_path("icons/data_operations/data_transformation.png")))
+        norm_button.setToolTip("Apply the selected scaling technique to selected columns")
+        if self.controller:
+            norm_button.clicked.connect(self.controller.apply_normalization)
+        
+        self.norm_help = HelpIcon("data_normalization")
+        if self.controller:
+            self.norm_help.clicked.connect(self.controller.show_help_dialog)
+            
+        norm_button_layout.addWidget(norm_button)
+        norm_button_layout.addWidget(self.norm_help)
+        norm_layout.addLayout(norm_button_layout)
+        
+        norm_group.setLayout(norm_layout)
+        column_layout.addWidget(norm_group)
 
         column_layout.addStretch()
         column_icon = QIcon(get_resource_path("icons/data_operations/edit_cols.png"))
@@ -747,6 +781,10 @@ class DataOperationsPanel(QWidget):
     def get_text_operation(self) -> str:
         """Retrieve the currently selected text manipulation operation"""
         return self.text_operation_combo.currentText()
+    
+    def get_normalization_method(self) -> str:
+        """Get the currently selected normalization method"""
+        return self.norm_method_combo.currentText()
     
     def get_sort_parameters(self) -> tuple[str, str]:
         """

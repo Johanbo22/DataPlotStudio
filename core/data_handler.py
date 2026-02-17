@@ -1241,6 +1241,42 @@ class DataHandler:
         if col not in self.df.columns:
             raise ValueError(f"Column '{col}' not found")
         self.df[new_col] = self.df[col].copy()
+    
+    def _normalize_data(self, **kwargs) -> None:
+        """Method to normalize or scale numeric columns in the dataset"""
+        columns: list[str] = kwargs.get("columns", [])
+        method: str = kwargs.get("method", "min_max")
+        
+        if not columns:
+            raise ValueError("No columns specified for normalization")
+        
+        for col in columns:
+            if col not in self.df.columns:
+                raise ValueError(f"Column '{col}' not found.")
+            if not pd.api.types.is_numeric_dtype(self.df[col]):
+                raise TypeError(f"Column '{col}' must be numeric to perform normalization")
+            
+            col_data = self.df[col]
+            
+            if method == "min_max":
+                min_val = col_data.min()
+                max_val = col_data.max()
+                if max_val != min_val:
+                    self.df[col] = (col_data - min_val) / (max_val - min_val)
+            elif method == "standard":
+                mean_val = col_data.mean()
+                std_val = col_data.std()
+                if std_val != 0:
+                    self.df[col] = (col_data - mean_val) / std_val
+            elif method == "quantile":
+                median_val = col_data.median()
+                q75 = col_data.quantile(0.75)
+                q25 = col_data.quantile(0.25)
+                iqr = q75 - q25
+                if iqr != 0:
+                    self.df[col] = (col_data - median_val) / iqr
+            else:
+                raise ValueError(f"Unsupported normalization method: {method}")
 
     def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
@@ -1272,6 +1308,8 @@ class DataHandler:
                 self._clip_outliers(**kwargs)
             elif action == "duplicate_column":
                 self._duplicate_column(**kwargs)
+            elif action == "normalize":
+                self._normalize_data(**kwargs)
             else:
                 raise ValueError(f"Unsupported cleaning action requested: {action}")
 
