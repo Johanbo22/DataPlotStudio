@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThreadPool
 from duckdb import duplicate
+from xlrd import colname
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -583,6 +584,33 @@ class DataTabController:
                 self.status_bar.log(
                     f"Failed to rename column: {str(RenameColumnError)}", "ERROR"
                 )
+    
+    def duplicate_column(self) -> None:
+        """Duplicate the selected column"""
+        selected_columns = self.view.operations_panel.get_selected_columns()
+        
+        if not selected_columns:
+            self.status_bar.log("No column selected", "WARNING")
+            return
+        if len(selected_columns) > 1:
+            QMessageBox.warning(self.view, "Selection Error", "Please select only one column to duplicate")
+            return
+        
+        col_name = selected_columns[0]
+        new_col_name = f"{col_name}_copy"
+        
+        counter = 1
+        while new_col_name in self.data_handler.df.columns:
+            new_col_name = f"{col_name}_copy_{counter}"
+            counter += 1
+        
+        try:
+            self.data_handler.clean_data("duplicate_column", column=col_name, new_column=new_col_name)
+            self.view.refresh_data_view()
+            self.status_bar.log_action(f"Duplicated '{col_name}' to '{new_col_name}'", details={"original_column": col_name, "new_column": new_col_name, "operation": "duplicate_column"}, level="SUCCESS")
+        except Exception as DuplicateColumnError:
+            self.status_bar.log(f"Failed to duplicate column: {str(DuplicateColumnError)}", "ERROR")
+            QMessageBox.critical(self.view, "Error", f"Failed to duplicate column: {str(DuplicateColumnError)}")
 
     def open_computed_column_dialog(self):
         """Opens the dialog to create a new column from a formula"""
@@ -981,7 +1009,7 @@ class DataTabController:
         if dialog.exec():
             config = dialog.get_config()
             try:
-                reply = reply = QMessageBox.question(
+                reply = QMessageBox.question(
                     self.view,
                     "Confirm Melt",
                     "Melting will restructure your entire dataset.\n\n"

@@ -297,6 +297,21 @@ class DataOperationsPanel(QWidget):
         rename_layout.addWidget(rename_button)
         rename_layout.addWidget(self.rename_column_help)
         column_layout.addLayout(rename_layout)
+        
+        # Duplicate Column
+        duplicate_layout = QHBoxLayout()
+        duplicate_button = DataPlotStudioButton("Duplicate Column", parent=self)
+        duplicate_button.setToolTip("Create an exact copy of the selected column")
+        duplicate_button.setIcon(QIcon(get_resource_path("icons/data_operations/copy.svg")))
+        if self.controller:
+            duplicate_button.clicked.connect(self.controller.duplicate_column)
+        self.duplicate_column_help = HelpIcon("duplicate_column")
+        if self.controller:
+            self.duplicate_column_help.clicked.connect(self.controller.show_help_dialog)
+            
+        duplicate_layout.addWidget(duplicate_button)
+        duplicate_layout.addWidget(self.duplicate_column_help)
+        column_layout.addLayout(duplicate_layout)
 
         # Compute Column
         computed_layout = QHBoxLayout()

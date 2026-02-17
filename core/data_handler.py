@@ -1171,6 +1171,13 @@ class DataHandler:
                     raise ValueError("Column names cannot contain backticks (`).")
                 
                 self.df = self.df.rename(columns={old_name: new_name})
+            elif action == "duplicate_column":
+                col = kwargs.get("column")
+                new_col = kwargs.get("new_column")
+                if col not in self.df.columns:
+                    raise ValueError(f"Column '{col}' not found")
+                self.df[new_col] = self.df[col].copy()
+                
             elif action == "change_data_type":
                 column = kwargs.get("column")
                 new_type = kwargs.get("new_type")
@@ -1226,7 +1233,7 @@ class DataHandler:
                         self.df[column] = self.df[column].str.strip()
                     elif operation == "lstrip":
                         self.df[column] = self.df[column].str.lstrip()
-                    elif operation == "lstrip":
+                    elif operation == "rstrip":
                         self.df[column] = self.df[column].str.rstrip()
                     else:
                         raise ValueError(f"Unsupported text operation: {operation}")
@@ -1357,7 +1364,7 @@ class DataHandler:
                 required_cols: int = len(self.df.columns) + 10
                 worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=str(required_rows, cols=str(required_cols)))
             
-            sanitized_df: pd.DataFarme = self.df.fillna("")
+            sanitized_df: pd.DataFrame = self.df.fillna("")
             
             export_payload: List[List[Any]] = [sanitized_df.columns.values.tolist()] + sanitized_df.values.tolist()
             
