@@ -4,6 +4,68 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## v0.0.9
+### Added
+- A visual join diagram as a Venn Diagram in the Merge tool to preview the merge of datasets
+- Data Cleaning Preview: The operations, "Remove Duplicates" and "Drop Missing Values", now highlight affected rows and requires a confirm to be removed.
+- Select points in plot: A selection tool to select points in a plot will redirect to the data explorer and highlight the selected points.
+- Added a colorblindess filter in the Appearance tab of the PlotTab, to allow for colorblindness accessibility
+- Added a custom QGraphicsEffect SVG filter using numpy to calculate the rgba values for each colorblindess type.
+- Statistical test support in `DataHandler` using `scipy.stats`
+- An action to the table context menu to run statistical tests on two columns
+- A separate Test results tab with the test results
+- Support for a portable .dps zip format for project save files
+- Internal SQLite database for each project
+- Updated PlotConfigs to include all missing/newly added controls and properties.
+- Regression type selection in the Scatter Plot settings panel
+- Polynomial degree selection to configure polynomials
+- Feature to export datasets to Google Sheets using Service Account
+- Dialog for exporting datasets using Service Account credentialsJSON and target worksheets
+- Menu action for "Export to Google Sheets"
+### Changed
+- Updated the plot engine to use matplotlib.colormaps registry
+- Switched to defusedxml.ElemenTree for XML loading of project files.
+- Google Sheets Import enforces data integrity by raising errors on bad lines instead of skipping them,
+- Renaming columns and creating a new column validates for names that could cause issues or crashes.
+- Refreshing google sheet documents now executes asynchronously
+- Opening an existing project automatically renders the plot saved to the project file.
+- Statistics generation is now handled by a separate class
+- Changed to lazy loading of large tables in the table view.
+- Disk I/O is handled by `tempfile.TemporaryDirectory()` to avoid corruption by partial save states
+- Refactored scatter plot analysis to support generic *y_pred* arrays for R2, RMSE and standard errors
+- Bound the canvas `SpanSelector` to right-click to avoid unintentional canvas selection when dragging annotations.
+- Expanded `DataHandler` to use google-auth to export to a Service Account google sheet.
+- Moved markdown_parsing from LandingPage.py to separate script in `core`
+- Changed `log_action` in `StatusBar` with a flag to ensure details are only logged to file once per instance.
+- Updated typing character in `StatusBar` to calculate chunk size based on string length. This ensures more consistent animation no matter length of log entry.
+- Updated HTML text blocks to use transparent backgrounds that removes a blocky outline on text in Test Results Viewer and Statistics Viewer.
+### Fixed
+- Bug where twinx and twiny support was not properly implemented in the code editor. Would raise an error upon clicking "Run Script"
+- Bug were the plotting engine would use cached data to redraw canvas, resulting in no change in redrawing even if data was changed.
+- Memory leak where old Matplotlib figures were not being closed, leading to increased memory usage over time and a eventual OOM crash.
+- Freezing when filter/aggregating large datasets
+- Bug where flipping the axes (swtiching x and y axis) would cause a crash
+- Issue where using a horizontal bar chart and adding a secondary y axis would cause the bar chart to become vertical.
+- Resolved an issue where import errors were swallowed and reported as "empty" sheet when importing data from Google Sheets
+- Fixed an issue where entering invalid numbers into an integer column would change the columns data type to object or corrupt the dataframe
+- Fixed an issue where the SubplotOverlay would flicker upon resizing the canvas or window
+- Fixed a code injection vulnerability where malicious strings could execute arbitrary code in exported scripts.
+- Fixed an issue where clicking "New Project" in the menubar remained on the welcome page instead of creating an empty data table.
+- Wrong arrow icons not being shown on scrollbars.
+- Fixed an issue where integers cast to floating point were displayed using e-notation.
+- Fixed issue where searching for values in a large dataset would cause a freezing due to indexing.
+- Large spikes in latency when handling tables with >100k rows during fast scrolling
+- A render bug when editing data and sorting the data table with large tables with > 100k rows
+- Typos in `_load_appearance_config` mapped wrong keys for LaTeX rendering and y-label parameters
+- Stuttering and text overwriting in terminal when receiving multiple log events
+- File logging duplication issue with overlapping log entries.
+- Method `update_data_stats` in `StatusBar` checks for the existance of df.shape before unpacking values.
+- Wrong implementation of progress bar styling in the `FillMissingValuesDialog`
+- Fixed aggressive caching for `generate_plot` that caused the plot not to update without prompting a data column change
+- Resolved an issue where the GeoSpatial settings remained visible even when non-geospatial plot types were selected
+### Removed
+- Deprecated XML DOM tree proccessing for project save files and project configs
+
 ## v0.0.8
 ### Added:
 - HoverFocusAnimationMixin class to handle border animations
