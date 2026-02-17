@@ -843,9 +843,11 @@ class PlotEngine:
         title = kwargs.pop("title", None)
         xlabel = kwargs.pop("xlabel", None)
         ylabel = kwargs.pop("ylabel", None)
+        legend = kwargs.pop("legend", True)
+        cmap = kwargs.pop("cmap", None)
 
         df_sorted = df[df[x].notna()].sort_values(by=x)
-        self.current_ax.stairs(df_sorted[x], df_sorted[y], picker=True, **kwargs)
+        self.current_ax.step(df_sorted[x], df_sorted[y], where="mid", picker=True, **kwargs)
 
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
 

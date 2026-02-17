@@ -330,7 +330,7 @@ class PlotConfigManager:
             }
         }
 
-    def _get_geospatial_confi(self) -> Dict[str, Any]:
+    def _get_geospatial_config(self) -> Dict[str, Any]:
         return {
             "target_crs": self.pt.geo_target_crs_input.text(),
             "basemap": {
