@@ -835,6 +835,65 @@ class DataTabController:
             self.status_bar.log(
                 f"Text manipulation failed: {str(TextManipulationError)}", "ERROR"
             )
+    
+    def extract_date_component(self):
+        """Extracts date components into a new column"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first")
+            return
+        
+        source_col, component = self.view.operations_panel.get_date_extraction_parameters()
+        if not source_col or not component:
+            QMessageBox.warning(self.view, "Missing Input", "Please select both a column and a date component to extract")
+            return
+        
+        try:
+            self.data_handler.clean_data("extract_date_component", column=source_col, component=component)
+            self.view.refresh_data_view()
+            self.status_bar.log_action(
+                f"Extracted '{component}' from '{source_col}'",
+                details={
+                    "source_column": source_col,
+                    "component": component,
+                    "operation": "extract_date_component"
+                }, level="SUCCESS"
+            )
+            self.status_bar.log(f"Extracted {component} from {source_col}", "SUCCESS")
+        except Exception as ExtractError:
+            self.status_bar.log(f"Date extraction failed: {str(ExtractError)}", "ERROR")
+            QMessageBox.critical(self.view, "Extraction Error", f"Failed to extract date component:\n{str(ExtractError)}")
+    
+    def calculate_date_difference(self):
+        """Calculates the time difference between two date columns"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+        
+        start_col, end_col, unit = self.view.operations_panel.get_date_diff_parameters()
+        if not start_col or not end_col:
+            QMessageBox.warning(self.view, "Missing Input", "Please select two columns")
+            return
+        if start_col == end_col:
+            QMessageBox.warning(self.view, "Invalid Selection", "The two columns cannot be the same")
+            return
+        
+        try:
+            self.data_handler.clean_data("calculate_date_difference", start_column=start_col, end_column=end_col, unit=unit)
+            self.view.refresh_data_view()
+            
+            self.status_bar.log_action(
+                f"Calculated duration between '{start_col}' and '{end_col}' in {unit}",
+                details={
+                    "start_column": start_col,
+                    "end_column": end_col,
+                    "unit": unit,
+                    "operation": "calculate_date_difference"
+                }, level="SUCCESS"
+            )
+            self.status_bar.log(f"Calculated duration in {unit}", "SUCCESS")
+        except Exception as CalcError:
+            self.status_bar.log(f"Date calculation failed: {str(CalcError)}", "ERROR")
+            QMessageBox.critical(self.view, "Calculation Error", f"Failed to calculate duration:\n{str(CalcError)}")
 
     def open_binning_dialog(self):
         if self.data_handler.df is None:

@@ -42,6 +42,8 @@ class DataOperation(str, Enum):
     CLIP_OUTLIERS = "clip_outliers"
     DUPLICATE_COLUMN = "duplicate_column"
     NORMALIZE = "normalize"
+    EXTRACT_DATE_COMPONENT = "extract_date_component"
+    CALCULATE_DATE_DIFFERENCE = "calculate_date_difference"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -1315,6 +1317,75 @@ class DataHandler:
                     self.df[col] = (col_data - median_val) / iqr
             else:
                 raise ValueError(f"Unsupported normalization method: {method}")
+    
+    def _extract_date_component(self, **kwargs) -> None:
+        """Method to extract components from a datetime column"""
+        column: str = kwargs.get("column")
+        component = kwargs.get("component")
+        
+        if not column or not component:
+            raise ValueError("Column and datetime component are required.")
+        if column not in self.df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        
+        if not pd.api.types.is_datetime64_any_dtype(self.df[column]):
+            try:
+                self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
+                if self.df[column].isna().all():
+                    raise ValueError(f"Column '{column}' could not be converted to datetime")
+            except Exception as error:
+                raise ValueError(f"Column '{column}' cannot be converted to datetime: {str(error)}")
+        
+        new_col_name = f"{column}_{component.replace(" ", "_")}"
+        if component == "Year":
+            self.df[new_col_name] = self.df[column].dt.year.astype("Int64")
+        elif component == "Month":
+            self.df[new_col_name] = self.df[column].dt.month.astype("Int64")
+        elif component == "Month Name":
+            self.df[new_col_name] = self.df[column].dt.month_name()
+        elif component == "Day":
+            self.df[new_col_name] = self.df[column].dt.day.astype("Int64")
+        elif component == "Day of Week":
+            self.df[new_col_name] = self.df[column].dt.day_name()
+        elif component == "Quarter":
+            self.df[new_col_name] = self.df[column].dt.quarter.astype("Int64")
+        elif component == "Hour":
+            self.df[new_col_name] = self.df[column].dt.hour.astype("Int64")
+        else:
+            raise ValueError(f"Unsupported date component: {component}")
+    
+    def _calculate_date_difference(self, **kwargs) -> None:
+        """Calculate the difference between two datetime columns"""
+        col_start = kwargs.get("start_column")
+        col_end = kwargs.get("end_column")
+        unit = kwargs.get("unit", "Days")
+        
+        if not col_start or not col_end:
+            raise ValueError("Start and End columns are required")
+        
+        for col in [col_start, col_end]:
+            if col not in self.df.columns:
+                raise ValueError(f"Column '{col}' not found")
+            if not pd.api.types.is_datetime64_any_dtype(self.df[col]):
+                try:
+                    self.df[col] = pd.to_datetime(self.df[col], errors="coerce")
+                except:
+                    raise ValueError(f"Column '{col}' must be a datetime column")
+        
+        diff_series = self.df[col_end] - self.df[col_start]
+        new_col = f"Diff_{unit}_{col_end}_vs_{col_start}"
+        new_col = "".join(c if c.isalnum() or c == "_" else "" for c in new_col)
+        
+        if unit == "Days":
+            self.df[new_col] = diff_series.dt.days
+        elif unit == "Hours":
+            self.df[new_col] = diff_series.dt.total_seconds() / 3600
+        elif unit == "Minutes":
+            self.df[new_col] = diff_series.dt.total_seconds() / 60
+        elif unit == "Seconds":
+            self.df[new_col] = diff_series.dt.total_seconds()
+        elif unit == "Weeks":
+            self.df[new_col] = diff_series.dt.days / 7
 
     def clean_data(self, action: DataOperation | str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
@@ -1354,6 +1425,10 @@ class DataHandler:
                 self._duplicate_column(**kwargs)
             elif action == DataOperation.NORMALIZE:
                 self._normalize_data(**kwargs)
+            elif action == DataOperation.EXTRACT_DATE_COMPONENT:
+                self._extract_date_component(**kwargs)
+            elif action == DataOperation.CALCULATE_DATE_DIFFERENCE:
+                self._calculate_date_difference(**kwargs)
             else:
                 raise ValueError(f"Unsupported cleaning action requested: {action}")
 

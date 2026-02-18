@@ -6,6 +6,7 @@ from PyQt6.QtGui import QIcon
 from typing import TYPE_CHECKING, Optional
 
 from matplotlib.pylab import normal
+from numpy import extract
 if TYPE_CHECKING:
     from ui.controllers.data_tab_controller import DataTabController
 
@@ -15,6 +16,7 @@ from ui.widgets import (
     DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioListWidget,
     HelpIcon
 )
+from resources.version import INFO_STYLESHEET
 
 class DataOperationsPanel(QWidget):
     """
@@ -47,6 +49,7 @@ class DataOperationsPanel(QWidget):
         self.create_filtering_tab()
         self.create_columns_tab()
         self.create_transform_tab()
+        self.create_datetime_tab()
         self.create_subsets_tab()
         self.create_history_tab()
         
@@ -607,13 +610,90 @@ class DataOperationsPanel(QWidget):
         transform_icon = QIcon(get_resource_path("icons/data_operations/data_transformation.png"))
         self.ops_tabs.addTab(transform_tab, transform_icon, "Transform")
 
+    def create_datetime_tab(self):
+        dt_tab = QWidget()
+        dt_layout = QVBoxLayout(dt_tab)
+        
+        dt_info = QLabel("Extract date components from dates or calculate duration between datetime columns")
+        dt_info.setWordWrap(True)
+        dt_info.setStyleSheet(INFO_STYLESHEET)
+        dt_layout.addWidget(dt_info)
+        
+        extract_group = DataPlotStudioGroupBox("Extract Date Components")
+        extract_layout = QVBoxLayout()
+        
+        extract_layout.addWidget(QLabel("Source Date Columns:"))
+        self.dt_source_combo = DataPlotStudioComboBox()
+        extract_layout.addWidget(self.dt_source_combo)
+        
+        extract_layout.addWidget(QLabel("Date Component to Extract:"))
+        self.dt_component_combo = DataPlotStudioComboBox()
+        self.dt_component_combo.addItems(["Year", "Month", "Month Name", "Day", "Day of Week", "Quarter", "Hour"])
+        extract_layout.addWidget(self.dt_component_combo)
+        
+        extract_button_layout = QHBoxLayout()
+        extract_button = DataPlotStudioButton("Extract Component", parent=self)
+        extract_button.setToolTip("Create a new column containing the selected time component")
+        extract_button.setIcon(QIcon(get_resource_path("icons/data_operations/data_transformation.png")))
+        if self.controller:
+            extract_button.clicked.connect(self.controller.extract_date_component)
+        
+        self.extract_help = HelpIcon("extract_date")
+        if self.controller:
+            self.extract_help.clicked.connect(self.controller.show_help_dialog)
+        
+        extract_button_layout.addWidget(extract_button)
+        extract_button_layout.addWidget(self.extract_help)
+        extract_layout.addLayout(extract_button_layout)
+        
+        extract_group.setLayout(extract_layout)
+        dt_layout.addWidget(extract_group)
+        
+        dt_layout.addSpacing(10)
+        
+        duration_group = DataPlotStudioGroupBox("Calculate Duration Difference")
+        duration_layout = QVBoxLayout()
+        
+        duration_layout.addWidget(QLabel("Start Date Columns:"))
+        self.dt_start_combo = DataPlotStudioComboBox()
+        duration_layout.addWidget(self.dt_start_combo)
+        
+        duration_layout.addWidget(QLabel("End Date Column:"))
+        self.dt_end_combo = DataPlotStudioComboBox()
+        duration_layout.addWidget(self.dt_end_combo)
+        
+        duration_layout.addWidget(QLabel("Result Unit:"))
+        self.dt_unit_combo = DataPlotStudioComboBox()
+        self.dt_unit_combo.addItems(["Days", "Weeks", "Hours", "Minutes", "Seconds"])
+        duration_layout.addWidget(self.dt_unit_combo)
+
+        duration_button_layout = QHBoxLayout()
+        duration_button = DataPlotStudioButton("Calculate Duration", parent=self)
+        duration_button.setToolTip("Create a new column with the time difference between two datetime columns")
+        if self.controller:
+            duration_button.clicked.connect(self.controller.calculate_date_difference)
+        self.duration_help = HelpIcon("date_duration")
+        if self.controller:
+            self.duration_help.clicked.connect(self.controller.show_help_dialog)
+        
+        duration_button_layout.addWidget(duration_button)
+        duration_button_layout.addWidget(self.duration_help)
+        duration_layout.addLayout(duration_button_layout)
+        
+        duration_group.setLayout(duration_layout)
+        dt_layout.addWidget(duration_group)
+        
+        dt_layout.addStretch()
+        dt_icon = QIcon(get_resource_path("icons/data_operations/calendar-clock.svg"))
+        self.ops_tabs.addTab(dt_tab, dt_icon, "Datetime Tools")
+        
     def create_subsets_tab(self):
         subset_tab = QWidget()
         subset_layout = QVBoxLayout(subset_tab)
 
         subset_info = QLabel("This tab allows you to create and manage data subsets.")
         subset_info.setWordWrap(True)
-        subset_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        subset_info.setStyleSheet(INFO_STYLESHEET)
         subset_layout.addWidget(subset_info)
         subset_layout.addSpacing(10)
 
@@ -796,6 +876,14 @@ class DataOperationsPanel(QWidget):
             self.sort_column_combo.currentText(),
             self.sort_order_combo.currentText()
         )
+    
+    def get_date_extraction_parameters(self) -> tuple[str, str]:
+        """Returns source_column and component_to_extract from box"""
+        return (self.dt_source_combo.currentText(), self.dt_component_combo.currentText())
+    
+    def get_date_diff_parameters(self) -> tuple[str, str, str]:
+        """Returns (start_column, end_column, unit)"""
+        return (self.dt_start_combo.currentText(), self.dt_end_combo.currentText(), self.dt_unit_combo.currentText())
     
     def get_quick_subset_column(self) -> str:
         """Retrieve the selected column name for auto-creating subsets"""

@@ -428,6 +428,12 @@ class DataTab(QWidget):
         panel.filter_column.addItems(columns)
         panel.column_list.clear()
         panel.column_list.addItems(columns)
+        panel.dt_source_combo.clear()
+        panel.dt_source_combo.addItems(columns)
+        panel.dt_start_combo.clear()
+        panel.dt_start_combo.addItems(columns)
+        panel.dt_end_combo.clear()
+        panel.dt_end_combo.addItems(columns)
         
         if hasattr(panel, "sort_column_combo"):
             current_sort = panel.sort_column_combo.currentText()
