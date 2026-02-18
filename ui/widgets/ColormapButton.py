@@ -59,6 +59,5 @@ class ColormapButton(HoverFocusAnimationMixin, QPushButton):
     def _update_display(self):
         from ui.dialogs import ColormapPickerDialog
         self.setText(f" {self.current_colormap}")
-        dialog = ColormapPickerDialog(parent=None)
-        icon = dialog._generate_icon(self.current_colormap)
+        icon = ColormapPickerDialog.generate_icon(self.current_colormap)
         self.setIcon(icon)

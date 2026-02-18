@@ -28,8 +28,10 @@ class ColormapPickerDialog(QDialog):
         if current_colormap and current_colormap.endswith("_r"):
             self.selected_colormap = current_colormap[:-2]
             is_reversed = True
+        else:
+            self.selected_colormap = current_colormap
         
-        self.selected_colormap = current_colormap
+        self._final_selected_colormap = current_colormap
 
         layout = QVBoxLayout(self)
 
@@ -86,6 +88,12 @@ class ColormapPickerDialog(QDialog):
         # the reverse checkbox is a separate colormap
         if base_name:
             self._save_recent_colormap(base_name)
+            if self.reverse_check.isChecked():
+                self._final_selected_colormap = f"{base_name}_r"
+            else:
+                self._final_selected_colormap = base_name
+        else:
+            self._final_selected_colormap = self.selected_colormap
         
         super().accept()
     
@@ -157,11 +165,12 @@ class ColormapPickerDialog(QDialog):
         item.setData(Qt.ItemDataRole.UserRole, "colormap")
 
         item.setSizeHint(QSize(0, 24))
-        icon = self._generate_icon(name)
+        icon = self.generate_icon(name)
         item.setIcon(icon)
         self.list_widget.addItem(item)
 
-    def _generate_icon(self, colormap_name) -> QIcon:
+    @staticmethod
+    def generate_icon(colormap_name) -> QIcon:
         """Method to generate an icon that matches the color gradient of the matplotlib colormaps"""
         width = 100
         height = 20
@@ -185,9 +194,10 @@ class ColormapPickerDialog(QDialog):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(0, 0, width, height)
 
-        except:
+        except Exception as error:
             painter.setBrush(QBrush(Qt.GlobalColor.gray))
             painter.drawRect(0, 0, width, height)
+            print(error)
         finally:
             painter.end()
         return QIcon(pixmap)
@@ -229,14 +239,4 @@ class ColormapPickerDialog(QDialog):
 
     def get_selected_colormap(self) -> str:
         """Returns the selected colormap name with an appending _r if the reverse checkbox is checked"""
-        selected_items = self.list_widget.selectedItems()
-        base_name = self.selected_colormap
-
-        if selected_items:
-            if selected_items[0].data(Qt.ItemDataRole.UserRole) != "header":
-                base_name = selected_items[0].text()
-        
-        if base_name and self.reverse_check.isChecked():
-            return f"{base_name}_r"
-        
-        return base_name
+        return self._final_selected_colormap
