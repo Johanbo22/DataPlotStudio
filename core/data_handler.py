@@ -10,6 +10,7 @@ import requests
 import atexit
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
+from enum import Enum
 from core.tempfilehandling.cleanup_temp_files import cleanup_temp_csv_files
 from core.tempfilehandling.create_temp_file import create_temp_csv_file
 
@@ -24,6 +25,33 @@ except ImportError:
     stats = None
     IsolationForest = None
 
+class StatisticalTest(str, Enum):
+    T_TEST = "t-test"
+    ANOVA = "anova"
+    PEARSON = "pearson"
+
+class DataOperation(str, Enum):
+    DROP_DUPLICATES = "drop_duplicates"
+    DROP_MISSING = "drop_missing"
+    FILL_MISSING = "fill_missing"
+    DROP_COLUMN = "drop_column"
+    RENAME_COLUMN = "rename_column"
+    CHANGE_DATA_TYPE = "change_data_type"
+    TEXT_MANIPULATION = "text_manipulation"
+    REMOVE_ROWS = "remove_rows"
+    CLIP_OUTLIERS = "clip_outliers"
+    DUPLICATE_COLUMN = "duplicate_column"
+    NORMALIZE = "normalize"
+
+class FillMethod(str, Enum):
+    MEAN = "mean"
+    MEDIAN = "median"
+    MODE = "mode"
+    FFILL = "ffill"
+    BFILL = "bfill"
+    STATIC_VALUE = "static_value"
+    LINEAR = "linear"
+    TIME = "time"
 
 class DataHandler:
     """Handles all data import, export, and manipulation"""
@@ -536,7 +564,7 @@ class DataHandler:
         }
         return info
     
-    def run_statistical_test(self, test_type: str, col1: str, col2: str) -> Dict[str, Any]:
+    def run_statistical_test(self, test_type: StatisticalTest | str, col1: str, col2: str) -> Dict[str, Any]:
         """
         Run statistical test on two numeric columns
         Supporting: T-Test, ANOVA, Pearson Correlation Test
@@ -549,6 +577,12 @@ class DataHandler:
         
         if col1 not in self.df.columns or col2 not in self.df.columns:
             raise ValueError(f"Columns: '{col1}' or '{col2}' not found in the dataset")
+
+        if isinstance(test_type, str):
+            try:
+                test_type = StatisticalTest(test_type.lower())
+            except ValueError:
+                raise ValueError(f"Unrecognized test type: {test_type}")
         
         # We drop nan values to ensure valid tests
         data = self.df[[col1, col2]].dropna()
@@ -556,7 +590,7 @@ class DataHandler:
         if data.empty:
             raise ValueError("Insufficient data to perform test after dropping missing values")
         
-        if test_type == "t-test":
+        if test_type == StatisticalTest.T_TEST:
             stat, p_val = stats.ttest_ind(data[col1], data[col2])
             test_name = "Independent T-Test"
             sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
@@ -565,7 +599,7 @@ class DataHandler:
                 f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}' "
                 f"at the typical 5% significance level (alpha = 0.05)."
             )
-        elif test_type == "anova":
+        elif test_type == StatisticalTest.ANOVA:
             stat, p_val = stats.f_oneway(data[col1], data[col2])
             test_name = "One-Way ANOVA"
             sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
@@ -574,7 +608,7 @@ class DataHandler:
                 f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}'. "
                 f"(Note: for two groups, this is mathematically equivalent to the Independent T-Test)."
             )
-        elif test_type == "pearson":
+        elif test_type == StatisticalTest.PEARSON:
             stat, p_val = stats.pearsonr(data[col1], data[col2])
             test_name = "Pearson Correlation"
             sig = "significant" if p_val < 0.05 else "not significant"
@@ -1029,7 +1063,11 @@ class DataHandler:
     
     def _fill_missing(self, **kwargs) -> None:
         """Method to to fill missing values in the datafr4ame"""
-        method = kwargs.get("method", "ffill")
+        raw_method = kwargs.get("method", FillMethod.FFILL)
+        try:
+            method = FillMethod(raw_method) if isinstance(raw_method, str) else raw_method
+        except ValueError:
+            method = raw_method
         column = kwargs.get("column", "All Columns")
         fill_value = kwargs.get("value", None)
         group_by = kwargs.get("group_by", None) 
@@ -1043,23 +1081,23 @@ class DataHandler:
             for col in target_cols:
                 if col == group_by:
                     continue
-                if method in ["mean", "median"] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                if method in [FillMethod.MEAN, FillMethod.MEDIAN] and not pd.api.types.is_numeric_dtype(self.df[col]):
                     continue
                 
-                if method == "mean":
+                if method == FillMethod.MEAN:
                     self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("mean"))
-                elif method == "median":
+                elif method == FillMethod.MEDIAN:
                     self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("median"))
-                elif method == "mode":
+                elif method == FillMethod.MODE:
                     self.df[col] = self.df.groupby(group_by)[col].transform(
                         lambda x: x.fillna(x.mode().iloc[0] if not x.mode().empty else x)
                     )
-                elif method == "ffill":
+                elif method == FillMethod.FFILL:
                     self.df[col] = self.df.groupby(group_by)[col].ffill()
-                elif method == "bfill":
+                elif method == FillMethod.BFILL:
                     self.df[col] = self.df.groupby(group_by)[col].bfill()
         else:
-            if method == "static_value":
+            if method == FillMethod.STATIC_VALUE:
                 for col in target_cols:
                     val_to_use = fill_value
                     if pd.api.types.is_numeric_dtype(self.df[col]) and isinstance(fill_value, str):
@@ -1071,29 +1109,29 @@ class DataHandler:
                         except ValueError:
                             pass
                     self.df[col] = self.df[col].fillna(val_to_use)
-            elif method in ["mean", "median", "mode"]:
+            elif method in [FillMethod.MEAN, FillMethod.MEDIAN, FillMethod.MODE]:
                 for col in target_cols:
-                    if method in ["mean", "median"] and not pd.api.types.is_numeric_dtype(self.df[col]):
+                    if method in [FillMethod.MEAN, FillMethod.MEDIAN] and not pd.api.types.is_numeric_dtype(self.df[col]):
                         continue
-                    if method == "mean":
+                    if method == FillMethod.MEAN:
                         fill_val = self.df[col].mean()
-                    elif method == "median":
+                    elif method == FillMethod.MEDIAN:
                         fill_val = self.df[col].median()
-                    elif method == "mode":
+                    elif method == FillMethod.MODE:
                         modes = self.df[col].mode()
                         fill_val = modes[0] if not modes.empty else None
                     
                     if fill_val is not None:
                         self.df[col] = self.df[col].fillna(fill_val)
-            elif method in ["ffill", "bfill"]:
+            elif method in [FillMethod.FFILL, FillMethod.BFILL]:
                 for col in target_cols:
-                    self.df[col] = self.df[col].fillna(method=method)
-            elif method in ["linear", "time"]:
-                if method == "time" and not isinstance(self.df.index, pd.DatatimeIndex):
+                    self.df[col] = self.df[col].fillna(method=method.value)
+            elif method in [FillMethod.LINEAR, FillMethod.TIME]:
+                if method == FillMethod.TIME and not isinstance(self.df.index, pd.DatetimeIndex):
                     raise ValueError("Time interpolation requires the dataframe to be a DatetimeINdex")
                 for col in target_cols:
                     if pd.api.types.is_numeric_dtype(self.df[col]):
-                        self.df[col] = self.df[col].interpolate(method=method)
+                        self.df[col] = self.df[col].interpolate(method=method.value)
     
     def _drop_column(self, **kwargs) -> None:
         """Method to remove specific columns from the dataframe"""
@@ -1182,7 +1220,7 @@ class DataHandler:
                 self.df[column] = self.df[column].str.capitalize()
             elif operation == "strip":
                 self.df[column] = self.df[column].str.strip()
-            elif operation == "ulstripr":
+            elif operation == "lstrip":
                 self.df[column] = self.df[column].str.lstrip()
             elif operation == "rstrip":
                 self.df[column] = self.df[column].str.rstrip()
@@ -1278,45 +1316,51 @@ class DataHandler:
             else:
                 raise ValueError(f"Unsupported normalization method: {method}")
 
-    def clean_data(self, action: str, **kwargs) -> pd.DataFrame:
+    def clean_data(self, action: DataOperation | str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
         if self.df is None:
             raise ValueError("No data loaded")
+        
+        if isinstance(action, str):
+            try:
+                action = DataOperation(action)
+            except ValueError:
+                raise ValueError(f"Unsupported cleaning action requested: {action}")
 
         try:
             # Save state before changes
             self._save_state()
 
             # Execute the appropriate cleaning action
-            if action == "drop_duplicates":
+            if action == DataOperation.DROP_DUPLICATES:
                 self.df = self.df.drop_duplicates()
-            elif action == "drop_missing":
+            elif action == DataOperation.DROP_MISSING:
                 self.df = self.df.dropna()
-            elif action == "fill_missing":
+            elif action == DataOperation.FILL_MISSING:
                 self._fill_missing(**kwargs)
-            elif action == "drop_column":
+            elif action == DataOperation.DROP_COLUMN:
                 self._drop_column(**kwargs)
-            elif action == "rename_column":
+            elif action == DataOperation.RENAME_COLUMN:
                 self._rename_column(**kwargs)
-            elif action == "change_data_type":
+            elif action == DataOperation.CHANGE_DATA_TYPE:
                 self._change_data_type(**kwargs)
-            elif action == "text_manipulation":
+            elif action == DataOperation.TEXT_MANIPULATION:
                 self._text_manipulation(**kwargs)
-            elif action == "remove_rows":
+            elif action == DataOperation.REMOVE_ROWS:
                 self._remove_rows(**kwargs)
-            elif action == "clip_outliers":
+            elif action == DataOperation.CLIP_OUTLIERS:
                 self._clip_outliers(**kwargs)
-            elif action == "duplicate_column":
+            elif action == DataOperation.DUPLICATE_COLUMN:
                 self._duplicate_column(**kwargs)
-            elif action == "normalize":
+            elif action == DataOperation.NORMALIZE:
                 self._normalize_data(**kwargs)
             else:
                 raise ValueError(f"Unsupported cleaning action requested: {action}")
 
-            log_entry = {"type": action, **kwargs}
+            log_entry = {"type": action.value, **kwargs}
             self.operation_log.append(log_entry)
 
-            print(f"DEBUG: clean_data({action}) completed. Undo stack: {len(self.undo_stack)}")
+            print(f"DEBUG: clean_data({action.value}) completed. Undo stack: {len(self.undo_stack)}")
             return self.df
             
         except Exception as CleanDataError:
