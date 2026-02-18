@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 from PyQt6.QtCore import Qt, QThreadPool
-from flask.config import T
 from ui.widgets import DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioComboBox, DataPlotStudioListWidget
 import pandas as pd
 from ui.workers import AggregationWorker

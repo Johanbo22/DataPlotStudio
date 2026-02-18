@@ -158,7 +158,7 @@ class BinningDialog(QDialog):
                     return
                 try:
                     # parse the edges
-                    bins = [float(x.strip() for x in edges_str.split(","))]
+                    bins = [float(x.strip()) for x in edges_str.split(",")]
                     if len(bins) < 2:
                         raise ValueError("At least two edges are required")
                     if bins != sorted(bins):
@@ -186,7 +186,7 @@ class BinningDialog(QDialog):
             }
             self.accept()
         except Exception as Error:
-            QMessageBox.critical(self, "Error", {str(Error)})
+            QMessageBox.critical(self, "Error", str(Error))
     
     def get_config(self) -> dict[str, Any] | None:
         return self.result_config
