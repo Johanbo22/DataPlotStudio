@@ -6,7 +6,9 @@ from PyQt6.QtWidgets import (
     QLabel,
     QTableView,
     QMessageBox,
+    QInputDialog
 )
+from core.data_handler import DataHandler
 from ui.widgets import DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
@@ -25,7 +27,7 @@ except ImportError:
 class OutlierDetectionDialog(QDialog):
     def __init__(self, data_handler, method="z_score", parent=None):
         super().__init__(parent)
-        self.data_handler = data_handler
+        self.data_handler: DataHandler = data_handler
         self.method = method
         self.outlier_indices = []
 
@@ -129,6 +131,11 @@ class OutlierDetectionDialog(QDialog):
 
         # Action buttons
         button_layout = QHBoxLayout()
+        
+        self.flag_button = DataPlotStudioButton("Flag Outliers", base_color_hex="#f39c12", text_color_hex="white")
+        self.flag_button.clicked.connect(self.flag_outliers)
+        self.flag_button.setToolTip("Create a new column marking outliers as True")
+        button_layout.addWidget(self.flag_button)
 
         self.remove_button = DataPlotStudioButton(
             "Remove Outliers", base_color_hex="#e74c3c", text_color_hex="white"
@@ -329,3 +336,16 @@ class OutlierDetectionDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             self.data_handler.clean_data("remove_rows", rows=self.outlier_indices)
             self.accept()
+    
+    def flag_outliers(self):
+        """Flags detected outliers in a new column as True"""
+        if not self.outlier_indices:
+            return
+        
+        name, ok = QInputDialog.getText(self, "Flag Outliers", "Enter name for the new column:", text="is_outlier")
+        if ok and name:
+            try:
+                self.data_handler.clean_data("flag_outliers", rows=self.outlier_indices, new_column_name=name)
+                self.accept()
+            except Exception as error:
+                QMessageBox.critical(self, "Error", f"Failed to flag outliers: {str(error)}")

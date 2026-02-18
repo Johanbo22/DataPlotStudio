@@ -44,6 +44,7 @@ class DataOperation(str, Enum):
     NORMALIZE = "normalize"
     EXTRACT_DATE_COMPONENT = "extract_date_component"
     CALCULATE_DATE_DIFFERENCE = "calculate_date_difference"
+    FLAG_OUTLIERS = "flag_outliers"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -1386,6 +1387,21 @@ class DataHandler:
             self.df[new_col] = diff_series.dt.total_seconds()
         elif unit == "Weeks":
             self.df[new_col] = diff_series.dt.days / 7
+    
+    def _flag_outliers(self, **kwargs) -> None:
+        """Method to flag rows as outliers in a new column expressed as a bool"""
+        rows = kwargs.get("rows")
+        new_column_name = kwargs.get("new_column_name", "is_outlier")
+        
+        if not new_column_name:
+            raise ValueError("A new column name is required before flagging outliers")
+        if new_column_name in self.df.columns:
+            raise ValueError(f"Column name '{new_column_name}' already exists")
+        
+        self.df[new_column_name] = False
+        if rows:
+            mask = self.df.index.isin(rows)
+            self.df.loc[mask, new_column_name] = True
 
     def clean_data(self, action: DataOperation | str, **kwargs) -> pd.DataFrame:
         """Clean data: remove duplicates, handle missing values, etc."""
@@ -1429,6 +1445,8 @@ class DataHandler:
                 self._extract_date_component(**kwargs)
             elif action == DataOperation.CALCULATE_DATE_DIFFERENCE:
                 self._calculate_date_difference(**kwargs)
+            elif action == DataOperation.FLAG_OUTLIERS:
+                self._flag_outliers(**kwargs)
             else:
                 raise ValueError(f"Unsupported cleaning action requested: {action}")
 
