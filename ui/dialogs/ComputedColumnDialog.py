@@ -208,12 +208,15 @@ class ComputedColumnDialog(QDialog):
             return
 
         func_text = item.text(0)
+        move_cursor_inside = False
+        
         if not func_text.endswith(")"):
             func_text += "()"
+            move_cursor_inside = True
         
         self.insert_text(func_text)
         
-        if func_text.endswith("()"):
+        if move_cursor_inside:
             cursor = self.expression_input.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, 1)
             self.expression_input.setTextCursor(cursor)
@@ -263,7 +266,12 @@ class ComputedColumnDialog(QDialog):
                 f"Column '{name}' already exists. Please choose another name",
             )
             return
-
+        backticked_columns = re.findall(r"`([^`]+)`", expression)
+        missing_columns = [col for col in backticked_columns if col not in self.columns]
+        if missing_columns:
+            QMessageBox.warning(self, "Validation Error", f"The following column referenced in the expression does not exist:\n\n" + "\n".join(f"- {col}" for col in missing_columns))
+            return
+        
         try:
             sanitized_expr = re.sub(r"`[^`]+`", "variable", expression)
             ast.parse(sanitized_expr)
