@@ -1,22 +1,21 @@
 import keyword
-from ui.widgets.AnimatedLineEdit import DataPlotStudioLineEdit
-
-
+from typing import Optional, List
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
-
-from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit
 
 
 class RenameColumnDialog(QDialog):
     """Dialog for renaming a column"""
 
-    def __init__(self, column_name, parent=None):
+    def __init__(self, column_name: str, existing_columns: Optional[List[str]] = None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Rename Column")
         self.setModal(True)
         self.resize(400, 150)
 
-        self.column_name = column_name
+        self.column_name: str = column_name
+        self.existing_columns: List[str] = existing_columns if existing_columns else []
+        self.new_name_input: Optional[DataPlotStudioLineEdit] = None
         self.init_ui()
 
     def init_ui(self):
@@ -62,26 +61,28 @@ class RenameColumnDialog(QDialog):
 
     def validate_and_accept(self):
         """Validate new name before accepting"""
-        new_name = self.new_name_input.text().strip()
+        if not self.new_name_input:
+            return
+        new_name: str = self.new_name_input.text().strip()
 
-        if not new_name or not str(new_name).strip():
+        if not new_name:
             QMessageBox.warning(self, "Validation Error", "New column name cannot be empty or whitespace only.")
             return
-
         if new_name == self.column_name:
             QMessageBox.warning(self, "Validation Error", "New name must be different from current name")
             return
-        
+        if new_name in self.existing_columns:
+            QMessageBox.warning(self, "Validation Error", f"Column '{new_name}' already exists in the dataset.")
+            return
         if keyword.iskeyword(new_name):
             QMessageBox.warning(self, "Validation Error", f"'{new_name}' is a reserved Python keyword and cannot be used as a column name.")
             return
-        
         if "`" in new_name:
             QMessageBox.warning(self, "Validation Error", "Column names cannot contain backticks (`).")
             return
 
         self.accept()
 
-    def get_new_name(self):
+    def get_new_name(self) -> str:
         """Return the new column name"""
         return self.new_name_input.text().strip()

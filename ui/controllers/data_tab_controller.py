@@ -600,8 +600,9 @@ class DataTabController:
             return
 
         old_name = selected_columns[0]
-
-        dialog = RenameColumnDialog(old_name, self.view)
+        
+        existing_columns = self.data_handler.df.columns.tolist() if self.data_handler.df is not None else []
+        dialog = RenameColumnDialog(old_name, existing_columns=existing_columns, parent=self.view)
         if dialog.exec():
             new_name = dialog.get_new_name()
             try:
