@@ -43,6 +43,18 @@ class DataTableModel(QAbstractTableModel):
         """Updates the highlighed rows and triggers a layout refresh on display changes"""
         self.highlighted_rows = set(rows) if rows else set()
         self.layoutChanged.emit()
+    
+    def update_data(self) -> None:
+        self.beginResetModel()
+        self._data = self.data_handler.df
+        self._data_buffer.clear()
+        self.highlighted_rows.clear()
+        
+        if self._data is not None:
+            self._is_numeric = [pd.api.types.is_numeric_dtype(dtype) for dtype in self._data.dtypes]
+        else:
+            self._is_numeric = []
+        self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """Returns the number of rows in a dataframe"""
@@ -63,6 +75,15 @@ class DataTableModel(QAbstractTableModel):
         
         row: int = index.row()
         col: int = index.column()
+        
+        if role == Qt.ItemDataRole.BackgroundRole:
+            if row in self.highlighted_rows:
+                return QColor("#ffcccc")
+            return None
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            if col < len(self._is_numeric) and self._is_numeric[col]:
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         
         # We determine the chunk index to use a cached subset of the dataframe
         # this is to stop the frequent .iat calls on large datasets
@@ -87,13 +108,12 @@ class DataTableModel(QAbstractTableModel):
             try:
                 if pd.isna(val):
                     return "NaN"
-                
+                if isinstance(val, pd.Timestamp):
+                    return val.strftime("%Y-%m-%d %H:%M:%S")
                 if isinstance(val, (bool, np.bool_)):
                     return str(val)
-                
                 if isinstance(val, (int, np.integer)):
                     return int(val)
-                
                 if isinstance(val, (float, np.floating)):
                     return f"{val:.{self.float_precision}f}"
                 
@@ -104,15 +124,24 @@ class DataTableModel(QAbstractTableModel):
 
             except Exception:
                 return None
-        
+        elif role == Qt.ItemDataRole.ToolTipRole:
+            try:
+                if not pd.isna(val):
+                    s_val: str = str(val)
+                    if len(s_val) > 64:
+                        return s_val
+            except Exception:
+                pass
+            return None
         elif role == Qt.ItemDataRole.EditRole:
             try:
                 if pd.isna(val):
                     return ""
+                if isinstance(val, pd.Timestamp):
+                    return val.strftime("%Y-%m-%d %H:%M:%S")
                 return str(val)
             except Exception:
                 return ""
-        
         elif role == Qt.ItemDataRole.ForegroundRole:
             try:
                 if isinstance(val, (int, float, np.number)) and not pd.isna(val):
@@ -138,15 +167,6 @@ class DataTableModel(QAbstractTableModel):
             except Exception:
                 pass
             return None
-        
-        elif role == Qt.ItemDataRole.BackgroundRole:
-            if index.row() in self.highlighted_rows:
-                return QColor("#ffcccc")
-        elif role == Qt.ItemDataRole.TextAlignmentRole:
-            if index.column() < len(self._is_numeric) and self._is_numeric[index.column()]:
-                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
-            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignCenter
-        
         return None
     
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
@@ -224,6 +244,7 @@ class DataTableModel(QAbstractTableModel):
             self.data_handler.sort_data(col_name, ascending)
             self._data = self.data_handler.df
             self._data_buffer.clear()
+            self._is_numeric = [pd.api.types.is_numeric_dtype(dtype) for dtype in self._data.dtypes]
         except Exception as SortError:
             print(f"Error sorting data: {str(SortError)}")
             self.status_bar = StatusBar()
