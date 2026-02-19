@@ -152,7 +152,7 @@ class MainWindow(QWidget):
         
         if "subsets" in project_data and project_data["subsets"] is not None:
             self.subset_manager.import_subsets(project_data["subsets"])
-            self.data_tab.refresh_active_subsets()
+            self.data_tab.controller.refresh_active_subsets()
             self.plot_tab.refresh_subset_list()
         
         # Automatically generate the plot based on the loaded configs
@@ -212,7 +212,7 @@ class MainWindow(QWidget):
         self.plot_tab.clear()
         self.subset_manager.subsets.clear()
         self.subset_manager.clear_cache()
-        self.data_tab.refresh_active_subsets()
+        self.data_tab.controller.refresh_active_subsets()
         self.plot_tab.refresh_subset_list()
         self.status_bar.update_data_stats(None)
     
