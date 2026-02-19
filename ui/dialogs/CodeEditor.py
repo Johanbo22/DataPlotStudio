@@ -2,7 +2,7 @@ from ui.LineNumberArea import LineNumberArea
 
 
 from PyQt6.QtCore import QRect, Qt, QStringListModel
-from PyQt6.QtGui import QColor, QFont, QPainter, QTextCursor, QTextFormat, QAction, QKeySequence
+from PyQt6.QtGui import QColor, QFont, QPainter, QTextCursor, QTextFormat, QAction, QKeySequence, QKeyEvent
 from PyQt6.QtWidgets import QPlainTextEdit, QTextEdit, QCompleter, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QWidget
 
 
@@ -188,7 +188,94 @@ class CodeEditor(QPlainTextEdit):
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Could not open Find/Replace:\n{e}")
     
-    def keyPressEvent(self, event):
+    def indentSelection(self, cursor: QTextCursor) -> None:
+        """Indents the currently selected text blocks by 4 spaces"""
+        global FOUR_SPACES
+        FOUR_SPACES = "    "
+        try:
+            has_selection: bool = cursor.hasSelection()
+            start_pos: int = cursor.selectionStart()
+            end_pos: int = cursor.selectionEnd()
+            
+            cursor.setPosition(start_pos)
+            start_block: int = cursor.blockNumber()
+            cursor.setPosition(end_pos)
+            end_block: int = cursor.blockNumber()
+            
+            if has_selection and cursor.positionInBlock() == 0 and end_block > start_block:
+                end_block -= 1
+            
+            cursor.beginEditBlock()
+            for i in range(start_block, end_block + 1):
+                block = self.document().findBlockByNumber(i)
+                cursor.setPosition(block.position())
+                cursor.insertText(FOUR_SPACES)
+            cursor.endEditBlock()
+            
+            if has_selection:
+                cursor.setPosition(self.document().findBlockByNumber(start_block).position())
+                cursor.setPosition(self.document().findBlockByNumber(end_block).position(), QTextCursor.MoveMode.KeepAnchor)
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            else:
+                cursor.setPosition(start_pos + 4)
+            self.setTextCursor(cursor)
+        except Exception as e:
+            print(f"CodeEditor Indent Error: {e}")
+    
+    def unindentSelection(self, cursor: QTextCursor) -> None:
+        """Unindents the currently selected block by up to four space"""
+        try:
+            has_selection: bool = cursor.hasSelection()
+            start_pos: int = cursor.selectionStart()
+            end_pos: int = cursor.selectionEnd()
+            
+            cursor.setPosition(start_pos)
+            start_block: int = cursor.blockNumber()
+            cursor.setPosition(end_pos)
+            end_block: int = cursor.blockNumber()
+
+            if cursor.positionInBlock() == 0 and end_block > start_block:
+                end_block -= 1
+            
+            cursor.beginEditBlock()
+            removed_from_start: int = 0
+            for i in range(start_block, end_block + 1):
+                block = self.document().findBlockByNumber(i)
+                cursor.setPosition(block.position())
+                block_text: str = block.text()
+                
+                spaces_to_remove: int = 0
+                if block_text.startswith(FOUR_SPACES):
+                    spaces_to_remove = 4
+                elif block_text.startswith("\t"):
+                    spaces_to_remove = 1
+                else:
+                    for char in block_text[:4]:
+                        if char == " ":
+                            spaces_to_remove += 1
+                        else:
+                            break
+                            
+                if spaces_to_remove > 0:
+                    cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor, spaces_to_remove)
+                    cursor.removeSelectedText()
+                    if i == start_block:
+                        removed_from_start = spaces_to_remove
+                        
+            cursor.endEditBlock()
+            if has_selection:
+                cursor.setPosition(self.document().findBlockByNumber(start_block).position())
+                cursor.setPosition(self.document().findBlockByNumber(end_block).position(), QTextCursor.MoveMode.KeepAnchor)
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            else:
+                new_pos: int = max(self.document().findBlockByNumber(start_block).position(), start_pos - removed_from_start)
+                cursor.setPosition(new_pos)
+                
+            self.setTextCursor(cursor)
+        except Exception as e:
+            print(f"CodeEditor Unindent Error: {e}")
+    
+    def keyPressEvent(self, event: QKeyEvent):
         if self.completer and self.completer.popup().isVisible():
             if event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return, Qt.Key.Key_Escape, Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
                 event.ignore()
@@ -207,13 +294,15 @@ class CodeEditor(QPlainTextEdit):
 
         #tabs
         if event.key() == Qt.Key.Key_Tab:
-            cursor.insertText("    ")
+            if cursor.hasSelection():
+                self.indentSelection(cursor)
+            else:
+                cursor.insertText(FOUR_SPACES)
             return
-
-        #backtab (wip)
+        #backtab
         if event.key() == Qt.Key.Key_Backtab:
-            pass
-
+            self.unindentSelection(cursor)
+            return
         #auto indent on enter
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             block = cursor.block()

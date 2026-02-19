@@ -94,6 +94,8 @@ class PlotTab(PlotTabUI):
         self.x_minor_grid_color = "lightgray"
         self.y_major_grid_color = "gray"
         self.y_minor_grid_color = "lightgray"
+        self.geo_missing_color = "lightgray"
+        self.geo_edge_color = "black"
 
         self.line_customizations = {}
         self.bar_customizations = {}
