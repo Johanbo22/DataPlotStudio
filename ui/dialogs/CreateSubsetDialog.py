@@ -1,7 +1,7 @@
-from turtle import textinput
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QStackedWidget, QDateEdit, QWidget, QSizePolicy
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QStackedWidget, QDateEdit, QWidget
 from PyQt6.QtCore import QDate
 import pandas as pd
+from typing import Dict, Any, List, Optional
 
 from ui.widgets import (
     DataPlotStudioButton,
@@ -197,7 +197,7 @@ class CreateSubsetDialog(QDialog):
         else:
             stack.setCurrentIndex(0)
     
-    def get_current_value(self, row):
+    def get_current_value(self, row: Dict[str, Any]) -> Any:
         """Retrieve the value from the active widget"""
         idx = row["stack"].currentIndex()
         if idx == 0:
@@ -210,12 +210,11 @@ class CreateSubsetDialog(QDialog):
             return row["inputs"]["date"].date().toString("yyyy-MM-dd")
         return None
 
-    def load_existing_subset(self):
+    def load_existing_subset(self) -> None:
         """Load an existing subset into the form"""
         self.desc_input.setText(self.existing_subset.description)
         
         filters = self.existing_subset.filters
-        
         legacy_logic = getattr(self.existing_subset, "logic", "AND")
         
         for i, row in enumerate(self.filter_rows):
@@ -230,14 +229,23 @@ class CreateSubsetDialog(QDialog):
                 try:
                     if isinstance(val, (int, float)):
                         row["inputs"]["number"].setValue(float(val))
-                except:
+                except ValueError:
+                    pass
+                if row["inputs"]["category"].findText(str(val)) != 1:
+                    row["inputs"]["category"].setCurrentText(str(val))
+                
+                try:
+                    parsed_date = QDate.fromString(str(val), "yyyy-MM-dd")
+                    if parsed_date.isValid():
+                        row["inputs"]["date"].setDate(parsed_date)
+                except Exception:
                     pass
                 
                 if i > 0:
                     op = f_def.get("operator", legacy_logic)
-                    row["logic"].setCurrentIndex(op if op else "AND")
+                    row["logic"].setCurrentText(op if op else "AND")
 
-    def validate_and_accept(self):
+    def validate_and_accept(self) -> None:
         """Validate and accept"""
         if not self.existing_subset:
             name = self.name_input.text().strip()
@@ -260,19 +268,22 @@ class CreateSubsetDialog(QDialog):
                     return
         self.accept()
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         """Returns the subset config"""
-        filters = []
-        for i, row in enumerate(self.filter_rows):
+        filters: List[Dict[str, Any]] = []
+        is_first_active = True
+        
+        for row in self.filter_rows:
             if row['active'].isChecked():
                 filters.append({
-                    'operator': row['logic'].currentText() if i > 0 else None,
+                    'operator': None if is_first_active else row["logic"].currentText(),
                     'column': row['column'].currentText(),
                     'condition': row['condition'].currentText(),
                     'value': self.get_current_value(row)
                 })
+                is_first_active = False
 
-        config = {
+        config: Dict[str, Any] = {
             'description': self.desc_input.text().strip(),
             'filters': filters,
             'logic': "COMPLEX"
