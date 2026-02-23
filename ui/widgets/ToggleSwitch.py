@@ -1,13 +1,16 @@
+from typing import Optional
+
 from PyQt6.QtCore import (
     Qt, 
     QSize, 
     QRectF, 
     QEasingCurve, 
     QPropertyAnimation,
-    pyqtProperty
+    pyqtProperty,
+    QPoint,
     )
-from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
-from PyQt6.QtWidgets import QCheckBox
+from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QPaintEvent
+from PyQt6.QtWidgets import QCheckBox, QWidget
 
 from ui.theme import ThemeColors
 from ui.widgets.mixins import HoverFocusAnimationMixin
@@ -15,7 +18,7 @@ from ui.widgets.mixins import HoverFocusAnimationMixin
 class DataPlotStudioToggleSwitch(HoverFocusAnimationMixin, QCheckBox):
     """A toggle switch widget"""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         QCheckBox.__init__(self, parent)
         
         HoverFocusAnimationMixin.__init__(self)
@@ -66,10 +69,10 @@ class DataPlotStudioToggleSwitch(HoverFocusAnimationMixin, QCheckBox):
             size = QSize(width, height)
         return size
     
-    def hitButton(self, pos) -> bool:
+    def hitButton(self, pos: QPoint) -> bool:
         return self.contentsRect().contains(pos)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
@@ -87,8 +90,8 @@ class DataPlotStudioToggleSwitch(HoverFocusAnimationMixin, QCheckBox):
             color_on = ThemeColors.ACCENT_COLOR
             
             red = color_off.red() + (color_on.red() - color_off.red()) * self._handle_position
-            green = color_off.green() + (color_off.green() - color_off.green()) * self._handle_position
-            blue = color_off.blue() + (color_off.blue() - color_off.blue()) * self._handle_position
+            green = color_off.green() + (color_on.green() - color_off.green()) * self._handle_position
+            blue = color_off.blue() + (color_on.blue() - color_off.blue()) * self._handle_position
             track_color = QColor(int(red), int(green), int(blue))
             
         painter.setOpacity(opacity)
