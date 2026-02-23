@@ -12,6 +12,7 @@ from ui.widgets import (
     DataPlotStudioButton
 )
 from ui.components.plot_settings_panel import PlotSettingsPanel
+from ui.icons import IconBuilder, IconType
 
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -76,7 +77,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.plot_button.setMinimumHeight(40)
-        self.plot_button.setIcon(QIcon(get_resource_path("icons/generate_plot.png")))
+        self.plot_button.setIcon(IconBuilder.build(IconType.GENERATE_PLOT))
         self.plot_button.setShortcut(QKeySequence("Ctrl+Return"))
         button_layout.addWidget(self.plot_button)
 
@@ -91,7 +92,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.save_plot_button.setMinimumHeight(40)
-        self.save_plot_button.setIcon(QIcon(get_resource_path("icons/menu_bar/save.svg")))
+        self.save_plot_button.setIcon(IconBuilder.build(IconType.SAVE_PLOT))
         self.save_plot_button.setToolTip("Export the current plot to PNG, PDF or SVG")
         button_layout.addWidget(self.save_plot_button)
         
@@ -106,7 +107,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.clear_button.setMinimumHeight(40)
-        self.clear_button.setIcon(QIcon(get_resource_path("icons/clean.svg")))
+        self.clear_button.setIcon(IconBuilder.build(IconType.CLEAR_PLOT))
         button_layout.addWidget(self.clear_button)
         
         self.editor_button = DataPlotStudioButton(
@@ -120,7 +121,7 @@ class PlotTabUI(QWidget):
             typewriter_effect=True
         )
         self.editor_button.setMinimumHeight(40)
-        self.editor_button.setIcon(QIcon(get_resource_path("icons/ui_styling/file-code-corner.svg")))
+        self.editor_button.setIcon(IconBuilder.build(IconType.OPEN_PYTHON_EDITOR))
         self.editor_button.setToolTip("Open the code editor to view/write python code for the plot.")
         button_layout.addWidget(self.editor_button)
         

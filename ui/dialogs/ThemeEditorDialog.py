@@ -1,12 +1,19 @@
 import json
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, QMessageBox, QInputDialog
+from typing import Dict, Any, Optional
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, QMessageBox, QInputDialog, QGroupBox, QPushButton, QCheckBox, QSlider, QWidget
 from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
 
 from ui.widgets.AnimatedButton import DataPlotStudioButton
+from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
+from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets.AnimatedSlider import DataPlotStudioSlider
 
 class ThemeEditorDialog(QDialog):
-    
-    def __init__(self, theme_name, theme_content, is_protected=False, parent=None):
+    """Editor for plot config editing
+    Used to create new themes from JSON configs or edit existing ones.
+    """
+    def __init__(self, theme_name: str, theme_content: Dict[str, Any], is_protected: bool = False, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle(f"Edit theme - {theme_name}")
         self.resize(600, 700)

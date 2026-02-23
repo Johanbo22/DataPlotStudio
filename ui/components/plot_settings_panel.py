@@ -23,6 +23,7 @@ from ui.widgets import (
 )
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.ColormapButton import ColormapButton
+from ui.icons import IconBuilder, IconType
 
 class PlotSettingsPanel(QWidget):
     """
@@ -42,37 +43,37 @@ class PlotSettingsPanel(QWidget):
 
         # TAB 1: BASIC
         basic_tab = self._create_basic_tab()
-        basic_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/general.png"))
+        basic_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_GENERAL_OPTIONS))
         self.custom_tabs.addTab(basic_tab, basic_tab_icon, "General")
 
         # TAB 2: APPEARANCE
         appearance_tab = self._create_appearance_tab()
-        appearance_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/appearance.png"))
+        appearance_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_APPEARANCE))
         self.custom_tabs.addTab(appearance_tab, appearance_tab_icon, "Appearance")
 
         # TAB 3: AXES
         axes_tab = self._create_axes_tab()
-        axes_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/axis.png"))
+        axes_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_AXES))
         self.custom_tabs.addTab(axes_tab, axes_tab_icon, "Axes")
 
         # TAB 4: LEGEND and GRID
         legend_tab = self._create_legend_tab()
-        legend_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/gridlines.png"))
+        legend_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_LEGEND_GRID))
         self.custom_tabs.addTab(legend_tab, legend_tab_icon, "Legend and Grid")
 
         # TAB 5: ADVANCED (Customization)
         advanced_tab = self._create_advanced_tab()
-        advanced_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/customization.png"))
+        advanced_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_CUSTOMIZATION))
         self.custom_tabs.addTab(advanced_tab, advanced_tab_icon, "Customization")
 
         # TAB 6: ANNOTATIONS
         annotations_tab = self._create_annotations_tab()
-        annotations_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/annotation.png"))
+        annotations_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_ANNOTATIONS))
         self.custom_tabs.addTab(annotations_tab, annotations_tab_icon, "Annotations")
 
         # TAB 7: GEO
         geospatial_tab = self._create_geospatial_tab()
-        geospatial_tab_icon = QIcon(get_resource_path("icons/plot_tab/customization_tabs/geospatial.png"))
+        geospatial_tab_icon = QIcon(IconBuilder.build(IconType.PLOT_GEOSPATIAL))
         self.custom_tabs.addTab(geospatial_tab, geospatial_tab_icon, "GeoSpatial")
 
         layout.addWidget(self.custom_tabs)

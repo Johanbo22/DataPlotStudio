@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction
 from pathlib import Path
 import re
+from ui.icons import IconBuilder, IconType
 
 from core.resource_loader import get_resource_path
 from ui.widgets.AnimatedButton import DataPlotStudioButton
@@ -73,12 +74,12 @@ class LandingPage(QWidget):
         button_width = 280
 
         self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex="#2980b9", text_color_hex="white", padding="12px", hover_color_hex="#3498db", pressed_color_hex="#1f6390", typewriter_effect=True)
-        self.button_open.setIcon(QIcon(get_resource_path("icons/menu_bar/folder-open.svg")))
+        self.button_open.setIcon(IconBuilder.build(IconType.OPEN_PROJECT))
         self.button_open.setFixedWidth(button_width)
         self.button_open.clicked.connect(self.open_project_clicked.emit)
 
         self.button_import_file = DataPlotStudioButton("Import from file", base_color_hex="#27ae60", text_color_hex="white", padding="12px", hover_color_hex="#2ecc71", pressed_color_hex="#1e8a4c", typewriter_effect=True)
-        self.button_import_file.setIcon(QIcon(get_resource_path("icons/menu_bar/file-down.svg")))
+        self.button_import_file.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
         self.button_import_file.setFixedWidth(button_width)
         self.button_import_file.clicked.connect(self.import_file_clicked.emit)
 
@@ -88,17 +89,17 @@ class LandingPage(QWidget):
         self.button_import_sheet.clicked.connect(self.import_sheets_clicked.emit)
 
         self.button_import_db = DataPlotStudioButton("Import from Database", base_color_hex="#8e44ad", text_color_hex="white", padding="12px", hover_color_hex="#9558b6", pressed_color_hex="#6f3487", typewriter_effect=True)
-        self.button_import_db.setIcon(QIcon(get_resource_path("icons/menu_bar/database.svg")))
+        self.button_import_db.setIcon(IconBuilder.build(IconType.IMPORT_DATABASE))
         self.button_import_db.setFixedWidth(button_width)
         self.button_import_db.clicked.connect(self.import_db_clicked.emit)
 
         self.button_new = DataPlotStudioButton("Create Empty Dataset", base_color_hex="#e67e22", text_color_hex="white", padding="12px", hover_color_hex="#f39c12", pressed_color_hex="#b85f17", typewriter_effect=True)
-        self.button_new.setIcon(QIcon(get_resource_path("icons/menu_bar/file-plus-corner.svg")))
+        self.button_new.setIcon(IconBuilder.build(IconType.NEW_PROJECT))
         self.button_new.setFixedWidth(button_width)
         self.button_new.clicked.connect(self.new_dataset_clicked.emit)
 
         self.button_quit = DataPlotStudioButton("Quit DataPlotStudio", base_color_hex="#c0392b", text_color_hex="white", padding="12px", hover_color_hex="#e74c3c", pressed_color_hex="#8f231f", typewriter_effect=True)
-        self.button_quit.setIcon(QIcon(get_resource_path("icons/menu_bar/log-out.svg")))
+        self.button_quit.setIcon(IconBuilder.build(IconType.QUIT))
         self.button_quit.setFixedWidth(button_width)
         self.button_quit.clicked.connect(self.quit_clicked.emit)
 

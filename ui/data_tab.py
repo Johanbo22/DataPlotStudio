@@ -38,6 +38,7 @@ from ui.widgets import (
     DataPlotStudioButton,
     DataPlotStudioTabWidget
 )
+from ui.icons import IconBuilder, IconType
 from ui.components.data_operations_panel import DataOperationsPanel
 from ui.components.statistics_generator import StatisticsGenerator
 from ui.LandingPage import LandingPage
@@ -126,8 +127,7 @@ class DataTab(QWidget):
             base_color_hex="#3498DB",
             text_color_hex="white",
         )
-        self.create_new_dataset_button.setIcon(
-            QIcon(get_resource_path("icons/menu_bar/file-plus-corner.svg"))
+        self.create_new_dataset_button.setIcon(IconBuilder.build(IconType.NEW_PROJECT)
         )
         self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
         self.create_new_dataset_button.clicked.connect(self.controller.create_new_dataset)
@@ -203,7 +203,7 @@ class DataTab(QWidget):
 
         self.stats_opacity_effect = QGraphicsOpacityEffect(self.stats_text)
         self.stats_text.setGraphicsEffect(self.stats_opacity_effect)
-        stats_icon = QIcon(get_resource_path("icons/data_stats.png"))
+        stats_icon = IconBuilder.build(IconType.EXPLORE_STATISTICS_ICON)
         self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
         
         self.test_results_text = QTextEdit()
@@ -211,7 +211,7 @@ class DataTab(QWidget):
         self.test_results_text.setStyleSheet("background-color: transparent; border: none;")
         
         self.set_test_results_greeting()
-        test_result_icon = QIcon(get_resource_path("icons/data_operations/calculator.svg"))
+        test_result_icon = IconBuilder.build(IconType.CALCULATOR)
         self.data_tabs.addTab(self.test_results_text, test_result_icon, "Test Results")
 
         data_view_layout.addWidget(self.data_tabs, 1)
@@ -390,9 +390,13 @@ class DataTab(QWidget):
             return
         
         df = self.data_handler.df
-        self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
-        self.data_table.setSortingEnabled(False)
-        self.data_table.setModel(self.model)
+        if hasattr(self, "model") and isinstance(self.model, DataTableModel):
+            self.model.update_data()
+            self.data_table.setSortingEnabled(False)
+        else:
+            self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
+            self.data_table.setSortingEnabled(False)
+            self.data_table.setModel(self.model)
         
         header = self.data_table.horizontalHeader()
         header.blockSignals(True)

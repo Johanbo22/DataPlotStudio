@@ -2,7 +2,7 @@ from core.resource_loader import get_resource_path
 from ui.widgets import DataPlotStudioToggleSwitch, DataPlotStudioSpinBox
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QFontComboBox, QFormLayout, QLabel, QTabWidget, QVBoxLayout, QWidget
-
+from ui.icons import IconBuilder, IconType
 
 
 class SettingsDialog(QDialog):
@@ -40,7 +40,7 @@ class SettingsDialog(QDialog):
         appearance_layout.addRow(QLabel("Font Size:"), self.font_size_spin)
 
         appearance_tab.setLayout(appearance_layout)
-        setting_tabs.addTab(appearance_tab, QIcon(get_resource_path("icons/plot_tab/customization_tabs/appearance.png"), "Appearance"))
+        setting_tabs.addTab(appearance_tab, IconBuilder.build(IconType.PLOT_APPEARANCE), "Appearance")
 
         settings_layout.addWidget(setting_tabs)
 
