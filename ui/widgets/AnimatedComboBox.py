@@ -114,9 +114,16 @@ class DataPlotStudioComboBox(HoverFocusAnimationMixin, QComboBox):
     def leaveEvent(self, event) -> None:
         if not self._is_focussed and not self.view().isVisible():
             self._animate_to(self._base_border_color)
-        if not self._clear_button.underMouse():
+        if not self._clear_button.underMouse() and not self.hasFocus():
             self._clear_button.hide()
         QComboBox.leaveEvent(self, event)
+    
+    def focusInEvent(self, event) -> None:
+        self._is_focussed = True
+        self._animate_to(self._focus_border_color)
+        if self.currentIndex() != 1:
+            self._clear_button.show()
+        QComboBox.focusInEvent(self, event)
     
     def focusOutEvent(self, event) -> None:
         self._is_focussed = False
@@ -125,6 +132,10 @@ class DataPlotStudioComboBox(HoverFocusAnimationMixin, QComboBox):
                 self._animate_to(self._hover_border_color)
             else:
                 self._animate_to(self._base_border_color)
+        
+        if not self.underMouse():
+            self._clear_button.hide()
+
         if event is not None:
             QComboBox.focusOutEvent(self, event)
 
