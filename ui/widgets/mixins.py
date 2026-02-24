@@ -11,8 +11,7 @@ class HoverFocusAnimationMixin:
     - Implement a _update_stylesheet(self, color: QColor) method.
     """
     
-    def __init__(self, base_color: QColor = None, hover_color: QColor = None, focus_color: QColor = None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, base_color: QColor = None, hover_color: QColor = None, focus_color: QColor = None):
         # Allow for custom colors,
         # but default to ThemeColors
         self._base_border_color = base_color if base_color else ThemeColors.BORDER_BASE
