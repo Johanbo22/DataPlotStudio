@@ -8,6 +8,8 @@ import seaborn as sns
 from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
+
+from core.regression_analyser import RegressionMetrics
 if TYPE_CHECKING:
     from ui.plot_tab import PlotTab
 try:
@@ -110,7 +112,6 @@ class PlotEngine:
         "GeoSpatial": "Visualizes geospatial data using GeoPandas. Requires a GeoDataFrame (imported from .shp, .geojson, etc.). The 'X Column' can be used to select a column for choropleth coloring (values determine color)."
     }
 
-    
     def __init__(self):
         self.current_figure: Optional[Figure] = None
         self.current_ax = None
@@ -1349,227 +1350,135 @@ class PlotEngine:
                 fontfamily=font_family
             )
     
-    def _helper_add_regression_analysis(self, plot_tab: 'PlotTab', x_col: str, y_col: str, flipped: bool = False) -> None:
+    def _helper_add_regression_analysis(self, plot_tab: "PlotTab", x_col: str, y_col: str, flipped: bool = False) -> None:
+        """Orchestrates regression calculation via RegressionAnalyzer and renders output."""
         try:
-            import numpy as np
-            from scipy import stats
-            from scipy.optimize import curve_fit
-
-            df = plot_tab.data_handler.df
-
-            if not pd.api.types.is_numeric_dtype(df[x_col]) or not pd.api.types.is_numeric_dtype(df[y_col]):
-                plot_tab.status_bar.log(f"Regression analysis skipped: '{x_col}' or '{y_col}' is not numeric", "INFO")
+            from core.regression_analyser import RegressionAnalyser, RegressionType, ErrorBarType
+            reg_type_str = plot_tab.view.regression_type_combo.currentText() if hasattr(plot_tab, "regression_type_combo") else "Linear"
+            try:
+                reg_type = RegressionType(reg_type_str)
+            except ValueError:
+                reg_type = RegressionType.LINEAR
+            
+            try:
+                x_data, y_data = RegressionAnalyser.clean_data(plot_tab.data_handler.df, x_col, y_col, reg_type)
+            except TypeError as Type_err:
+                plot_tab.status_bar.log(f"Regression skipped: {str(Type_err)}", "INFO")
                 return
-
-            # Remove NaN/inf values from both columns
-            mask = np.isfinite(df[x_col]) & np.isfinite(df[y_col])
             
-            # Identify regression type
-            reg_type = plot_tab.regression_type_combo.currentText() if hasattr(plot_tab, "regression_type_combo") else "Linear"
-            if reg_type == "Logarithmic":
-                mask = mask & (df[x_col] > 0)
-            
-            x_data = df.loc[mask, x_col].values
-            y_data = df.loc[mask, y_col].values
-
             if len(x_data) < 2:
-                plot_tab.status_bar.log("Not enough data points to perform regressional analysis", "WARNING")
+                plot_tab.status_bar.log("Not enough data points to perform regression analysis", "WARNING")
+                return
+            degree = plot_tab.view.poly_degree_spin.value() if hasattr(plot_tab, "poly_degree_spin") else 2
+            try:
+                result = RegressionAnalyser.compute_fit(x_data, y_data, reg_type, degree)
+            except RuntimeError:
+                plot_tab.status_bar.log(f"{reg_type.value} fit failed to converge", "ERROR")
                 return
             
-            x_line = np.linspace(x_data.min(), x_data.max(), 100)
-            equation_str = ""
+            if plot_tab.view.regression_line_check.isChecked():
+                self._render_regression_line(result.x_line, result.y_line, reg_type, flipped)
             
-            if reg_type == "Polynomial":
-                deg = plot_tab.poly_degree_spin.value() if hasattr(plot_tab, "poly_degree_spin") else 2
-                coeffs = np.polyfit(x_data, y_data, deg)
-                poly_func = np.poly1d(coeffs)
-                y_pred_all = poly_func(x_data)
-                y_line = poly_func(x_line)
-                
-                terms = []
-                for i, c in enumerate(coeffs):
-                    power = deg - i
-                    if power == 0:
-                        terms.append(f"{c:.2e}")
-                    elif power == 1:
-                        terms.append(f"{c:.2e}x")
-                    else:
-                        terms.append(f"{c:.2e}x^{power}")
-                equation_str = " + ".join(terms).replace("+ -", "- ")
+            if plot_tab.view.confidence_interval_check.isChecked():
+                confidence = plot_tab.view.confidence_level_spin.value() / 100.0
+                margin = RegressionAnalyser.compute_confidence_interval(x_data, result.residuals, result.x_line, confidence)
+                self._render_confidence_interval(result.x_line, result.y_line, margin, confidence, flipped)
             
-            elif reg_type == "Exponential":
-                def exp_func(x, a, b):
-                    return a * np.exp(b * x)
-                try:
-                    popt, _ = curve_fit(exp_func, x_data, y_data, p0=(1, 1e-6), maxfev=10000)
-                    y_pred_all = exp_func(x_data, *popt)
-                    y_line = exp_func(x_line, *popt)
-                    equation_str = f"{popt[0]:.2e} * exp({popt[1]:.2e} * x)"
-                except RuntimeError:
-                    plot_tab.status_bar.log("Exponential fit failed to converge", "ERROR")
-                    return
+            self._render_regression_statistics(plot_tab, result.metrics, flipped)
             
-            elif reg_type == "Logarithmic":
-                def log_func(x, a, b):
-                    return a + b * np.log(x)
-                try:
-                    popt, _ = curve_fit(log_func, x_data, y_data)
-                    y_pred_all = log_func(x_data, *popt)
-                    y_line = log_func(x_line, *popt)
-                    equation_str = f"{popt[0]:.2e} + {popt[1]:.2e} * ln(x)"
-                except RuntimeError:
-                    plot_tab.status_bar.log("Logarithmic fit failed to converge", "ERROR")
-                    return
-            else:
-                slope, intercept, _, _, _ = stats.linregress(x_data, y_data)
-                y_pred_all = slope * x_data + intercept
-                y_line = slope * x_line + intercept
-                equation_str = f"{slope:.4f}x {'+' if intercept >= 0 else '-'} {abs(intercept):.4f}"
+            error_bar_str = plot_tab.view.error_bars_combo.currentText()
+            try:
+                error_bar_type = ErrorBarType(error_bar_str)
+            except ValueError:
+                error_bar_type = ErrorBarType.NONE
             
-            ss_res = np.sum((y_data - y_pred_all)**2)
-            ss_tot = np.sum((y_data - np.mean(y_data))**2)
-            r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
-
-            # plot regression line
-            if plot_tab.regression_line_check.isChecked():
-                plot_args = (x_line, y_line) if not flipped else (y_line, x_line)
-                reg_line = self.current_ax.plot(
-                    *plot_args, 
-                    color="red", linestyle="-", linewidth=2, 
-                    label=f"{reg_type} Fit", alpha=0.5
-                )[0]
-                reg_line.set_gid("regression_line")
-            
-            # calculate confidence interval
-            if plot_tab.confidence_interval_check.isChecked():
-                confidence = plot_tab.confidence_level_spin.value() / 100.0
-                
-                # standard error of the fit
-                residuals = y_data - (slope * x_data + intercept)
-                n = len(x_data)
-                residual_std = np.sqrt(np.sum(residuals**2) / (n - 2))
-
-                #std eror for each prediction
-                x_mean = np.mean(x_data)
-                se_line = residual_std * np.sqrt(1/n + (x_line - x_mean)**2 / np.sum((x_data - x_mean)**2))
-
-                from scipy.stats import t as t_dist
-                t_val = t_dist.ppf((1 + confidence) / 2, max(1, n - 2))
-                margin = t_val * se_line
-                
-                fill_args = (x_line, y_line - margin, y_line + margin) if not flipped else (y_line - margin, y_line + margin, x_line)
-
-                if not flipped:
-                    ci_poly = self.current_ax.fill_between(
-                        fill_args[0], fill_args[1], fill_args[2],
-                        color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
-                    )
-                else:
-                    ci_poly = self.current_ax.fill_betweenx(
-                        fill_args[2], fill_args[0], fill_args[1], # y, x1, x2
-                        color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
-                    )
-                ci_poly.set_gid("confidence_interval")
-
-            # calculate rmse
-            rmse = np.sqrt(np.mean((y_data - y_pred_all)**2))
-
-            #b uild stats text
-            stats_text = []
-            
-            eq_x_label = "y" if flipped else "x"
-            eq_y_label = "x" if flipped else "y"
-            if plot_tab.show_equation_check.isChecked():
-                formatted_eq = equation_str.replace('x', eq_x_label)
-                stats_text.append(f'{eq_y_label} = {formatted_eq}')
-            
-            if plot_tab.show_r2_check.isChecked():
-                stats_text.append(f"R² = {r_squared:.4f}")
-            
-            if plot_tab.show_rmse_check.isChecked():
-                stats_text.append(f"RMSE = {rmse:.4f}")
-            
-            #display on plot
-            if stats_text:
-                textstr = "\n".join(stats_text)
-                props = dict(boxstyle="round", facecolor="wheat", alpha=0.85, edgecolor="black", linewidth=1)
-                font_family = plot_tab.font_family_combo.currentFont().family()
-
-                self.current_ax.text(0.05, 0.95, textstr, transform=self.current_ax.transAxes, fontsize=11, verticalalignment='top', bbox=props, fontfamily=font_family, zorder=15)
-            
-            #add errorbars
-            error_bar_type = plot_tab.error_bars_combo.currentText()
-            if error_bar_type == "Standard Deviation":
-                # calculate residuals
-                residuals = y_data - y_pred_all
-
-                # calculate std in bins
-                n_bins = min(20, len(x_data) // 5)
-                if n_bins > 1: # Need at least 2 bins
-                    # sort by x vals
-                    sorted_indices = np.argsort(x_data)
-                    x_sorted = x_data[sorted_indices]
-                    y_sorted = y_data[sorted_indices]
-                    residuals_sorted = residuals[sorted_indices]
-
-                    # calc std bins
-                    bin_size = len(x_data) // n_bins
-                    x_centers = []
-                    y_centers = []
-                    y_errors = []
-
-                    for i in range(n_bins):
-                        start = i * bin_size
-                        end = start + bin_size if i < n_bins - 1 else len(x_data)
-
-                        if end - start > 1: 
-                            x_centers.append(np.mean(x_sorted[start:end]))
-                            y_centers.append(np.mean(y_sorted[start:end]))
-                            y_errors.append(np.std(residuals_sorted[start:end]))
-                    
-                    if x_centers:
-                        err_args = (x_centers, y_centers)
-                        err_kwargs = {"yerr": y_errors} if not flipped else {"xerr": y_errors}
-                        
-                        self.current_ax.errorbar(
-                            *err_args, **err_kwargs,
-                            fmt="o", markersize=3, ecolor="black", alpha=0.5, 
-                            capsize=4, zorder=10, markerfacecolor="none", 
-                            markeredgecolor="gray", linestyle="none"
-                        )
-            
-            elif error_bar_type == "Standard Error":
-                residuals = y_data - y_pred_all
-                residual_std = np.sqrt(np.sum(residuals**2) / (len(x_data) - 2))
-
-                #se for each xvals
-                x_mean = np.mean(x_data)
-                se_points = residual_std * np.sqrt(1/len(x_data) + (x_data - x_mean)**2 / np.sum((x_data - x_mean)**2))
-
-                # sample points
-                step = max(1, len(x_data) // 30)
-                
-                err_args = (x_data[::step], y_data[::step])
-                err_kwargs = {"yerr": se_points[::step]} if not flipped else {"xerr": se_points[::step]}
-                
-                self.current_ax.errorbar(
-                    *err_args, **err_kwargs,
-                    fmt="none", ecolor="gray", markersize=3, alpha=0.5, 
-                    capsize=4, zorder=8, markerfacecolor="none", 
-                    markeredgecolor="none", elinewidth=1, 
-                    linestyle="none"
-                )
-
+            if error_bar_type != ErrorBarType.NONE:
+                self._render_regression_error_bars(x_data, y_data, result.residuals, error_bar_type, flipped)
             plot_tab.status_bar.log(
-                f"✓ Regression ({reg_type}): R²={r_squared:.4f}, RMSE={rmse:.4f}",
-                "SUCCESS"
+            f"Regression ({reg_type.value}): R²={result.metrics.r_squared:.4f}, RMSE={result.metrics.rmse:.4f}",
+            "SUCCESS"
             )
-        
-        except Exception as RegressionAnalysisError:
-            plot_tab.status_bar.log(f"Regression analysis failed: {str(RegressionAnalysisError)}", "ERROR")
+        except Exception as error:
+            plot_tab.status_bar.log(f"Regression analysis failed: {str(error)}", "ERROR")
             import traceback
             print(f"Regression error: {traceback.format_exc()}")
     
+    def _render_regression_line(self, x_line: np.ndarray, y_line: np.ndarray, reg_type: Any, flipped: bool) -> None:
+        plot_args = (x_line, y_line) if not flipped else (y_line, x_line)
+        reg_line = self.current_ax.plot(
+            *plot_args, color="red", linestyle="-", linewidth=2,
+            label=f"{reg_type.value} Fit", alpha=0.5
+        )[0]
+        reg_line.set_gid("regression_line")
+    
+    def _render_confidence_interval(self, x_line: np.ndarray, y_line: np.ndarray, margin: np.ndarray, confidence: float, flipped: bool) -> None:
+        fill_args = (x_line, y_line - margin, y_line + margin) if not flipped else (y_line - margin, y_line + margin, x_line)
+        if not flipped:
+            ci_poly = self.current_ax.fill_between(
+                fill_args[0], fill_args[1], fill_args[2],
+                color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
+            )
+        else:
+            ci_poly = self.current_ax.fill_betweenx(
+                fill_args[2], fill_args[0], fill_args[1],
+                color="red", alpha=0.15, label=f"{int(confidence*100)}% CI", zorder=-1
+            )
+        ci_poly.set_gid("confidence_interval")
+    
+    def _render_regression_statistics(self, plot_tab: 'PlotTab', metrics: RegressionMetrics, flipped: bool) -> None:
+        stats_text = []
+        eq_x_label = "y" if flipped else "x"
+        eq_y_label = "x" if flipped else "y"
+        
+        if plot_tab.view.show_equation_check.isChecked():
+            formatted_eq = metrics.equation_str.replace('x', eq_x_label)
+            stats_text.append(f'{eq_y_label} = {formatted_eq}')
+        
+        if plot_tab.view.show_r2_check.isChecked():
+            stats_text.append(f"R² = {metrics.r_squared:.4f}")
+        
+        if plot_tab.view.show_rmse_check.isChecked():
+            stats_text.append(f"RMSE = {metrics.rmse:.4f}")
+            
+        if stats_text:
+            textstr = "\n".join(stats_text)
+            props = dict(boxstyle="round", facecolor="wheat", alpha=0.85, edgecolor="black", linewidth=1)
+            font_family = plot_tab.view.font_family_combo.currentFont().family()
+            self.current_ax.text(
+                0.05, 0.95, textstr, transform=self.current_ax.transAxes, 
+                fontsize=11, verticalalignment='top', bbox=props, 
+                fontfamily=font_family, zorder=15
+            )
+    
+    def _render_regression_error_bars(self, x_data: np.ndarray, y_data: np.ndarray, residuals: np.ndarray, error_bar_type: Any, flipped: bool) -> None:
+        from core.regression_analyser import RegressionAnalyser, ErrorBarType
+        import numpy as np
+        
+        if error_bar_type == ErrorBarType.STANDARD_DEVIATION:
+            x_centers, y_centers, y_errors = RegressionAnalyser.compute_error_bars_std(x_data, y_data, residuals)
+            if x_centers:
+                err_args = (x_centers, y_centers)
+                err_kwargs = {"yerr": y_errors} if not flipped else {"xerr": y_errors}
+                self.current_ax.errorbar(
+                    *err_args, **err_kwargs,
+                    fmt="o", markersize=3, ecolor="black", alpha=0.5,
+                    capsize=4, zorder=10, markerfacecolor="none",
+                    markeredgecolor="gray", linestyle="none"
+                )
+                
+        elif error_bar_type == ErrorBarType.STANDARD_ERROR:
+            se_points = RegressionAnalyser.compute_error_bars_se(x_data, residuals)
+            step = max(1, len(x_data) // 30)
+            err_args = (x_data[::step], y_data[::step])
+            err_kwargs = {"yerr": se_points[::step]} if not flipped else {"xerr": se_points[::step]}
+            self.current_ax.errorbar(
+                *err_args, **err_kwargs,
+                fmt="none", ecolor="gray", markersize=3, alpha=0.5,
+                capsize=4, zorder=8, markerfacecolor="none",
+                markeredgecolor="none", elinewidth=1,
+                linestyle="none"
+            )
+                
     # Plot strategies
     def execute_strategy(self, plot_type: str, plot_tab: "PlotTab", x_col: str, y_cols: List[str], axes_flipped: bool, font_family: str, plot_kwargs: Dict[str, Any], general_kwargs: Dict[str, Any]) -> Optional[str]:
         from core.plot_strategies.strat_registry import StrategyRegistry
