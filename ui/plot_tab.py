@@ -109,41 +109,7 @@ class PlotTab(PlotTabUI):
         self.bar_customizations = {}
         self.annotations = []
         self.subplot_data_configs = {}
-
-        #plot dispatcher
-        self.plot_strategies = {
-            "Line": self.plot_engine.strategy_line,
-            "Scatter": self.plot_engine.strategy_scatter,
-            "Bar": self.plot_engine.strategy_bar,
-            "Histogram": self.plot_engine.strategy_histogram,
-            "Box": self.plot_engine.strategy_box,
-            "Violin": self.plot_engine.strategy_violin,
-            "Heatmap": self.plot_engine.strategy_heatmap,
-            "KDE": self.plot_engine.strategy_kde,
-            "Area": self.plot_engine.strategy_area,
-            "Pie": self.plot_engine.strategy_pie,
-            "Count Plot": self.plot_engine.strategy_count,
-            "Hexbin": self.plot_engine.strategy_hexbin,
-            "2D Density": self.plot_engine.strategy_2d_density,
-            "Stem": self.plot_engine.strategy_stem,
-            "Stackplot": self.plot_engine.strategy_stackplot,
-            "Stairs": self.plot_engine.strategy_stairs,
-            "Eventplot": self.plot_engine.strategy_eventplot,
-            "ECDF": self.plot_engine.strategy_ecdf,
-            "2D Histogram": self.plot_engine.strategy_hist2d,
-            "Image Show (imshow)": self.plot_engine.strategy_imshow,
-            "pcolormesh": self.plot_engine.strategy_pcolormesh,
-            "Contour": self.plot_engine.strategy_contour,
-            "Contourf": self.plot_engine.strategy_contourf,
-            "Barbs": self.plot_engine.strategy_barbs,
-            "Quiver": self.plot_engine.strategy_quiver,
-            "Streamplot": self.plot_engine.strategy_streamplot,
-            "Tricontour": self.plot_engine.strategy_tricontour,
-            "Tricontourf": self.plot_engine.strategy_tricontourf,
-            "Tripcolor": self.plot_engine.strategy_tripcolor,
-            "Triplot": self.plot_engine.strategy_triplot,
-            "GeoSpatial": self.plot_engine.strategy_geospatial
-        }
+        
         # Categories
         self.plot_categories = {
             "Basic & Relational": ["Line", "Scatter", "Bar", "Area", "Pie", "Stem", "Stairs"],
@@ -2416,16 +2382,20 @@ class PlotTab(PlotTabUI):
 
     def _execute_plot_strategy(self, plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """Executes the correct plotting strategy"""
-        if plot_type not in self.plot_strategies:
-            raise ValueError(f"Unknown plot type: {plot_type}")
         
         original_df = self.data_handler.df
         self.data_handler.df = active_df
 
         try:
-            strategy_func = self.plot_strategies[plot_type]
-            error_message = strategy_func(
-                self, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs
+            error_message = self.plot_engine.execute_strategy(
+                plot_type=plot_type,
+                plot_tab=self,
+                x_col=x_col,
+                y_cols=y_cols,
+                axes_flipped=axes_flipped,
+                font_family=font_family,
+                plot_kwargs=plot_kwargs,
+                general_kwargs=general_kwargs
             )
 
             if error_message:
