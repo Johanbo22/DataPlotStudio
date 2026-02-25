@@ -72,6 +72,14 @@ class PlotTab(PlotTabUI):
         self.ignore_next_click = False
         self.config_manager = PlotConfigManager(self)
         
+        self._is_data_dirty = False
+        self._is_clearing = False
+        self.AUTO_UPDATE_THRESHOLD = 2000
+        self.style_update_timer = QTimer()
+        self.style_update_timer.setSingleShot(True)
+        self.style_update_timer.setInterval(300)
+        self.style_update_timer.timeout.connect(self._fast_render)
+        
         self.bg_color = "white"
         self.face_color = "white"
 
@@ -272,7 +280,14 @@ class PlotTab(PlotTabUI):
         self.view.multi_y_check.stateChanged.connect(self.toggle_multi_y)
         self.view.select_all_y_btn.clicked.connect(self.select_all_y_columns)
         self.view.clear_all_y_btn.clicked.connect(self.clear_all_y_columns)
+        
+        self.view.x_column.currentTextChanged.connect(self.on_data_changed)
+        self.view.y_column.currentTextChanged.connect(self.on_data_changed)
+        self.view.y_columns_list.itemSelectionChanged.connect(self.on_data_changed)
         self.view.hue_column.currentTextChanged.connect(self.on_data_changed)
+        self.view.subset_combo.currentIndexChanged.connect(self.on_data_changed)
+        self.view.quick_filter_input.textChanged.connect(self.on_data_changed)
+        
         self.view.apply_subplot_layout_button.clicked.connect(self.apply_subplot_layout)
         self.view.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         self.view.add_subplots_check.stateChanged.connect(self.on_subplot_active)
@@ -297,6 +312,28 @@ class PlotTab(PlotTabUI):
         self.view.height_spin.valueChanged.connect(lambda: self._setup_plot_figure(clear=False))
         self.view.colorblind_check.stateChanged.connect(self.update_colorblind_simulation)
         self.view.colorblind_type_combo.currentTextChanged.connect(self.update_colorblind_simulation)
+        
+        self.view.title_input.textChanged.connect(self.on_style_changed)
+        self.view.title_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.title_weight_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.title_position_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.title_check.stateChanged.connect(self.on_style_changed)
+        self.view.xlabel_input.textChanged.connect(self.on_style_changed)
+        self.view.xlabel_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.xlabel_weight_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.xlabel_check.stateChanged.connect(self.on_style_changed)
+        self.view.ylabel_input.textChanged.connect(self.on_style_changed)
+        self.view.ylabel_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.ylabel_weight_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.ylabel_check.stateChanged.connect(self.on_style_changed)
+        self.view.font_family_combo.currentFontChanged.connect(self.on_style_changed)
+        self.view.style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.global_spine_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.top_spine_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.bottom_spine_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.left_spine_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.right_spine_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.palette_combo.currentTextChanged.connect(self.on_style_changed)
     
     def _connect_axes_tab_signals(self) -> None:
         """Connect signals for the Axes tab"""
@@ -307,6 +344,30 @@ class PlotTab(PlotTabUI):
         self.view.custom_datetime_check.stateChanged.connect(self.toggle_datetime_format)
         self.view.x_datetime_format_combo.currentTextChanged.connect(self.on_x_datetime_format_changed)
         self.view.y_datetime_format_combo.currentTextChanged.connect(self.on_y_datetime_format_changed)
+        
+        self.view.flip_axes_check.stateChanged.connect(self.on_data_changed)
+        self.view.x_auto_check.stateChanged.connect(self.on_style_changed)
+        self.view.y_auto_check.stateChanged.connect(self.on_style_changed)
+        self.view.x_min_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_max_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_min_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_max_spin.valueChanged.connect(self.on_style_changed)
+        self.view.xtick_label_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.ytick_label_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.xtick_rotation_spin.valueChanged.connect(self.on_style_changed)
+        self.view.ytick_rotation_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_max_ticks_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_max_ticks_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_show_minor_ticks_check.stateChanged.connect(self.on_style_changed)
+        self.view.y_show_minor_ticks_check.stateChanged.connect(self.on_style_changed)
+        self.view.x_major_tick_direction_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.y_major_tick_direction_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_major_tick_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_major_tick_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_scale_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.y_scale_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_display_units_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.y_display_units_combo.currentTextChanged.connect(self.on_style_changed)
         
     def _connect_legend_grid_tab_signals(self) -> None:
         """Connect signals for the Legend and Grid tab"""
@@ -326,6 +387,36 @@ class PlotTab(PlotTabUI):
         self.view.y_minor_grid_color_button.clicked.connect(self.choose_y_minor_grid_color)
         self.view.y_minor_grid_alpha_slider.valueChanged.connect(lambda v: self.view.y_minor_grid_alpha_label.setText(f"{v}%"))
         
+        self.view.legend_loc_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.legend_title_input.textChanged.connect(self.on_style_changed)
+        self.view.legend_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.legend_columns_spin.valueChanged.connect(self.on_style_changed)
+        self.view.legend_colspace_spin.valueChanged.connect(self.on_style_changed)
+        self.view.legend_frame_check.stateChanged.connect(self.on_style_changed)
+        self.view.legend_fancybox_check.stateChanged.connect(self.on_style_changed)
+        self.view.legend_shadow_check.stateChanged.connect(self.on_style_changed)
+        self.view.legend_edge_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.legend_alpha_slider.valueChanged.connect(self.on_style_changed)
+        self.view.grid_which_type_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.grid_axis_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.global_grid_alpha_slider.valueChanged.connect(self.on_style_changed)
+        self.view.x_major_grid_check.stateChanged.connect(self.on_style_changed)
+        self.view.x_major_grid_style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_major_grid_linewidth_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_major_grid_alpha_slider.valueChanged.connect(self.on_style_changed)
+        self.view.x_minor_grid_check.stateChanged.connect(self.on_style_changed)
+        self.view.x_minor_grid_style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_minor_grid_linewidth_spin.valueChanged.connect(self.on_style_changed)
+        self.view.x_minor_grid_alpha_slider.valueChanged.connect(self.on_style_changed)
+        self.view.y_major_grid_check.stateChanged.connect(self.on_style_changed)
+        self.view.y_major_grid_style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.y_major_grid_linewidth_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_major_grid_alpha_slider.valueChanged.connect(self.on_style_changed)
+        self.view.y_minor_grid_check.stateChanged.connect(self.on_style_changed)
+        self.view.y_minor_grid_style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.y_minor_grid_linewidth_spin.valueChanged.connect(self.on_style_changed)
+        self.view.y_minor_grid_alpha_slider.valueChanged.connect(self.on_style_changed)
+        
     def _connect_advanced_tab_signals(self) -> None:
         """Connect signals for the customization tab"""
         self.view.multiline_custom_check.stateChanged.connect(self.toggle_line_selector)
@@ -342,6 +433,34 @@ class PlotTab(PlotTabUI):
         self.view.save_bar_custom_button.clicked.connect(self.save_bar_customization)
         self.view.alpha_slider.valueChanged.connect(lambda v: self.view.alpha_label.setText(f"{v}%"))
         
+        # Style connections
+        self.view.linewidth_spin.valueChanged.connect(self.on_style_changed)
+        self.view.linestyle_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.marker_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.marker_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.marker_edge_width_spin.valueChanged.connect(self.on_style_changed)
+        self.view.alpha_slider.valueChanged.connect(self.on_style_changed)
+        
+        # Data connections
+        self.view.histogram_bins_spin.valueChanged.connect(self.on_data_changed)
+        self.view.histogram_show_normal_check.stateChanged.connect(self.on_data_changed)
+        self.view.histogram_show_kde_check.stateChanged.connect(self.on_data_changed)
+        self.view.bar_width_spin.valueChanged.connect(self.on_data_changed)
+        self.view.regression_line_check.stateChanged.connect(self.on_data_changed)
+        self.view.regression_type_combo.currentTextChanged.connect(self.on_data_changed)
+        self.view.poly_degree_spin.valueChanged.connect(self.on_data_changed)
+        self.view.confidence_interval_check.stateChanged.connect(self.on_data_changed)
+        self.view.show_r2_check.stateChanged.connect(self.on_data_changed)
+        self.view.show_rmse_check.stateChanged.connect(self.on_data_changed)
+        self.view.show_equation_check.stateChanged.connect(self.on_data_changed)
+        self.view.confidence_level_spin.valueChanged.connect(self.on_data_changed)
+        self.view.pie_show_percentages_check.stateChanged.connect(self.on_data_changed)
+        self.view.pie_start_angle_spin.valueChanged.connect(self.on_data_changed)
+        self.view.pie_explode_check.stateChanged.connect(self.on_data_changed)
+        self.view.pie_explode_distance_spin.valueChanged.connect(self.on_data_changed)
+        self.view.pie_shadow_check.stateChanged.connect(self.on_data_changed)
+        self.view.error_bars_combo.currentTextChanged.connect(self.on_data_changed)
+        
     def _connect_annotation_tab_signals(self) -> None:
         """Connect signals for the Annotations tab"""
         self.view.annotation_color_button.clicked.connect(self.choose_annotation_color)
@@ -352,11 +471,37 @@ class PlotTab(PlotTabUI):
         self.view.clear_annotations_button.clicked.connect(self.clear_annotations)
         self.view.table_enable_check.stateChanged.connect(self.toggle_table_controls)
         self.view.table_auto_font_size_check.stateChanged.connect(self.toggle_table_font_controls)
+        
+        self.view.textbox_enable_check.stateChanged.connect(self.on_style_changed)
+        self.view.textbox_content.textChanged.connect(self.on_style_changed)
+        self.view.textbox_position_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.textbox_style_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.table_enable_check.stateChanged.connect(self.on_style_changed)
+        self.view.table_type_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.table_location_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.table_auto_font_size_check.stateChanged.connect(self.on_style_changed)
+        self.view.table_font_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.table_scale_spin.valueChanged.connect(self.on_style_changed)
 
     def _connect_geospatial_tab_signals(self) -> None:
         """Connect signals for the Geospatial tab"""
         self.view.geo_missing_color_btn.clicked.connect(self.choose_geo_missing_color)
         self.view.geo_edge_color_btn.clicked.connect(self.choose_geo_edge_color)
+        
+        self.view.geo_scheme_combo.currentTextChanged.connect(self.on_data_changed)
+        self.view.geo_k_spin.valueChanged.connect(self.on_data_changed)
+        self.view.geo_legend_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_legend_loc_combo.currentTextChanged.connect(self.on_data_changed)
+        self.view.geo_use_divider_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_cax_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_axis_off_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_missing_label_input.textChanged.connect(self.on_data_changed)
+        self.view.geo_hatch_combo.currentTextChanged.connect(self.on_data_changed)
+        self.view.geo_boundary_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_linewidth_spin.valueChanged.connect(self.on_data_changed)
+        self.view.geo_target_crs_input.textChanged.connect(self.on_data_changed)
+        self.view.geo_basemap_check.stateChanged.connect(self.on_data_changed)
+        self.view.geo_basemap_style_combo.currentTextChanged.connect(self.on_data_changed)
 
     def _connect_theme_controls(self) -> None:
         """Connect signals for Theme management"""
@@ -421,6 +566,7 @@ class PlotTab(PlotTabUI):
                 list_w.clearSelection()
         
         self.on_plot_type_changed(plot_type)
+        self.on_data_changed()
         self._sync_script_if_open()
     
     def _select_plot_in_toolbox(self, plot_type_name):
@@ -461,6 +607,7 @@ class PlotTab(PlotTabUI):
         """Toggles the customization of spines for each"""
         checked  = self.view.individual_spines_check.isChecked()
         self.view.individual_spines_container.setVisible(checked)
+        self.on_style_changed()
     
     def choose_global_spine_color(self):
         """Aplly the color and open diaglo"""
@@ -469,6 +616,7 @@ class PlotTab(PlotTabUI):
             self.global_spine_color = color.name()
             self.view.global_spine_color_label.setText(self.global_spine_color)
             self.view.global_spine_color_button.updateColors(base_color_hex=self.global_spine_color)
+            self.on_style_changed()
     
     def on_subplot_active(self):
         """Activate subplot group for visibility"""
@@ -712,6 +860,7 @@ class PlotTab(PlotTabUI):
             self.geo_missing_color = color.name()
             self.view.geo_missing_color_label.setText(self.geo_missing_color)
             self.view.geo_missing_color_btn.updateColors(base_color_hex=self.geo_missing_color)
+            self.on_style_changed()
 
     def choose_geo_edge_color(self):
         color = QColorDialog.getColor()
@@ -719,11 +868,13 @@ class PlotTab(PlotTabUI):
             self.geo_edge_color = color.name()
             self.view.geo_edge_color_label.setText(self.geo_edge_color)
             self.view.geo_edge_color_btn.updateColors(base_color_hex=self.geo_edge_color)
+            self.on_style_changed()
     
     def toggle_auto_annotate(self):
         """Enable auto annotation controls"""
         is_enabled = self.view.auto_annotate_check.isChecked()
         self.view.auto_annotate_col_combo.setEnabled(is_enabled)
+        self.on_style_changed()
 
     def activate_subset(self, subset_name: str):
         """Activates the 'Use Subset' checkbox and selects the selected subset"""
@@ -925,6 +1076,7 @@ class PlotTab(PlotTabUI):
         if not is_enabled:
             self.view.grid_axis_tab.setVisible(False)
             self.view.independent_grid_check.setChecked(False)
+        self.on_style_changed()
     
     def on_legend_toggle(self) -> None:
         """Handle legend UI visibility"""
@@ -940,6 +1092,8 @@ class PlotTab(PlotTabUI):
         self.view.legend_column_spacing_label.setVisible(is_enabled)
         self.view.legend_colspace_spin.setVisible(is_enabled)
         self.view.box_styling_group.setVisible(is_enabled)
+        
+        self.on_style_changed()
 
     
     def on_independent_grid_toggle(self):
@@ -950,6 +1104,7 @@ class PlotTab(PlotTabUI):
         #disable global control when independent axis controls are enabeld
         self.view.grid_which_type_combo.setEnabled(not is_independent)
         self.view.grid_axis_combo.setEnabled(not is_independent)
+        self.on_style_changed()
 
     def choose_x_major_grid_color(self):
         """Choose color for x-axis major gridlines"""
@@ -958,6 +1113,7 @@ class PlotTab(PlotTabUI):
             self.x_major_grid_color = color.name()
             self.view.x_major_grid_color_label.setText(self.x_major_grid_color)
             self.view.x_major_grid_color_button.updateColors(base_color_hex=self.x_major_grid_color)
+            self.on_style_changed()
 
     def choose_x_minor_grid_color(self):
         """Choose the colour for the minor x gridlnies"""
@@ -966,6 +1122,7 @@ class PlotTab(PlotTabUI):
             self.x_minor_grid_color = color.name()
             self.view.x_minor_grid_color_label.setText(self.x_minor_grid_color)
             self.view.x_minor_grid_color_button.updateColors(base_color_hex=self.x_minor_grid_color)
+            self.on_style_changed()
     
     def choose_y_major_grid_color(self):
         """Choose color for x-axis major gridlines"""
@@ -974,6 +1131,7 @@ class PlotTab(PlotTabUI):
             self.y_major_grid_color = color.name()
             self.view.y_major_grid_color_label.setText(self.y_major_grid_color)
             self.view.y_major_grid_color_button.updateColors(base_color_hex=self.y_major_grid_color)
+            self.on_style_changed()
 
     def choose_y_minor_grid_color(self):
         """Choose the colour for the minor x gridlnies"""
@@ -982,6 +1140,7 @@ class PlotTab(PlotTabUI):
             self.y_minor_grid_color = color.name()
             self.view.y_minor_grid_color_label.setText(self.y_minor_grid_color)
             self.view.y_minor_grid_color_button.updateColors(base_color_hex=self.y_minor_grid_color)
+            self.on_style_changed()
     
     def toggle_multi_y(self):
         """Toggle between multi and single y slections"""
@@ -1001,14 +1160,17 @@ class PlotTab(PlotTabUI):
                 if self.view.y_columns_list.item(i).text() == current_y:
                     self.view.y_columns_list.item(i).setSelected(True)
                     break
+        self.on_data_changed()
     
     def select_all_y_columns(self):
         """Select all availalbe ycols"""
         self.view.y_columns_list.selectAll()
+        self.on_data_changed()
     
     def clear_all_y_columns(self):
         """Clear all selected ycols"""
         self.view.y_columns_list.clearSelection()
+        self.on_data_changed()
     
     def get_selected_y_columns(self):
         """Get list of selected ycols"""
@@ -1026,6 +1188,7 @@ class PlotTab(PlotTabUI):
             self.bg_color = color.name()
             self.view.bg_color_label.setText(self.bg_color)
             self.view.bg_color_button.updateColors(base_color_hex=self.bg_color)
+            self.on_style_changed()
 
     def choose_face_color(self) -> None:
         """Open the color picker tool for the face of the plotting axes"""
@@ -1034,6 +1197,7 @@ class PlotTab(PlotTabUI):
             self.face_color = color.name()
             self.view.face_color_label.setText(self.face_color)
             self.view.face_color_button.updateColors(base_color_hex=self.face_color)
+            self.on_style_changed()
     
     def update_colorblind_simulation(self) -> None:
         """Applies or removes the SVG filter effect from canvas"""
@@ -1045,6 +1209,7 @@ class PlotTab(PlotTabUI):
         else:
             self.canvas.setGraphicsEffect(None)
             self.status_bar.log("Color blindess mode disabled", "INFO")
+        self.on_style_changed()
 
     def toggle_line_selector(self) -> None:
         """Show/enable line selection"""
@@ -1165,6 +1330,7 @@ class PlotTab(PlotTabUI):
             self.top_spine_color = color.name()
             self.view.top_spine_color_label.setText(self.top_spine_color)
             self.view.top_spine_color_button.updateColors(base_color_hex=self.top_spine_color)
+            self.on_style_changed()
     
     def choose_bottom_spine_color(self):
         """Open color picker for bottom spine"""
@@ -1173,6 +1339,7 @@ class PlotTab(PlotTabUI):
             self.bottom_spine_color = color.name()
             self.view.bottom_spine_color_label.setText(self.bottom_spine_color)
             self.view.bottom_spine_color_button.updateColors(base_color_hex=self.bottom_spine_color)
+            self.on_style_changed()
     
     def choose_left_spine_color(self):
         """Open color picker for left spine"""
@@ -1181,6 +1348,7 @@ class PlotTab(PlotTabUI):
             self.left_spine_color = color.name()
             self.view.left_spine_color_label.setText(self.left_spine_color)
             self.view.left_spine_color_button.updateColors(base_color_hex=self.left_spine_color)
+            self.on_style_changed()
     
     def choose_right_spine_color(self):
         """Open color picker for right spine"""
@@ -1189,6 +1357,7 @@ class PlotTab(PlotTabUI):
             self.right_spine_color = color.name()
             self.view.right_spine_color_label.setText(self.right_spine_color)
             self.view.right_spine_color_button.updateColors(base_color_hex=self.right_spine_color)
+            self.on_style_changed()
     
     def preset_all_spines(self):
         """Preset: Show all spines"""
@@ -1197,6 +1366,7 @@ class PlotTab(PlotTabUI):
         self.view.left_spine_visible_check.setChecked(True)
         self.view.right_spine_visible_check.setChecked(True)
         self.status_bar.log("Applied preset: All Spines", "INFO")
+        self.on_style_changed()
 
     def preset_box_only(self):
         """Preset: Show only left and buttom spines"""
@@ -1205,6 +1375,7 @@ class PlotTab(PlotTabUI):
         self.view.left_spine_visible_check.setChecked(True)
         self.view.right_spine_visible_check.setChecked(False)
         self.status_bar.log("Applied preset: Box Only", "INFO")
+        self.on_style_changed()
 
     def preset_no_spines(self):
         """Preset: Hide all spines"""
@@ -1213,6 +1384,7 @@ class PlotTab(PlotTabUI):
         self.view.left_spine_visible_check.setChecked(False)
         self.view.right_spine_visible_check.setChecked(False)
         self.status_bar.log("Applied preset: No Spines", "INFO")
+        self.on_style_changed()
     
     def choose_line_color(self) -> None:
         """Open color picker for line color"""
@@ -1222,6 +1394,7 @@ class PlotTab(PlotTabUI):
             self.view.line_color_label.setText(self.line_color)
             # Show color preview
             self.view.line_color_button.updateColors(base_color_hex=self.line_color)
+            self.on_style_changed()
     
     def choose_marker_color(self):
         """Open color picker for marker color"""
@@ -1230,6 +1403,7 @@ class PlotTab(PlotTabUI):
             self.marker_color = color.name()
             self.view.marker_color_label.setText(self.marker_color)
             self.view.marker_color_button.updateColors(base_color_hex=self.marker_color)
+            self.on_style_changed()
     
     def choose_marker_edge_color(self):
         """Open color picker for marker edge color"""
@@ -1238,6 +1412,7 @@ class PlotTab(PlotTabUI):
             self.marker_edge_color = color.name()
             self.view.marker_edge_label.setText(self.marker_edge_color)
             self.view.marker_edge_button.updateColors(base_color_hex=self.marker_edge_color)
+            self.on_style_changed()
     
     def choose_bar_color(self):
         """Open color picker for bar color"""
@@ -1247,6 +1422,7 @@ class PlotTab(PlotTabUI):
             self.view.bar_color_label.setText(self.bar_color)
             self.view.bar_color_button.updateColors(base_color_hex=self.bar_color)
             self._update_bar_customization_live()
+            self.on_style_changed()
     
     def choose_bar_edge_color(self):
         """Open color picker for bar edge color"""
@@ -1256,6 +1432,7 @@ class PlotTab(PlotTabUI):
             self.view.bar_edge_label.setText(self.bar_edge_color)
             self.view.bar_edge_button.updateColors(base_color_hex=self.bar_edge_color)
             self._update_bar_customization_live()
+            self.on_style_changed()
     
     def choose_annotation_color(self):
         """Open color picker for annotation color"""
@@ -1264,6 +1441,7 @@ class PlotTab(PlotTabUI):
             self.annotation_color = color.name()
             self.view.annotation_color_label.setText(self.annotation_color)
             self.view.annotation_color_button.updateColors(base_color_hex=self.annotation_color)
+            self.on_style_changed()
     
     def choose_textbox_bg_color(self):
         """Open color picker for text box background"""
@@ -1272,6 +1450,7 @@ class PlotTab(PlotTabUI):
             self.textbox_bg_color = color.name()
             self.view.textbox_bg_label.setText(self.textbox_bg_color)
             self.view.textbox_bg_button.updateColors(base_color_hex=self.textbox_bg_color)
+            self.on_style_changed()
     
     def choose_legend_bg_color(self):
         """Open color picker for legend background"""
@@ -1280,6 +1459,7 @@ class PlotTab(PlotTabUI):
             self.legend_bg_color = color.name()
             self.view.legend_bg_label.setText(self.legend_bg_color)
             self.view.legend_bg_button.updateColors(base_color_hex=self.legend_bg_color)
+            self.on_style_changed()
     
     def choose_legend_edge_color(self):
         """Open color picker for legend edge color"""
@@ -1288,6 +1468,7 @@ class PlotTab(PlotTabUI):
             self.legend_edge_color = color.name()
             self.view.legend_edge_label.setText(self.legend_edge_color)
             self.view.legend_edge_button.updateColors(base_color_hex=self.legend_edge_color)
+            self.on_style_changed()
     
     def add_annotation(self):
         """Add text annotation to plot"""
@@ -1308,6 +1489,7 @@ class PlotTab(PlotTabUI):
         self.view.annotations_list.addItem(f"{text} @ ({annotation['x']:.2f}, {annotation['y']:.2f})")
         self.view.annotation_text.clear()
         self.status_bar.log(f"Added annotation: {text}")
+        self.on_style_changed()
     
     def on_annotation_selected(self, item):
         """Handle annotation selection"""
@@ -1320,6 +1502,7 @@ class PlotTab(PlotTabUI):
             self.view.annotation_fontsize_spin.setValue(ann['fontsize'])
             self.annotation_color = ann['color']
             self.view.annotation_color_label.setText(self.annotation_color)
+            self.on_style_changed()
     
     def clear_annotations(self):
         """Clear all annotations"""
@@ -1327,6 +1510,7 @@ class PlotTab(PlotTabUI):
         self.view.annotations_list.clear()
         self.view.annotation_text.clear()
         self.status_bar.log("Cleared all annotations")
+        self.on_style_changed()
     
     def update_column_combo(self):
         """Update column ComboBoxes with available columns"""
@@ -1566,7 +1750,56 @@ class PlotTab(PlotTabUI):
 
     def on_data_changed(self):
         """Handle data column selection change"""
-        self.status_bar.log("Data selection changed")
+        if self._is_clearing:
+            return
+        self._is_data_dirty = True
+        df = self.get_active_dataframe()
+        if df is not None and len(df) <= self.AUTO_UPDATE_THRESHOLD:
+            self.style_update_timer.start()
+        else:
+            self._is_data_dirty = True
+            self.selection_overlay.show_update_required(True)
+            self.status_bar.log("Data change detected. Click 'Generate Plot' to update.", "WARNING")
+    
+    def on_style_changed(self) -> None:
+        if self._is_clearing:
+            return
+        if self._is_data_dirty:
+            return
+
+        if self.style_update_timer:
+            self.style_update_timer.start()
+    
+    def _fast_render(self) -> None:
+        if self._is_clearing:
+            return
+        if getattr(self, '_is_data_dirty', False):
+            self.generate_plot()
+            return
+
+        cached_df = getattr(self, '_cached_active_df', None)
+        if cached_df is None:
+            return
+        
+        current_subplot_index, _ = self._get_subplot_config()
+        x_col = self.view.x_column.currentText()
+        y_cols = self.get_selected_y_columns()
+        hue = self.view.hue_column.currentText() if self.view.hue_column.currentText() != "None" else None
+        subset_name = self.view.subset_combo.currentData() if self.view.use_subset_check.isChecked() else None
+        quick_filter = self.view.quick_filter_input.text().strip()
+
+        self._generate_main_plot(
+            active_df=cached_df,
+            plot_type=self.current_plot_type_name,
+            x_col=x_col,
+            y_cols=y_cols,
+            hue=hue,
+            subset_name=subset_name,
+            current_subplot_index=current_subplot_index,
+            quick_filter=quick_filter,
+            keep_data=True,
+            animate=False
+        )
 
     def toggle_datetime_format(self):
         """Enabled/disable formating ctrsl for datetime"""
@@ -1600,6 +1833,8 @@ class PlotTab(PlotTabUI):
     
     def generate_plot(self):
         """Generate plot based on current settings"""
+        if self._is_clearing:
+            return
         if not self._validate_data_loaded():
             return
 
@@ -1895,7 +2130,7 @@ class PlotTab(PlotTabUI):
         except Exception as ConvertColumnToDatetimeError:
             self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertColumnToDatetimeError)}", "ERROR")
     
-    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter="", keep_data=False):
+    def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter="", keep_data=False, animate=True):
         """Generate plot using matplotlib settings"""
         data_size = len(self.data_handler.df)
         show_progress = (data_size > 1000 and not keep_data)
@@ -1944,7 +2179,7 @@ class PlotTab(PlotTabUI):
 
             # Finalize
             self._update_progress(progress_dialog, 98, "Finising up")
-            self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter)
+            self._finalize_plot(current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter, is_fast_render=keep_data)
 
             # Log
             if not keep_data:
@@ -1955,9 +2190,11 @@ class PlotTab(PlotTabUI):
             self._update_progress(progress_dialog, 100, "Complete")
             if progress_dialog:
                 QTimer.singleShot(300, progress_dialog.accept)
+            self._is_data_dirty = False
 
-            self.plot_animation = PlotGeneratedAnimation(parent=self, message="Plot Generated")
-            self.plot_animation.start(target_widget=self)
+            if animate:
+                self.plot_animation = PlotGeneratedAnimation(parent=self, message="Plot Generated")
+                self.plot_animation.start(target_widget=self)
         
         except Exception as CreateMainPlotError:
             if progress_dialog:
@@ -2241,7 +2478,7 @@ class PlotTab(PlotTabUI):
         else:
             self.plot_engine.current_ax.grid(False)
     
-    def _finalize_plot(self, current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter) -> None:
+    def _finalize_plot(self, current_subplot_index, x_col, y_cols, hue, subset_name, quick_filter, is_fast_render=False) -> None:
         """Finalize plot and save configs"""
         try:
             if self.view.tight_layout_check.isChecked():
@@ -2251,7 +2488,8 @@ class PlotTab(PlotTabUI):
         
         self.canvas.draw()
 
-        self._update_overlay()
+        if not is_fast_render:
+            self._update_overlay()  
 
         if self.view.add_subplots_check.isChecked():
             self.subplot_data_configs[current_subplot_index] = {
@@ -2910,10 +3148,14 @@ class PlotTab(PlotTabUI):
 
     def clear_plot(self) -> None:
         """Clear the plot"""
+        self._is_clearing = True
+        self.style_update_timer.stop()
         self.plot_engine.clear_plot()
 
         self._last_data_signature = None
         self._last_viz_signature = None
+        self._cached_active_df = None
+        self._is_data_dirty = False
 
         self.view.subplot_rows_spin.blockSignals(True)
         self.view.subplot_cols_spin.blockSignals(True)
@@ -2924,10 +3166,12 @@ class PlotTab(PlotTabUI):
         self.view.subplot_cols_spin.setValue(1)
         self.view.active_subplot_combo.clear()
         self.view.active_subplot_combo.addItem("Plot 1")
+        self.view.quick_filter_input.clear()
 
         self.view.subplot_rows_spin.blockSignals(False)
         self.view.subplot_cols_spin.blockSignals(False)
         self.view.active_subplot_combo.blockSignals(False)
+        self.view.quick_filter_input.blockSignals(False)
 
         self.canvas.draw()
         self.selection_overlay.hide()
@@ -2962,6 +3206,7 @@ class PlotTab(PlotTabUI):
             details={"operation": "clear_plot"},
             level="INFO"
         )
+        QTimer.singleShot(100, lambda: setattr(self, "_is_clearing", False))
     
     def _toggle_secondary_input(self, enabled: bool):
         is_enabled = bool(enabled)
@@ -2986,9 +3231,17 @@ class PlotTab(PlotTabUI):
     def clear(self) -> None:
         """Clear all plot data"""
         self.clear_plot()
+        self.view.title_input.blockSignals(True)
+        self.view.xlabel_input.blockSignals(True)
+        self.view.ylabel_input.blockSignals(True)
+        
         self.view.title_input.clear()
         self.view.xlabel_input.clear()
         self.view.ylabel_input.clear()
+        
+        self.view.title_input.blockSignals(False)
+        self.view.xlabel_input.blockSignals(False)
+        self.view.ylabel_input.blockSignals(False)
     
     def open_script_editor(self):
         """Open the Python Script Editor"""

@@ -15,6 +15,21 @@ class SubplotOverlay(QWidget):
         self.v_layout.setContentsMargins(0, 0, 0, 0)
         self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        self.update_notice_label = QLabel("Data has changed. Click 'Generate Plot' to update")
+        self.update_notice_label.setStyleSheet("""
+            QLabel {
+                background-color: rgba(231, 76, 60, 0.9);
+                color: white;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: 2px solid #c0392b;
+                border-radius: 8px;
+                font-size: 12pt;
+            }
+        """)
+        self.update_notice_label.hide()
+        self.v_layout.addWidget(self.update_notice_label)
+        
         self.label_widget = QLabel()
         self.label_widget.setStyleSheet(
             """
@@ -37,6 +52,13 @@ class SubplotOverlay(QWidget):
         self.fade_animation.setEndValue(0.2)
         self.fade_animation.setEasingCurve(QEasingCurve.Type.InCubic)
         self.fade_animation.finished.connect(self._on_animation_finished)
+    
+    def show_update_required(self, visible: bool = True) -> None:
+        self.update_notice_label.setVisible(visible)
+        if visible:
+            self.show()
+        elif not self.label_widget.text():
+            self.hide()
 
     def _on_animation_finished(self):
         """CAlled when the animation is finished to remove text but retain border values"""

@@ -118,6 +118,15 @@ class PlotEngine:
         self.current_plot_type: Optional[str] = None
         self.plot_config: Dict[str, Any] = {}
         self.secondary_ax = None
+        self._cached_processed_data: Optional[pd.DataFrame] = None
+        self._is_data_dirty: bool = False
+    
+    def cache_data(self, df: pd.DataFrame) -> None:
+        self._cached_processed_data = df.copy() if df is not None else None
+        self._is_data_dirty = False
+        
+    def get_cached_data(self) -> Optional[pd.DataFrame]:
+        return self._cached_processed_data
     
     def create_figure(self, figsize=(10, 6), dpi=100) -> Figure:
         """Create a new matplotlib figure"""
