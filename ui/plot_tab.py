@@ -481,6 +481,13 @@ class PlotTab(PlotTabUI):
         """Triggered on tab visibility. Clears selectons from plot"""
         super().showEvent(event)
         
+        if getattr(self, "is_data_dirty", False):
+            df = self.get_active_dataframe()
+            if df is not None and len(df) <= self.AUTO_UPDATE_THRESHOLD:
+                self.style_update_timer.start()
+            elif hasattr(self, "selection_overlay"):
+                self.selection_overlay.show_update_required(True)
+        
         if getattr(self, "span_selector", None) is not None:
             if hasattr(self.span_selector, "clear"):
                 self.span_selector.clear()
@@ -1719,6 +1726,7 @@ class PlotTab(PlotTabUI):
         if self._is_clearing:
             return
         self._is_data_dirty = True
+        
         df = self.get_active_dataframe()
         if df is not None and len(df) <= self.AUTO_UPDATE_THRESHOLD:
             self.style_update_timer.start()
@@ -1732,12 +1740,17 @@ class PlotTab(PlotTabUI):
             return
         if self._is_data_dirty:
             return
-
+        if not self.isVisible():
+            self._is_data_dirty = True
+            return
         if self.style_update_timer:
             self.style_update_timer.start()
-    
+
     def _fast_render(self) -> None:
         if self._is_clearing:
+            return
+        if not self.isVisible():
+            self._is_data_dirty = True
             return
         if getattr(self, '_is_data_dirty', False):
             self.generate_plot()
@@ -1789,7 +1802,7 @@ class PlotTab(PlotTabUI):
             self.view.x_custom_datetime_input.setEnabled(self.view.x_datetime_format_combo.currentText() == "Custom")
             self.view.x_custom_datetime_input.setEnabled(self.view.y_datetime_format_combo.currentText() == "Custom")
     
-    def on_x_datetime_format_changed(self, text):
+    def on_x_datetime_format_changed(self, text) -> None:
         """Handle x-axis format change"""
         self.view.x_custom_datetime_input.setEnabled(text == "Custom")
     
@@ -1800,6 +1813,9 @@ class PlotTab(PlotTabUI):
     def generate_plot(self):
         """Generate plot based on current settings"""
         if self._is_clearing:
+            return
+        if not self.isVisible():
+            self._is_data_dirty = True
             return
         if not self._validate_data_loaded():
             return
