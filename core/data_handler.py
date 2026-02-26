@@ -858,6 +858,7 @@ class DataHandler:
                 raise ValueError(f"Column '{column}' not found")
 
             self.df = self.df.sort_values(by=column, ascending=ascending)
+            self.sort_state = (column, ascending)
 
             self.operation_log.append(
                 {"type": "sort", "column": column, "ascending": ascending}

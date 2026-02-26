@@ -52,6 +52,8 @@ class RegressionAnalyser:
         """Computes a regression fit based on regression type"""
         x_line = np.linspace(x_data.min(), x_data.max(), 100)
         
+        num_format = ".4g"
+        
         if reg_type == RegressionType.POLYNOMIAL:
             coeffs = np.polyfit(x_data, y_data, degree)
             poly_func = np.poly1d(coeffs)
@@ -59,14 +61,15 @@ class RegressionAnalyser:
             y_line = poly_func(x_line)
             
             terms = []
-            for i, c in enumerate(coeffs):
+            for i, coefficient in enumerate(coeffs):
                 power = degree - i
+                formatted_coeff = f"{coefficient:{num_format}}"
                 if power == 0:
-                    terms.append(f"{c:.2e}")
+                    terms.append(f"{formatted_coeff}")
                 elif power == 1:
-                    terms.append(f"{c:.2e}x")
+                    terms.append(f"{formatted_coeff}x")
                 else:
-                    terms.append(f"{c:.2e}x^{power}")
+                    terms.append(f"{formatted_coeff}x^{power}")
             equation_str = " + ".join(terms).replace("+ -", "- ")
         
         elif reg_type == RegressionType.EXPONENTIAL:
@@ -75,7 +78,7 @@ class RegressionAnalyser:
             popt, _ = curve_fit(exp_func, x_data, y_data, p0=(1, 1e-6), maxfev=10000)
             y_pred_all = exp_func(x_data, *popt)
             y_line = exp_func(x_line, *popt)
-            equation_str = f"{popt[0]:.2e} * exp({popt[1]:.2e} * x)"
+            equation_str = f"{popt[0]:{num_format}} * exp({popt[1]:{num_format}} * x)"
         
         elif reg_type == RegressionType.LOGARITHMIC:
             def log_func(x, a, b):
@@ -83,12 +86,12 @@ class RegressionAnalyser:
             popt, _ = curve_fit(log_func, x_data, y_data)
             y_pred_all = log_func(x_data, *popt)
             y_line = log_func(x_line, *popt)
-            equation_str = f"{popt[0]:.2e} + {popt[1]:.2e} * ln(x)"
+            equation_str = f"{popt[0]:{num_format}} + {popt[1]:{num_format}} * ln(x)"
         else:
             slope, intercept, _, _, _ = stats.linregress(x_data, y_data)
             y_pred_all = slope * x_data + intercept
             y_line = slope * x_line + intercept
-            equation_str = f"{slope:.4f}x {'+' if intercept >= 0 else '-'} {abs(intercept):.4f}"
+            equation_str = f"{slope:{num_format}}x {'+' if intercept >= 0 else '-'} {abs(intercept):{num_format}}"
         
         residuals = y_data - y_pred_all
         ss_res = np.sum(residuals**2)
