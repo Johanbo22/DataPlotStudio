@@ -26,9 +26,13 @@ from .BinningDialog import BinningDialog
 from .ComputedColumnDialog import ComputedColumnDialog
 from .PlotExportDialog import PlotExportDialog
 from .GoogleSheetsExportDialog import GoogleSheetsExportDialog
+from .SplitColumnDialog import SplitColumnDialog
+from .RegexReplaceDialog import RegexReplaceDialog
 
 __all__ = [
     "AggregationDialog",
+    "SplitColumnDialog",
+    "RegexReplaceDialog",
     "CodeEditor",
     "ColormapPickerDialog",
     "CreateSubsetDialog",

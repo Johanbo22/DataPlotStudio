@@ -402,6 +402,34 @@ class DataOperationsPanel(QWidget):
         text_apply_layout.addWidget(text_apply_button)
         text_apply_layout.addWidget(self.text_manipulation_help)
         text_layout.addLayout(text_apply_layout)
+        
+        text_layout.addSpacing(5)
+        
+        advanced_text_layout = QHBoxLayout()
+        split_button = DataPlotStudioButton("Split Column", parent=self)
+        split_button.setIcon(IconBuilder.build(IconType.TEXT_OPERATION))
+        split_button.setToolTip("Split a string column into multiple columns using a delimiter")
+        if self.controller:
+            split_button.clicked.connect(self.controller.open_split_column_dialog)
+        self.split_column_help = HelpIcon("split_column")
+        if self.controller:
+            self.split_column_help.clicked.connect(self.controller.show_help_dialog)
+        
+        regex_button = DataPlotStudioButton("Regex Replace", parent=self)
+        regex_button.setIcon(IconBuilder.build(IconType.TEXT_OPERATION))
+        regex_button.setToolTip("Replace text in a column using regular expressions")
+        if self.controller:
+            regex_button.clicked.connect(self.controller.open_regex_replace_dialog)
+        self.regex_replace_help = HelpIcon("regex_replace")
+        if self.controller:
+            self.regex_replace_help.clicked.connect(self.controller.show_help_dialog)
+        
+        advanced_text_layout.addWidget(split_button)
+        advanced_text_layout.addWidget(self.split_column_help)
+        advanced_text_layout.addWidget(regex_button)
+        advanced_text_layout.addWidget(self.regex_replace_help)
+        text_layout.addLayout(advanced_text_layout)
+        
         text_group.setLayout(text_layout)
         column_layout.addWidget(text_group)
         

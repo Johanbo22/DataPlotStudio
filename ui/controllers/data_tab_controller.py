@@ -46,7 +46,9 @@ from ui.dialogs import (
     ComputedColumnDialog,
     SubsetDataViewer,
     SubsetManagerDialog,
-    ProgressDialog
+    ProgressDialog,
+    SplitColumnDialog,
+    RegexReplaceDialog
 )
 from ui.workers import GoogleSheetsImportWorker
 
@@ -837,6 +839,46 @@ class DataTabController:
                 f"Text manipulation failed: {str(TextManipulationError)}", "ERROR"
             )
     
+    def open_split_column_dialog(self) -> None:
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+        
+        columns = list(self.data_handler.df.columns)
+        dialog = SplitColumnDialog(columns, self.view)
+        
+        if dialog.exec():
+            column, delimiter, new_cols = dialog.get_parameters()
+            try:
+                self.data_handler.clean_data("split_column", column=column, delimiter=delimiter, new_columns=new_cols)
+                self.view.refresh_data_view()
+            except Exception as error:
+                self.view.status_bar.log(f"Failed to split column: {str(error)}", "ERROR")
+                QMessageBox.critical(self.main_window, "Error", f"Failed to split column:\n{str(error)}")
+    
+    def open_regex_replace_dialog(self) -> None:
+        """Open the dialog to configure and apply regex text replacement."""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+            
+        columns = list(self.data_handler.df.columns)
+        dialog = RegexReplaceDialog(columns, self.view)
+        
+        if dialog.exec():
+            column, pattern, replacement = dialog.get_parameters()
+            try:
+                self.data_handler.clean_data(
+                    "regex_replace",
+                    column=column,
+                    pattern=pattern,
+                    replacement=replacement
+                )
+                self.view.refresh_data_view()
+            except Exception as error:
+                self.view.status_bar.log(f"Regex operation failed: {str(error)}", "ERROR")
+                QMessageBox.critical(self.main_window, "Error", f"Regex operation failed:\n{str(error)}")
+                
     def extract_date_component(self):
         """Extracts date components into a new column"""
         if self.data_handler.df is None:

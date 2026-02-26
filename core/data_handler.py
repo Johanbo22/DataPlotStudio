@@ -38,6 +38,8 @@ class DataOperation(str, Enum):
     RENAME_COLUMN = "rename_column"
     CHANGE_DATA_TYPE = "change_data_type"
     TEXT_MANIPULATION = "text_manipulation"
+    SPLIT_COLUMN = "split_column"
+    REGEX_REPLACE = "regex_replace"
     REMOVE_ROWS = "remove_rows"
     CLIP_OUTLIERS = "clip_outliers"
     DUPLICATE_COLUMN = "duplicate_column"
@@ -1233,6 +1235,45 @@ class DataHandler:
         except (AttributeError, TypeError):
             raise ValueError(f"Column '{column}' is not a text column. Please convert it to 'string' first using 'Change Data Type'")
     
+    def _split_column(self, **kwargs) -> None:
+        """Method to split a text column into multiple columns based on a delimiter"""
+        column: str = kwargs.get("column")
+        delimiter: str = kwargs.get("delimiter", " ")
+        new_columns: list[str] = kwargs.get("new_columns")
+        
+        if not column or not new_columns:
+            raise ValueError("Column and new columns are required for splitting")
+        if column not in self.df.columns:
+            raise ValueError(f"Column '{column}' not found in the dataset")
+        
+        try:
+            split_df = self.df[column].astype(str).str.split(delimiter, expand=True)
+            
+            for index, new_col_name in enumerate(new_columns):
+                if index < split_df.shape[1]:
+                    self.df[new_col_name] = split_df[index]
+                else:
+                    self.df[new_col_name] = None
+        except Exception as SplitError:
+            raise ValueError(f"Error splitting column '{column}': {str(SplitError)}")
+    
+    def _regex_replace(self, **kwargs) -> None:
+        """Method to replace text in a column using regex"""
+        column: str = kwargs.get("column")
+        pattern: str = kwargs.get("pattern")
+        replacement: str = kwargs.get("replacement", "")
+        
+        if not column or not pattern:
+            raise ValueError("Column and regex pattern are required for replacement")
+            
+        if column not in self.df.columns:
+            raise ValueError(f"Column '{column}' not found in the dataset")
+        
+        try:
+            self.df[column] = self.df[column].astype(str).str.replace(pattern, replacement, regex=True)
+        except Exception as RegexError:
+            raise ValueError(f"Error applying regex replacement to '{column}': {str(RegexError)}")
+    
     def _remove_rows(self, **kwargs) -> None:
         """Method to drop row indicies"""
         rows_to_remove = kwargs.get("rows")
@@ -1434,6 +1475,10 @@ class DataHandler:
                 self._change_data_type(**kwargs)
             elif action == DataOperation.TEXT_MANIPULATION:
                 self._text_manipulation(**kwargs)
+            elif action == DataOperation.SPLIT_COLUMN:
+                self._split_column(**kwargs)
+            elif action == DataOperation.REGEX_REPLACE:
+                self._regex_replace(**kwargs)
             elif action == DataOperation.REMOVE_ROWS:
                 self._remove_rows(**kwargs)
             elif action == DataOperation.CLIP_OUTLIERS:

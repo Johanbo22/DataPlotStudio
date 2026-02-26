@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from core.data_handler import DataHandler
+from core.data_handler import DataHandler, DataOperation
 
 def test_create_empty_dataframe(empty_data_handler: DataHandler) -> None:
     target_rows: int = 5
@@ -56,3 +56,79 @@ def test_sort_data_raises_error_on_missing_column(empty_data_handler: DataHandle
     
     assert "Error sorting data" in str(expected_error.value)
     assert invalid_column_name in str(expected_error.value)
+
+def test_split_column_success(empty_data_handler: DataHandler) -> None:
+    """
+    Test that a string column is correctly split into multiple columns using a delimiter.
+    """
+    # Arrange
+    test_data: dict[str, list[str]] = {"FullName": ["John Doe", "Jane Smith", "Alice Jones"]}
+    empty_data_handler.df = pd.DataFrame(test_data)
+    
+    # Act
+    resulting_dataframe: pd.DataFrame = empty_data_handler.clean_data(
+        action=DataOperation.SPLIT_COLUMN,
+        column="FullName",
+        delimiter=" ",
+        new_columns=["FirstName", "LastName"]
+    )
+    
+    # Assert
+    assert "FirstName" in resulting_dataframe.columns
+    assert "LastName" in resulting_dataframe.columns
+    assert resulting_dataframe["FirstName"].tolist() == ["John", "Jane", "Alice"]
+    assert resulting_dataframe["LastName"].tolist() == ["Doe", "Smith", "Jones"]
+
+def test_split_column_missing_column(empty_data_handler: DataHandler) -> None:
+    """
+    Test that splitting a non-existent column raises an error.
+    """
+    # Arrange
+    empty_data_handler.df = pd.DataFrame({"ID": [1, 2, 3]})
+    
+    # Act & Assert
+    with pytest.raises(Exception) as expected_error:
+        empty_data_handler.clean_data(
+            action=DataOperation.SPLIT_COLUMN,
+            column="NonExistent",
+            delimiter=" ",
+            new_columns=["Col1", "Col2"]
+        )
+    assert "not found in the dataset" in str(expected_error.value)
+
+def test_regex_replace_success(empty_data_handler: DataHandler) -> None:
+    """
+    Test that regex replacement correctly substitutes matched patterns in a string column.
+    """
+    # Arrange
+    test_data: dict[str, list[str]] = {"ProductCode": ["PRD-123-X", "PRD-456-Y", "PRD-789-Z"]}
+    empty_data_handler.df = pd.DataFrame(test_data)
+    
+    # Act
+    resulting_dataframe: pd.DataFrame = empty_data_handler.clean_data(
+        action=DataOperation.REGEX_REPLACE,
+        column="ProductCode",
+        pattern=r"\d+",
+        replacement="000"
+    )
+    
+    # Assert
+    expected_values: list[str] = ["PRD-000-X", "PRD-000-Y", "PRD-000-Z"]
+    assert resulting_dataframe["ProductCode"].tolist() == expected_values
+
+def test_regex_replace_missing_pattern(empty_data_handler: DataHandler) -> None:
+    """
+    Test that regex replacement raises an error if the pattern is missing.
+    """
+    # Arrange
+    empty_data_handler.df = pd.DataFrame({"TextCol": ["A1", "B2"]})
+    
+    # Act & Assert
+    with pytest.raises(Exception) as expected_error:
+        empty_data_handler.clean_data(
+            action=DataOperation.REGEX_REPLACE,
+            column="TextCol",
+            pattern="",
+            replacement="X"
+        )
+    assert "regex pattern are required" in str(expected_error.value)
