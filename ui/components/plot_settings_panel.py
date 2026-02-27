@@ -1653,10 +1653,6 @@ class PlotSettingsPanel(QWidget):
         line_color_layout.addWidget(self.line_color_label)
         line_layout.addLayout(line_color_layout)
 
-        self.save_line_custom_button = DataPlotStudioButton("Save Settings to Selected Line", parent=self)
-        self.save_line_custom_button.setVisible(False)
-        line_layout.addWidget(self.save_line_custom_button)
-
         line_group.setLayout(line_layout)
         page_line_layout.addWidget(line_group)
         page_line_layout.addStretch()
@@ -1737,11 +1733,6 @@ class PlotSettingsPanel(QWidget):
         self.bar_edge_width_spin.setValue(1)
         self.bar_edge_width_spin.setSingleStep(0.1)
         bar_layout.addWidget(self.bar_edge_width_spin)
-
-        # Button to save customization for a bar to generate
-        self.save_bar_custom_button = DataPlotStudioButton("Save Customization to Selected Bar", parent=self)
-        self.save_bar_custom_button.setVisible(False)
-        bar_layout.addWidget(self.save_bar_custom_button)
 
         self.bar_group.setLayout(bar_layout)
         page_bar_layout.addWidget(self.bar_group)

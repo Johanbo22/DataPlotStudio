@@ -1127,7 +1127,7 @@ class PlotEngine:
             axis.set_major_formatter(ticker.FixedFormatter(labels))
         
         if axis == self.current_ax.xaxis:
-            plt.setp(axis.get_xticklabels(), rotation=45, ha="right")
+            plt.setp(self.current_ax.get_xticklabels(), rotation=45, ha="right")
 
     def _helper_is_datetime_column(self, plot_tab: "PlotTab", data) -> bool:
         """Check if data is datetime"""

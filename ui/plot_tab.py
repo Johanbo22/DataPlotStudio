@@ -388,7 +388,6 @@ class PlotTab(PlotTabUI):
         self.view.multiline_custom_check.stateChanged.connect(self.toggle_line_selector)
         self.view.line_selector_combo.currentTextChanged.connect(self.on_line_selected)
         self.view.line_color_button.clicked.connect(self.choose_line_color)
-        self.view.save_line_custom_button.clicked.connect(self.save_line_customization)
         self.view.marker_color_button.clicked.connect(self.choose_marker_color)
         self.view.marker_edge_button.clicked.connect(self.choose_marker_edge_color)
         self.view.multibar_custom_check.stateChanged.connect(self.toggle_bar_selector)
@@ -396,7 +395,6 @@ class PlotTab(PlotTabUI):
         self.view.bar_color_button.clicked.connect(self.choose_bar_color)
         self.view.bar_edge_button.clicked.connect(self.choose_bar_edge_color)
         self.view.bar_edge_width_spin.valueChanged.connect(self._update_bar_customization_live)
-        self.view.save_bar_custom_button.clicked.connect(self.save_bar_customization)
         self.view.alpha_slider.valueChanged.connect(lambda v: self.view.alpha_label.setText(f"{v}%"))
         
         # Style connections
@@ -943,13 +941,36 @@ class PlotTab(PlotTabUI):
         is_enabled = self.view.multibar_custom_check.isChecked()
         self.view.bar_selector_label.setVisible(is_enabled)
         self.view.bar_selector_combo.setVisible(is_enabled)
-        self.view.save_bar_custom_button.setVisible(is_enabled)
 
         if is_enabled:
+            self._initialize_all_bar_customizations()
             self.update_bar_selector()
+        self.on_style_changed()
+    
+    def _initialize_all_bar_customizations(self) -> None:
+        """Initialize customizations dictionary for all bars with their current visual state."""
+        if not self.plot_engine.current_ax or not self.plot_engine.current_ax.containers:
+            return
         
-    def update_bar_selector(self) -> None:
+        for i, container in enumerate(self.plot_engine.current_ax.containers):
+            if not hasattr(container, "patches") or not container.patches:
+                continue
+            label = container.get_label()
+            if not label or label.startswith("_"):
+                handles, labels = self.plot_engine.current_ax.get_legend_handles_labels()
+                label = labels[i] if i < len(labels) else f"Bar Series {i+1}"
+            
+            if label not in self.bar_customizations:
+                patch = container.patches[0]
+                self.bar_customizations[label] = {
+                    "facecolor": to_hex(patch.get_facecolor()) if patch.get_facecolor() else None,
+                    "edgecolor": to_hex(patch.get_edgecolor()) if patch.get_edgecolor() else None,
+                    "linewidth": patch.get_linewidth(),
+                    "alpha": patch.get_alpha() if patch.get_alpha() is not None else 1.0
+                }
+    def update_bar_selector(self, preserve_selection: bool = False) -> None:
         """Update the bar selection tool with the current patches in the plot"""
+        current_text = self.view.bar_selector_combo.currentText()
         self.view.bar_selector_combo.blockSignals(True)
         self.view.bar_selector_combo.clear()
 
@@ -966,6 +987,12 @@ class PlotTab(PlotTabUI):
                 self.view.bar_selector_combo.addItem(label, userData=container)
         
         self.view.bar_selector_combo.blockSignals(False)
+
+        if preserve_selection and current_text:
+            idx = self.view.bar_selector_combo.findText(current_text)
+            if idx >= 0:
+                self.view.bar_selector_combo.setCurrentIndex(idx)
+                return
 
         if self.view.bar_selector_combo.count() > 0:
             self.on_bar_selected(self.view.bar_selector_combo.currentText())
@@ -1000,6 +1027,13 @@ class PlotTab(PlotTabUI):
         self.view.bar_edge_width_spin.blockSignals(True)
         self.view.bar_edge_width_spin.setValue(patch.get_linewidth())
         self.view.bar_edge_width_spin.blockSignals(False)
+        
+        alpha = patch.get_alpha()
+        if alpha is not None:
+            self.view.alpha_slider.blockSignals(True)
+            self.view.alpha_slider.setValue(int(alpha * 100))
+            self.view.alpha_slider.blockSignals(False)
+            self.view.alpha_label.setText(f"{int(alpha * 100)}%")
     
     def _update_bar_customization_live(self) -> None:
         """Saves the current temporary bar settings to self.bar_customizations if a bar series is selected"""
@@ -1014,29 +1048,9 @@ class PlotTab(PlotTabUI):
         custom["facecolor"] = self.bar_color
         custom["edgecolor"] = self.bar_edge_color
         custom["linewidth"] = self.view.bar_edge_width_spin.value()
+        custom["alpha"] = self.view.alpha_slider.value() / 100.0
 
         self.bar_customizations[bar_name] = custom
-        self.status_bar.log(f"Updated customisation settings for: {bar_name}")
-
-
-    def save_bar_customization(self) -> None:
-        """Save current settings for a selected bar"""
-        if not self.view.multibar_custom_check.isChecked():
-            return
-        
-        bar_name = self.view.bar_selector_combo.currentText()
-        if not bar_name:
-            return
-        
-        #store the customizations made
-        self.bar_customizations[bar_name] = {
-            "facecolor": self.bar_color,
-            "edgecolor": self.bar_edge_color,
-            "linewidth": self.view.bar_edge_width_spin.value()
-        }
-
-        self.status_bar.log(f"Saved customization for: {bar_name}")
-        QMessageBox.information(self, "Saved", f"Settings saved for '{bar_name}'.\nClick 'Generate Plot' to apply changes.")
 
     def on_grid_toggle(self) -> None:
         """Handle grid checkbox toggle"""
@@ -1189,25 +1203,43 @@ class PlotTab(PlotTabUI):
         is_enabled = self.view.multiline_custom_check.isChecked()
         self.view.line_selector_label.setVisible(is_enabled)
         self.view.line_selector_combo.setVisible(is_enabled)
-        self.view.save_line_custom_button.setVisible(is_enabled)
 
         if is_enabled:
+            self._initialize_all_line_customizations()
             self.update_line_selector()
+        self.on_style_changed()
     
-    def save_line_customization(self) -> None:
-        """Save current settings for a line"""
+    def _initialize_all_line_customizations(self) -> None:
+        """Initialize customizations dict for all lines with their current state"""
+        if not self.plot_engine.current_ax:
+            return
+        lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+        for i, line in enumerate(lines):
+            line_name = line.get_label() if not line.get_label().startswith("_") else f"Line {i+1}"
+            if line_name not in self.line_customizations:
+                self.line_customizations[line_name] = {
+                    'linewidth': line.get_linewidth(),
+                    'linestyle': line.get_linestyle(),
+                    'color': to_hex(line.get_color()) if line.get_color() else None,
+                    'marker': line.get_marker(),
+                    'markersize': line.get_markersize(),
+                    'markerfacecolor': to_hex(line.get_markerfacecolor()) if line.get_markerfacecolor() else None,
+                    'markeredgecolor': to_hex(line.get_markeredgecolor()) if line.get_markeredgecolor() else None,
+                    'markeredgewidth': line.get_markeredgewidth(),
+                    'alpha': line.get_alpha() if line.get_alpha() is not None else 1.0
+                }
+    def _update_line_customization_live(self) -> None:
+        """Save the current settings for the selected line"""
         if not self.view.multiline_custom_check.isChecked():
             return
-        
         line_name = self.view.line_selector_combo.currentText()
         if not line_name:
             return
         
         linestyle_map = {'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':'}
         linestyle_val = linestyle_map.get(self.view.linestyle_combo.currentText(), '-')
-
-        # Store customizations
-        self.line_customizations[line_name] = {
+        custom = self.line_customizations.get(line_name, {})
+        custom.update({
             'linewidth': self.view.linewidth_spin.value(),
             'linestyle': linestyle_val,
             'color': self.line_color,
@@ -1217,35 +1249,30 @@ class PlotTab(PlotTabUI):
             'markeredgecolor': self.marker_edge_color,
             'markeredgewidth': self.view.marker_edge_width_spin.value(),
             'alpha': self.view.alpha_slider.value() / 100.0,
-        }
-
-        self.status_bar.log(f"Saved customization for: {line_name}")
-        QMessageBox.information(self, "Saved", f"Settings saved for '{line_name}'.\nClick 'Generate Plot' to apply changes.")
-
+        })
+        self.line_customizations[line_name] = custom
     
-    def update_line_selector(self) -> None:
+    def update_line_selector(self, preserve_selection: bool = False) -> None:
         """Update the line selection with the ucrrent lines in current_ax"""
+        current_text = self.view.line_selector_combo.currentText()
         self.view.line_selector_combo.blockSignals(True)
         self.view.line_selector_combo.clear()
-
+        
         if self.plot_engine.current_ax:
-            lines = self.plot_engine.current_ax.get_lines()
-
+            lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
             for i, line in enumerate(lines):
-                # skip reg and confid lines
-                if line.get_gid() in ["regression_line", "confidence_interval"]:
-                    continue
-
-                #get line
                 label = line.get_label()
                 if label.startswith("_"):
                     label = f"Line {i+1}"
-                
                 self.view.line_selector_combo.addItem(label, userData=i)
-            
         self.view.line_selector_combo.blockSignals(False)
-
-        # load
+        
+        if preserve_selection and current_text:
+            idx = self.view.line_selector_combo.findText(current_text)
+            if idx >= 0:
+                self.view.line_selector_combo.setCurrentIndex(idx)
+                return
+            
         if self.view.line_selector_combo.count() > 0:
             self.on_line_selected(self.view.line_selector_combo.currentText())
     
@@ -1295,6 +1322,13 @@ class PlotTab(PlotTabUI):
                 self.view.marker_size_spin.blockSignals(True)
                 self.view.marker_size_spin.setValue(int(line.get_markersize()))
                 self.view.marker_size_spin.blockSignals(False)
+                
+            alpha = line.get_alpha()
+            if alpha is not None:
+                self.view.alpha_slider.blockSignals(True)
+                self.view.alpha_slider.setValue(int(alpha * 100))
+                self.view.alpha_slider.blockSignals(False)
+                self.view.alpha_label.setText(f"{int(alpha * 100)}%")
     
     def choose_top_spine_color(self):
         """Open color picker for top spine"""
@@ -1743,6 +1777,10 @@ class PlotTab(PlotTabUI):
         if not self.isVisible():
             self._is_data_dirty = True
             return
+        if self.view.multiline_custom_check.isChecked():
+            self._update_line_customization_live()
+        if self.view.multibar_custom_check.isChecked():
+            self._update_bar_customization_live()
         if self.style_update_timer:
             self.style_update_timer.start()
 
@@ -2485,6 +2523,11 @@ class PlotTab(PlotTabUI):
             "subset_name": subset_name,
             "quick_filter": quick_filter
         }
+        
+        if self.view.multiline_custom_check.isChecked():
+            self.update_line_selector(preserve_selection=True)
+        if self.view.multibar_custom_check.isChecked():
+            self.update_bar_selector(preserve_selection=True)
             
         self._sync_script_if_open()
 
@@ -2630,8 +2673,6 @@ class PlotTab(PlotTabUI):
                             line.set_markeredgecolor(marker_edge_color)
                         line.set_markeredgewidth(marker_edge_width)
                     line.set_alpha(alpha)
-
-            self.update_line_selector()
         else:
             for line in self.plot_engine.current_ax.get_lines():
                 if line.get_gid() in ["regression_line", "confidence_interval"]:
@@ -2664,37 +2705,38 @@ class PlotTab(PlotTabUI):
         
         #apply to patches (e.g., bar plots, histograms)
         if self.view.multibar_custom_check.isChecked():
-            self.update_bar_selector()
+            if self.plot_engine.current_ax and self.plot_engine.current_ax.containers:
+                for i, container in enumerate(self.plot_engine.current_ax.containers):
+                    if not hasattr(container, "patches") or not container.patches:
+                        continue
+                    
+                    label = container.get_label()
+                    if not label or label.startswith("_"):
+                        handles, labels = self.plot_engine.current_ax.get_legend_handles_labels()
+                        label = labels[i] if i < len(labels) else f"Bar Series {i+1}"
+                    
+                    if label in self.bar_customizations:
+                        custom = self.bar_customizations[label]
 
-            for i in range(self.view.bar_selector_combo.count()):
-                bar_name = self.view.bar_selector_combo.itemText(i)
-                container = self.view.bar_selector_combo.itemData(i)
-
-                if not container or not hasattr(container, "patches"):
-                    continue
-
-                if bar_name in self.bar_customizations:
-                    custom = self.bar_customizations[bar_name]
-
-                    for patch in container.patches:
-                        if "facecolor" in custom and custom["facecolor"]:
-                            patch.set_facecolor(custom["facecolor"])
-                        if "edgecolor" in custom and custom["edgecolor"]:
-                            patch.set_edgecolor(custom["edgecolor"])
-                        if "linewidth" in custom:
-                            patch.set_linewidth(custom["linewidth"])
-                        if "alpha" in custom:
-                            patch.set_alpha(custom["alpha"])
-                        else:
+                        for patch in container.patches:
+                            if "facecolor" in custom and custom["facecolor"]:
+                                patch.set_facecolor(custom["facecolor"])
+                            if "edgecolor" in custom and custom["edgecolor"]:
+                                patch.set_edgecolor(custom["edgecolor"])
+                            if "linewidth" in custom:
+                                patch.set_linewidth(custom["linewidth"])
+                            if "alpha" in custom:
+                                patch.set_alpha(custom["alpha"])
+                            else:
+                                patch.set_alpha(alpha)
+                    else:
+                        for patch in container.patches:
                             patch.set_alpha(alpha)
-                else:
-                    for patch in container.patches:
-                        patch.set_alpha(alpha)
-                        if bar_color:
-                            patch.set_facecolor(bar_color)
-                        if bar_edge_color:
-                            patch.set_edgecolor(bar_edge_color)
-                        patch.set_linewidth(bar_edge_width)
+                            if bar_color:
+                                patch.set_facecolor(bar_color)
+                            if bar_edge_color:
+                                patch.set_edgecolor(bar_edge_color)
+                            patch.set_linewidth(bar_edge_width)
             
         else:
             #set globals
@@ -2706,8 +2748,6 @@ class PlotTab(PlotTabUI):
                     patch.set_edgecolor(bar_edge_color)
                 patch.set_linewidth(bar_edge_width)
 
-
-        
     def _apply_legend(self, font_family) -> None:
         """Apply legend"""
         if not self.view.legend_check.isChecked():
@@ -2753,7 +2793,6 @@ class PlotTab(PlotTabUI):
         except Exception as ApplyLegendError:
             self.status_bar.log(f"Failed to apply legend: {ApplyLegendError}", "WARNING")
 
-    
     def _apply_annotations(self, df=None, x_col=None, y_cols=None):
         """Apply text annotations"""
 
@@ -3287,7 +3326,7 @@ class PlotTab(PlotTabUI):
 
                 base_name = name.split(".")[0]
                 if base_name not in allowed_modules:
-                    raise ImportError(f"Security: Import of module: '{name}' is restricted.")
+                    raise ImportError(f"Import of module: '{name}' is restricted.")
                 
                 return __import__(name, globals, locals, fromlist, level)
 

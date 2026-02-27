@@ -308,6 +308,8 @@ class MainWindow(QWidget):
         self.plot_tab.update_column_combo()
         self.unsaved_changes = True
         self.status_bar.update_data_stats(loaded_dataframe)
+        
+        self.tabs.setCurrentWidget(self.data_tab)
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
@@ -379,6 +381,8 @@ class MainWindow(QWidget):
         self.unsaved_changes = True
 
         self.status_bar.update_data_stats(loaded_dataframe)
+        
+        self.tabs.setCurrentWidget(self.data_tab)
 
         if self.progress_dialog:
             self.progress_dialog.update_progress(100, "Complete")
