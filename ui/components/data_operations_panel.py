@@ -559,7 +559,21 @@ class DataOperationsPanel(QWidget):
             self.merge_help.clicked.connect(self.controller.show_help_dialog)
         merge_layout.addWidget(merge_button)
         merge_layout.addWidget(self.merge_help)
-        transform_layout.addLayout(merge_layout)        
+        transform_layout.addLayout(merge_layout)
+        
+        #Append / concatenate
+        append_layout = QHBoxLayout()
+        append_button = DataPlotStudioButton("Append / Concatenate Data", parent=self)
+        append_button.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
+        append_button.setToolTip("Stack datasets vertically by appending rows from another file")
+        if self.controller:
+            append_button.clicked.connect(self.controller.open_append_dialog)
+        self.append_help = HelpIcon("append_data")
+        if self.controller:
+            self.append_help.clicked.connect(self.controller.show_help_dialog)
+        append_layout.addWidget(append_button)
+        append_layout.addWidget(self.append_help)
+        transform_layout.addLayout(append_layout)
 
         # Sorting
         sorting_group = DataPlotStudioGroupBox("Sort Data")

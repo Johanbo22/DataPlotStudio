@@ -48,7 +48,8 @@ from ui.dialogs import (
     SubsetManagerDialog,
     ProgressDialog,
     SplitColumnDialog,
-    RegexReplaceDialog
+    RegexReplaceDialog,
+    AppendDialog
 )
 from ui.workers import GoogleSheetsImportWorker
 
@@ -1281,6 +1282,36 @@ class DataTabController:
             except Exception as MergeError:
                 QMessageBox.critical(self.view, "Merge Error", str(MergeError))
                 self.status_bar.log(f"Merge failed: {str(MergeError)}", "ERROR")
+    
+    def open_append_dialog(self) -> None:
+        """Opens the dialog to configure and execute data concatenation."""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first")
+            return
+        
+        dialog = AppendDialog(self.data_handler, self.view)
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                rows_before = len(self.data_handler.df)
+                self.data_handler.concatenate_data(other_df=config["other_df"], ignore_index=config["ignore_index"])
+                rows_after = len(self.data_handler.df)
+                self.view.refresh_data_view()
+                
+                self.status_bar.log_action(
+                    f"Appended {rows_after - rows_before:,} rows of data",
+                    details={
+                        "rows_before": rows_before,
+                        "rows_after": rows_after,
+                        "rows_added": rows_after - rows_before,
+                        "operation": "concatenate"
+                    },
+                    level="SUCCESS"
+                )
+                FileImportAnimation(message="Data Appended").start(target_widget=self.view)
+            except Exception as AppendError:
+                QMessageBox.critical(self.view, "Append Error", str(AppendError))
+                self.status_bar.log(f"Append failed: {str(AppendError)}", "ERROR")
 
     def apply_sort(self):
         """Apply a permanent sorting to data"""

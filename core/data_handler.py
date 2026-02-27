@@ -1067,6 +1067,31 @@ class DataHandler:
         except Exception as MergeDataError:
             raise Exception(f"Merge operation failed: {str(MergeDataError)}")
     
+    def concatenate_data(self, other_df: pd.DataFrame, ignore_index: bool = True) -> pd.DataFrame:
+        """
+        Append rows from another DataFrame to the active DataFrame.
+        
+        Args:
+            other_df (pd.DataFrame): The DataFrame containing rows to append.
+            ignore_index (bool): Whether to reset the index incrementally.
+
+        Returns:
+            pd.DataFrame: The vertically stacked DataFrame.
+        """
+        if self.df is None:
+            raise ValueError("No active data to append to")
+        try:
+            self._save_state()
+            self.df = pd.concat([self.df, other_df], ignore_index=ignore_index)
+            self.operation_log.append({
+                "type": "concatenate",
+                "ignore_index": ignore_index
+            })
+            self.sort_state = None
+            return self.df
+        except Exception as ConcatenateDataError:
+            raise Exception(f"Concatenate operation failed: {str(ConcatenateDataError)}")
+    
     def _fill_missing(self, **kwargs) -> None:
         """Method to to fill missing values in the datafr4ame"""
         raw_method = kwargs.get("method", FillMethod.FFILL)
