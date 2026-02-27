@@ -1498,83 +1498,74 @@ class PlotEngine:
             return str(error)
         except Exception as error:
             return f"Failed to execute plotting sequence for {plot_type}. Error: {str(error)}"
-    def plot_geospatial(self, gdf: "gpd.GeoDataFrame", column: Optional[str] = None, **kwargs) -> None:
-        """Create a geospatial plot"""
-
-        if gpd is None:
-            self.current_ax.text(0.5, 0.5, "GeoPandas is required for this plot.\nPlease install it first: pip install geopandas", ha="center", va="center", fontsize=12, color="red")
-            return
         
+    def _validate_geospatial_data(self, gdf: Any) -> bool:
+        """Validates if the provided data is a valid GeoDataFrame and GeoPandas is installed"""
+        if gpd is None:
+            self.current_ax.text(0.5, 0.5, "GeoPandas is required for this plot.\nPlease install it first", ha="center", va="center", fontsize=12, color="red")
+            return False
         if not isinstance(gdf, gpd.GeoDataFrame):
-            self.current_ax.text(0.5, 0.5, "Data is not a GeoDataFrame.\nEnsure a 'geometry' column is present.",ha="center", va="center", fontsize=12, color="red")
-            return
-
-        #CRS support and basemap support
-        target_crs = kwargs.pop("target_crs", None)
-        add_basemap = kwargs.pop("add_basemap", False)
-        basemap_source = kwargs.pop("basemap_source", "OpenStreetMap")
-        basemap_zoom = kwargs.pop("basemap_zoom", "auto")
-
+            self.current_ax.text(0.5, 0.5, "Data is not a GeoDataFrame.\nEnsure a 'geometry' column is present", ha="center", va="center", fontsize=12, color="red")
+            return False
+        
+        return True
+    
+    def _handle_geospatial_crs(self, gdf: "gpd.GeoDataFrame", target_crs: Optional[str], add_basemap: bool) -> "gpd.GeoDataFrame":
         if gdf.crs is None:
-            print("Warning. Data has no CRS defined.")
+            print("Warning. Data has no CRS defined")
             try:
                 gdf.set_crs("EPSG:4326")
             except Exception as SetCRSError:
                 print(f"Failed to set default CRS: {SetCRSError}")
-
-        # CRS Transformation
+        
         if target_crs and target_crs.lower() != "none" and target_crs.strip():
             try:
                 gdf = gdf.to_crs(target_crs)
             except Exception as CRSInfo:
-                print(f"Warning: Coordinate Reference System Transformation failed: {CRSInfo}")
-            
-        # Basemap
-        ## If adding a basemap an no specific CRS is chosen default to Web mercator projection
+                print(f"Warning: Coordinate Reference System Transformation failed: {str(CRSInfo)}")
+        
         if add_basemap and ctx:
             if not target_crs:
                 try:
                     if gdf.crs and gdf.crs.to_string() != "EPSG:3857":
                         gdf = gdf.to_crs("EPSG:3857")
-                except Exception as ReprojectError:
-                    print(f"Warning: Auto-projection for basemap failed: {str(ReprojectError)}")
+                except Exception as ReprojectionError:
+                    print(f"Warning: Auto-projection for basemap failed: {str(ReprojectionError)}")
         
-        title = kwargs.pop("title", None)
-        xlabel = kwargs.pop("xlabel", None)
-        ylabel = kwargs.pop("ylabel", None)
-        legend = kwargs.pop("legend", True)
-        orientation = kwargs.pop("orientation", None)
-        legend_kwds = kwargs.pop("legend_kwds", {})
+        return gdf
+    
+    def _configure_geospatial_legend(self, gdf: "gpd.GeoDataFrame", column: Optional[str], legend: bool, orientation: Optional[str], legend_kwds: Dict[str, Any], use_divider: bool, kwargs: Dict[str, Any]) -> Tuple[bool, bool, Dict[str, Any]]:
+        """Configures the legend properties based on given data type and the orientation given"""
         if legend_kwds is None:
             legend_kwds = {}
-
-        use_divider = kwargs.pop("use_divider", False)
         if use_divider and column:
             legend = True
-        cax_enabled = kwargs.pop("cax_enabled", False)
-        axis_off = kwargs.pop("axis_off", False)
-
+        
         is_categorical = False
         if column and column in gdf:
             col_dtype = gdf[column].dtype
             if pd.api.types.is_categorical_dtype(col_dtype) or pd.api.types.is_object_dtype(col_dtype):
                 is_categorical = True
-            if "categorical" in kwargs and kwargs["categorical"]:
+            if kwargs.get("categorical", False):
                 is_categorical = True
-            if "scheme" in kwargs and kwargs["scheme"] is not None and kwargs["scheme"] != "None":
+            if kwargs.get("scheme", "None") != "None":
                 is_categorical = False
-        if is_categorical:
-            pass
-        else:
-            if "loc" in legend_kwds:
-                legend_kwds.pop("loc")
-            if "loc" in kwargs:
-                kwargs.pop("loc")
-
+        
+        if not is_categorical:
+            legend_kwds.pop("loc", None)
+            kwargs.pop("loc", None)
+            
             if isinstance(orientation, str):
                 orientation = orientation.lower()
                 legend_kwds["orientation"] = orientation
         
+        if legend and orientation and not is_categorical:
+            legend_kwds["orientation"] = orientation
+        
+        return legend, is_categorical, legend_kwds
+
+    def _setup_geospatial_cax(self, use_divider: bool, column: Optional[str], legend: bool, orientation: Optional[str]) -> Any:
+        """Sets up a colorbar axis if the axis divider is requested"""
         cax = None
         if use_divider and column and legend:
             try:
@@ -1587,32 +1578,20 @@ class PlotEngine:
                 self.current_ax._cax = cax
             except Exception as DividerError:
                 print(f"Error creating axis divider: {DividerError}")
-                cax = None
-        elif cax_enabled and column:
-            pass
         
-        if legend:
-            if orientation and not is_categorical:
-                legend_kwds["orientation"] = orientation
-        
-        if "cmap" not in kwargs and not is_categorical:
-            kwargs["cmap"] = "viridis"
-
-        if column and column in gdf:
-            gdf.plot(column=column, ax=self.current_ax, cax=cax, legend=legend, legend_kwds=legend_kwds, **kwargs)
-        else:
-            kwargs.pop("cmap", None)
-            gdf.plot(ax=self.current_ax, **kwargs)
-        
-        if axis_off:
-            self.current_ax.set_axis_off()
-        
-        # Adding basemap
+        return cax
+    
+    def _add_geospatial_basemap(
+        self,
+        gdf: "gpd.GeoDataFrame",
+        add_basemap: bool,
+        basemap_source: str,
+        basemap_zoom: Any
+    ) -> None:
+        """Applies a basemap to the current ploy using Contextiliy"""
         if add_basemap and ctx:
             try:
-                #Default to OpenStreetMap from Mapnik
                 provider = ctx.providers.OpenStreetMap.Mapnik
-
                 source_map = {
                     "OpenStretMap": ctx.providers.OpenStreetMap.Mapnik,
                     "CartoDB Positron": ctx.providers.CartoDB.Positron,
@@ -1622,7 +1601,6 @@ class PlotEngine:
                 }
                 if basemap_source in source_map:
                     provider = source_map[basemap_source]
-
                 if gdf.crs:
                     ctx.add_basemap(
                         self.current_ax,
@@ -1632,9 +1610,46 @@ class PlotEngine:
                     )
                 else:
                     print("Unable to add basemap: CRS is undefined")
-            except Exception as BasemapError:
-                print(f"Failed to add basemap: {BasemapError}")
+            except Exception as BaseMapError:
+                print(f"Failed to add basemap: {BaseMapError}")
         elif add_basemap and not ctx:
-            self.current_ax.text(0.02, 0.02, "Install 'contextily' for basemaps", transform=self.current_ax.transAxes, fontsize=8, color="red", bbox=dict(facecolor="white",alpha=0.7))
+            self.current_ax.text(0.02, 0.02, "Instal contextily for basemap support", transform=self.current_ax.transAxes, fontsize=8, color="red", bbox=dict(facecolor="white", alpha=0.7))
+    
+    def plot_geospatial(self, gdf: "gpd.GeoDataFrame", column: Optional[str] = None, **kwargs) -> None:
+        """Create a geospatial plot"""
+        if not self._validate_geospatial_data(gdf):
+            return
         
+        target_crs = kwargs.pop("target_crs", None)
+        add_basemap = kwargs.pop("add_basemap", False)
+        basemap_source = kwargs.pop("basemap_source", "OpenStreetMap")
+        basemap_zoom = kwargs.pop("basemap_zoom", "auto")
+        
+        gdf = self._handle_geospatial_crs(gdf, target_crs, add_basemap)
+        title = kwargs.pop("title", None)
+        xlabel = kwargs.pop("xlabel", None)
+        ylabel = kwargs.pop("ylabel", None)
+        legend = kwargs.pop("legend", True)
+        orientation = kwargs.pop("orientation", None)
+        legend_kwds = kwargs.pop("legend_kwds", {})
+        use_divider = kwargs.pop("use_divider", False)
+        cax_enabled = kwargs.pop("cax_enabled", False)
+        axis_off = kwargs.pop("axis_off", False)
+        
+        legend, is_categorical, legend_kwds = self._configure_geospatial_legend(gdf, column, legend, orientation, legend_kwds, use_divider, kwargs)
+        cax = self._setup_geospatial_cax(use_divider, column, legend, orientation)
+        
+        if "cmap" not in kwargs and not is_categorical:
+            kwargs["cmap"] = "viridis"
+        
+        if column and column in gdf:
+            gdf.plot(column=column, ax=self.current_ax, cax=cax, legend=legend, legend_kwds=legend_kwds, **kwargs)
+        else:
+            kwargs.pop("cmap", None)
+            gdf.plot(ax=self.current_ax, **kwargs)
+        
+        if axis_off:
+            self.current_ax.set_axis_off()
+        
+        self._add_geospatial_basemap(gdf, add_basemap, basemap_source, basemap_zoom)
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
