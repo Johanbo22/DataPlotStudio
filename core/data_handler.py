@@ -164,6 +164,49 @@ class DataHandler:
         """Check if redo is available"""
         return len(self.redo_stack) > 0
     
+    def _attempt_datetime_conversion(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        """
+        Attempts to automatically convert object and string columns to datetime objects.
+        Uses a sampling approach to handle any date format Pandas supports while 
+        maintaining high performance and avoiding false positives.
+        
+        Args:
+            dataframe (pd.DataFrame): The DataFrame to process.
+            
+        Returns:
+            pd.DataFrame: The DataFrame with converted datetime columns where applicable.
+        """
+        if dataframe is None or dataframe.empty:
+            return dataframe
+        
+        object_columns = dataframe.select_dtypes(include=["object", "string"]).columns
+        for col in object_columns:
+            non_null_series = dataframe[col].dropna()
+            if non_null_series.empty:
+                continue
+            sample = non_null_series.head(100)
+            try:
+                pd.to_numeric(sample, errors="raise")
+                continue
+            except (TypeError, ValueError):
+                pass
+            
+            try:
+                sampled_converted = pd.to_datetime(sample, errors="coerce")
+                if sampled_converted.isna().any():
+                    continue
+                
+                converted_series = pd.to_datetime(dataframe[col], errors="coerce")
+                                
+                original_missing_count = dataframe[col].isna().sum()
+                new_missing_count = converted_series.isna().sum()
+                
+                if original_missing_count == new_missing_count:
+                    dataframe[col] = converted_series
+            except (ValueError, TypeError, Exception):
+                pass
+        return dataframe
+    
     def read_file(self, filepath: str) -> pd.DataFrame:
         """
         Reads a file from path and returns a DataFrame without modifying the current instance
@@ -271,6 +314,7 @@ class DataHandler:
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
 
+            self.df = self._attempt_datetime_conversion(self.df)
             self.original_df = self.df.copy()
             self.file_path = path
             self.is_temp_file = False
@@ -372,7 +416,7 @@ class DataHandler:
                     message += f"\n\nNote: Please verify the sheet name '{sheet_name}' matches exactly"
                 raise ValueError(message)
 
-            self.df = df
+            self.df = self._attempt_datetime_conversion(df)
             self.original_df = self.df.copy()
 
             # create temp csv
@@ -456,7 +500,7 @@ class DataHandler:
             if df is None or len(df) == 0:
                 raise ValueError("Query returned no data.")
 
-            self.df = df
+            self.df = self._attempt_datetime_conversion(df)
             self.original_df = self.df.copy()
 
             # from the database data we create a temp_csv file for the storing and saving logic to better work.
