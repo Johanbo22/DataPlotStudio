@@ -23,7 +23,7 @@ class WorkerSignals(QObject):
     
 class AggregationWorker(QRunnable):
     """Worker for performing data aggregation"""
-    def __init__(self, data_handler: DataHandler, group_by: list, agg_config: dict, date_grouping: dict):
+    def __init__(self, data_handler: DataHandler, group_by: list[str], agg_config: dict[str, str], date_grouping: dict[str, str]) -> None:
         super().__init__()
         self.data_handler = data_handler
         self.group_by = group_by
@@ -35,12 +35,15 @@ class AggregationWorker(QRunnable):
     def run(self):
         try:
             self.signals.progress.emit(10, "Preparing Aggregation...")
+            self.signals.log.emit(f"Starting background aggregation task with {len(self.group_by)} groups...")
             result_df = self.data_handler.preview_aggregation(group_by=self.group_by, agg_config=self.agg_config, date_grouping=self.date_grouping, limit=None)
             
             self.signals.progress.emit(100, "Aggregation complete")
+            self.signals.log.emit("Background aggregation task completed successfully.")
             self.signals.finished.emit(result_df)
-        except Exception as Error:
-            self.signals.error.emit(Error)
+        except Exception as AggWorkerError:
+            self.signals.log.emit(f"Aggregation worker failed: {str(AggWorkerError)}")
+            self.signals.error.emit(AggWorkerError)
 
 class FilterWorker(QRunnable):
     """Worker for applying filters"""
