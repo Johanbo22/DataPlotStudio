@@ -697,44 +697,54 @@ class DataTab(QWidget):
             "word_wrap": self.data_table.wordWrap(),
             "selection_behavior": self.data_table.selectionBehavior(),
             "float_precision": self.current_precision,
-            "conditional_rules": self.current_formatting_rules
+            "conditional_rules": self.current_formatting_rules,
+            "text_alignment": getattr(self, "current_text_aligment", "Left")
         }
 
         dialog = TableCustomizationDialog(current_settings, self)
+        dialog.settings_applied.connect(self.apply_table_settings)
         if dialog.exec():
             settings = dialog.get_settings()
-            
-            self.current_precision = settings.get("float_precision", 2)
-            self.current_formatting_rules = settings.get("conditional_rules", [])
+            self.apply_table_settings(settings)
+    
+    def apply_table_settings(self, settings: dict) -> None:
+        """
+        Applies a dictionary of customization settings to the data table and its model.
+        Used for both live previewing (Apply) and final confirmation (OK).
+        """
+        self.current_precision = settings.get("float_precision", 2)
+        self.current_formatting_rules = settings.get("conditional_rules", [])
+        
+        self.current_text_alignment = settings.get("text_alignment", "Left")
 
-            self.data_table.setAlternatingRowColors(settings["alternating_rows"])
-            if settings["alternating_rows"]:
-                palette = self.data_table.palette()
-                palette.setColor(
-                    QPalette.ColorRole.AlternateBase, QColor(settings["alt_color"])
-                )
-                self.data_table.setPalette(palette)
-            self.data_table.setShowGrid(settings["show_grid"])
+        self.data_table.setAlternatingRowColors(settings["alternating_rows"])
+        if settings["alternating_rows"]:
+            palette = self.data_table.palette()
+            palette.setColor(
+                QPalette.ColorRole.AlternateBase, QColor(settings["alt_color"])
+            )
+            self.data_table.setPalette(palette)
+        self.data_table.setShowGrid(settings["show_grid"])
 
-            self.data_table.horizontalHeader().setVisible(settings["show_h_headers"])
-            self.data_table.verticalHeader().setVisible(settings["show_v_headers"])
+        self.data_table.horizontalHeader().setVisible(settings["show_h_headers"])
+        self.data_table.verticalHeader().setVisible(settings["show_v_headers"])
 
-            font = QFont(settings["font_family"])
-            font.setPointSize(settings["font_size"])
-            self.data_table.setFont(font)
+        font = QFont(settings["font_family"])
+        font.setPointSize(settings["font_size"])
+        self.data_table.setFont(font)
 
-            self.data_table.setWordWrap(settings["word_wrap"])
-            self.data_table.setSelectionBehavior(settings["selection_behavior"])
+        self.data_table.setWordWrap(settings["word_wrap"])
+        self.data_table.setSelectionBehavior(settings["selection_behavior"])
 
-            self.data_table.resizeRowsToContents()
-            if settings["word_wrap"]:
-                self.data_table.resizeColumnsToContents()
-            
-            if self.data_table.model() and isinstance(self.data_table.model(), DataTableModel):
-                self.data_table.model().set_float_precision(self.current_precision)
-                self.data_table.model().set_conditional_rules(self.current_formatting_rules)
+        self.data_table.resizeRowsToContents()
+        if settings["word_wrap"]:
+            self.data_table.resizeColumnsToContents()
+        
+        if self.data_table.model() and isinstance(self.data_table.model(), DataTableModel):
+            self.data_table.model().set_float_precision(self.current_precision)
+            self.data_table.model().set_conditional_rules(self.current_formatting_rules)
 
-            self.status_bar.log("Table settings updated", "SUCCESS")
+        self.status_bar.log("Table settings updated", "SUCCESS")
 
     def get_selection_state(self):
         """Returns the currently selected row indicies and column names"""

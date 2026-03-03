@@ -3,15 +3,15 @@ from ui.dialogs import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
 
 import sys
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QTextCursor, QColor
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QPlainTextEdit, QMenu, QSplitter, QTreeWidget, QTreeWidgetItem
+import ast
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtGui import QTextCursor, QColor, QFont, QFontMetrics, QShortcut, QKeySequence
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QPlainTextEdit, QMenu, QSplitter, QTreeWidget, QTreeWidgetItem, QWidget, QApplication
 
 
 from datetime import datetime
 
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
+from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit
 from ui.animations.PlotGeneratedAnimation import PlotGeneratedAnimation
 
 class StreamRedirector:
@@ -20,10 +20,12 @@ class StreamRedirector:
         self.widget = widget
         self.original_stream = original_stream
         self.color = color
-    
-    def write(self, text: str):
+        
+    def write(self, text) -> int:
+        text_str = str(text)
         if self.original_stream:
-            self.original_stream.write(text)
+            self.original_stream.write(text_str)
+            
         
         cursor = self.widget.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
@@ -33,33 +35,37 @@ class StreamRedirector:
             original_format = cursor.charFormat()
             fmt.setForeground(QColor(self.color))
             cursor.setCharFormat(fmt)
-            cursor.insertText(text)
+            cursor.insertText(text_str)
             cursor.setCharFormat(original_format)
         else:
-            cursor.insertText(text)
+            cursor.insertText(text_str)
         
         self.widget.setTextCursor(cursor)
         self.widget.ensureCursorVisible()
+        
+        QApplication.processEvents()
+        
+        return len(text_str)
     
-    def flush(self):
-        if self.original_stream:
-            self.original_stream.flush()
+    def flush(self) -> None:
+        self.original_stream.flush()
 
 
 class ScriptEditorDialog(QDialog):
-    """A dialog for editing and running custo python plotting scripts"""
+    """A dialog for editing and running custom python plotting scripts"""
 
     run_script_signal = pyqtSignal(str)
 
-    def __init__(self, initial_code="", df=None, parent=None):
+    def __init__(self, initial_code: str = "", df=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Python Console")
         self.resize(1200, 900)
         self.setModal(False)
 
         self.df = df
-        self.script_history = []
-        self.run_counter = 0
+        self.script_history: list[dict[str, str]] = []
+        self.run_counter: int = 0
+        self.is_code_modified: bool = False
 
         self.init_ui(initial_code)
         
@@ -72,7 +78,45 @@ class ScriptEditorDialog(QDialog):
         sys.stdout = self.stdout_redirector
         sys.stderr = self.stderr_redirector
         
+        self.read_settings()
+    
+    def read_settings(self) -> None:
+        """Restores the window size, position, and splitter layout from previous sessions."""
+        settings = QSettings("DataPlotStudio", "ScriptEditor")
+        saved_geometry = settings.value("geometry")
+        if saved_geometry:
+            self.restoreGeometry(saved_geometry)
+        
+        saved_splitter = settings.value("splitter_state")
+        if saved_splitter and hasattr(self, "splitter"):
+            self.splitter.restoreState(saved_splitter)
+    
+    def write_settings(self) -> None:
+        """Saves the current window layout preferences to the system registry/config."""
+        settings = QSettings("DataPlotStudio", "ScriptEditor")
+        settings.setValue("geometry", self.saveGeometry())
+        if hasattr(self, "splitter"):
+            settings.setValue("splitter_state", self.splitter.saveState())
+        
     def close_event(self, event):
+        """
+        Intercepts the dialog close event to restore system streams and 
+        warn the user if there are unsaved code modifications.
+        """
+        if self.is_code_modified and not self.auto_sync_check.isChecked():
+            reply = QMessageBox.question(
+                self, 
+                "Unsaved Changes",
+                "You have modified the script. Are you sure you want to close without running?\n"
+                "Any unexecuted changes will be lost.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            ) 
+            if reply == QMessageBox.StandardButton.No:
+                event.ignore()
+                return
+        
+        self.write_settings()
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
         super().closeEvent(event)
@@ -114,20 +158,28 @@ class ScriptEditorDialog(QDialog):
             QMenu::item:selected { background-color: #4a9c4d; }
         """)
         
-        snippets = {
-            "Vertical Reference Line": "ax.axvline(x=0, color='red', linestyle='--', linewidth=1.5, label='Ref Line')\n",
-            "Horizontal Reference Line": "ax.axhline(y=0, color='blue', linestyle=':', linewidth=1.5, label='Threshold')\n",
-            "Highlight Vertical Region": "ax.axvspan(xmin=0, xmax=1, color='yellow', alpha=0.2)\n",
-            "Highlight Horizontal Region": "ax.axhspan(ymin=0, ymax=1, color='green', alpha=0.2)\n",
-            "Diagonal Line": "ax.plot([0, 1], [0, 1], linestyle='-.', color='gray', linewidth=1.2)\n",
-            "Custom Line Segment": "ax.plot([0.2, 0.8], [0.1, 0.9], color='black', linewidth=2.0)\n",
-            "Star Marker": "ax.scatter(x=[0.5], y=[0.5], marker='*', s=200, color='gold')\n",
-            "Cross Marker": "ax.scatter(x=[0.2], y=[0.8], marker='x', s=100, color='red')\n",
+        categorized_snippets: dict[str, dict[str, str]] = {
+            "Reference Lines": {
+                "Vertical Reference Line": "ax.axvline(x=0, color='red', linestyle='--', linewidth=1.5, label='Ref Line')\n",
+                "Horizontal Reference Line": "ax.axhline(y=0, color='blue', linestyle=':', linewidth=1.5, label='Threshold')\n",
+                "Diagonal Line": "ax.plot([0, 1], [0, 1], linestyle='-.', color='gray', linewidth=1.2)\n",
+                "Custom Line Segment": "ax.plot([0.2, 0.8], [0.1, 0.9], color='black', linewidth=2.0)\n",
+            },
+            "Highlights & Regions": {
+                "Highlight Vertical Region": "ax.axvspan(xmin=0, xmax=1, color='yellow', alpha=0.2)\n",
+                "Highlight Horizontal Region": "ax.axhspan(ymin=0, ymax=1, color='green', alpha=0.2)\n",
+            },
+            "Markers": {
+                "Star Marker": "ax.scatter(x=[0.5], y=[0.5], marker='*', s=200, color='gold')\n",
+                "Cross Marker": "ax.scatter(x=[0.2], y=[0.8], marker='x', s=100, color='red')\n",
+            }
         }
         
-        for name, code in snippets.items():
-            action = self.snippet_menu.addAction(name)
-            action.triggered.connect(lambda checked, c=code: self.insert_snippet_into_code(c))
+        for category_name, snippets in categorized_snippets.items():
+            sub_menu = self.snippet_menu.addMenu(category_name)
+            for name, code_snippet in snippets.items():
+                action = sub_menu.addAction(name)
+                action.triggered.connect(lambda checked, c=code_snippet: self.insert_snippet_into_code(c))
             
         self.snippet_button.setMenu(self.snippet_menu)
         toolbar.addWidget(self.snippet_button)
@@ -147,6 +199,14 @@ class ScriptEditorDialog(QDialog):
         self.editor = CodeEditor()
         self.editor.setPlainText(code if code else "")
         self.editor.setMinimumHeight(400)
+        
+        editor_font = QFont("Consolas", 11)
+        editor_font.setStyleHint(QFont.StyleHint.Monospace)
+        self.editor.setFont(editor_font)
+        self.editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        
+        font_metrics = QFontMetrics(editor_font)
+        self.editor.setTabStopDistance(font_metrics.horizontalAdvance(" ")*4)
         self.editor.setStyleSheet("""
             QPlainTextEdit {
                 background-color: #2b2b2b; 
@@ -157,25 +217,60 @@ class ScriptEditorDialog(QDialog):
             }
         """)
         self.editor.textChanged.connect(self.on_text_changed)
+        
+        self.comment_shortcut = QShortcut(QKeySequence("Ctrl+Shift+7"), self.editor)
+        self.comment_shortcut.activated.connect(self.toggle_comments)
 
         # add python syntax highlighnign
         self.highlighter = PythonHighlighter(self.editor.document())
         layout.addWidget(self.editor, 3)
         
         # Splitter for variable panel and editor (left and right)
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self.editor)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.addWidget(self.editor)
+        
+        variable_panel = QVBoxLayout()
+        variable_panel.setContentsMargins(0, 0, 0, 0)
+        
+        self.variable_search_bar = DataPlotStudioLineEdit()
+        self.variable_search_bar.setPlaceholderText("Search Columns...")
+        self.variable_search_bar.setStyleSheet("""
+            QLineEdit {
+                background-color: #1e1e1e;
+                color: #000000;
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 4px;
+            }
+        """)
+        self.variable_search_bar.textChanged.connect(self.filter_variables)
+        variable_panel.addWidget(self.variable_search_bar)
         
         self.variable_explorer = self.create_variable_explorer()
-        splitter.addWidget(self.variable_explorer)
+        variable_panel.addWidget(self.variable_explorer)
         
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
+        variable_container_widget = QWidget()
+        variable_container_widget.setLayout(variable_panel)
         
-        layout.addWidget(splitter, 1)
+        self.splitter.addWidget(variable_container_widget)
+        
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 1)
+        
+        layout.addWidget(self.splitter, 3)
         
         # console pane
-        layout.addWidget(QLabel("Console Output:"))
+        console_header_layout = QHBoxLayout()
+        console_header_layout.addWidget(QLabel("Console Output:"))
+        console_header_layout.addStretch()
+        
+        self.clear_console_button = DataPlotStudioButton("Clear Console", parent=self)
+        self.clear_console_button.setToolTip("Clear the console")
+        self.clear_console_button.clicked.connect(self.clear_console)
+        console_header_layout.addWidget(self.clear_console_button)
+        
+        layout.addLayout(console_header_layout)
+        
         self.console_output = QPlainTextEdit()
         self.console_output.setReadOnly(True)
         self.console_output.setMinimumHeight(50)
@@ -290,8 +385,7 @@ class ScriptEditorDialog(QDialog):
                             mean_item = QTreeWidgetItem(col_item)
                             mean_item.setText(0, "Mean")
                             mean_item.setText(1, f"{series.mean():.4g}")
-                    except Exception:
-                        print("oopsie")
+                    except Exception as aggregation_error:
                         pass
         else:
             item = QTreeWidgetItem(tree)
@@ -299,6 +393,38 @@ class ScriptEditorDialog(QDialog):
             item.setText(1, "df is None")
         
         return tree
+    
+    def filter_variables(self, search_text: str) -> None:
+        """
+        Filters the variable explorer tree based on the user's search input.
+        Hides columns that do not match the search string (case-insensitive).
+        """
+        if not hasattr(self, "variable_explorer") or self.variable_explorer.topLevelItemCount() == 0:
+            return
+        
+        root_item = self.variable_explorer.topLevelItem(0)
+        if not root_item:
+            return
+        
+        # Locate the columns root node to search within
+        columns_node: QTreeWidgetItem | None = None
+        for i in range(root_item.childCount()):
+            if root_item.child(i).text(0) == "Columns":
+                columns_node = root_item.child(i)
+                break
+        
+        if not columns_node:
+            return
+        
+        search_text_lower: str = search_text.lower()
+        
+        # Iterate through columns and hide show based on search matches
+        for i in range(columns_node.childCount()):
+            col_item = columns_node.child(i)
+            col_name: str = col_item.text(0).lower()
+            
+            # Show item if search string matches, hide otherwise
+            col_item.setHidden(search_text_lower not in col_name)
     
     def on_explorer_double_click(self, item: QTreeWidgetItem, column: int):
         """
@@ -318,7 +444,7 @@ class ScriptEditorDialog(QDialog):
         menu.setStyleSheet("QMenu { background-color: #2b2b2b; color: white; }")
         
         data = item.data(0, Qt.ItemDataRole.UserRole)
-        col_name = item.text(0)
+        node_text = item.text(0)
         
         if data:
             action_insert = menu.addAction(f"Insert {data}")
@@ -329,8 +455,15 @@ class ScriptEditorDialog(QDialog):
                 df_access = f"df[{data}]"
                 action_df = menu.addAction(f"Insert {df_access}")
                 action_df.triggered.connect(lambda: self.insert_snippet_into_code(df_access))
+        
+        # Add bulk list insertion if the columns root node is clicked
+        if node_text == "Columns" and hasattr(self, "df") and self.df is not None:
+            col_list_str: str = "[" + ", ".join([f"'{col}'" for col in self.df.columns]) + "]"
+            action_list = menu.addAction("Insert as List [...]")
+            action_list.triggered.connect(lambda: self.insert_snippet_into_code(col_list_str))
 
-        menu.exec(self.variable_explorer.viewport().mapToGlobal(position))
+        if not menu.isEmpty():
+            menu.exec(self.variable_explorer.viewport().mapToGlobal(position))
     
     def insert_snippet_into_code(self, code: str) -> None:
         """Inserts the snippet code into the code editor at cursor position"""
@@ -348,6 +481,60 @@ class ScriptEditorDialog(QDialog):
         # set the autosync to off so the user does not lose data
         if self.auto_sync_check.isChecked() and self.editor.hasFocus():
             self.auto_sync_check.setChecked(False)
+    
+    def toggle_comments(self) -> None:
+        """Toggles Python comments (#) on the currently selected lines."""
+        cursor = self.editor.textCursor()
+        cursor.beginEditBlock()
+        
+        start_block: int = self.editor.document().findBlock(cursor.selectionStart()).blockNumber()
+        end_block: int = self.editor.document().findBlock(cursor.selectionEnd()).blockNumber()
+        
+        # Determine if we are commenting or uncommenting based on the first line
+        comment_symbol = "#"
+        first_block_text: str = self.editor.document().findBlockByNumber(start_block).text().lstrip()
+        is_uncommenting: bool = first_block_text.startswith(comment_symbol)
+        
+        for i in range(start_block, end_block, 1):
+            block = self.editor.document().findBlockByNumber(i)
+            text: str = block.text()
+            
+            # Resposition cursor to the start of the current block
+            cursor.setPosition(block.position())
+            if is_uncommenting:
+                idx: int = text.find(comment_symbol)
+                if idx != -1:
+                    cursor.setPosition(block.position() + idx)
+                    cursor.deleteChar()
+                    
+                    space = " "
+                    if len(text) > idx + 1 and text[idx + 1] == space:
+                        cursor.deleteChar()
+            else:
+                cursor.insertText(comment_symbol)
+        
+        cursor.endEditBlock()
+    
+    def clear_console(self) -> None:
+        self.console_output.clear()
+    
+    def goto_error_line(self, line_number: int) -> None:
+        """
+        Moves the editor's cursor to the specified line number and highlights it 
+        to help the user quickly locate syntax errors.
+        """
+        if not line_number:
+            return
+        
+        # Qt text blocks are 0-indexed, but AST is 1-indexed
+        block = self.editor.document().findBlockByNumber(line_number - 1)
+        if block.isValid():
+            cursor = QTextCursor(block)
+            # Hightlight the entire block with the error
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            
+            self.editor.setTextCursor(cursor)
+            self.editor.setFocus()
 
     def update_code(self, new_code):
         """Update the code from the GUI"""
@@ -364,15 +551,41 @@ class ScriptEditorDialog(QDialog):
         """Validate and emit code"""
         code = self.editor.toPlainText()
 
-        blocked_keywords = [
-            "import os", "from os", "import sys", "from sys", "subprocess", "eval(", "exec(", "__import__", "shutil", "pathlib", "socket", "requests"
-        ]
-
-        found_threats = [kw for kw in blocked_keywords if kw in code]
-
+        blocked_modules = {"os", "sys", "subprocess", "shutil", "pathlib", "socket", "requests"}
+        blocked_funcs = {"eval", "exec", "__import__"}
+        found_threats = []
+        
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name in blocked_modules:
+                            found_threats.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module in blocked_modules:
+                        found_threats.append(node.module)
+                elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id in blocked_funcs:
+                        found_threats.append(node.func.id)
+                elif isinstance(node, ast.While):
+                    found_threats.append("while, infinite loop protection")
+        except SyntaxError as syntaxerror:
+            sys.stderr.write(syntaxerror)
+            # Navigate to the syntax error
+            if syntaxerror.lineno:
+                self.goto_error_line(syntaxerror.lineno)
+            QMessageBox.critical(self, "Syntax Error", f"Cannot run script due to syntax error:\n{syntaxerror}")
+            return
+        
         if found_threats:
-            QMessageBox.critical(self, "Security Alert", f"Unintended keywords detected!\nBlocked keywords: {', '.join(found_threats)}\n\n"
-            "Please remove these to run the script")
+            unique_threats = sorted(list(set(found_threats)))
+            QMessageBox.critical(
+                self, 
+                "Potential Unsafe Script Notice", 
+                f"Unintended modules or functions detected\nBlocked usage: {', '.join(unique_threats)}\n\n"
+                "Please remove these to run the script."
+            )
             return
 
         self.save_to_history(code)
@@ -382,21 +595,21 @@ class ScriptEditorDialog(QDialog):
         self.run_script_animation = PlotGeneratedAnimation(parent=self, message="Run Script")
         self.run_script_animation.start(target_widget=self)
 
-
     def save_to_history(self, code):
         """Save the current code to a list, cannot go more than 5, """
         #no saving dups
         if self.script_history and self.script_history[-1]["code"] == code:
             return
 
-        self.run_counter = 1
+        self.run_counter += 1
         timestamp = datetime.now().strftime("%H:%M:%S")
         label = f"Edition: #{self.run_counter} - {timestamp}"
 
         self.script_history.append({'code': code, 'label': label})
 
         #max 5 copyes
-        if len(self.script_history) > 5:
+        MAX_HISTORY_ITEMS: int = 5
+        if len(self.script_history) > MAX_HISTORY_ITEMS:
             self.script_history.pop(0)
 
         self.update_history_combo()

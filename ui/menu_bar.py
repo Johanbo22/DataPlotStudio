@@ -1,5 +1,5 @@
 # ui/menu_bar.py
-from PyQt6.QtWidgets import QMenuBar
+from PyQt6.QtWidgets import QMenuBar, QWidget
 from PyQt6.QtGui import QAction, QIcon
 from core.resource_loader import get_resource_path
 from ui.widgets.AnimatedMenu import DataPlotStudioMenu
@@ -8,7 +8,7 @@ from ui.icons import IconBuilder, IconType
 class MenuBar(QMenuBar):
     """Custom menu bar for the application"""
     
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         super().__init__(parent)
         
         # File Menu
@@ -30,7 +30,7 @@ class MenuBar(QMenuBar):
         self.file_save.setToolTip(self.tr("Save the current project"))
         file_menu.addAction(self.file_save)
 
-        self.file_save_as = QAction(IconBuilder.build(IconType.SAVE_PROJECT_AS), self.tr("Save Project As..."), self)
+        self.file_save_as = QAction(IconBuilder.build(IconType.SAVE_PROJECT_AS), self.tr("Save Project As..."), parent)
         self.file_save_as.setShortcut("Ctrl+Shift+S")
         file_menu.addAction(self.file_save_as)
         
@@ -41,7 +41,7 @@ class MenuBar(QMenuBar):
         self.import_file.setToolTip(self.tr("Import data from a file on your computer"))
         file_menu.addAction(self.import_file)
         
-        self.import_sheets = QAction(QIcon(get_resource_path("icons/menu_bar/google-sheets-logo-icon.svg")), self.tr("&Import from Google )Sheets"), parent)
+        self.import_sheets = QAction(QIcon(get_resource_path("icons/menu_bar/google-sheets-logo-icon.svg")), self.tr("&Import from Google Sheets"), parent)
         self.import_sheets.setToolTip(self.tr("Import data from Google Sheet"))
         file_menu.addAction(self.import_sheets)
 
@@ -62,11 +62,11 @@ class MenuBar(QMenuBar):
         
         file_menu.addSeparator()
         
-        exit_action = QAction(IconBuilder.build(IconType.QUIT), self.tr("E&xit"), parent)
-        exit_action.setShortcut("Ctrl+Q")
-        exit_action.setToolTip(self.tr("Exit the program"))
-        exit_action.triggered.connect(parent.close)
-        file_menu.addAction(exit_action)
+        self.exit_action = QAction(IconBuilder.build(IconType.QUIT), self.tr("E&xit"), parent)
+        self.exit_action.setShortcut("Ctrl+Q")
+        self.exit_action.setToolTip(self.tr("Exit the program"))
+        self.exit_action.triggered.connect(parent.close)
+        file_menu.addAction(self.exit_action)
         
         # Edit Menu
         edit_menu = DataPlotStudioMenu(self.tr("&Edit"), self)
@@ -85,7 +85,7 @@ class MenuBar(QMenuBar):
         edit_menu.addSeparator()
         self.settings_action = QAction(IconBuilder.build(IconType.SETTINGS), self.tr("&Settings"), parent)
         self.settings_action.setShortcut("Ctrl+,")
-        self.settings_action.setToolTip(self.tr("Configre application preferences"))
+        self.settings_action.setToolTip(self.tr("Configure application preferences"))
         edit_menu.addAction(self.settings_action)
         
         # View Menu
@@ -120,4 +120,6 @@ class MenuBar(QMenuBar):
         self.addMenu(help_menu)
         
         self.about_action = QAction(IconBuilder.build(IconType.INFORMATION), self.tr("&About"), parent)
+        self.about_action.setShortcut("F1")
+        self.about_action.setToolTip(self.tr("View application information and version"))
         help_menu.addAction(self.about_action)

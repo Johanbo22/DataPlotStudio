@@ -1,15 +1,37 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QWidget, QFontComboBox, QAbstractItemView, QColorDialog, QListWidget, QListWidgetItem
 from PyQt6.QtGui import QFont, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioSpinBox, DataPlotStudioTabWidget, DataPlotStudioToggleSwitch
 
+DIALOG_WIDTH: int = 600
+DIALOG_HEIGHT: int = 500
+MIN_FONT_SIZE: int = 6
+MAX_FONT_SIZE: int = 72
+DEFAULT_FONT_SIZE: int = 10
+DEFAULT_FLOAT_PRECISION: int = 2
+MIN_FLOAT_PRECISION: int = 0
+MAX_FLOAT_PRECISION: int = 10
+MIN_RULE_VALUE: float = -9999999.0
+MAX_RULE_VALUE: float = 9999999.0
+DEFAULT_RULE_TEXT_COLOR: str = "#FF0000"
+DEFAULT_RULE_BG_COLOR: str = "#FFFFFF"
+DEFAULT_ALT_COLOR: str = "#F5F5F5"
+
 class TableCustomizationDialog(QDialog):
+    
+    settings_applied = pyqtSignal(dict)
     def __init__(self, current_settings: dict, parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle("Customize data table")
-        self.resize(600, 500)
+        self.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         self.settings = current_settings or {}
+        
+        self._selection_mapping = {
+            "Select Items": QAbstractItemView.SelectionBehavior.SelectItems,
+            "Select Rows": QAbstractItemView.SelectionBehavior.SelectRows,
+            "Select Columns": QAbstractItemView.SelectionBehavior.SelectColumns
+        }
         self.init_ui()
 
     def init_ui(self):
@@ -24,9 +46,23 @@ class TableCustomizationDialog(QDialog):
         main_layout.addWidget(self.tabs)
 
         # Buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel |
+            QDialogButtonBox.StandardButton.Apply |
+            QDialogButtonBox.StandardButton.RestoreDefaults
+        )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
+        
+        apply_btn = button_box.button(QDialogButtonBox.StandardButton.Apply)
+        if apply_btn:
+            apply_btn.clicked.connect(self.apply_settings)
+        
+        restore_btn = button_box.button(QDialogButtonBox.StandardButton.RestoreDefaults)
+        if restore_btn:
+            restore_btn.clicked.connect(self.reset_to_defaults)
+            
         main_layout.addWidget(button_box)
     
     def create_appearance_tab(self) -> QWidget:
@@ -46,7 +82,7 @@ class TableCustomizationDialog(QDialog):
         self.alt_color_button = DataPlotStudioButton("Choose Color")
         self.alt_color_button.setFixedWidth(140)
         self.alt_color_button.setToolTip("Click to change the color of the alternating row")
-        self.current_alt_color = self.settings.get("alt_color", "#F5F5F5")
+        self.current_alt_color = self.settings.get("alt_color", DEFAULT_ALT_COLOR)
         self.alt_color_button.updateColors(self.current_alt_color)
         self.alt_color_button.clicked.connect(self.pick_alt_color)
 
@@ -103,8 +139,8 @@ class TableCustomizationDialog(QDialog):
         hbox_size = QHBoxLayout()
         hbox_size.addWidget(QLabel("Font Size:"))
         self.font_size_spin = DataPlotStudioSpinBox()
-        self.font_size_spin.setRange(6, 72)
-        self.font_size_spin.setValue(self.settings.get("font_size", 10))
+        self.font_size_spin.setRange(MIN_FONT_SIZE, MAX_FONT_SIZE)
+        self.font_size_spin.setValue(self.settings.get("font_size", DEFAULT_FONT_SIZE))
         hbox_size.addWidget(self.font_size_spin)
         hbox_size.addStretch()
         vbox.addLayout(hbox_size)
@@ -119,6 +155,18 @@ class TableCustomizationDialog(QDialog):
         self.word_wrap_check = DataPlotStudioToggleSwitch("Word Wrap Long Text")
         self.word_wrap_check.setChecked(self.settings.get("word_wrap", False))
         text_vbox.addWidget(self.word_wrap_check)
+        
+        # Text alignment options
+        hbox_align = QHBoxLayout()
+        hbox_align.addWidget(QLabel("Default Alignment:"))
+        self.alignment_combo = DataPlotStudioComboBox()
+        self.alignment_combo.addItems(["Left", "Center", "Right"])
+        
+        current_alignment = self.settings.get("text_alignment", "Left")
+        self.alignment_combo.setCurrentText(current_alignment)
+        hbox_align.addWidget(self.alignment_combo)
+        
+        text_vbox.addLayout(hbox_align)
 
         text_group.setLayout(text_vbox)
         layout.addWidget(text_group)
@@ -138,8 +186,8 @@ class TableCustomizationDialog(QDialog):
         hbox_prec = QHBoxLayout()
         hbox_prec.addWidget(QLabel("Float Decimal Places:"))
         self.precision_spin = DataPlotStudioSpinBox()
-        self.precision_spin.setRange(0, 10)
-        self.precision_spin.setValue(self.settings.get("float_precision", 2))
+        self.precision_spin.setRange(MIN_FLOAT_PRECISION, MAX_FLOAT_PRECISION)
+        self.precision_spin.setValue(self.settings.get("float_precision", DEFAULT_FLOAT_PRECISION))
         self.precision_spin.setToolTip("Set the number of decimal places to display for floating point numbers.")
         hbox_prec.addWidget(self.precision_spin)
         hbox_prec.addStretch()
@@ -172,17 +220,26 @@ class TableCustomizationDialog(QDialog):
         add_rule_layout.addWidget(self.rule_operation_combo)
         
         self.rule_value_spin = DataPlotStudioDoubleSpinBox()
-        self.rule_value_spin.setRange(-9999999.0, 9999999.0)
-        self.rule_value_spin.setDecimals(2)
+        self.rule_value_spin.setRange(MIN_RULE_VALUE, MAX_RULE_VALUE)
+        self.rule_value_spin.setDecimals(DEFAULT_FLOAT_PRECISION)
         self.rule_value_spin.setFixedWidth(100)
         add_rule_layout.addWidget(self.rule_value_spin)
         
-        self.rule_color_button = DataPlotStudioButton("Color")
+        # Text color picker
+        self.rule_color_button = DataPlotStudioButton("Text")
         self.rule_color_button.setFixedWidth(60)
-        self.rule_color_code = "#FF0000"
+        self.rule_color_code = DEFAULT_RULE_TEXT_COLOR
         self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: white;")
-        self.rule_color_button.clicked.connect(self.choose_rule_color)
+        self.rule_color_button.clicked.connect(self.choose_rule_text_color)
         add_rule_layout.addWidget(self.rule_color_button)
+        
+        # Background color picker
+        self.rule_bg_color_button = DataPlotStudioButton("Fill")
+        self.rule_bg_color_button.setFixedWidth(50)
+        self.rule_bg_color_code = DEFAULT_RULE_BG_COLOR
+        self.rule_bg_color_button.setStyleSheet(f"background-color: {self.rule_bg_color_code}; color: black")
+        self.rule_bg_color_button.clicked.connect(self.choose_rule_bg_color)
+        add_rule_layout.addWidget(self.rule_bg_color_button)
         
         add_rule_button = DataPlotStudioButton("Add Rule")
         add_rule_button.setToolTip("Add this conditional formatting fule.")
@@ -212,16 +269,16 @@ class TableCustomizationDialog(QDialog):
         hbox_mode = QHBoxLayout()
         hbox_mode.addWidget(QLabel("Selection Behavior:"))
         self.selection_behavior_combo = DataPlotStudioComboBox()
-        self.selection_behavior_combo.addItems(["Select Items", "Select Rows", "Select Columns"])
+        self.selection_behavior_combo.addItems(list(self._selection_mapping.keys()))
 
         # those settings are mapped to index
         current_behavior = self.settings.get("selection_behavior", QAbstractItemView.SelectionBehavior.SelectItems)
-        if current_behavior == QAbstractItemView.SelectionBehavior.SelectRows:
-            self.selection_behavior_combo.setCurrentIndex(1)
-        elif current_behavior == QAbstractItemView.SelectionBehavior.SelectColumns:
-            self.selection_behavior_combo.setCurrentIndex(2)
-        else:
-            self.selection_behavior_combo.setCurrentIndex(0)
+        match_index = 0
+        for index, behavior in enumerate(self._selection_mapping.values()):
+            if behavior == current_behavior:
+                match_index = index
+                break
+        self.selection_behavior_combo.setCurrentIndex(match_index)
         
         hbox_mode.addWidget(self.selection_behavior_combo)
         vbox.addLayout(hbox_mode)
@@ -232,25 +289,35 @@ class TableCustomizationDialog(QDialog):
         layout.addStretch()
         return widget
     
-    def choose_rule_color(self):
+    def choose_rule_text_color(self):
         """Opens the color dialog for the rules"""
         color = QColorDialog.getColor(QColor(self.rule_color_code), self, "Select Rule Color")
         if color.isValid():
             self.rule_color_code = color.name()
-            self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: white;")
+            text_color = "black" if color.lightness() > 128 else "white"
+            self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: {text_color};")
+    
+    def choose_rule_bg_color(self) -> None:
+        """Opens the color dialog for the rule background color"""
+        color = QColorDialog.getColor(QColor(self.rule_bg_color_code), self, "Select Rule Background Color")
+        if color.isValid():
+            self.rule_bg_color_code = color.name()
+            text_color = "black" if color.lightness() > 128 else "white"
+            self.rule_bg_color_button.setStyleSheet(f"background-color: {self.rule_bg_color_code}; color: {text_color}")
     
     def add_rule(self):
         """Adds new rule to the list"""
         rule = {
             "operator": self.rule_operation_combo.currentText(),
             "value": self.rule_value_spin.value(),
-            "color": self.rule_color_code
+            "color": self.rule_color_code,
+            "bg_color": self.rule_bg_color_code
         }
         self._add_rule_item(rule)
     
     def _add_rule_item(self, rule: dict):
         """Creates a list widget item from the dictionary of added rules"""
-        text = f"Value {rule["operator"]} {rule["value"]} -> Text Color: {rule["color"]}"
+        text = f"If value {rule['operator']} {rule['value']} -> Text: {rule['color']} | Fill: {rule.get('bg_color', 'None')}"
         item = QListWidgetItem(text)
         item.setData(Qt.ItemDataRole.UserRole, rule)
         self.rule_list.addItem(item)
@@ -271,13 +338,8 @@ class TableCustomizationDialog(QDialog):
 
     def get_settings(self) -> dict:
         """Configured settings"""
-        selection_index = self.selection_behavior_combo.currentIndex()
-        if selection_index == 1:
-            selection_behavior = QAbstractItemView.SelectionBehavior.SelectRows
-        elif selection_index == 2:
-            selection_behavior = QAbstractItemView.SelectionBehavior.SelectColumns
-        else:
-            selection_behavior = QAbstractItemView.SelectionBehavior.SelectItems
+        selection_text = self.selection_behavior_combo.currentText()
+        selection_behavior = self._selection_mapping.get(selection_text, QAbstractItemView.SelectionBehavior.SelectItems)
         
         # Retrieve rules
         conditional_rules = []
@@ -291,12 +353,37 @@ class TableCustomizationDialog(QDialog):
             "alternating_rows": self.alternating_check.isChecked(),
             "alt_color": self.current_alt_color,
             "show_grid": self.grid_check.isChecked(),
-            "show_h_header": self.horizontal_header_check.isChecked(),
-            "show_v_header": self.vertical_header_check.isChecked(),
+            "show_h_headers": self.horizontal_header_check.isChecked(),
+            "show_v_headers": self.vertical_header_check.isChecked(),
             "font_family": self.font_combo.currentFont().family(),
             "font_size": self.font_size_spin.value(),
             "word_wrap": self.word_wrap_check.isChecked(),
             "selection_behavior": selection_behavior,
             "float_precision": self.precision_spin.value(),
-            "conditional_rules": conditional_rules
+            "conditional_rules": conditional_rules,
+            "text_alignment": self.alignment_combo.currentText()
         }
+    
+    def apply_settings(self) -> None:
+        """Emits the current settings without closing the dialog"""
+        current_config = self.get_settings()
+        self.settings_applied.emit(current_config)
+    
+    def reset_to_defaults(self) -> None:
+        """Resets the UI components to system standard defaults."""
+        self.alternating_check.setChecked(True)
+        self.current_alt_color = DEFAULT_ALT_COLOR
+        self.alt_color_button.updateColors(self.current_alt_color)
+        
+        self.grid_check.setChecked(True)
+        self.horizontal_header_check.setChecked(True)
+        self.vertical_header_check.setChecked(True)
+        
+        self.font_size_spin.setValue(DEFAULT_FONT_SIZE)
+        self.word_wrap_check.setChecked(False)
+        self.alignment_combo.setCurrentText("Left")
+        
+        self.precision_spin.setValue(DEFAULT_FLOAT_PRECISION)
+        self.rule_list.clear()
+        
+        self.selection_behavior_combo.setCurrentText("Select Items")

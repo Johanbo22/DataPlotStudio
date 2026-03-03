@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import QPlainTextEdit, QTextEdit, QCompleter, QDialog, QVBo
 
 class CodeEditor(QPlainTextEdit):
     """Custom texedit widget that serves as a code editor"""
+    
+    TAB_SPACES: str = "    "
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.lineNumberArea: LineNumberArea = LineNumberArea(self)
@@ -190,8 +192,6 @@ class CodeEditor(QPlainTextEdit):
     
     def indentSelection(self, cursor: QTextCursor) -> None:
         """Indents the currently selected text blocks by 4 spaces"""
-        global FOUR_SPACES
-        FOUR_SPACES = "    "
         try:
             has_selection: bool = cursor.hasSelection()
             start_pos: int = cursor.selectionStart()
@@ -209,7 +209,7 @@ class CodeEditor(QPlainTextEdit):
             for i in range(start_block, end_block + 1):
                 block = self.document().findBlockByNumber(i)
                 cursor.setPosition(block.position())
-                cursor.insertText(FOUR_SPACES)
+                cursor.insertText(self.TAB_SPACES)
             cursor.endEditBlock()
             
             if has_selection:
@@ -217,7 +217,7 @@ class CodeEditor(QPlainTextEdit):
                 cursor.setPosition(self.document().findBlockByNumber(end_block).position(), QTextCursor.MoveMode.KeepAnchor)
                 cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
             else:
-                cursor.setPosition(start_pos + 4)
+                cursor.setPosition(start_pos + len(self.TAB_SPACES))
             self.setTextCursor(cursor)
         except Exception as e:
             print(f"CodeEditor Indent Error: {e}")
@@ -245,12 +245,12 @@ class CodeEditor(QPlainTextEdit):
                 block_text: str = block.text()
                 
                 spaces_to_remove: int = 0
-                if block_text.startswith(FOUR_SPACES):
-                    spaces_to_remove = 4
+                if block_text.startswith(self.TAB_SPACES):
+                    spaces_to_remove = len(self.TAB_SPACES)
                 elif block_text.startswith("\t"):
                     spaces_to_remove = 1
                 else:
-                    for char in block_text[:4]:
+                    for char in block_text[:len(self.TAB_SPACES)]:
                         if char == " ":
                             spaces_to_remove += 1
                         else:
@@ -297,7 +297,7 @@ class CodeEditor(QPlainTextEdit):
             if cursor.hasSelection():
                 self.indentSelection(cursor)
             else:
-                cursor.insertText(FOUR_SPACES)
+                cursor.insertText(self.TAB_SPACES)
             return
         #backtab
         if event.key() == Qt.Key.Key_Backtab:
