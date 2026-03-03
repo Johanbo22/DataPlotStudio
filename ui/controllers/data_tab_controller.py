@@ -960,7 +960,9 @@ class DataTabController:
                             new_column_name=config["new_column"],
                             method=config["method"],
                             bins=config["bins"],
-                            labels=config["labels"]
+                            labels=config["labels"],
+                            right_inclusive=config.get("right_inclusive", True),
+                            drop_original=config.get("drop_original", False)
                         )
                     self.view.refresh_data_view()
                     

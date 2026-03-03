@@ -840,7 +840,7 @@ class DataHandler:
                 f"Error computing and creating new column: {str(ComputedColumnError)}"
             )
     
-    def bin_column(self, column: str, new_column_name: str, method: str, bins: Any, labels: List[str] = None) -> pd.DataFrame:
+    def bin_column(self, column: str, new_column_name: str, method: str, bins: Any, labels: List[str] = None, right_inclusive: bool = True, drop_original: bool = False) -> pd.DataFrame:
         """
         Bin a continuous variable into categorical buckets.
 
@@ -850,6 +850,8 @@ class DataHandler:
             method: 'cut' for value-based (uniform/custom), 'qcut' for quantile-based.
             bins: Number of bins (int) or list of bin edges.
             labels: Optional labels for the bins.
+            right_inclusive: Whether intervals are closed on the right (for cut method).
+            drop_original: Whether to drop the source column after binning.
         """
         if self.df is None:
             raise ValueError("No data loaded")
@@ -871,11 +873,14 @@ class DataHandler:
             else:
                 #use value based binning
                 self.df[new_column_name] = pd.cut(
-                    self.df[column], bins=bins, labels=labels, include_lowest=True
+                    self.df[column], bins=bins, labels=labels, include_lowest=True, right=right_inclusive
                 )
             
             if not isinstance(self.df[new_column_name].dtype, pd.CategoricalDtype):
                 self.df[new_column_name] = self.df[new_column_name].astype("category")
+            
+            if drop_original and column != new_column_name:
+                self.df = self.df.drop(columns=[column])
             
             self.operation_log.append({
                 "type": "bin_column",
