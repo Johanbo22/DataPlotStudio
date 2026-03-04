@@ -6,6 +6,7 @@ import re
 from ui.icons import IconBuilder, IconType
 
 from core.resource_loader import get_resource_path
+from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
 from core.markdown_parser import parse_changelog
@@ -73,7 +74,7 @@ class LandingPage(QWidget):
         # Buttons
         button_width = 280
 
-        self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex="#2980b9", text_color_hex="white", padding="12px", hover_color_hex="#3498db", pressed_color_hex="#1f6390", typewriter_effect=True)
+        self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", hover_color_hex="#3498db", pressed_color_hex="#1f6390", typewriter_effect=True)
         self.button_open.setIcon(IconBuilder.build(IconType.OPEN_PROJECT))
         self.button_open.setFixedWidth(button_width)
         self.button_open.clicked.connect(self.open_project_clicked.emit)

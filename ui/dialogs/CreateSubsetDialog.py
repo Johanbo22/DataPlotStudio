@@ -3,6 +3,7 @@ from PyQt6.QtCore import QDate
 import pandas as pd
 from typing import Dict, Any, List, Optional
 
+from ui.theme import ThemeColors
 from ui.widgets import (
     DataPlotStudioButton,
     DataPlotStudioComboBox,
@@ -149,7 +150,7 @@ class CreateSubsetDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
 
-        create_btn = DataPlotStudioButton("Create" if not self.existing_subset else "Update", parent=self, base_color_hex="#4caf50", text_color_hex="white")
+        create_btn = DataPlotStudioButton("Create" if not self.existing_subset else "Update", parent=self, base_color_hex=ThemeColors.MainColor, text_color_hex="white")
         create_btn.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(create_btn)
 

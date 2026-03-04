@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QWidget
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit, DataPlotStudioComboBox, DataPlotStudioSpinBox, DataPlotStudioGroupBox, DataPlotStudioCheckBox
 
 import pandas as pd
@@ -129,7 +130,7 @@ class BinningDialog(QDialog):
         self.apply_button = DataPlotStudioButton(
             "Create Bins",
             parent=self,
-            base_color_hex="#27ae60",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="white"
         )
         self.apply_button.clicked.connect(self.validate_and_accept)

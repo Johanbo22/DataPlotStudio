@@ -34,6 +34,7 @@ from core.subset_manager import SubsetManager
 from pathlib import Path
 
 from ui.data_table_model import DataTableModel
+from ui.theme import ThemeColors
 from ui.widgets import (
     DataPlotStudioButton,
     DataPlotStudioTabWidget
@@ -124,7 +125,7 @@ class DataTab(QWidget):
         self.create_new_dataset_button = DataPlotStudioButton(
             "Create a New Dataset",
             parent=self,
-            base_color_hex="#3498DB",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="white",
         )
         self.create_new_dataset_button.setIcon(IconBuilder.build(IconType.NEW_PROJECT)

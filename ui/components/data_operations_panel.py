@@ -14,8 +14,8 @@ from ui.widgets import (
     DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioListWidget,
     HelpIcon
 )
-from resources.version import INFO_STYLESHEET
 from ui.icons import IconBuilder, IconType
+from theme import ThemeColors
 
 class DataOperationsPanel(QWidget):
     """
@@ -33,8 +33,7 @@ class DataOperationsPanel(QWidget):
         reset_button = DataPlotStudioButton(
             "Reset to Original",
             parent=self,
-            base_color_hex="#ffcccc",
-            hover_color_hex="#faafaf",
+            base_color_hex=ThemeColors.DestructiveColor,
             typewriter_effect=True,
         )
         reset_button.setIcon(IconBuilder.build(IconType.REDO))
@@ -60,7 +59,7 @@ class DataOperationsPanel(QWidget):
 
         clean_info = QLabel("This tab includes operations to clean your dataset.")
         clean_info.setWordWrap(True)
-        clean_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        clean_info.setStyleSheet(ThemeColors.InfoStylesheet)
         cleaning_layout.addWidget(clean_info)
 
         # Remove Duplicates
@@ -168,13 +167,13 @@ class DataOperationsPanel(QWidget):
 
         filter_info = QLabel("This tab has operations which help you filter your dataset based on your own criteria. Use the 'Advanced Filter' dialog to apply more than one filter")
         filter_info.setWordWrap(True)
-        filter_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_info.setStyleSheet(ThemeColors.InfoStylesheet)
         filter_layout.addWidget(filter_info)
 
         filter_layout.addWidget(QLabel("Column:"))
         filter_column_info = QLabel("Select the column you wish to apply a filter to")
         filter_column_info.setWordWrap(True)
-        filter_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_column_info.setStyleSheet(ThemeColors.InfoStylesheet)
         filter_layout.addWidget(filter_column_info)
 
         self.filter_column = DataPlotStudioComboBox()
@@ -182,7 +181,7 @@ class DataOperationsPanel(QWidget):
 
         filter_layout.addWidget(QLabel("Condition:"))
         filter_condition_info = QLabel("Select which conditional to apply to column. N.B. Uses Python Syntax")
-        filter_condition_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_condition_info.setStyleSheet(ThemeColors.InfoStylesheet)
         filter_condition_info.setWordWrap(True)
         filter_layout.addWidget(filter_condition_info)
 
@@ -193,7 +192,7 @@ class DataOperationsPanel(QWidget):
         filter_layout.addWidget(QLabel("Value:"))
         filter_value_info = QLabel("Enter the value you want the column to be evaluate to.\nNote: reference your data. This is case-sensitive")
         filter_value_info.setWordWrap(True)
-        filter_value_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        filter_value_info.setStyleSheet(ThemeColors.InfoStylesheet)
         filter_layout.addWidget(filter_value_info)
 
         self.filter_value = DataPlotStudioLineEdit()
@@ -257,12 +256,12 @@ class DataOperationsPanel(QWidget):
 
         column_info = QLabel("This tab allows you to change certain elements to the columns of your data")
         column_info.setWordWrap(True)
-        column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        column_info.setStyleSheet(ThemeColors.InfoStylesheet)
         column_layout.addWidget(column_info)
 
         column_column_info = QLabel("Select the column you wish to work with")
         column_column_info.setWordWrap(True)
-        column_column_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        column_column_info.setStyleSheet(ThemeColors.InfoStylesheet)
         column_layout.addWidget(column_column_info)
 
         self.column_list = DataPlotStudioListWidget()
@@ -341,7 +340,7 @@ class DataOperationsPanel(QWidget):
 
         data_type_info = QLabel("This operation allows you to change the datatype of your selected column.")
         data_type_info.setWordWrap(True)
-        data_type_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        data_type_info.setStyleSheet(ThemeColors.InfoStylesheet)
         type_layout.addWidget(data_type_info)
 
         type_layout.addWidget(QLabel("Change selected columns DataType to:"))
@@ -378,7 +377,7 @@ class DataOperationsPanel(QWidget):
 
         text_info = QLabel("Standardize text data in the selected column.\nRemove whitespace, fix casing etc.")
         text_info.setWordWrap(True)
-        text_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        text_info.setStyleSheet(ThemeColors.InfoStylesheet)
         text_layout.addWidget(text_info)
 
         self.text_operation_combo = DataPlotStudioComboBox()
@@ -441,7 +440,7 @@ class DataOperationsPanel(QWidget):
         
         binning_info = QLabel("Convert continuous numeric variables into categorical buckets (e.g., Age -> Age Groups).")
         binning_info.setWordWrap(True)
-        binning_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        binning_info.setStyleSheet(ThemeColors.InfoStylesheet)
         binning_layout.addWidget(binning_info)
         
         binning_btn_layout = QHBoxLayout()
@@ -469,7 +468,7 @@ class DataOperationsPanel(QWidget):
         
         norm_info = QLabel("Scale numeric data to a standard range or distribution")
         norm_info.setWordWrap(True)
-        norm_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        norm_info.setStyleSheet(ThemeColors.InfoStylesheet)
         norm_layout.addWidget(norm_info)
         
         self.norm_method_combo = DataPlotStudioComboBox()
@@ -504,7 +503,7 @@ class DataOperationsPanel(QWidget):
 
         transform_info = QLabel("This tab allows you to alter your input data by grouping and aggregation.")
         transform_info.setWordWrap(True)
-        transform_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        transform_info.setStyleSheet(ThemeColors.InfoStylesheet)
         transform_layout.addWidget(transform_info)
 
         # Aggregate
@@ -581,7 +580,7 @@ class DataOperationsPanel(QWidget):
 
         sorting_info = QLabel("Permanently sort your dataset by a column.")
         sorting_info.setWordWrap(True)
-        sorting_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        sorting_info.setStyleSheet(ThemeColors.InfoStylesheet)
         sorting_layout.addWidget(sorting_info)
 
         sort_controls = QHBoxLayout()
@@ -612,7 +611,7 @@ class DataOperationsPanel(QWidget):
 
         saved_agg_info = QLabel("Save aggregations to switch between different views of your dataset")
         saved_agg_info.setWordWrap(True)
-        saved_agg_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        saved_agg_info.setStyleSheet(ThemeColors.InfoStylesheet)
         saved_agg_layout.addWidget(saved_agg_info)
 
         self.saved_agg_list = DataPlotStudioListWidget()
@@ -657,7 +656,7 @@ class DataOperationsPanel(QWidget):
         
         dt_info = QLabel("Extract date components from dates or calculate duration between datetime columns")
         dt_info.setWordWrap(True)
-        dt_info.setStyleSheet(INFO_STYLESHEET)
+        dt_info.setStyleSheet(ThemeColors.InfoStylesheet)
         dt_layout.addWidget(dt_info)
         
         extract_group = DataPlotStudioGroupBox("Extract Date Components")
@@ -735,7 +734,7 @@ class DataOperationsPanel(QWidget):
 
         subset_info = QLabel("This tab allows you to create and manage data subsets.")
         subset_info.setWordWrap(True)
-        subset_info.setStyleSheet(INFO_STYLESHEET)
+        subset_info.setStyleSheet(ThemeColors.InfoStylesheet)
         subset_layout.addWidget(subset_info)
         subset_layout.addSpacing(10)
 
@@ -818,8 +817,7 @@ class DataOperationsPanel(QWidget):
         self.inject_subset_tbn = DataPlotStudioButton(
             "Insert Selected Subset",
             parent=self,
-            base_color_hex="#3409db",
-            hover_color_hex="#1b0085",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="white",
             font_weight="bold",
             padding="8px",
@@ -838,8 +836,7 @@ class DataOperationsPanel(QWidget):
         self.restore_original_btn = DataPlotStudioButton(
             "Revert to Original Data View",
             parent=self,
-            base_color_hex="#e74c3c",
-            hover_color_hex="#e91801",
+            base_color_hex=ThemeColors.DestructiveColor,
             text_color_hex="white",
             padding="8px",
         )
@@ -861,7 +858,7 @@ class DataOperationsPanel(QWidget):
 
         history_info = QLabel("View and revert to a previous state of data state")
         history_info.setWordWrap(True)
-        history_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        history_info.setStyleSheet(ThemeColors.InfoStylesheet)
         history_layout.addWidget(history_info)
 
         self.history_list = DataPlotStudioListWidget()

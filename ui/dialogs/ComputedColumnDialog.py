@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextCursor
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit, DataPlotStudioGroupBox, DataPlotStudioListWidget
 from ui.dialogs.CodeEditor import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
@@ -106,7 +107,7 @@ class ComputedColumnDialog(QDialog):
             "Use column names exactly as they appear below.\n"
             "If columns have spaces, wrap them in backticks: `Column Name`"
         )
-        help_text.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        help_text.setStyleSheet(ThemeColors.InfoStylesheet)
         help_text.setWordWrap(True)
         input_layout.addWidget(help_text)
 
@@ -164,10 +165,8 @@ class ComputedColumnDialog(QDialog):
         self.create_button = DataPlotStudioButton(
             "Create Column",
             parent=self,
-            base_color_hex="#27ae60",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="white",
-            hover_color_hex="#2ecc71",
-            pressed_color_hex="#1e8a4c",
             typewriter_effect=True,
         )
         self.create_button.clicked.connect(self.validate_and_accept)

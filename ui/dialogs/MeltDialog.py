@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel
 from typing import List
 
 import pandas as pd
+from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 
@@ -34,7 +35,7 @@ class MeltDialog(QDialog):
             "1. Select ID variables (columns to keep as identifers).\n"
             "2. Select Value Variables (columns to unpivot into rows)."
         )
-        info_description.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        info_description.setStyleSheet(ThemeColors.InfoStylesheet)
         info_description.setWordWrap(True)
         layout.addWidget(info_description)
 
@@ -129,7 +130,7 @@ class MeltDialog(QDialog):
         preview_button.clicked.connect(self.update_preview)
         button_layout.addWidget(preview_button)
 
-        apply_button = DataPlotStudioButton("Melt Data", base_color_hex="#4caf50")
+        apply_button = DataPlotStudioButton("Melt Data", base_color_hex=ThemeColors.MainColor)
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)

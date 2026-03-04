@@ -28,9 +28,11 @@ from .PlotExportDialog import PlotExportDialog
 from .GoogleSheetsExportDialog import GoogleSheetsExportDialog
 from .SplitColumnDialog import SplitColumnDialog
 from .RegexReplaceDialog import RegexReplaceDialog
+from .AppendDialog import AppendDialog
 
 __all__ = [
     "AggregationDialog",
+    "AppendDialog",
     "SplitColumnDialog",
     "RegexReplaceDialog",
     "CodeEditor",

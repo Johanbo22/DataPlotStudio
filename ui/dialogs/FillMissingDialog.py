@@ -1,3 +1,4 @@
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioButton, DataPlotStudioLineEdit
 from PyQt6.QtWidgets import (
     QDialog,
@@ -124,7 +125,7 @@ class FillMissingDialog(QDialog):
         apply_btn = DataPlotStudioButton(
             "Apply Fill",
             parent=self,
-            base_color_hex="#4caf50",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="white",
             font_weight="bold",
         )

@@ -8,6 +8,7 @@ from PyQt6.QtGui import QIcon, QKeySequence
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.resource_loader import get_resource_path
+from ui.theme import ThemeColors
 from ui.widgets import (
     DataPlotStudioButton
 )
@@ -69,9 +70,7 @@ class PlotTabUI(QWidget):
         self.plot_button = DataPlotStudioButton(
             "Generate Plot",
             parent=self,
-            base_color_hex="#4CAF50",    
-            hover_color_hex="#5cb85c",
-            pressed_color_hex="#4a9c4d",
+            base_color_hex=ThemeColors.MainColor,
             text_color_hex="#FFFFFF",
             border_style="none",
             typewriter_effect=True
@@ -84,10 +83,6 @@ class PlotTabUI(QWidget):
         self.save_plot_button = DataPlotStudioButton(
             "Save Plot",
             parent=self,
-            base_color_hex="#ff9800",
-            hover_color_hex="#ffb74d",
-            pressed_color_hex="#f57c00",
-            text_color_hex="#ffffff",
             border_style="none",
             typewriter_effect=True
         )
@@ -113,10 +108,6 @@ class PlotTabUI(QWidget):
         self.editor_button = DataPlotStudioButton(
             "Open Python Editor",
             parent=self,
-            base_color_hex="#2196F3",
-            hover_color_hex="#42A5F5",
-            pressed_color_hex="#1e88e5",
-            text_color_hex="#ffffff",
             border_style="none",
             typewriter_effect=True
         )

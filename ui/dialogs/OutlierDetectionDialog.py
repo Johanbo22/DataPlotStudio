@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QInputDialog
 )
 from core.data_handler import DataHandler
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
@@ -88,7 +89,7 @@ class OutlierDetectionDialog(QDialog):
             self.parameter_spin.valueChanged.connect(self.apply_detection)
             settings_layout.addWidget(self.parameter_spin)
 
-        refresh_button = DataPlotStudioButton("Recalculate", base_color_hex="#3498DB")
+        refresh_button = DataPlotStudioButton("Recalculate", base_color_hex=ThemeColors.MainColor)
         refresh_button.clicked.connect(self.apply_detection)
         settings_layout.addWidget(refresh_button)
 
@@ -132,20 +133,20 @@ class OutlierDetectionDialog(QDialog):
         # Action buttons
         button_layout = QHBoxLayout()
         
-        self.flag_button = DataPlotStudioButton("Flag Outliers", base_color_hex="#f39c12", text_color_hex="white")
+        self.flag_button = DataPlotStudioButton("Flag Outliers")
         self.flag_button.clicked.connect(self.flag_outliers)
         self.flag_button.setToolTip("Create a new column marking outliers as True")
         button_layout.addWidget(self.flag_button)
 
         self.remove_button = DataPlotStudioButton(
-            "Remove Outliers", base_color_hex="#e74c3c", text_color_hex="white"
+            "Remove Outliers", base_color_hex=ThemeColors.DestructiveColor, text_color_hex="white"
         )
         self.remove_button.clicked.connect(self.remove_outliers)
         button_layout.addWidget(self.remove_button)
 
         # Clippin contrsol
         self.clip_button = DataPlotStudioButton(
-            "Clip Values", base_color_hex="#27ae60", text_color_hex="white"
+            "Clip Values", base_color_hex=ThemeColors.MainColor, text_color_hex="white"
         )
         self.clip_button.clicked.connect(self.clip_outliers)
         if self.method == "isolation_forest":

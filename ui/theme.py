@@ -25,3 +25,11 @@ class ThemeColors:
     
     # Indicators
     ACCENT_COLOR = BORDER_FOCUS
+    
+    # Text for information
+    InfoStylesheet = "color: #666; font-style: italic; font-size: 9pt;"
+    
+    # Button color
+    MainColor = "#2196F3"
+    DestructiveColor = "#ffcccc"
+    

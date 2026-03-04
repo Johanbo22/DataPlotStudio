@@ -4,6 +4,7 @@ from PyQt6.QtCore import QDate, QThreadPool
 from flask.cli import F
 import pandas as pd
 
+from ui.theme import ThemeColors
 from ui.workers import FilterWorker
 from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioCheckBox
 
@@ -142,15 +143,15 @@ class FilterAdvancedDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
 
-        apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex="#e8f5fa")
+        apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex=ThemeColors.MainColor)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)
 
-        clear_button = DataPlotStudioButton("Clear Filters", parent=self, base_color_hex="#ffebee")
+        clear_button = DataPlotStudioButton("Clear Filters", parent=self, base_color_hex=ThemeColors.DestructiveColor)
         clear_button.clicked.connect(self.clear_fields)
         button_layout.addWidget(clear_button)
 
-        cancel_button = DataPlotStudioButton("Cancel", parent=self, base_color_hex="#e8f5fa")
+        cancel_button = DataPlotStudioButton("Cancel", parent=self)
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
 

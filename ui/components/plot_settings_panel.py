@@ -7,6 +7,7 @@ from core.resource_loader import get_resource_path
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
 
+from ui.theme import ThemeColors
 from ui.widgets import (
     AutoResizingStackedWidget,
     DataPlotStudioButton,
@@ -139,7 +140,7 @@ class PlotSettingsPanel(QWidget):
         self.subplot_group.setVisible(False)
         subplot_layout = QVBoxLayout()
         subplot_info = QLabel("This tool allows you to control how many subplots you wish to add to the current canvas\nThe rows adjust the number of horizontal plots added and the columns control the number of vertical plots added. Together they make up a array of plots. So if you add 2 rows and 2 columns you get 4 plots.")
-        subplot_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        subplot_info.setStyleSheet(ThemeColors.InfoStylesheet)
         subplot_info.setWordWrap(True)
         subplot_layout.addWidget(subplot_info)
 
@@ -301,7 +302,7 @@ class PlotSettingsPanel(QWidget):
             "Create subsets in the Data Explorer tab."
         )
         subset_info.setWordWrap(True)
-        subset_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        subset_info.setStyleSheet(ThemeColors.InfoStylesheet)
         subset_layout.addWidget(subset_info)
 
         self.subset_combo = DataPlotStudioComboBox()
@@ -370,7 +371,7 @@ class PlotSettingsPanel(QWidget):
         theme_layout = QVBoxLayout()
 
         theme_info = QLabel("Save or load custom visual styles")
-        theme_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        theme_info.setStyleSheet(ThemeColors.InfoStylesheet)
         theme_layout.addWidget(theme_info)
 
         # Controls to load theme from file
@@ -395,7 +396,7 @@ class PlotSettingsPanel(QWidget):
         self.edit_theme_button.setToolTip("Edit the JSON file of the selected theme")
         theme_controls_layout.addWidget(self.edit_theme_button)
 
-        self.delete_theme_button = DataPlotStudioButton("Delete theme", parent=self, base_color_hex="#d32f2f")
+        self.delete_theme_button = DataPlotStudioButton("Delete theme", parent=self, base_color_hex=ThemeColors.DestructiveColor)
         theme_controls_layout.addWidget(self.delete_theme_button)
         theme_layout.addLayout(theme_controls_layout)
 
@@ -551,7 +552,7 @@ class PlotSettingsPanel(QWidget):
 
         # inf label
         spines_info = QLabel("Customize the four borders (spines) of the plotting axes")
-        spines_info.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        spines_info.setStyleSheet(ThemeColors.InfoStylesheet)
         spines_layout.addWidget(spines_info)
         spines_layout.addSpacing(10)
 

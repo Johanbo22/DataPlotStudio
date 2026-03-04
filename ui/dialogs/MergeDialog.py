@@ -13,6 +13,7 @@ import pandas as pd
 from pathlib import Path
 
 from core.resource_loader import get_resource_path
+from ui.theme import ThemeColors
 from ui.widgets import (
     DataPlotStudioButton,
     DataPlotStudioComboBox,
@@ -106,7 +107,7 @@ class MergeDialog(QDialog):
         
         # Buttons
         button_layout = QHBoxLayout()
-        self.merge_button = DataPlotStudioButton("Merge Data", parent=self, base_color_hex="#3498DB", text_color_hex="white")
+        self.merge_button = DataPlotStudioButton("Merge Data", parent=self, base_color_hex=ThemeColors.MainColor, text_color_hex="white")
         self.merge_button.clicked.connect(self.validate_and_accept)
         self.merge_button.setEnabled(False)
         

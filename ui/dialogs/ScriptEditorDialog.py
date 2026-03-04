@@ -1,3 +1,4 @@
+from ui.theme import ThemeColors
 from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from ui.dialogs import CodeEditor
 from ui.PythonHighlighter import PythonHighlighter
@@ -289,7 +290,7 @@ class ScriptEditorDialog(QDialog):
     
         #buttons
         button_layout = QHBoxLayout()
-        self.run_button = DataPlotStudioButton("Run Script", parent=self, base_color_hex="#4caf50", hover_color_hex="#5cb85c", pressed_color_hex="#4a9c4d", text_color_hex="white", padding="6px", typewriter_effect=True)
+        self.run_button = DataPlotStudioButton("Run Script", parent=self, base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="6px", typewriter_effect=True)
         self.run_button.setMinimumHeight(40)
         self.run_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.run_button.setShortcut("Ctrl+Shift+Return")

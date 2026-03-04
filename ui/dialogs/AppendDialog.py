@@ -3,8 +3,8 @@ from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox
 from PyQt6.QtCore import Qt
 from core.data_handler import DataHandler
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit, DataPlotStudioCheckBox
-from resources.version import INFO_STYLESHEET
 
 class AppendDialog(QDialog):
     """
@@ -29,7 +29,7 @@ class AppendDialog(QDialog):
             "file will be added to the bottom of your current active dataframe"
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet(INFO_STYLESHEET)
+        info_label.setStyleSheet(ThemeColors.InfoStylesheet)
         layout.addWidget(info_label)
         
         # File selection layout
@@ -61,7 +61,7 @@ class AppendDialog(QDialog):
         cancel_btn = DataPlotStudioButton("Cancel", parent=self)
         cancel_btn.clicked.connect(self.reject)
         
-        self.append_btn = DataPlotStudioButton("Append Data", parent=self, base_color_hex="#0078d7")
+        self.append_btn = DataPlotStudioButton("Append Data", parent=self, base_color_hex=ThemeColors.MainColor)
         self.append_btn.clicked.connect(self.accept_append)
         self.append_btn.setEnabled(False)
         

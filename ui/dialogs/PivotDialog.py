@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageB
 from typing import List, Dict, Any
 
 import pandas as pd
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioComboBox, DataPlotStudioListWidget
 
 class PivotDialog(QDialog):
@@ -32,7 +33,7 @@ class PivotDialog(QDialog):
             "2. Columns: Keys to group by on the columns.\n"
             "3. Values: Column(s) to aggregate by."
         )
-        info_description.setStyleSheet("color: #666; font-style: italic; font-size: 9pt;")
+        info_description.setStyleSheet(ThemeColors.InfoStylesheet)
         info_description.setWordWrap(True)
         layout.addWidget(info_description)
         
@@ -108,7 +109,7 @@ class PivotDialog(QDialog):
         preview_button.clicked.connect(self.update_preview)
         button_layout.addWidget(preview_button)
         
-        apply_button = DataPlotStudioButton("Pivot Data", base_color_hex="#4caf50")
+        apply_button = DataPlotStudioButton("Pivot Data", base_color_hex=ThemeColors.MainColor)
         apply_button.setMinimumWidth(120)
         apply_button.clicked.connect(self.validate_and_accept)
         button_layout.addWidget(apply_button)

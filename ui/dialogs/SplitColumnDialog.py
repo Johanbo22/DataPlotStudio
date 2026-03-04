@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox
 from typing import Optional
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit
 
 class SplitColumnDialog(QDialog):
@@ -35,7 +36,7 @@ class SplitColumnDialog(QDialog):
         layout.addSpacing(10)
 
         btn_layout = QHBoxLayout()
-        self.btn_ok = DataPlotStudioButton("Apply Split", parent=self, base_color_hex="#0078d7")
+        self.btn_ok = DataPlotStudioButton("Apply Split", parent=self, base_color_hex=ThemeColors.MainColor)
         self.btn_ok.clicked.connect(self.validate_and_accept)
         
         self.btn_cancel = DataPlotStudioButton("Cancel", parent=self)
