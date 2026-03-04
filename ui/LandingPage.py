@@ -74,42 +74,43 @@ class LandingPage(QWidget):
         # Buttons
         button_width = 280
 
-        self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", hover_color_hex="#3498db", pressed_color_hex="#1f6390", typewriter_effect=True)
+        self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", typewriter_effect=True)
         self.button_open.setIcon(IconBuilder.build(IconType.OPEN_PROJECT))
         self.button_open.setFixedWidth(button_width)
         self.button_open.clicked.connect(self.open_project_clicked.emit)
 
-        self.button_import_file = DataPlotStudioButton("Import from file", base_color_hex="#27ae60", text_color_hex="white", padding="12px", hover_color_hex="#2ecc71", pressed_color_hex="#1e8a4c", typewriter_effect=True)
+        self.button_import_file = DataPlotStudioButton("Import from file", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
         self.button_import_file.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
         self.button_import_file.setFixedWidth(button_width)
         self.button_import_file.clicked.connect(self.import_file_clicked.emit)
 
-        self.button_import_sheet = DataPlotStudioButton("Import from Google Sheets", base_color_hex="#16a085", text_color_hex="white", padding="12px", hover_color_hex="#1abc9c", pressed_color_hex="#107a66", typewriter_effect=True)
+        self.button_import_sheet = DataPlotStudioButton("Import from Google Sheets", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
         self.button_import_sheet.setIcon(QIcon(get_resource_path("icons/menu_bar/google-sheets-logo-icon.svg")))
         self.button_import_sheet.setFixedWidth(button_width)
         self.button_import_sheet.clicked.connect(self.import_sheets_clicked.emit)
 
-        self.button_import_db = DataPlotStudioButton("Import from Database", base_color_hex="#8e44ad", text_color_hex="white", padding="12px", hover_color_hex="#9558b6", pressed_color_hex="#6f3487", typewriter_effect=True)
+        self.button_import_db = DataPlotStudioButton("Import from Database", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
         self.button_import_db.setIcon(IconBuilder.build(IconType.IMPORT_DATABASE))
         self.button_import_db.setFixedWidth(button_width)
         self.button_import_db.clicked.connect(self.import_db_clicked.emit)
 
-        self.button_new = DataPlotStudioButton("Create Empty Dataset", base_color_hex="#e67e22", text_color_hex="white", padding="12px", hover_color_hex="#f39c12", pressed_color_hex="#b85f17", typewriter_effect=True)
+        self.button_new = DataPlotStudioButton("Create Empty Dataset", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", typewriter_effect=True)
         self.button_new.setIcon(IconBuilder.build(IconType.NEW_PROJECT))
         self.button_new.setFixedWidth(button_width)
         self.button_new.clicked.connect(self.new_dataset_clicked.emit)
 
-        self.button_quit = DataPlotStudioButton("Quit DataPlotStudio", base_color_hex="#c0392b", text_color_hex="white", padding="12px", hover_color_hex="#e74c3c", pressed_color_hex="#8f231f", typewriter_effect=True)
+        self.button_quit = DataPlotStudioButton("Quit DataPlotStudio", base_color_hex="#e0e0e0", text_color_hex="#555555", padding="12px",  typewriter_effect=True)
         self.button_quit.setIcon(IconBuilder.build(IconType.QUIT))
         self.button_quit.setFixedWidth(button_width)
         self.button_quit.clicked.connect(self.quit_clicked.emit)
 
         actions_layout.addWidget(self.button_open)
         actions_layout.addWidget(self.button_new)
+        actions_layout.addSpacing(10)
         actions_layout.addWidget(self.button_import_file)
         actions_layout.addWidget(self.button_import_sheet)
         actions_layout.addWidget(self.button_import_db)
-        actions_layout.addSpacing(20)
+        actions_layout.addSpacing(35)
         actions_layout.addWidget(self.button_quit)
 
         actions_layout.addStretch()

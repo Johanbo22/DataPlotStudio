@@ -2,6 +2,8 @@ from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, QTimer,
 from PyQt6.QtGui import QColor, QKeyEvent
 from PyQt6.QtWidgets import QPushButton
 
+from ui.theme import ThemeColors
+
 
 class DataPlotStudioButton(QPushButton):
     """Custom QPush Button that animates on hover."""
@@ -14,7 +16,7 @@ class DataPlotStudioButton(QPushButton):
     def __init__(self,
                 text: str,
                 parent=None,
-                base_color_hex: str = "#ededed",
+                base_color_hex: str = ThemeColors.ButtonDefaultColor,
                 hover_color_hex: str | None = None,
                 pressed_color_hex: str | None = None,
                 text_color_hex: str | None = None,

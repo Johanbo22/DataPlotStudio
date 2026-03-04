@@ -98,7 +98,7 @@ class PlotSettingsPanel(QWidget):
         plot_type_layout = QVBoxLayout()
 
         self.current_plot_label = QLabel("Selected Plot: None")
-        self.current_plot_label.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 11pt; margin-bottom: 5px;")
+        self.current_plot_label.setStyleSheet(ThemeColors.SectionHeaderStylesheet)
         plot_type_layout.addWidget(self.current_plot_label)
 
         self.plot_type = QToolBox()
@@ -205,7 +205,7 @@ class PlotSettingsPanel(QWidget):
 
         # data selection
         data_group = DataPlotStudioGroupBox("Data")
-        data_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        data_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         data_layout = QVBoxLayout()
 
         # x column selection
@@ -250,7 +250,7 @@ class PlotSettingsPanel(QWidget):
 
         # info for multiplaye
         self.multi_y_info = QLabel("Tip: Hold Ctrl/Cmd to select multiple columns")
-        self.multi_y_info.setStyleSheet("color: #7f8c8d; font-size: 9.5pt; font-style: italic;")
+        self.multi_y_info.setStyleSheet(ThemeColors.MutedTextStylesheet)
         self.multi_y_info.setVisible(False)
         data_layout.addWidget(self.multi_y_info)
 
@@ -294,7 +294,7 @@ class PlotSettingsPanel(QWidget):
         #  SUBSEts
         self.subset_group = DataPlotStudioGroupBox("Data Subset")
         self.subset_group.setVisible(False)
-        self.subset_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        self.subset_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         subset_layout = QVBoxLayout()
 
         subset_info = QLabel(
@@ -326,7 +326,7 @@ class PlotSettingsPanel(QWidget):
         scroll_layout.addWidget(self.subset_group)
 
         hue_group = DataPlotStudioGroupBox("Hue/Group:")
-        hue_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        hue_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         hue_layout = QVBoxLayout()
         self.hue_column = DataPlotStudioComboBox()
         self.hue_column.addItem("None")
@@ -338,7 +338,7 @@ class PlotSettingsPanel(QWidget):
 
         # plot description tab
         description_group = DataPlotStudioGroupBox("Plot Description: ")
-        description_group.setStyleSheet("AnimatedGroupBox { font-size: 16pt; font-weight: bold;}")
+        description_group.setStyleSheet(ThemeColors.GroupBoxHeaderLargeStyle)
         description_layout = QVBoxLayout()
         self.description_label = QLabel()
         self.description_label.setWordWrap(True)
@@ -407,7 +407,7 @@ class PlotSettingsPanel(QWidget):
 
         # Font FAMILY
         font_group = DataPlotStudioGroupBox("Font Settings")
-        font_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        font_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         font_layout = QVBoxLayout()
 
         font_layout.addWidget(QLabel("Font Family:"))
@@ -443,7 +443,7 @@ class PlotSettingsPanel(QWidget):
 
         # Title
         title_group = DataPlotStudioGroupBox("Title Options")
-        title_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        title_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         title_layout = QVBoxLayout()
         self.title_check = DataPlotStudioToggleSwitch("Show Title")
         self.title_check.setChecked(True)
@@ -484,7 +484,7 @@ class PlotSettingsPanel(QWidget):
 
         # X Label
         xlabel_group = DataPlotStudioGroupBox("X Label Options")
-        xlabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        xlabel_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         xlabel_layout = QVBoxLayout()
         self.xlabel_check = DataPlotStudioToggleSwitch("Show X Label")
         self.xlabel_check.setChecked(True)
@@ -516,7 +516,7 @@ class PlotSettingsPanel(QWidget):
 
         # Y Label
         ylabel_group = DataPlotStudioGroupBox("Y Label Options")
-        ylabel_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        ylabel_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         ylabel_layout = QVBoxLayout()
         self.ylabel_check = DataPlotStudioToggleSwitch("Show Y Label")
         self.ylabel_check.setChecked(True)
@@ -729,7 +729,7 @@ class PlotSettingsPanel(QWidget):
 
         # Figure size
         figure_size_group = DataPlotStudioGroupBox("Figure Settings")
-        figure_size_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        figure_size_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         figure_size_layout = QVBoxLayout()
         figure_size_layout.addWidget(QLabel("Figure Width:"))
         self.width_spin = DataPlotStudioSpinBox()
@@ -827,7 +827,7 @@ class PlotSettingsPanel(QWidget):
 
         # X-axis limits
         xaxis_limit_group = DataPlotStudioGroupBox("X-axis Options")
-        xaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        xaxis_limit_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         xaxis_limit_layout = QVBoxLayout()
 
         xaxis_limit_layout.addWidget(QLabel("X-axis - Auto Limit:"))
@@ -942,7 +942,7 @@ class PlotSettingsPanel(QWidget):
 
         # Y-axis limits
         yaxis_limit_group = DataPlotStudioGroupBox("Y-axis Options")
-        yaxis_limit_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        yaxis_limit_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         yaxis_limit_layout = QVBoxLayout()
         yaxis_limit_layout.addWidget(QLabel("Y-axis - Auto Limit:"))
         self.y_auto_check = DataPlotStudioToggleSwitch("Auto")
@@ -1046,7 +1046,7 @@ class PlotSettingsPanel(QWidget):
 
         # FLiping axis feature
         flip_axes_group = DataPlotStudioGroupBox("Axis Orientation")
-        flip_axes_group.setStyleSheet("AnimatedGroupBox { font-size: 14pt; font-weight: bold;}")
+        flip_axes_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         flip_axes_layout = QVBoxLayout()
 
         self.flip_axes_check = DataPlotStudioToggleSwitch("Flip Axis (Swap X and Y axis)")
@@ -1192,8 +1192,7 @@ class PlotSettingsPanel(QWidget):
         )
         self.format_help.setVisible(False)
         self.format_help.setWordWrap(True)
-        self.format_help.setStyleSheet(
-            "background-color: #f0f0f0; padding: 8px; border-radius: 4px; margin-top: 10px;")
+        self.format_help.setStyleSheet(ThemeColors.HelpBoxStylesheet)
         datetime_format_layout.addWidget(self.format_help)
 
         datetime_format_group.setLayout(datetime_format_layout)

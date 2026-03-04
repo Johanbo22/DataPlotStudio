@@ -78,7 +78,6 @@ class PlotTabUI(QWidget):
         self.plot_button.setMinimumHeight(40)
         self.plot_button.setIcon(IconBuilder.build(IconType.GENERATE_PLOT))
         self.plot_button.setShortcut(QKeySequence("Ctrl+Return"))
-        button_layout.addWidget(self.plot_button)
 
         self.save_plot_button = DataPlotStudioButton(
             "Save Plot",
@@ -89,21 +88,15 @@ class PlotTabUI(QWidget):
         self.save_plot_button.setMinimumHeight(40)
         self.save_plot_button.setIcon(IconBuilder.build(IconType.SAVE_PLOT))
         self.save_plot_button.setToolTip("Export the current plot to PNG, PDF or SVG")
-        button_layout.addWidget(self.save_plot_button)
         
         self.clear_button = DataPlotStudioButton(
             "Clear",
             parent=self,
-            base_color_hex="#ededed",    
-            hover_color_hex="#f5f5f5",
-            pressed_color_hex="#dcdcdc",
             text_color_hex="#000000",
-            border_style="1px solid #c9c9c9",
             typewriter_effect=True
         )
         self.clear_button.setMinimumHeight(40)
         self.clear_button.setIcon(IconBuilder.build(IconType.CLEAR_PLOT))
-        button_layout.addWidget(self.clear_button)
         
         self.editor_button = DataPlotStudioButton(
             "Open Python Editor",
@@ -114,7 +107,11 @@ class PlotTabUI(QWidget):
         self.editor_button.setMinimumHeight(40)
         self.editor_button.setIcon(IconBuilder.build(IconType.OPEN_PYTHON_EDITOR))
         self.editor_button.setToolTip("Open the code editor to view/write python code for the plot.")
+        
+        button_layout.addWidget(self.plot_button)
+        button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.editor_button)
+        button_layout.addWidget(self.save_plot_button)
         
         right_layout.addLayout(button_layout)
         

@@ -15,7 +15,7 @@ from ui.widgets import (
     HelpIcon
 )
 from ui.icons import IconBuilder, IconType
-from theme import ThemeColors
+from ui.theme import ThemeColors
 
 class DataOperationsPanel(QWidget):
     """
@@ -34,6 +34,7 @@ class DataOperationsPanel(QWidget):
             "Reset to Original",
             parent=self,
             base_color_hex=ThemeColors.DestructiveColor,
+            text_color_hex="white",
             typewriter_effect=True,
         )
         reset_button.setIcon(IconBuilder.build(IconType.REDO))
@@ -810,7 +811,7 @@ class DataOperationsPanel(QWidget):
 
         inject_info = QLabel("Insert the selected subset into the active DataFrame to work directly with it.")
         inject_info.setWordWrap(True)
-        inject_info.setStyleSheet("color: #ff6b35; font-style: italic; font-size: 9pt;")
+        inject_info.setStyleSheet(ThemeColors.WarningInfoStylesheet)
         inject_layout.addWidget(inject_info)
         inject_layout.addSpacing(10)
 
@@ -828,7 +829,7 @@ class DataOperationsPanel(QWidget):
 
         self.injection_status_label = QLabel("Status: Working with original data")
         self.injection_status_label.setStyleSheet(
-            "color: #27ae60; font-weight: bold; padding: 5px; background-color: #ecf0f1; border-radius: 3px;"
+            ThemeColors.SuccessStatusStylesheet
         )
         inject_layout.addWidget(self.injection_status_label)
         inject_layout.addSpacing(10)
@@ -868,7 +869,7 @@ class DataOperationsPanel(QWidget):
 
         history_help = QLabel("Click on a state to go back/forwards to it.\nGray items are undone operations.")
         history_help.setWordWrap(True)
-        history_help.setStyleSheet("color: #7f8c8d; font-size: 8pt;")
+        history_help.setStyleSheet(ThemeColors.MutedTextStylesheet)
         history_layout.addWidget(history_help)
 
         history_icon = QIcon(get_resource_path("icons/data_operations/view.png"))
@@ -996,14 +997,14 @@ class DataOperationsPanel(QWidget):
         if is_subset_active:
             self.injection_status_label.setText(f"Status: Working with a subset: '{subset_name}'")
             self.injection_status_label.setStyleSheet(
-                "color: #e74c3c; font-weight: bold; padding: 5px; background-color: #ffe5e5; border-radius: 3px;"
+                ThemeColors.WarningStatusStylesheet
             )
             self.restore_original_btn.setEnabled(True)
             self.inject_subset_tbn.setEnabled(False)
         else:
             self.injection_status_label.setText("Status: Working with original data")
             self.injection_status_label.setStyleSheet(
-                "color: #27ae60; font-weight: bold; padding: 5px; background-color: #ecf0f1; border-radius: 3px;"
+                ThemeColors.SuccessStatusStylesheet
             )
             self.restore_original_btn.setEnabled(False)
             self.inject_subset_tbn.setEnabled(True)
