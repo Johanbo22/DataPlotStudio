@@ -1,5 +1,5 @@
-from tkinter import N
 from core.resource_loader import get_resource_path
+from ui.icons import IconBuilder, IconType
 from ui.widgets.AnimatedComboBox import DataPlotStudioComboBox
 
 
@@ -25,7 +25,7 @@ class DatabaseConnectionDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Import from Database")
-        self.setWindowIcon(QIcon(get_resource_path("icons/menu_bar/database.svg")))
+        self.setWindowIcon(IconBuilder.build(IconType.ImportDatabase))
         self.setMinimumWidth(900)
         self.resize(100, 600)
 

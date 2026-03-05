@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTextBrowser, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon, QAction
 from pathlib import Path
 import re
@@ -75,32 +75,32 @@ class LandingPage(QWidget):
         button_width = 280
 
         self.button_open = DataPlotStudioButton("Open Existing Project", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", typewriter_effect=True)
-        self.button_open.setIcon(IconBuilder.build(IconType.OPEN_PROJECT))
+        self.button_open.setIcon(IconBuilder.build(IconType.OpenProject))
         self.button_open.setFixedWidth(button_width)
         self.button_open.clicked.connect(self.open_project_clicked.emit)
 
         self.button_import_file = DataPlotStudioButton("Import from file", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
-        self.button_import_file.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
+        self.button_import_file.setIcon(IconBuilder.build(IconType.ImportFile))
         self.button_import_file.setFixedWidth(button_width)
         self.button_import_file.clicked.connect(self.import_file_clicked.emit)
 
         self.button_import_sheet = DataPlotStudioButton("Import from Google Sheets", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
-        self.button_import_sheet.setIcon(QIcon(get_resource_path("icons/menu_bar/google-sheets-logo-icon.svg")))
+        self.button_import_sheet.setIcon(IconBuilder.build(IconType.ImportGoogleSheets))
         self.button_import_sheet.setFixedWidth(button_width)
         self.button_import_sheet.clicked.connect(self.import_sheets_clicked.emit)
 
         self.button_import_db = DataPlotStudioButton("Import from Database", base_color_hex=ThemeColors.ButtonDefaultColor, padding="12px", typewriter_effect=True)
-        self.button_import_db.setIcon(IconBuilder.build(IconType.IMPORT_DATABASE))
+        self.button_import_db.setIcon(IconBuilder.build(IconType.ImportDatabase))
         self.button_import_db.setFixedWidth(button_width)
         self.button_import_db.clicked.connect(self.import_db_clicked.emit)
 
         self.button_new = DataPlotStudioButton("Create Empty Dataset", base_color_hex=ThemeColors.MainColor, text_color_hex="white", padding="12px", typewriter_effect=True)
-        self.button_new.setIcon(IconBuilder.build(IconType.NEW_PROJECT))
+        self.button_new.setIcon(IconBuilder.build(IconType.NewProject))
         self.button_new.setFixedWidth(button_width)
         self.button_new.clicked.connect(self.new_dataset_clicked.emit)
 
         self.button_quit = DataPlotStudioButton("Quit DataPlotStudio", base_color_hex="#e0e0e0", text_color_hex="#555555", padding="12px",  typewriter_effect=True)
-        self.button_quit.setIcon(IconBuilder.build(IconType.QUIT))
+        self.button_quit.setIcon(IconBuilder.build(IconType.Quit))
         self.button_quit.setFixedWidth(button_width)
         self.button_quit.clicked.connect(self.quit_clicked.emit)
 

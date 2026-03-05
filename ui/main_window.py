@@ -57,7 +57,7 @@ class MainWindow(QWidget):
         self.tabs = DataPlotStudioTabWidget()
 
         # Data tab
-        data_icon = IconBuilder.build(IconType.DATA_EXPLORER_ICON)
+        data_icon = IconBuilder.build(IconType.DataExplorerIcon)
         data_explorer_name = "Data Explorer"
         self.data_tab = DataTab(self.data_handler, self.status_bar, self.subset_manager)
 
@@ -71,7 +71,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.data_tab, data_icon, data_explorer_name)
 
         # Plot tab
-        plot_icon = IconBuilder.build(IconType.PLOT_TAB_ICON)
+        plot_icon = IconBuilder.build(IconType.PlotTabIcon)
         plot_tab_name = "Plot Studio"
         self.plot_tab = PlotTab(self.data_handler, self.status_bar)
         self.plot_tab.brush_selection_made.connect(self._on_brush_selection_made)

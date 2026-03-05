@@ -2,6 +2,7 @@ from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QCheckBox
 from core.resource_loader import get_resource_path
+from ui.icons.icon_registry import IconBuilder, IconType
 from ui.widgets.mixins import HoverFocusAnimationMixin
 
 
@@ -24,7 +25,7 @@ class DataPlotStudioCheckBox(HoverFocusAnimationMixin, QCheckBox):
             self.setToolTip(description)
 
     def _update_stylesheet(self, color: QColor) -> None:
-        icon = get_resource_path("icons/ui_styling/checkmark.svg").replace("\\", "/")
+        icon_url = IconBuilder.build_stylesheet_icon_path(IconType.Checkmark, color="#FFFFFF")
         
         palette: QPalette = self.palette()
         text_color: str = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText).name()
@@ -49,7 +50,7 @@ class DataPlotStudioCheckBox(HoverFocusAnimationMixin, QCheckBox):
             QCheckBox::indicator:checked {{
                 border-color: {self._focus_border_color.name()};
                 background-color: {self._focus_border_color.name()};
-                image: url({icon}); 
+                image: url({icon_url}); 
             }}
             QCheckBox::indicator:disabled {{
                 background-color: {disabled_bg};

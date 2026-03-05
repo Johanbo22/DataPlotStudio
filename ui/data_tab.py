@@ -43,6 +43,7 @@ from ui.icons import IconBuilder, IconType
 from ui.components.data_operations_panel import DataOperationsPanel
 from ui.components.statistics_generator import StatisticsGenerator
 from ui.LandingPage import LandingPage
+from ui.icons import IconBuilder, IconType
 
 from ui.animations import (
     EditModeToggleAnimation
@@ -128,7 +129,7 @@ class DataTab(QWidget):
             base_color_hex=ThemeColors.MainColor,
             text_color_hex="white",
         )
-        self.create_new_dataset_button.setIcon(IconBuilder.build(IconType.NEW_PROJECT)
+        self.create_new_dataset_button.setIcon(IconBuilder.build(IconType.NewProject)
         )
         self.create_new_dataset_button.setToolTip("Create a new empty DataFrame")
         self.create_new_dataset_button.clicked.connect(self.controller.create_new_dataset)
@@ -161,7 +162,7 @@ class DataTab(QWidget):
             base_color_hex="#95a5a6",
             text_color_hex="white",
         )
-        self.edit_dataset_toggle_button.setIcon(QIcon(get_resource_path("icons/pencil-ruler.svg")))
+        self.edit_dataset_toggle_button.setIcon(IconBuilder.build(IconType.EditModeToggleOff))
         self.edit_dataset_toggle_button.setCheckable(True)
         self.edit_dataset_toggle_button.setToolTip(
             "Toggle to edit data directly in the table"
@@ -194,7 +195,7 @@ class DataTab(QWidget):
         self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.search_shortcut.activated.connect(self.open_search_dialog)
 
-        data_table_icon = QIcon(get_resource_path("icons/data_table.png"))
+        data_table_icon = IconBuilder.build(IconType.DataExplorerIcon)
         self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
 
         # Statistics Tab
@@ -204,7 +205,7 @@ class DataTab(QWidget):
 
         self.stats_opacity_effect = QGraphicsOpacityEffect(self.stats_text)
         self.stats_text.setGraphicsEffect(self.stats_opacity_effect)
-        stats_icon = IconBuilder.build(IconType.EXPLORE_STATISTICS_ICON)
+        stats_icon = IconBuilder.build(IconType.ExploreStatisticsIcon)
         self.data_tabs.addTab(self.stats_text, stats_icon, "Statistics")
         
         self.test_results_text = QTextEdit()
@@ -212,7 +213,7 @@ class DataTab(QWidget):
         self.test_results_text.setStyleSheet("background-color: transparent; border: none;")
         
         self.set_test_results_greeting()
-        test_result_icon = IconBuilder.build(IconType.CALCULATOR)
+        test_result_icon = IconBuilder.build(IconType.Calculator)
         self.data_tabs.addTab(self.test_results_text, test_result_icon, "Test Results")
 
         data_view_layout.addWidget(self.data_tabs, 1)
@@ -244,6 +245,7 @@ class DataTab(QWidget):
 
         if self.is_editing:
             self.edit_dataset_toggle_button.setText("Edit Mode: ON")
+            self.edit_dataset_toggle_button.setIcon(IconBuilder.build(IconType.EditModeToggleOn))
             self.edit_dataset_toggle_button.updateColors(
                 base_color_hex="#E74C3C", hover_color_hex="#C0392B"
             )
@@ -262,6 +264,7 @@ class DataTab(QWidget):
             self.edit_toggle_on_animation.start(target_widget=self)
         else:
             self.edit_dataset_toggle_button.setText("Edit Mode: OFF")
+            self.edit_dataset_toggle_button.setIcon(IconBuilder.build(IconType.EditModeToggleOff))
             self.edit_dataset_toggle_button.updateColors(
                 base_color_hex="#95A5A6", hover_color_hex="#7F8C8D"
             )
@@ -515,7 +518,7 @@ class DataTab(QWidget):
         if current_index == 0:
             initial_item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
             initial_item.setForeground(Qt.GlobalColor.black)
-            initial_item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
+            initial_item.setIcon(IconBuilder.build(IconType.Checkmark))
         
         panel.history_list.addItem(initial_item)
         
@@ -528,7 +531,7 @@ class DataTab(QWidget):
             if history_index == current_index:
                 item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
                 item.setForeground(Qt.GlobalColor.black)
-                item.setIcon(QIcon(get_resource_path("icons/ui_styling/checkmark.png")))
+                item.setIcon(IconBuilder.build(IconType.Checkmark))
                 item.setBackground(Qt.GlobalColor.white)
             elif history_index > current_index:
                 item.setForeground(Qt.GlobalColor.gray)

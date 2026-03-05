@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, QTimer, Qt, QEvent
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, QTimer, Qt, QEvent, QSize
 from PyQt6.QtGui import QColor, QKeyEvent
 from PyQt6.QtWidgets import QPushButton
 
@@ -26,7 +26,8 @@ class DataPlotStudioButton(QPushButton):
                 font_weight: str = "bold",
                 typewriter_effect: bool = False,
                 accessible_description: str | None = None,
-                tooltip: str | None = None) -> None:
+                tooltip: str | None = None,
+                icon_size: QSize | None = QSize(20, 20)) -> None:
         super().__init__(text, parent)
         
         # Setting accessibility tags for screen readers. 
@@ -36,6 +37,9 @@ class DataPlotStudioButton(QPushButton):
             self.setAccessibleDescription(accessible_description)
         if tooltip:
             self.setToolTip(tooltip)
+        
+        
+        self.setIconSize(icon_size)
             
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)

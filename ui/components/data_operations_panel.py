@@ -37,7 +37,7 @@ class DataOperationsPanel(QWidget):
             text_color_hex="white",
             typewriter_effect=True,
         )
-        reset_button.setIcon(IconBuilder.build(IconType.REDO))
+        reset_button.setIcon(IconBuilder.build(IconType.Redo))
         if self.controller:
             reset_button.clicked.connect(self.controller.reset_data)
         layout.addWidget(reset_button)
@@ -67,7 +67,7 @@ class DataOperationsPanel(QWidget):
         remove_dups_layout = QHBoxLayout()
         clean_button = DataPlotStudioButton("Remove Duplicate Rows", parent=self)
         clean_button.setToolTip("Use this to remove any instances of duplicate row entries in your dataset")
-        clean_button.setIcon(IconBuilder.build(IconType.REMOVE_DUPLICATES))
+        clean_button.setIcon(IconBuilder.build(IconType.RemoveDuplicates))
         if self.controller:
             clean_button.clicked.connect(self.controller.remove_duplicates)
         
@@ -83,7 +83,7 @@ class DataOperationsPanel(QWidget):
         drop_missing_layout = QHBoxLayout()
         drop_missing_button = DataPlotStudioButton("Drop Missing Values", parent=self)
         drop_missing_button.setToolTip("Use this to remove rows in your dataset with incomplete entries")
-        drop_missing_button.setIcon(IconBuilder.build(IconType.DROP_MISSING_VALUES))
+        drop_missing_button.setIcon(IconBuilder.build(IconType.DropMissingValues))
         if self.controller:
             drop_missing_button.clicked.connect(self.controller.drop_missing)
         
@@ -99,7 +99,7 @@ class DataOperationsPanel(QWidget):
         fill_missing_layout = QHBoxLayout()
         fill_missing_button = DataPlotStudioButton("Fill Missing Values", parent=self)
         fill_missing_button.setToolTip("Use this to fill in 'NaN' values in your dataset to something specific")
-        fill_missing_button.setIcon(IconBuilder.build(IconType.FILL_MISSING_VALUES))
+        fill_missing_button.setIcon(IconBuilder.build(IconType.FillMissingValues))
         if self.controller:
             fill_missing_button.clicked.connect(self.controller.fill_missing)
         
@@ -159,7 +159,7 @@ class DataOperationsPanel(QWidget):
         cleaning_layout.addWidget(outlier_group)
 
         cleaning_layout.addStretch()
-        data_clean_icon = IconBuilder.build(IconType.DATA_CLEANING)
+        data_clean_icon = IconBuilder.build(IconType.DataCleaning)
         self.ops_tabs.addTab(cleaning_tab, data_clean_icon, "Data Cleaning")
 
     def create_filtering_tab(self):
@@ -202,7 +202,7 @@ class DataOperationsPanel(QWidget):
         # Apply Filter
         apply_filter_layout = QHBoxLayout()
         apply_filter_button = DataPlotStudioButton("Apply Filter", parent=self)
-        apply_filter_button.setIcon(IconBuilder.build(IconType.FILTER))
+        apply_filter_button.setIcon(IconBuilder.build(IconType.Filter))
         if self.controller:
             apply_filter_button.clicked.connect(self.controller.apply_filter)
         
@@ -218,7 +218,7 @@ class DataOperationsPanel(QWidget):
         clear_filter_layout = QHBoxLayout()
         clear_filter_button = DataPlotStudioButton("Clear Filters", parent=self)
         clear_filter_button.setToolTip("Reset the dataset to its original state and remove the filters")
-        clear_filter_button.setIcon(IconBuilder.build(IconType.CLEAR_FILTER))
+        clear_filter_button.setIcon(IconBuilder.build(IconType.ClearFilter))
         if self.controller:
             clear_filter_button.clicked.connect(self.controller.clear_filters)
         
@@ -234,7 +234,7 @@ class DataOperationsPanel(QWidget):
         # Advanced Filter
         advanced_filter_layout = QHBoxLayout()
         adv_filter_button = DataPlotStudioButton("Advanced Filter", parent=self)
-        adv_filter_button.setIcon(IconBuilder.build(IconType.ADVANCED_FILTER))
+        adv_filter_button.setIcon(IconBuilder.build(IconType.AdvancedFilter))
         if self.controller:
             adv_filter_button.clicked.connect(self.controller.open_advanced_filter)
         
@@ -248,7 +248,7 @@ class DataOperationsPanel(QWidget):
         filter_layout.addLayout(advanced_filter_layout)
 
         filter_layout.addStretch()
-        filter_icon = IconBuilder.build(IconType.FILTER)
+        filter_icon = IconBuilder.build(IconType.Filter)
         self.ops_tabs.addTab(filter_tab, filter_icon, "Filter Data")
 
     def create_columns_tab(self):
@@ -274,7 +274,7 @@ class DataOperationsPanel(QWidget):
         drop_column_layout = QHBoxLayout()
         drop_column_button = DataPlotStudioButton("Drop Column", parent=self)
         drop_column_button.setToolTip("Use this to remove the selected column from the dataset")
-        drop_column_button.setIcon(IconBuilder.build(IconType.DROP_COLUMN))
+        drop_column_button.setIcon(IconBuilder.build(IconType.DropColumn))
         if self.controller:
             drop_column_button.clicked.connect(self.controller.drop_column)
         
@@ -290,7 +290,7 @@ class DataOperationsPanel(QWidget):
         rename_layout = QHBoxLayout()
         rename_button = DataPlotStudioButton("Rename Column", parent=self)
         rename_button.setToolTip("Use this to rename the selected column")
-        rename_button.setIcon(IconBuilder.build(IconType.RENAME_COLUMN))
+        rename_button.setIcon(IconBuilder.build(IconType.RenameColumn))
         if self.controller:
             rename_button.clicked.connect(self.controller.rename_column)
         
@@ -306,7 +306,7 @@ class DataOperationsPanel(QWidget):
         duplicate_layout = QHBoxLayout()
         duplicate_button = DataPlotStudioButton("Duplicate Column", parent=self)
         duplicate_button.setToolTip("Create an exact copy of the selected column")
-        duplicate_button.setIcon(IconBuilder.build(IconType.DUPLICATE_COLUMN))
+        duplicate_button.setIcon(IconBuilder.build(IconType.DuplicateColumn))
         if self.controller:
             duplicate_button.clicked.connect(self.controller.duplicate_column)
         self.duplicate_column_help = HelpIcon("duplicate_column")
@@ -321,7 +321,7 @@ class DataOperationsPanel(QWidget):
         computed_layout = QHBoxLayout()
         computed_button = DataPlotStudioButton("Compute Column", parent=self)
         computed_button.setToolTip("Create a new column based on a formula (e.g., Total = Price * Quantity)")
-        computed_button.setIcon(IconBuilder.build(IconType.CALCULATOR))
+        computed_button.setIcon(IconBuilder.build(IconType.Calculator))
         if self.controller:
             computed_button.clicked.connect(self.controller.open_computed_column_dialog)
         
@@ -356,7 +356,7 @@ class DataOperationsPanel(QWidget):
 
         datatype_layout = QHBoxLayout()
         type_button = DataPlotStudioButton("Apply DataType Change", parent=self)
-        type_button.setIcon(IconBuilder.build(IconType.CHANGE_DATATYPE))
+        type_button.setIcon(IconBuilder.build(IconType.ChangeDataType))
         if self.controller:
             type_button.clicked.connect(self.controller.change_column_type)
         
@@ -391,7 +391,7 @@ class DataOperationsPanel(QWidget):
 
         text_apply_layout = QHBoxLayout()
         text_apply_button = DataPlotStudioButton("Apply Text Operation", parent=self)
-        text_apply_button.setIcon(IconBuilder.build(IconType.TEXT_OPERATION))
+        text_apply_button.setIcon(IconBuilder.build(IconType.TextOperation))
         if self.controller:
             text_apply_button.clicked.connect(self.controller.apply_text_manipulation)
 
@@ -407,7 +407,7 @@ class DataOperationsPanel(QWidget):
         
         advanced_text_layout = QHBoxLayout()
         split_button = DataPlotStudioButton("Split Column", parent=self)
-        split_button.setIcon(IconBuilder.build(IconType.TEXT_OPERATION))
+        split_button.setIcon(IconBuilder.build(IconType.TextOperation))
         split_button.setToolTip("Split a string column into multiple columns using a delimiter")
         if self.controller:
             split_button.clicked.connect(self.controller.open_split_column_dialog)
@@ -416,7 +416,7 @@ class DataOperationsPanel(QWidget):
             self.split_column_help.clicked.connect(self.controller.show_help_dialog)
         
         regex_button = DataPlotStudioButton("Regex Replace", parent=self)
-        regex_button.setIcon(IconBuilder.build(IconType.TEXT_OPERATION))
+        regex_button.setIcon(IconBuilder.build(IconType.TextOperation))
         regex_button.setToolTip("Replace text in a column using regular expressions")
         if self.controller:
             regex_button.clicked.connect(self.controller.open_regex_replace_dialog)
@@ -446,7 +446,7 @@ class DataOperationsPanel(QWidget):
         
         binning_btn_layout = QHBoxLayout()
         binning_btn = DataPlotStudioButton("Bin / Discretize Column", parent=self)
-        binning_btn.setIcon(IconBuilder.build(IconType.DATA_TRANSFORM))
+        binning_btn.setIcon(IconBuilder.build(IconType.DataTransform))
         binning_btn.setToolTip("Open tool to create bins from numeric data")
         if self.controller:
             binning_btn.clicked.connect(self.controller.open_binning_dialog)
@@ -478,7 +478,7 @@ class DataOperationsPanel(QWidget):
         
         norm_button_layout = QHBoxLayout()
         norm_button = DataPlotStudioButton("Apply Scaling", parent=self)
-        norm_button.setIcon(IconBuilder.build(IconType.DATA_TRANSFORM))
+        norm_button.setIcon(IconBuilder.build(IconType.DataTransform))
         norm_button.setToolTip("Apply the selected scaling technique to selected columns")
         if self.controller:
             norm_button.clicked.connect(self.controller.apply_normalization)
@@ -495,7 +495,7 @@ class DataOperationsPanel(QWidget):
         column_layout.addWidget(norm_group)
 
         column_layout.addStretch()
-        column_icon = IconBuilder.build(IconType.EDIT_COLUMNS)
+        column_icon = IconBuilder.build(IconType.EditColumns)
         self.ops_tabs.addTab(column_tab, column_icon, "Columns")
 
     def create_transform_tab(self):
@@ -523,7 +523,7 @@ class DataOperationsPanel(QWidget):
         # Melt
         melt_layout = QHBoxLayout()
         melt_button = DataPlotStudioButton("Melt/Unpivot Data", parent=self)
-        melt_button.setIcon(QIcon(get_resource_path("icons/data_operations/melt_data.svg")))
+        melt_button.setIcon(IconBuilder.build(IconType.PivotData))
         if self.controller:
             melt_button.clicked.connect(self.controller.open_melt_dialog)
         self.melt_help = HelpIcon("melt_data")
@@ -536,7 +536,7 @@ class DataOperationsPanel(QWidget):
         # Pivot
         pivot_layout = QHBoxLayout()
         pivot_button = DataPlotStudioButton("Pivot Table", parent=self)
-        pivot_button.setIcon(IconBuilder.build(IconType.DATA_TRANSFORM))
+        pivot_button.setIcon(IconBuilder.build(IconType.DataTransform))
         pivot_button.setToolTip("Reshape data using index, columns and values")
         if self.controller:
             pivot_button.clicked.connect(self.controller.open_pivot_dialog)
@@ -550,7 +550,7 @@ class DataOperationsPanel(QWidget):
         # Merge
         merge_layout = QHBoxLayout()
         merge_button = DataPlotStudioButton("Merge / Join Datasets", parent=self)
-        merge_button.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
+        merge_button.setIcon(IconBuilder.build(IconType.ImportFile))
         merge_button.setToolTip("Join the current dataset with another file")
         if self.controller:
             merge_button.clicked.connect(self.controller.open_merge_dialog)
@@ -564,7 +564,7 @@ class DataOperationsPanel(QWidget):
         #Append / concatenate
         append_layout = QHBoxLayout()
         append_button = DataPlotStudioButton("Append / Concatenate Data", parent=self)
-        append_button.setIcon(IconBuilder.build(IconType.IMPORT_FILE))
+        append_button.setIcon(IconBuilder.build(IconType.ImportFile))
         append_button.setToolTip("Stack datasets vertically by appending rows from another file")
         if self.controller:
             append_button.clicked.connect(self.controller.open_append_dialog)
@@ -595,7 +595,7 @@ class DataOperationsPanel(QWidget):
 
         sort_button_layout = QHBoxLayout()
         self.sort_button = DataPlotStudioButton("Sort Data", parent=self)
-        self.sort_button.setIcon(IconBuilder.build(IconType.SORT))
+        self.sort_button.setIcon(IconBuilder.build(IconType.Sort))
         if self.controller:
             self.sort_button.clicked.connect(self.controller.apply_sort)
 
@@ -624,21 +624,21 @@ class DataOperationsPanel(QWidget):
         saved_agg_buttons = QHBoxLayout()
         self.view_agg_btn = DataPlotStudioButton("View Aggregations", parent=self)
         self.view_agg_btn.setToolTip("View the selected aggregated data in the Data Table.")
-        self.view_agg_btn.setIcon(IconBuilder.build(IconType.VIEW_ITEM))
+        self.view_agg_btn.setIcon(IconBuilder.build(IconType.ViewItem))
         self.view_agg_btn.setEnabled(False)
         if self.controller:
             self.view_agg_btn.clicked.connect(self.controller.view_saved_aggregations)
         saved_agg_buttons.addWidget(self.view_agg_btn)
 
         self.refresh_agg_list_btn = DataPlotStudioButton("Refresh", parent=self)
-        self.refresh_agg_list_btn.setIcon(IconBuilder.build(IconType.REFRESH_ITEM))
+        self.refresh_agg_list_btn.setIcon(IconBuilder.build(IconType.RefreshItem))
         if self.controller:
             self.refresh_agg_list_btn.clicked.connect(self.controller.refresh_saved_agg_list)
         saved_agg_buttons.addWidget(self.refresh_agg_list_btn)
         saved_agg_layout.addLayout(saved_agg_buttons)
 
         self.delete_agg_btn = DataPlotStudioButton("Delete Selected Aggregtation", parent=self)
-        self.delete_agg_btn.setIcon(IconBuilder.build(IconType.DELETE_ITEM))
+        self.delete_agg_btn.setIcon(IconBuilder.build(IconType.DeleteItem))
         self.delete_agg_btn.setEnabled(False)
         if self.controller:
             self.delete_agg_btn.clicked.connect(self.controller.delete_saved_aggregation)
@@ -648,7 +648,7 @@ class DataOperationsPanel(QWidget):
         transform_layout.addWidget(saved_agg_group)
 
         transform_layout.addStretch()
-        transform_icon = IconBuilder.build(IconType.DATA_TRANSFORM)
+        transform_icon = IconBuilder.build(IconType.DataTransform)
         self.ops_tabs.addTab(transform_tab, transform_icon, "Transform")
 
     def create_datetime_tab(self):
@@ -675,7 +675,7 @@ class DataOperationsPanel(QWidget):
         extract_button_layout = QHBoxLayout()
         extract_button = DataPlotStudioButton("Extract Component", parent=self)
         extract_button.setToolTip("Create a new column containing the selected time component")
-        extract_button.setIcon(IconBuilder.build(IconType.DATA_TRANSFORM))
+        extract_button.setIcon(IconBuilder.build(IconType.DataTransform))
         if self.controller:
             extract_button.clicked.connect(self.controller.extract_date_component)
         
@@ -711,7 +711,7 @@ class DataOperationsPanel(QWidget):
         duration_button_layout = QHBoxLayout()
         duration_button = DataPlotStudioButton("Calculate Duration", parent=self)
         duration_button.setToolTip("Create a new column with the time difference between two datetime columns")
-        duration_button.setIcon(IconBuilder.build(IconType.CALCULATOR))
+        duration_button.setIcon(IconBuilder.build(IconType.Calculator))
         if self.controller:
             duration_button.clicked.connect(self.controller.calculate_date_difference)
         self.duration_help = HelpIcon("date_duration")
@@ -726,7 +726,7 @@ class DataOperationsPanel(QWidget):
         dt_layout.addWidget(duration_group)
         
         dt_layout.addStretch()
-        dt_icon = QIcon(get_resource_path("icons/data_operations/calendar-clock.svg"))
+        dt_icon = IconBuilder.build(IconType.DatetimeTools)
         self.ops_tabs.addTab(dt_tab, dt_icon, "Datetime Tools")
         
     def create_subsets_tab(self):
@@ -790,13 +790,13 @@ class DataOperationsPanel(QWidget):
 
         subset_list_btns = QHBoxLayout()
         view_subset_btn = DataPlotStudioButton("View", parent=self)
-        view_subset_btn.setIcon(IconBuilder.build(IconType.VIEW_ITEM))
+        view_subset_btn.setIcon(IconBuilder.build(IconType.ViewItem))
         if self.controller:
             view_subset_btn.clicked.connect(self.controller.view_subset_quick)
         subset_list_btns.addWidget(view_subset_btn)
 
         refresh_subsets_btn = DataPlotStudioButton("Refresh", parent=self)
-        refresh_subsets_btn.setIcon(IconBuilder.build(IconType.REFRESH_ITEM))
+        refresh_subsets_btn.setIcon(IconBuilder.build(IconType.RefreshItem))
         if self.controller:
             refresh_subsets_btn.clicked.connect(self.controller.refresh_active_subsets)
         subset_list_btns.addWidget(refresh_subsets_btn)
@@ -872,7 +872,7 @@ class DataOperationsPanel(QWidget):
         history_help.setStyleSheet(ThemeColors.MutedTextStylesheet)
         history_layout.addWidget(history_help)
 
-        history_icon = QIcon(get_resource_path("icons/data_operations/view.png"))
+        history_icon = IconBuilder.build(IconType.History)
         self.ops_tabs.addTab(history_tab, history_icon, "History")
     
     ###### Getters for widgets
