@@ -6,6 +6,7 @@ import re
 from ui.icons import IconBuilder, IconType
 
 from core.resource_loader import get_resource_path
+from ui.styles.widget_styles import Label
 from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
@@ -61,11 +62,11 @@ class LandingPage(QWidget):
 
         # Logo and title
         title_label = QLabel("DataPlotStudio")
-        title_label.setStyleSheet("font-size: 36px; font-weight: bold; color: #2c3e50;")
+        title_label.setStyleSheet(Label.LandingPageTitleLabel)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         subtitle_label = QLabel("Data Manipulation and Visualization Tool")
-        subtitle_label.setStyleSheet("font-size: 16px; color: #7f8c8d; margin-bottom: 30px;")
+        subtitle_label.setStyleSheet(Label.LandingPageSubTitleLabel)
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         actions_layout.addWidget(title_label)
@@ -121,14 +122,14 @@ class LandingPage(QWidget):
         scroll.setStyleSheet("border: none;")
         info_panel = QFrame()
         info_panel.setFrameShape(QFrame.Shape.StyledPanel)
-        info_panel.setStyleSheet("background-color: white; border-radius: 15px; border: 1px solid #dfe6e9;")
+        info_panel.setStyleSheet(Label.LandingPageWhatsNewInfoLabel)
         info_layout = QVBoxLayout(info_panel)
         info_layout.setContentsMargins(30, 30, 30, 30)
 
         info_title = QLabel("What's New")
-        info_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #34495e; margin-bottom: 15px;")
+        info_title.setStyleSheet(Label.LandingPageWhatsNewInfoTitle)
         app_version = QLabel(f"App. Ver. {APPLICATION_VERSION}")
-        app_version.setStyleSheet("font-size: 12px; font-weight: italic; color: #34495e; margin-bottom: 2px;")
+        app_version.setStyleSheet(Label.LandingPageVersionLabel)
 
         whats_new_content = "<h3 style='color:red'>Loading failed</h3>"
         try:
