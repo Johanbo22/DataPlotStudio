@@ -10,7 +10,7 @@ from ui.styles.widget_styles import Label
 from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
-from core.markdown_parser import parse_changelog
+from core.markdown_parser import parse_changelog, ChangelogSection, ParseMode
 
 class ChangelogViewer(QDialog):
     """
@@ -169,13 +169,13 @@ class LandingPage(QWidget):
         layout.addWidget(actions_panel, 1)
         layout.addWidget(scroll, 1)
         
-    def handle_changelog_link(self, link: str):
+    def handle_changelog_link(self, link: str) -> None:
         if link == "current_fixes":
-            self.show_changelog_popup("Current Bug Fixes and Changes", mode="fixes")
+            self.show_changelog_popup("Current Bug Fixes and Changes", mode=ParseMode.Fixes)
         elif link == "past_versions":
-            self.show_changelog_popup("Version History", mode="history")
+            self.show_changelog_popup("Version History", mode=ParseMode.History)
         
-    def show_changelog_popup(self, title: str, mode: str):
+    def show_changelog_popup(self, title: str, mode: str) -> None:
         changelog_path = Path(get_resource_path("CHANGELOG.md"))
         if not changelog_path.exists():
             changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"

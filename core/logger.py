@@ -1,13 +1,15 @@
 # core/logger.py
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Deque
+from collections import deque
+import textwrap
 
 
 class LogEntry:
     """Represents a single log entry"""
     
-    def __init__(self, level: str, message: str, timestamp: Optional[datetime] = None):
+    def __init__(self, level: str, message: str, timestamp: Optional[datetime] = None) -> None:
         self.timestamp = timestamp or datetime.now()
         self.level = level
         self.message = message
@@ -21,162 +23,158 @@ class LogEntry:
 
 
 class Logger:
-    """Handles all logging for DataPlot Studio"""
+    """Handles all logging for DataPlotStudio"""
     
-    def __init__(self, max_entries: int = 1000):
-        self.entries: List[LogEntry] = []
+    def __init__(self, max_entries: int = 1000) -> None:
         self.max_entries = max_entries
+        self.entries: Deque[LogEntry] = deque(maxlen=max_entries)
     
-    def _add_entry(self, level: str, message: str):
+    def _add_entry(self, level: str, message: str) -> None:
         """Add log entry"""
         entry = LogEntry(level, message)
         self.entries.append(entry)
-        
-        # Keep only recent entries
-        if len(self.entries) > self.max_entries:
-            self.entries = self.entries[-self.max_entries:]
     
-    def info(self, message: str):
+    def info(self, message: str) -> None:
         """Log info message"""
         self._add_entry("INFO", message)
     
-    def success(self, message: str):
+    def success(self, message: str) -> None:
         """Log success message"""
         self._add_entry("SUCCESS", message)
     
-    def warning(self, message: str):
+    def warning(self, message: str) -> None:
         """Log warning message"""
         self._add_entry("WARNING", message)
     
-    def error(self, message: str):
+    def error(self, message: str) -> None:
         """Log error message"""
         self._add_entry("ERROR", message)
     
-    def data_imported(self, filename: str, rows: int, cols: int, file_size_kb: float):
+    def data_imported(self, filename: str, rows: int, cols: int, file_size_kb: float) -> None:
         """Log data import"""
-        msg = f"Data imported: {filename} ({rows:,} rows × {cols} cols, {file_size_kb:.1f} KB)"
+        msg = f"Data imported: {filename} ({rows:,} rows x {cols} cols, {file_size_kb:.1f} KB)"
         self.success(msg)
     
-    def google_sheets_imported(self, sheet_id: str, sheet_name: str, rows: int, cols: int):
+    def google_sheets_imported(self, sheet_id: str, sheet_name: str, rows: int, cols: int) -> None:
         """Log Google Sheets import"""
         msg = f"Google Sheet imported: '{sheet_name}' ({rows:,} rows × {cols} cols)"
         self.success(msg)
     
-    def filter_applied(self, column: str, condition: str, value: str, rows_before: int, rows_after: int):
+    def filter_applied(self, column: str, condition: str, value: str, rows_before: int, rows_after: int) -> None:
         """Log filter operation"""
         rows_removed = rows_before - rows_after
         msg = f"Filter applied: {column} {condition} '{value}' | Rows: {rows_before:,} → {rows_after:,} (-{rows_removed:,})"
         self.success(msg)
     
-    def duplicates_removed(self, count: int):
+    def duplicates_removed(self, count: int) -> None:
         """Log duplicate removal"""
         msg = f"Removed {count:,} duplicate row(s)"
         self.success(msg)
     
-    def missing_values_dropped(self, count: int):
+    def missing_values_dropped(self, count: int) -> None:
         """Log missing value removal"""
         msg = f"Dropped {count:,} row(s) with missing values"
         self.success(msg)
     
-    def missing_values_filled(self, count: int, method: str = "forward fill"):
+    def missing_values_filled(self, count: int, method: str = "forward fill") -> None:
         """Log missing value filling"""
         msg = f"Filled {count:,} missing value(s) using {method}"
         self.success(msg)
     
-    def column_dropped(self, column: str):
+    def column_dropped(self, column: str) -> None:
         """Log column drop"""
         msg = f"Column dropped: '{column}'"
         self.success(msg)
     
-    def column_renamed(self, old_name: str, new_name: str):
+    def column_renamed(self, old_name: str, new_name: str) -> None:
         """Log column rename"""
         msg = f"Column renamed: '{old_name}' → '{new_name}'"
         self.success(msg)
     
-    def data_aggregated(self, group_by: str, agg_col: str, agg_func: str, result_rows: int):
+    def data_aggregated(self, group_by: str, agg_col: str, agg_func: str, result_rows: int) -> None:
         """Log aggregation"""
         msg = f"Data aggregated: groupby('{group_by}').{agg_func}('{agg_col}') | Result: {result_rows:,} rows"
         self.success(msg)
     
-    def data_exported(self, filename: str, format_type: str, rows: int, cols: int):
+    def data_exported(self, filename: str, format_type: str, rows: int, cols: int) -> None:
         """Log data export"""
         msg = f"Data exported: {filename} ({format_type.upper()}, {rows:,} rows × {cols} cols)"
         self.success(msg)
     
-    def code_exported(self, filename: str, script_type: str):
+    def code_exported(self, filename: str, script_type: str) -> None:
         """Log code export"""
         msg = f"Python script exported: {filename} ({script_type})"
         self.success(msg)
     
-    def plot_generated(self, plot_type: str, x_col: str, y_col: str, annotations: int = 0):
+    def plot_generated(self, plot_type: str, x_col: str, y_col: str, annotations: int = 0) -> None:
         """Log plot generation"""
         ann_text = f" with {annotations} annotation(s)" if annotations > 0 else ""
         msg = f"Plot generated: {plot_type} | X: '{x_col}', Y: '{y_col}'{ann_text}"
         self.success(msg)
     
-    def plot_cleared(self):
+    def plot_cleared(self) -> None:
         """Log plot clear"""
         self.info("Plot cleared")
     
-    def data_reset(self):
+    def data_reset(self) -> None:
         """Log data reset"""
         msg = "Data reset to original state"
         self.success(msg)
     
-    def undo_performed(self):
+    def undo_performed(self) -> None:
         """Log undo"""
         msg = "Undo: Previous state restored"
         self.info(msg)
     
-    def redo_performed(self):
+    def redo_performed(self) -> None:
         """Log redo"""
         msg = "Redo: Action restored"
         self.info(msg)
     
-    def project_created(self):
+    def project_created(self) -> None:
         """Log new project"""
         self.success("New project created")
     
-    def project_loaded(self, filename: str):
+    def project_loaded(self, filename: str) -> None:
         """Log project load"""
         self.success(f"Project loaded: {filename}")
     
-    def project_saved(self, filename: str):
+    def project_saved(self, filename: str) -> None:
         """Log project save"""
         self.success(f"Project saved: {filename}")
 
-    def subset_created(self, name: str, rows: int):
+    def subset_created(self, name: str, rows: int) -> None:
         """Log subset creation"""
         message = f"Subset created: '{name}' ({rows:,} rows)"
         self.success(message)
     
-    def subset_inserted(self, name: str, rows: int):
+    def subset_inserted(self, name: str, rows: int) -> None:
         """Log subset insertion into active """
         message = f"Subset inserted as active data: '{name}' ({rows:,} rows)"
         self.info(message)
 
-    def subset_deleted(self, name: str):
+    def subset_deleted(self, name: str) -> None:
         """Log deletion of subseet"""
         message = f"Subset deleted: '{name}'"
         self.info(message)
     
-    def aggregation_saved(self, name: str):
+    def aggregation_saved(self, name: str) -> None:
         """Log aggregation saved"""
         message = f"Aggregation saved: '{name}'"
         self.success(message)
     
-    def aggregation_deleted(self, name: str):
+    def aggregation_deleted(self, name: str) -> None:
         """Log deletion af agg"""
         message = f"Aggregation deleted: '{name}'"
         self.info(message)
     
-    def data_melted(self, id_vars: List[str], value_vars: Optional[List[str]], rows_before: int, rows_after: int):
+    def data_melted(self, id_vars: List[str], value_vars: Optional[List[str]], rows_before: int, rows_after: int) -> None:
         """Log pivot/melt """
         value_vars = str(value_vars) if value_vars else "All other columns"
         message = f"Data melted: id_vars={id_vars}, value_vars={value_vars} | Rows: {rows_before:,} -> {rows_after:,}"
         self.success(message)
     
-    def column_data_type_changed(self, column: str, old_data_type: str, new_data_type: str):
+    def column_data_type_changed(self, column: str, old_data_type: str, new_data_type: str) -> None:
         """Kig data type change of column"""
         message = f"Column type changed. '{column}' ({old_data_type} -> {new_data_type})"
         self.success(message)
@@ -205,12 +203,12 @@ class Logger:
     
     def _generate_log_report(self, detailed: bool = True) -> str:
         """Generate formatted log report"""
-        report = f"""
-            {'='*160}
+        header = textwrap.dedent(f"""
+            {'='*120}
             DataPlot Studio - Session Log Report
             Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             This log is automatically generated
-            {'='*160}
+            {'='*120}
 
             SUMMARY
             -------
@@ -219,20 +217,17 @@ class Logger:
 
             LOG ENTRIES
             -----------
-            """
+        """)
+        log_content = self.get_detailed_logs() if detailed else self.get_all_logs()
         
-        if detailed:
-            report += self.get_detailed_logs()
-        else:
-            report += self.get_all_logs()
+        footer = textwrap.dedent(f"""\
+            
+            {'='*120}
+            END OF LOG REPORT
+            {'='*120}
+        """)
         
-        report += f"""
-
-        {'='*160}
-        END OF LOG REPORT
-        {'='*160}
-        """
-        return report
+        return header + log_content + footer
     
     def _get_session_duration(self) -> str:
         """Calculate session duration"""
@@ -248,13 +243,13 @@ class Logger:
         
         return f"{hours}:{minutes:02d}:{seconds:02d}"
     
-    def clear(self):
+    def clear(self) -> None:
         """Clear all log entries"""
         self.entries.clear()
     
-    def get_stats(self) -> dict:
+    def get_stats(self) -> Dict[str, Any]:
         """Get log statistics"""
-        levels = {}
+        levels: Dict[str, int] = {}
         for entry in self.entries:
             levels[entry.level] = levels.get(entry.level, 0) + 1
         

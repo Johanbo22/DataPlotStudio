@@ -29,7 +29,7 @@ class PlotConfigManager:
         }
         return config
     
-    def load_config(self, config: dict) -> None:
+    def load_config(self, config: Dict[str, Any]) -> None:
         """Load the plot configuration"""
         try:
             if "plot_type" in config:
@@ -46,8 +46,10 @@ class PlotConfigManager:
             if "annotations" in config: self._load_annotations_config(config["annotations"])
             if "geospatial" in config: self._load_geospatial_config(config["geospatial"])
 
-        except Exception as Error:
-            raise Error
+        except Exception as error:
+            import logging
+            logging.error(f"Failed to load configuration: {error}")
+            raise
     
     def get_theme_config(self) -> Dict[str, Any]:
         """Get configuration formatted for themes"""
@@ -213,7 +215,7 @@ class PlotConfigManager:
             "fancy_box": self.pt.legend_fancybox_check.isChecked(),
             "shadow": self.pt.legend_shadow_check.isChecked(),
             "bg_color": self.pt.legend_bg_color,
-            "edge_clor": self.pt.legend_edge_color,
+            "edge_color": self.pt.legend_edge_color,
             "edge_width": self.pt.legend_edge_width_spin.value(),
             "alpha": self.pt.legend_alpha_slider.value() / 100.0,
         }
@@ -416,7 +418,7 @@ class PlotConfigManager:
         # Font
         if "font_family" in config:
             self.pt.font_family_combo.setCurrentFont(QFont(config["font_family"]))
-        self.pt.usetex_checkbox.setChecked(config.get("usetext", False))
+        self.pt.usetex_checkbox.setChecked(config.get("usetex", False))
 
         # Colorblind mode
         cb_conf = config.get("colorblind", {})
@@ -552,7 +554,7 @@ class PlotConfigManager:
         self.pt.legend_bg_label.setText(self.pt.legend_bg_color)
         self.pt.legend_bg_button.updateColors(base_color_hex=self.pt.legend_bg_color)
         
-        self.pt.legend_edge_color = config.get("edge_clor") or "black"
+        self.pt.legend_edge_color = config.get("edge_color") or "black"
         self.pt.legend_edge_label.setText(self.pt.legend_edge_color)
         self.pt.legend_edge_button.updateColors(base_color_hex=self.pt.legend_edge_color)
         

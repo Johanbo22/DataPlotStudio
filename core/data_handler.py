@@ -1,11 +1,10 @@
 # core/data_handler.py
 from duckdb import connect
-from glm import mul
 import pandas as pd
 import keyword
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 import requests
 import atexit
 from sqlalchemy import create_engine
@@ -60,7 +59,14 @@ class FillMethod(str, Enum):
 
 class DataHandler:
     """Handles all data import, export, and manipulation"""
-
+    
+    FrequencyMap = {
+        "Year": "Y",
+        "Quarter": "Q",
+        "Month": "M",
+        "Week": "W",
+        "Day": "D",
+    }
     def __init__(self):
         self.df: Optional[pd.DataFrame] = None
         self.original_df: Optional[pd.DataFrame] = None  # For undo operations
@@ -613,7 +619,7 @@ class DataHandler:
         }
         return info
     
-    def run_statistical_test(self, test_type: StatisticalTest | str, col1: str, col2: str) -> Dict[str, Any]:
+    def run_statistical_test(self, test_type: Union[StatisticalTest, str], col1: str, col2: str) -> Dict[str, Any]:
         """
         Run statistical test on two numeric columns
         Supporting: T-Test, ANOVA, Pearson Correlation Test
@@ -928,7 +934,6 @@ class DataHandler:
         """
         Aggregate data with specific functions per column and datetime if possible
         """
-        global freq_map
 
         if self.df is None:
             raise ValueError("No data loaded")
@@ -937,17 +942,10 @@ class DataHandler:
             self._save_state()
 
             groupers = []
-            freq_map = {
-                "Year": "Y",
-                "Quarter": "Q",
-                "Month": "M",
-                "Week": "W",
-                "Day": "D",
-            }
             for col in group_by:
                 if date_grouping and col in date_grouping:
                     freq_name = date_grouping[col]
-                    pandas_freq = freq_map.get(freq_name, None)
+                    pandas_freq = self.FrequencyMap.get(freq_name, None)
                     if pandas_freq:
                         groupers.append(pd.Grouper(key=col, freq=pandas_freq))
                     else:
@@ -990,7 +988,7 @@ class DataHandler:
             groupers = []
             for col in group_by:
                 if date_grouping and col in date_grouping:
-                    pandas_freq = freq_map.get(date_grouping[col])
+                    pandas_freq = self.FrequencyMap.get(date_grouping[col])
                     if pandas_freq:
                         groupers.append(pd.Grouper(key=col, freq=pandas_freq))
                     else:
@@ -1452,8 +1450,9 @@ class DataHandler:
                     raise ValueError(f"Column '{column}' could not be converted to datetime")
             except Exception as error:
                 raise ValueError(f"Column '{column}' cannot be converted to datetime: {str(error)}")
-        
-        new_col_name = f"{column}_{component.replace(" ", "_")}"
+            
+        safe_component = component.replace(" ", "_")
+        new_col_name = f"{column}_{safe_component}"
         if component == "Year":
             self.df[new_col_name] = self.df[column].dt.year.astype("Int64")
         elif component == "Month":
@@ -1634,7 +1633,7 @@ class DataHandler:
             except gspread.exceptions.WorksheetNotFound:
                 required_rows: int = len(self.df) + 100
                 required_cols: int = len(self.df.columns) + 10
-                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=str(required_rows, cols=str(required_cols)))
+                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=required_rows, cols=required_cols)
             
             sanitized_df: pd.DataFrame = self.df.fillna("")
             
