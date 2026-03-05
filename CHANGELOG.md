@@ -4,6 +4,95 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## v0.1.0
+### Added
+- Support for column duplication from the Columns tab in Data Tab
+- Methods in `DataHandler` to handle data cleaning operations
+- Data normalization tools in the Column panel. Support for Min-Max, Standard and Median normalization
+- New `DataOperation` types: `Extract_DATE_COMPONENT` and `CALCULATE_DATE_DIFFERENCE`
+- New datetime extraction and calculate duration methods and UI
+- Flagging outliers to mark outliers in a new column. Method added to `DataHandler` and button implemented in `OutlierDetectionDialog`
+- Better support for multiline indentation and unindentation for multiline selected text in `CodeEditor`
+- Added better viewing of long cell content as tooltips in DataTable
+- Added cell rendering for `datetime64` datatypes in the table
+- Added a icons module to render icons at runtime instead of asset files. Uses `QIconEngine` to draw icons.
+- Syntax highlighting for more Python keywords such as `async`, `await`, `match`, and `case`
+- Support for scientific, binary and octal notation highlighting
+- Added a method to DataPlotStudioButton to calculate the hover/pressed colors as well as the text color based on the base button color.
+- Added cursor pointer on hover on buttons
+- Added caching to used DataFrame. Allows for idle drawing of canvas instead of "Generating Plot" each time
+- Added a notification to `SubplotOverlay` to notify when a click on generate plot is needed
+- Added a pipeline to automatically update a plot with datasets smaller than 2000 rows
+- Added text splitting. Split single columns into multiple by a delimiter
+- Added regex replacement function. Use regex to replace string within a column.
+- Added method to datahandler for vertically stacking datasets
+- Added the AppendDialog UI component for selecting files to append
+- Automatic parsing of datetime columns to avoid manual conversion.
+- Text alignment and background color rules for table customization
+- Added an apply and restore to defaults button for the TableCustomizationDialog
+- **CodeEditor**: Clear console method and button to flush standard output, toggle_comments on multiple lines, read and write settings to remember UI states when closing window.
+- Added a check for while loops to prevent them from freezing the app.
+- **AggregationDialog**: Search and filter input for columns in AggregationDialog, Double click on item support, a clear all button for remove all selected aggregations at once, a timer for updating preview for large datasets. Drag-and-drop mode for group-by columns, tooltips for aggregation function. Icons for datatypes in column selection. A visual loading for updating the preview table.
+- Checkboxes for right-inclusive intervals and dropping original column in binning-dialog. Bin_column method in DataHandler updated to reflect this. Enforce strict monotonic increase validation for custom bin edges to prevent pandas execution errors. Sequential labels for binning, a checkbox to add infinite bounds to upper and lower binning edges
+- Search functionality inside the Data Subsets Tool to filter the existing subsets list.
+- Right-click context menu in the `SubsetManagerDialog` list for quick access to actions.
+- HTML formatting for subset filter logic to improve readability.
+- Double-click action on subset items to instantly open the Data Viewer.
+- Keyboard shortcuts (`Delete` and `Backspace`) to quickly remove selected subsets. And keyboard shortcut (`Return`) to view subset
+- Alphabetical sorting for the subset list widget.
+- "Duplicate" feature for Subsets to instantly clone filter configurations.
+- Direct "Export Data" functionality, enabling saving a generated subset straight to a CSV file from the manager dialog.
+- Alternating row colors in the subset list to enhance visual tracking of datasets.
+- Using SVG draw paths for icons
+### Changed
+- Refactored the `clean_data` method to call separate methods for each action
+- Updated `ColormapPickerDialog.generate_icon` to be a static method
+- ColormapPickerDialog returns a cached value during dialog accept to prevent lag when indexing
+- Checking if a column name exists in the dataset before renaming it. Before it only checked for the same name as current column being renamed.
+- Updated the performance of the Datatable to not render the dataframe each time a visual element to the table is called
+- The numeric check for cells in the table updates correctly when updating table or changing table elements.
+- When editing `datetime64` data the EditRole uses ISO-formatted dates instead of generic `__str__` of `pd.Timestamp` objects
+- The way the `DataTableModel` resets its layout. Using `being/endResetModel` to update model interface instead of recreating layout.
+- Regex for keywords and builtins to reduce CPU usage during typing
+- Disabled animation for plotting when not clicking generate plot button.
+- Plotting is now modularised and uses a sequence strategy instead of a dict lookup
+- Moved regression analysis into a new file `RegressionAnalyser` to free up space in PlotEngine
+- Changed how the customizations of lines, bars and markers are handled when plotting updates. The old "Save Customizations to Plot" method has been removed and the customizatons are now reflected based on the GID of the bar/line/marker.
+### Fixed
+- Resolved a bug where `Trim trailing whitespace` triggered the lstrip operation instead of rstrip
+- Fixed a `TypeError` that would cause a crash when exporting data to Google Sheets
+- Fixed text typos in Data Tab
+- A maths error in the IQR method `clip_outliers` where the upper limit was bound to Q1 instead of Q3. 
+- Resolved a `TypeError` when parsing custom bin edge values
+- Fixed an issue where a messagebox did not display the error correctly when binning data.
+- Fixed issue where ColormapPickerDialog was instantiated every time a new colormap was chosen
+- Fixed an issue with uninitialized colors for geospatial parameters when using the `CodeEditor` causing a crash.
+- Fixed a crash that occurred when creating a new project upon application initialization.
+- An update to the DataTableModel upon altering the table would instanciate a new model each time, which lead to memory leaks over time.
+- Fixed a rendering artifact where menubar drop down menus displayed black corners
+- Fixed incorrect color interpolation for the "On" state of the toggle switch widget. Previous color was a dull green instead of the default blue accent color. 
+- Fixed an issue where escape sequences, `\"` ended string highlighting
+- Fixed a bug where dot-notation for decorators were improperly formatted
+- Keyboard focus for buttons when using tab to cycle through buttons was hidden
+- Fixed issue where screen readers would read segmented strings with the typerwrite effect for buttons
+- Fixed lag when adjusting sliders when plotting.
+- Fixed issue where plot was instantly redrawn after clicking clear
+- Fixed issue where SubplotOverlay information was being drawn every time an element was changed on the plot.
+- Fixed a wrong calculation when calculating confidence intervals from a non linear regression
+- Fixed a notation error when writing equation_str to canvas. Used e-notation causing small numbers to be represented as 1e-01 instead of just 1
+- Fixed a sorting state bug where the sorting state was never updated when sorting data.
+- Fixed a performance issues where data operations triggered canvas and plot rendering even when canvas was not in view.
+- Fixed a bug where two categorical xaxis object could not be rendered.
+- Fixed an issue where the MainWindow would not switch to the DataExplorer upon importing a new dataset.
+- Fixed a crash when attempting to insert a tab without an active text selection in the python editor.
+- Fixed a increment error in run_counter for ScriptEditor dialog causing wrong code history values
+- Fixed a crash in `SubsetManagerDialog` occurring when saving a new subset
+### Removed
+- Redundant string conversion from RenameDialog
+- All strategy_* methods from PlotEngine 
+- Buttons for saving customizations to lines and bars in PlotTab
+- IconEngine and manual drawing of icons
+
 ## v0.0.9
 ### Added
 - A visual join diagram as a Venn Diagram in the Merge tool to preview the merge of datasets
