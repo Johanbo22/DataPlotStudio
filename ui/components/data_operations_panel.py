@@ -1,9 +1,11 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView, QListWidgetItem
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView, QListWidgetItem, QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from typing import TYPE_CHECKING, Optional
+
+from ui.styles.widget_styles import ScrollArea
 
 if TYPE_CHECKING:
     from ui.controllers.data_tab_controller import DataTabController
@@ -252,7 +254,14 @@ class DataOperationsPanel(QWidget):
         self.ops_tabs.addTab(filter_tab, filter_icon, "Filter Data")
 
     def create_columns_tab(self):
+        column_scroll_area = QScrollArea()
+        column_scroll_area.setWidgetResizable(True)
+        column_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        column_scroll_area.setStyleSheet(ScrollArea.TransparentScrollArea)
+        
         column_tab = QWidget()
+        column_tab.setObjectName("ScrollContent")
+        column_tab.setStyleSheet("QWidget#ScrollContent { background-color: transparent; }")
         column_layout = QVBoxLayout(column_tab)
 
         column_info = QLabel("This tab allows you to change certain elements to the columns of your data")
@@ -495,8 +504,9 @@ class DataOperationsPanel(QWidget):
         column_layout.addWidget(norm_group)
 
         column_layout.addStretch()
+        column_scroll_area.setWidget(column_tab)
         column_icon = IconBuilder.build(IconType.EditColumns)
-        self.ops_tabs.addTab(column_tab, column_icon, "Columns")
+        self.ops_tabs.addTab(column_scroll_area, column_icon, "Columns")
 
     def create_transform_tab(self):
         transform_tab = QWidget()

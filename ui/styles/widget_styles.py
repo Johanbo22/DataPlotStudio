@@ -20,3 +20,5 @@ class Label:
     LandingPageWhatsNewInfoTitle: str = "font-size: 22px; font-weight: bold; color: #34495e; margin-bottom: 15px;"
     LandingPageVersionLabel: str = "font-size: 12px; font-weight: italic; color: #34495e; margin-bottom: 2px;"
 
+class ScrollArea:
+    TransparentScrollArea: str = "QScrollArea { background-color: transparent; }"
