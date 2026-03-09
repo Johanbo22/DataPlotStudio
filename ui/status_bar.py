@@ -3,8 +3,10 @@ from PyQt6.QtWidgets import QStatusBar, QLabel, QLineEdit, QProgressBar, QApplic
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from datetime import datetime
 from core.logger import Logger
+from ui import widgets
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.dialogs.LogHistoryPopup import LogHistoryPopup
+from ui.styles import widget_styles
 
 
 
@@ -37,84 +39,35 @@ class StatusBar(QStatusBar):
         self.current_anim_text = ""
         self.current_anim_index = 0
 
-        self.setStyleSheet("""
-            QStatusBar {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border-top: 1px solid #3e3e42;
-                padding: 4px;
-            }
-            QStatusBar::item {
-                border: none;
-            }
-            QLabel{
-                padding: 0 5px;
-            }
-        """)
+        self.setStyleSheet(widget_styles.StatusBar.Statusbar)
 
         # Adding a label of data stat
         self.stats_label = QLabel("No Data")
-        self.stats_label.setStyleSheet("""
-            QLabel {
-                color: #858585;
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 11px;
-                padding-right: 15px;
-            }
-        """)
+        self.stats_label.setStyleSheet(widget_styles.StatusBar.StatsLabel)
 
         # Adding some progress
         self.progress_bar = QProgressBar()
         self.progress_bar.setFixedWidth(150)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                border: none;
-                background-color: #2d2d2d;
-                border-radius: 2px;
-                min-height: 4px;
-                max-height: 4px;
-            }
-            QProgressBar::chunk {
-                background-color: #007acc;
-                border-radius: 2px;
-            }
-        """)
+        self.progress_bar.setStyleSheet(widget_styles.StatusBar.ProgressBar)
         self.progress_bar.hide()
         
         # Terminal-like output area
         self.terminal = QLineEdit()
         self.terminal.setReadOnly(True)
-        self.terminal.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                color: #00ff00;
-                font-family: Consolas, monospace;
-                font-size: 10px;
-                border: 1px solid #444;
-                padding: 4px;
-            }
-        """)
+        self.terminal.setStyleSheet(widget_styles.StatusBar.Terminal)
 
         # Open history button
         self.history_button = DataPlotStudioButton("≡", base_color_hex="#333", hover_color_hex="#444", text_color_hex="#ddd", padding="4px")
         self.history_button.setToolTip("View Log History")
         self.history_button.setFixedWidth(24)
         self.history_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.history_button.setStyleSheet("""
-            DataPlotStudioButton {
-                background-color: #333; 
-                color: #ddd; 
-                border: 1px solid #444; 
-                font-weight: bold;
-            }
-            DataPlotStudioButton:hover { background-color: #444; color: #fff; }
-        """)
+        self.history_button.setStyleSheet(widget_styles.StatusBar.HistoryButton)
         self.history_button.clicked.connect(self.show_log_history)
         
         # Status label
         self.status_label = QLabel()
-        self.status_label.setStyleSheet("color: #00ff00;")
+        self.status_label.setStyleSheet(widget_styles.StatusBar.StatusLabel)
         
         # Add widgets to status bar
         self.addWidget(self.status_label, 0)
@@ -122,10 +75,10 @@ class StatusBar(QStatusBar):
         self.addWidget(self.history_button)
 
         self.source_label = QLabel("")
-        self.source_label.setStyleSheet("color: #3498db; font-size: 11px; padding-right: 10px;")
+        self.source_label.setStyleSheet(widget_styles.StatusBar.SourceLabel)
 
         self.view_context_label = QLabel("")
-        self.view_context_label.setStyleSheet("color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;")
+        self.view_context_label.setStyleSheet(widget_styles.StatusBar.ContextLabel)
         
         self.addPermanentWidget(self.progress_bar)
         self.addPermanentWidget(self.source_label)
@@ -309,6 +262,6 @@ class StatusBar(QStatusBar):
 
         # Colors
         if context_type == "aggregation":
-            self.view_context_label.setStyleSheet("color: #8e44ad; font-weight: bold; font-size: 11px; padding-right: 10px;")
+            self.view_context_label.setStyleSheet(widget_styles.StatusBar.AggregationContextLabel)
         else:
-            self.view_context_label.setStyleSheet("color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;")
+            self.view_context_label.setStyleSheet(widget_styles.StatusBar.SubsetContextLabel)

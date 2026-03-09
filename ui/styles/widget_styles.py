@@ -99,3 +99,64 @@ class Dialog:
                 background-color: #2980b9;
             }
         """
+
+class StatusBar:
+    Statusbar: str = """
+            QStatusBar {
+                background-color: #1e1e1e;
+                color: #ffffff;
+                border-top: 1px solid #3e3e42;
+                padding: 4px;
+            }
+            QStatusBar::item {
+                border: none;
+            }
+            QLabel{
+                padding: 0 5px;
+            }
+        """
+    StatsLabel: str = """
+            QLabel {
+                color: #858585;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+                padding-right: 15px;
+            }
+        """
+    ProgressBar: str = """
+            QProgressBar {
+                border: none;
+                background-color: #2d2d2d;
+                border-radius: 2px;
+                min-height: 4px;
+                max-height: 4px;
+            }
+            QProgressBar::chunk {
+                background-color: #007acc;
+                border-radius: 2px;
+            }
+        """
+    Terminal: str = """
+            QLineEdit {
+                background-color: #1e1e1e;
+                color: #00ff00;
+                font-family: Consolas, monospace;
+                font-size: 10px;
+                border: 1px solid #444;
+                padding: 4px;
+            }
+        """
+    HistoryButton: str = """
+            DataPlotStudioButton {
+                background-color: #333; 
+                color: #ddd; 
+                border: 1px solid #444; 
+                font-weight: bold;
+            }
+            DataPlotStudioButton:hover { background-color: #444; color: #fff; }
+        """
+    StatusLabel: str = "color: #00ff00;"
+    SourceLabel: str = "color: #3498db; font-size: 11px; padding-right: 10px;"
+    ContextLabel: str = "color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;"
+    AggregationContextLabel: str = "color: #8e44ad; font-weight: bold; font-size: 11px; padding-right: 10px;"
+    SubsetContextLabel: str = "color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;"
