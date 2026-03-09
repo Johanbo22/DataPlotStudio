@@ -21,130 +21,119 @@ class LegendGridSettingstab(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
-        self._setup_legend_group(scroll_layout)
-        scroll_layout.addSpacing(10)
-        self._setup_legend_box_styling(scroll_layout)
+        self._setup_legend_config_group(scroll_layout)
         scroll_layout.addSpacing(10)
         self._setup_gridlines_group(scroll_layout)
 
         scroll_layout.addStretch()
         scroll.setWidget(scroll_widget)
         main_layout.addWidget(scroll)
-
-    def _setup_legend_group(self, parent_layout: QVBoxLayout) -> None:
+    
+    def _setup_legend_config_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Legend")
         layout = QVBoxLayout()
-
+        
         self.legend_check = DataPlotStudioToggleSwitch("Show Legend")
         self.legend_check.setChecked(False)
         layout.addWidget(self.legend_check)
-
-        self.legend_location_label = QLabel("Legend Placement:")
-        self.legend_location_label.setVisible(False)
-        layout.addWidget(self.legend_location_label)
         
+        self.legend_tab_widget = DataPlotStudioTabWidget()
+        self.legend_tab_widget.setVisible(False)
+        self.legend_tab_widget.setMinimumHeight(240)
+        
+        self.legend_check.toggled.connect(self.legend_tab_widget.setVisible)
+        
+        layout_tab = QWidget()
+        layout_tab_layout = QVBoxLayout(layout_tab)
+        
+        layout_tab_layout.addWidget(QLabel("Legend Placement:"))
         self.legend_loc_combo = DataPlotStudioComboBox()
-        self.legend_loc_combo.addItems([
-            'best', 'upper right', 'upper left', 'lower left', 'lower right', 
-            'right', 'center left', 'center right', 'lower center', 'upper center', 'center'
-        ])
-        self.legend_loc_combo.setVisible(False)
-        layout.addWidget(self.legend_loc_combo)
-
-        self.legend_title_label = QLabel("Legend Title:")
-        self.legend_title_label.setVisible(False)
-        layout.addWidget(self.legend_title_label)
+        self.legend_loc_combo.addItems(['best', 'upper right', 'upper left', 'lower left', 'lower right', 
+            'right', 'center left', 'center right', 'lower center', 'upper center', 'center'])
+        layout_tab_layout.addWidget(self.legend_loc_combo)
         
+        layout_tab_layout.addWidget(QLabel("Legend Title:"))
         self.legend_title_input = DataPlotStudioLineEdit()
         self.legend_title_input.setPlaceholderText("Enter legend title")
-        self.legend_title_input.setVisible(False)
-        layout.addWidget(self.legend_title_input)
-
-        self.legend_font_size_label = QLabel("Legend Font Size:")
-        self.legend_font_size_label.setVisible(False)
-        layout.addWidget(self.legend_font_size_label)
+        layout_tab_layout.addWidget(self.legend_title_input)
         
+        layout_tab_layout.addWidget(QLabel("Legend Font Size:"))
         self.legend_size_spin = DataPlotStudioSpinBox()
-        self.legend_size_spin.setRange(6, 20)
+        self.legend_size_spin.setRange(5, 20)
         self.legend_size_spin.setValue(10)
-        self.legend_size_spin.setVisible(False)
-        layout.addWidget(self.legend_size_spin)
-
-        self.legend_ncols_label = QLabel("Number of Columns:")
-        self.legend_ncols_label.setVisible(False)
-        layout.addWidget(self.legend_ncols_label)
+        layout_tab_layout.addWidget(self.legend_size_spin)
         
+        layout_tab_layout.addWidget(QLabel("Number of Columns:"))
         self.legend_columns_spin = DataPlotStudioSpinBox()
         self.legend_columns_spin.setRange(1, 5)
         self.legend_columns_spin.setValue(1)
-        self.legend_columns_spin.setVisible(False)
-        layout.addWidget(self.legend_columns_spin)
-
-        self.legend_column_spacing_label = QLabel("Column Spacing:")
-        self.legend_column_spacing_label.setVisible(False)
-        layout.addWidget(self.legend_column_spacing_label)
+        layout_tab_layout.addWidget(self.legend_columns_spin)
         
+        layout_tab_layout.addWidget(QLabel("Column Spacing"))
         self.legend_colspace_spin = DataPlotStudioDoubleSpinBox()
         self.legend_colspace_spin.setRange(0.5, 5.0)
         self.legend_colspace_spin.setValue(1.0)
         self.legend_colspace_spin.setSingleStep(0.1)
-        self.legend_colspace_spin.setVisible(False)
-        layout.addWidget(self.legend_colspace_spin)
-
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
-
-    def _setup_legend_box_styling(self, parent_layout: QVBoxLayout) -> None:
-        self.box_styling_group = DataPlotStudioGroupBox("Legend Box Styling")
-        self.box_styling_group.setVisible(False)
-        layout = QVBoxLayout()
-
+        layout_tab_layout.addWidget(self.legend_colspace_spin)
+        
+        layout_tab_layout.addStretch()
+        self.legend_tab_widget.addTab(layout_tab, "Layout and Text")
+        
+        # Box styling options
+        box_tab = QWidget()
+        box_layout = QVBoxLayout(box_tab)
+        
         self.legend_frame_check = DataPlotStudioToggleSwitch("Show Frame")
         self.legend_frame_check.setChecked(True)
-        layout.addWidget(self.legend_frame_check)
-
-        self.legend_fancybox_check = DataPlotStudioToggleSwitch("Fancy Box (Rounded Corners)")
-        self.legend_fancybox_check.setChecked(True)
-        layout.addWidget(self.legend_fancybox_check)
-
+        box_layout.addWidget(self.legend_frame_check)
+        
+        self.legend_fancybox_check = DataPlotStudioToggleSwitch("Fancy Box")
+        self.legend_fancybox_check.setChecked(False)
+        box_layout.addWidget(self.legend_fancybox_check)
+        
         self.legend_shadow_check = DataPlotStudioToggleSwitch("Show Shadow")
         self.legend_shadow_check.setChecked(False)
-        layout.addWidget(self.legend_shadow_check)
-
-        layout.addWidget(QLabel("Background Color:"))
+        box_layout.addWidget(self.legend_shadow_check)
+        
+        box_layout.addWidget(QLabel("Background Color:"))
         bg_layout = QHBoxLayout()
-        self.legend_bg_button = DataPlotStudioButton("Choose", parent=self)
+        self.legend_bg_button = DataPlotStudioButton("Choose Color", parent=self)
         self.legend_bg_label = QLabel("White")
         bg_layout.addWidget(self.legend_bg_button)
         bg_layout.addWidget(self.legend_bg_label)
-        layout.addLayout(bg_layout)
-
-        layout.addWidget(QLabel("Edge Color:"))
+        box_layout.addLayout(bg_layout)
+        
+        box_layout.addWidget(QLabel("Edge Color:"))
         edge_layout = QHBoxLayout()
-        self.legend_edge_button = DataPlotStudioButton("Choose", parent=self)
+        self.legend_edge_button = DataPlotStudioButton("Choose Color", parent=self)
         self.legend_edge_label = QLabel("Black")
         edge_layout.addWidget(self.legend_edge_button)
         edge_layout.addWidget(self.legend_edge_label)
-        layout.addLayout(edge_layout)
-
-        layout.addWidget(QLabel("Edge Width:"))
+        box_layout.addLayout(edge_layout)
+        
+        box_layout.addWidget(QLabel("Edge Width:"))
         self.legend_edge_width_spin = DataPlotStudioDoubleSpinBox()
         self.legend_edge_width_spin.setRange(0.5, 3.0)
         self.legend_edge_width_spin.setValue(1.0)
         self.legend_edge_width_spin.setSingleStep(0.1)
-        layout.addWidget(self.legend_edge_width_spin)
-
-        layout.addWidget(QLabel("Box Alpha (Transparency):"))
+        box_layout.addWidget(self.legend_edge_width_spin)
+        
+        box_layout.addWidget(QLabel("Box Alpha:"))
         self.legend_alpha_slider = DataPlotStudioSlider(Qt.Orientation.Horizontal)
         self.legend_alpha_slider.setRange(10, 100)
         self.legend_alpha_slider.setValue(100)
-        layout.addWidget(self.legend_alpha_slider)
-
+        box_layout.addWidget(self.legend_alpha_slider)
+        
         self.legend_alpha_label = QLabel("100%")
-        layout.addWidget(self.legend_alpha_label)
+        box_layout.addWidget(self.legend_alpha_label)
+        
+        box_layout.addStretch()
+        self.legend_tab_widget.addTab(box_tab, "Legend Style")
+        
+        layout.addWidget(self.legend_tab_widget)
+        group.setLayout(layout)
+        parent_layout.addWidget(group)
 
-        self.box_styling_group.setLayout(layout)
-        parent_layout.addWidget(self.box_styling_group)
 
     def _setup_gridlines_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Gridlines")
@@ -171,6 +160,14 @@ class LegendGridSettingstab(QWidget):
         self.grid_axis_combo.addItems(["both", "x", "y"])
         self.grid_axis_combo.setToolTip("Choose which axis to show gridlines")
         global_layout.addWidget(self.grid_axis_combo)
+        
+        global_layout.addWidget(QLabel("Grid Color:"))
+        global_color_layout = QHBoxLayout()
+        self.global_grid_color_button = DataPlotStudioButton("Choose Color", parent=self)
+        self.global_grid_color_label = QLabel("Auto")
+        global_color_layout.addWidget(self.global_grid_color_button)
+        global_color_layout.addWidget(self.global_grid_color_label)
+        global_layout.addLayout(global_color_layout)
 
         global_layout.addWidget(QLabel("Grid Alpha (Transparency):"))
         self.global_grid_alpha_slider = DataPlotStudioSlider(Qt.Orientation.Horizontal)
@@ -189,7 +186,10 @@ class LegendGridSettingstab(QWidget):
         layout.addWidget(self.independent_grid_check)
 
         self.grid_axis_tab = DataPlotStudioTabWidget()
+        self.grid_axis_tab.setMinimumHeight(260)
         self.grid_axis_tab.setVisible(False)
+        
+        self.independent_grid_check.toggled.connect(self.grid_axis_tab.setVisible)
 
         # X-Axis Tab
         x_grid_tab = QWidget()

@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollAr
 from PyQt6.QtCore import Qt
 
 from ui.theme import ThemeColors
-from ui.widgets import AutoResizingStackedWidget, DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioSlider
+from ui.widgets import AutoResizingStackedWidget, DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioSlider, DataPlotStudioTabWidget
 
 class CustomizationSettingsTab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -105,30 +105,11 @@ class CustomizationSettingsTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
 
-        # Histogram Sub-Properties
-        self.histogram_group = DataPlotStudioGroupBox("Histogram Properties")
-        hist_layout = QVBoxLayout()
+        tab_widget = DataPlotStudioTabWidget()
+        tab_widget.setMinimumHeight(240)
 
-        hist_layout.addWidget(QLabel("Number of Bins:"))
-        self.histogram_bins_spin = DataPlotStudioSpinBox()
-        self.histogram_bins_spin.setRange(5, 200)
-        self.histogram_bins_spin.setValue(30)
-        hist_layout.addWidget(self.histogram_bins_spin)
-
-        self.histogram_show_normal_check = DataPlotStudioToggleSwitch("Overlay a Normal Distribution Curve")
-        self.histogram_show_normal_check.setChecked(False)
-        hist_layout.addWidget(self.histogram_show_normal_check)
-
-        self.histogram_show_kde_check = DataPlotStudioToggleSwitch("Overlay Kernel Density Estimate")
-        self.histogram_show_kde_check.setChecked(False)
-        hist_layout.addWidget(self.histogram_show_kde_check)
-
-        self.histogram_group.setLayout(hist_layout)
-        layout.addWidget(self.histogram_group)
-
-        # Bar Sub-Properties
-        self.bar_group = DataPlotStudioGroupBox("Bar Properties")
-        bar_layout = QVBoxLayout()
+        bar_tab = QWidget()
+        bar_layout = QVBoxLayout(bar_tab)
 
         self.multibar_custom_check = DataPlotStudioToggleSwitch("Enable per-bar customization")
         self.multibar_custom_check.setChecked(False)
@@ -172,8 +153,30 @@ class CustomizationSettingsTab(QWidget):
         self.bar_edge_width_spin.setSingleStep(0.1)
         bar_layout.addWidget(self.bar_edge_width_spin)
 
-        self.bar_group.setLayout(bar_layout)
-        layout.addWidget(self.bar_group)
+        bar_layout.addStretch()
+        tab_widget.addTab(bar_tab, "Bar Properties")
+
+        hist_tab = QWidget()
+        hist_layout = QVBoxLayout(hist_tab)
+
+        hist_layout.addWidget(QLabel("Number of Bins:"))
+        self.histogram_bins_spin = DataPlotStudioSpinBox()
+        self.histogram_bins_spin.setRange(5, 200)
+        self.histogram_bins_spin.setValue(30)
+        hist_layout.addWidget(self.histogram_bins_spin)
+
+        self.histogram_show_normal_check = DataPlotStudioToggleSwitch("Overlay a Normal Distribution Curve")
+        self.histogram_show_normal_check.setChecked(False)
+        hist_layout.addWidget(self.histogram_show_normal_check)
+
+        self.histogram_show_kde_check = DataPlotStudioToggleSwitch("Overlay Kernel Density Estimate")
+        self.histogram_show_kde_check.setChecked(False)
+        hist_layout.addWidget(self.histogram_show_kde_check)
+        
+        hist_layout.addStretch()
+        tab_widget.addTab(hist_tab, "Histogram Properties")
+
+        layout.addWidget(tab_widget)
         layout.addStretch()
 
         self.advanced_stack.addWidget(self.page_bar_hist)

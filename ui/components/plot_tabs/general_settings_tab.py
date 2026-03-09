@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioListWidget, QuickFilterEdit, HelpIcon
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioListWidget, QuickFilterEdit, HelpIcon, DataPlotStudioTabWidget
 from ui.styles.widget_styles import ToolBox
 
 class GeneralSettingsTab(QWidget):
@@ -28,11 +28,7 @@ class GeneralSettingsTab(QWidget):
         self._setup_plot_type_group(scroll_layout)
         self._setup_subplot_group(scroll_layout)
         scroll_layout.addSpacing(10)
-        self._setup_data_group(scroll_layout)
-        self._setup_subset_group(scroll_layout)
-        self._setup_hue_group(scroll_layout)
-        scroll_layout.addSpacing(10)
-        self._setup_description_group(scroll_layout)
+        self._setup_data_configuration_group(scroll_layout)
 
         scroll_layout.addStretch()
         scroll.setWidget(scroll_widget)
@@ -123,121 +119,112 @@ class GeneralSettingsTab(QWidget):
         self.subplot_group.setLayout(layout)
         parent_layout.addWidget(self.subplot_group)
 
-    def _setup_data_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Data")
+    def _setup_data_configuration_group(self, parent_layout: QVBoxLayout) -> None:
+        group = DataPlotStudioGroupBox("Data Configuration")
         group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
 
+        tab_widget = DataPlotStudioTabWidget()
+        tab_widget.setMinimumHeight(320)
+
+        var_tab = QWidget()
+        var_layout = QVBoxLayout(var_tab)
+        
         x_layout = QHBoxLayout()
         x_layout.addWidget(QLabel("X Column:"))
         self.x_column = DataPlotStudioComboBox()
         x_layout.addWidget(self.x_column, 1)
-        layout.addLayout(x_layout)
+        var_layout.addLayout(x_layout)
 
         y_lbl_layout = QHBoxLayout()
-        y_lbl_layout.addWidget(QLabel("Y Column(s)"))
+        y_lbl_layout.addWidget(QLabel("Y Column(s):"))
         y_lbl_layout.addStretch()
-
         self.multi_y_check = DataPlotStudioToggleSwitch("Multiple Y Columns")
         y_lbl_layout.addWidget(self.multi_y_check)
-        layout.addLayout(y_lbl_layout)
+        var_layout.addLayout(y_lbl_layout)
 
         self.y_column = DataPlotStudioComboBox()
-        layout.addWidget(self.y_column)
+        var_layout.addWidget(self.y_column)
 
         self.y_columns_list = DataPlotStudioListWidget()
         self.y_columns_list.setSelectionMode(DataPlotStudioListWidget.SelectionMode.MultiSelection)
-        self.y_columns_list.setMaximumHeight(150)
+        self.y_columns_list.setMaximumHeight(100)
         self.y_columns_list.setVisible(False)
-        layout.addWidget(self.y_columns_list)
+        var_layout.addWidget(self.y_columns_list)
 
         multi_btns = QHBoxLayout()
         self.select_all_y_btn = DataPlotStudioButton("Select All", parent=self)
         self.select_all_y_btn.setVisible(False)
         self.clear_all_y_btn = DataPlotStudioButton("Clear All", parent=self)
+        self.clear_all_y_btn.setMinimumHeight(28)
         self.clear_all_y_btn.setVisible(False)
         multi_btns.addWidget(self.select_all_y_btn)
         multi_btns.addWidget(self.clear_all_y_btn)
-        layout.addLayout(multi_btns)
+        var_layout.addLayout(multi_btns)
 
         self.multi_y_info = QLabel("Tip: Hold Ctrl/Cmd to select multiple columns")
         self.multi_y_info.setStyleSheet(ThemeColors.MutedTextStylesheet)
         self.multi_y_info.setVisible(False)
-        layout.addWidget(self.multi_y_info)
+        var_layout.addWidget(self.multi_y_info)
 
-        layout.addSpacing(10)
-        sec_y_layout = QHBoxLayout()
-        self.secondary_y_check = DataPlotStudioToggleSwitch("Secondary Y-Axis")
-        sec_y_layout.addWidget(self.secondary_y_check)
-        layout.addLayout(sec_y_layout)
+        var_layout.addWidget(QLabel("Hue/Group:"))
+        self.hue_column = DataPlotStudioComboBox()
+        self.hue_column.addItem("None")
+        var_layout.addWidget(self.hue_column)
+        
+        var_layout.addStretch()
+        tab_widget.addTab(var_tab, "Variables")
 
-        sec_config_layout = QHBoxLayout()
+        sec_tab = QWidget()
+        sec_layout = QVBoxLayout(sec_tab)
+        
+        self.secondary_y_check = DataPlotStudioToggleSwitch("Enable Secondary Y-Axis")
+        sec_layout.addWidget(self.secondary_y_check)
+        
+        sec_layout.addWidget(QLabel("Secondary Y Column:"))
         self.secondary_y_column = DataPlotStudioComboBox()
         self.secondary_y_column.setEnabled(False)
-        sec_config_layout.addWidget(self.secondary_y_column, stretch=2)
+        sec_layout.addWidget(self.secondary_y_column)
 
+        sec_layout.addWidget(QLabel("Secondary Plot Type:"))
         self.secondary_plot_type_combo = DataPlotStudioComboBox()
         self.secondary_plot_type_combo.setEnabled(False)
         self.secondary_plot_type_combo.addItems(["Line", "Scatter", "Bar", "Area"])
-        sec_config_layout.addWidget(self.secondary_plot_type_combo, stretch=1)
-        layout.addLayout(sec_config_layout)
+        sec_layout.addWidget(self.secondary_plot_type_combo)
+        
+        sec_layout.addStretch()
+        tab_widget.addTab(sec_tab, "Secondary Axis")
 
-        layout.addSpacing(10)
-        layout.addWidget(QLabel("Quick Filter:"))
+        filter_tab = QWidget()
+        filter_layout = QVBoxLayout(filter_tab)
+        
+        filter_layout.addWidget(QLabel("Quick Filter:"))
         self.quick_filter_input = QuickFilterEdit()
         self.quick_filter_input.setPlaceholderText("e.g. value > 100 or category == 'A'")
-        layout.addWidget(self.quick_filter_input)
-
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
-
-    def _setup_subset_group(self, parent_layout: QVBoxLayout) -> None:
-        self.subset_group = DataPlotStudioGroupBox("Data Subset")
-        self.subset_group.setVisible(False)
-        self.subset_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
-        layout = QVBoxLayout()
-
-        info = QLabel("Plot a specific subset of your data instead of the full dataset.")
-        info.setWordWrap(True)
-        info.setStyleSheet(ThemeColors.InfoStylesheet)
-        layout.addWidget(info)
+        filter_layout.addWidget(self.quick_filter_input)
+        
+        filter_layout.addSpacing(10)
+        
+        subset_info = QLabel("Plot a specific subset of your data. Enable 'Use Subset' in the Plot Type group above.")
+        subset_info.setWordWrap(True)
+        subset_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        filter_layout.addWidget(subset_info)
 
         self.subset_combo = DataPlotStudioComboBox()
         self.subset_combo.addItem("(Full Dataset)")
         self.subset_combo.setEnabled(False)
-        layout.addWidget(self.subset_combo)
+        filter_layout.addWidget(self.subset_combo)
 
         self.use_subset_check.stateChanged.connect(
             lambda state: self.subset_combo.setEnabled(state == Qt.CheckState.Checked.value)
         )
 
         self.refresh_subsets_btn = DataPlotStudioButton("Refresh Subset List", parent=self)
-        layout.addWidget(self.refresh_subsets_btn)
-
-        self.subset_group.setLayout(layout)
-        parent_layout.addWidget(self.subset_group)
-
-    def _setup_hue_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Hue/Group:")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
-        layout = QVBoxLayout()
-        self.hue_column = DataPlotStudioComboBox()
-        self.hue_column.addItem("None")
-        layout.addWidget(self.hue_column)
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
-
-    def _setup_description_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Plot Description: ")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderLargeStyle)
-        layout = QVBoxLayout()
+        filter_layout.addWidget(self.refresh_subsets_btn)
         
-        self.description_label = QLabel()
-        self.description_label.setWordWrap(True)
-        font = QFont()
-        font.setPointSize(12)
-        self.description_label.setFont(font)
-        
-        layout.addWidget(self.description_label)
+        filter_layout.addStretch()
+        tab_widget.addTab(filter_tab, "Filters and Subsets")
+
+        layout.addWidget(tab_widget)
         group.setLayout(layout)
         parent_layout.addWidget(group)

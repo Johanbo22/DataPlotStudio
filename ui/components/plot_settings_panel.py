@@ -54,7 +54,7 @@ class PlotSettingsPanel(QWidget):
         
         self._expose_legend_grid_tab_widgets()
 
-        # TAB 5: ADVANCED (Customization)
+        # TAB 5: ADVANCED / Customization
         from ui.components.plot_tabs.customization_settings_tab import CustomizationSettingsTab
         self.customization_tab = CustomizationSettingsTab(self)
         advanced_tab_icon = QIcon(IconBuilder.build(IconType.PlotCustomization))
@@ -112,14 +112,11 @@ class PlotSettingsPanel(QWidget):
         
         self.quick_filter_input = self.basic_tab.quick_filter_input
         
-        self.subset_group = self.basic_tab.subset_group
         self.subset_combo = self.basic_tab.subset_combo
         self.refresh_subsets_btn = self.basic_tab.refresh_subsets_btn
         
         self.hue_column = self.basic_tab.hue_column
-        self.description_label = self.basic_tab.description_label
 
-        # Route signals from child tab to parent dialog logic
         self.basic_tab.help_requested.connect(self.show_help_dialog)
 
     def _expose_appearance_tab_widgets(self) -> None:
@@ -272,19 +269,13 @@ class PlotSettingsPanel(QWidget):
 
         # Legend
         self.legend_check = lg_tab.legend_check
-        self.legend_location_label = lg_tab.legend_location_label
         self.legend_loc_combo = lg_tab.legend_loc_combo
-        self.legend_title_label = lg_tab.legend_title_label
         self.legend_title_input = lg_tab.legend_title_input
-        self.legend_font_size_label = lg_tab.legend_font_size_label
         self.legend_size_spin = lg_tab.legend_size_spin
-        self.legend_ncols_label = lg_tab.legend_ncols_label
         self.legend_columns_spin = lg_tab.legend_columns_spin
-        self.legend_column_spacing_label = lg_tab.legend_column_spacing_label
         self.legend_colspace_spin = lg_tab.legend_colspace_spin
 
         # Legend Box Styling
-        self.box_styling_group = lg_tab.box_styling_group
         self.legend_frame_check = lg_tab.legend_frame_check
         self.legend_fancybox_check = lg_tab.legend_fancybox_check
         self.legend_shadow_check = lg_tab.legend_shadow_check
@@ -301,6 +292,8 @@ class PlotSettingsPanel(QWidget):
         self.global_grid_group = lg_tab.global_grid_group
         self.grid_which_type_combo = lg_tab.grid_which_type_combo
         self.grid_axis_combo = lg_tab.grid_axis_combo
+        self.global_grid_color_button = lg_tab.global_grid_color_button
+        self.global_grid_color_label = lg_tab.global_grid_color_label
         self.global_grid_alpha_slider = lg_tab.global_grid_alpha_slider
         self.global_grid_alpha_label = lg_tab.global_grid_alpha_label
         
@@ -367,12 +360,10 @@ class PlotSettingsPanel(QWidget):
         self.line_color_label = cust_tab.line_color_label
 
         # Bar and Histogram Properties
-        self.histogram_group = cust_tab.histogram_group
         self.histogram_bins_spin = cust_tab.histogram_bins_spin
         self.histogram_show_normal_check = cust_tab.histogram_show_normal_check
         self.histogram_show_kde_check = cust_tab.histogram_show_kde_check
         
-        self.bar_group = cust_tab.bar_group
         self.multibar_custom_check = cust_tab.multibar_custom_check
         self.bar_selector_label = cust_tab.bar_selector_label
         self.bar_selector_combo = cust_tab.bar_selector_combo

@@ -98,6 +98,7 @@ class PlotTab(PlotTabUI):
         self.textbox_bg_color = "white"
         self.legend_bg_color = "white"
         self.legend_edge_color = "black"
+        self.global_grid_color = "gray"
         self.x_major_grid_color = "gray"
         self.x_minor_grid_color = "lightgray"
         self.y_major_grid_color = "gray"
@@ -342,6 +343,7 @@ class PlotTab(PlotTabUI):
         self.view.legend_edge_button.clicked.connect(self.choose_legend_edge_color)
         self.view.legend_alpha_slider.valueChanged.connect(lambda v: self.view.legend_alpha_label.setText(f"{v}%"))
         self.view.grid_check.stateChanged.connect(self.on_grid_toggle)
+        self.view.global_grid_color_button.clicked.connect(self.choose_global_grid_color)
         self.view.global_grid_alpha_slider.valueChanged.connect(lambda v: self.view.global_grid_alpha_label.setText(f"{v}%"))
         self.view.independent_grid_check.stateChanged.connect(self.on_independent_grid_toggle)
         self.view.x_major_grid_color_button.clicked.connect(self.choose_x_major_grid_color)
@@ -598,9 +600,7 @@ class PlotTab(PlotTabUI):
     def use_subset(self):
         """Active subset on change"""
         subset_enabled = self.view.use_subset_check.isChecked()
-        self.view.subset_group.setVisible(subset_enabled)
-        
-    
+
     def apply_subplot_layout(self):
         """Apply new grid layout to subplot context"""
         rows = self.view.subplot_rows_spin.value()
@@ -1067,31 +1067,26 @@ class PlotTab(PlotTabUI):
     
     def on_legend_toggle(self) -> None:
         """Handle legend UI visibility"""
-        is_enabled = self.view.legend_check.isChecked()
-        self.view.legend_location_label.setVisible(is_enabled)
-        self.view.legend_loc_combo.setVisible(is_enabled)
-        self.view.legend_title_input.setVisible(is_enabled)
-        self.view.legend_title_input.setVisible(is_enabled)
-        self.view.legend_font_size_label.setVisible(is_enabled)
-        self.view.legend_size_spin.setVisible(is_enabled)
-        self.view.legend_ncols_label.setVisible(is_enabled)
-        self.view.legend_columns_spin.setVisible(is_enabled)
-        self.view.legend_column_spacing_label.setVisible(is_enabled)
-        self.view.legend_colspace_spin.setVisible(is_enabled)
-        self.view.box_styling_group.setVisible(is_enabled)
-        
         self.on_style_changed()
 
     
     def on_independent_grid_toggle(self):
         """Handle indepeendent customization of axis grids toggle"""
         is_independent = self.view.independent_grid_check.isChecked()
-        self.view.grid_axis_tab.setVisible(is_independent)
 
         #disable global control when independent axis controls are enabeld
         self.view.grid_which_type_combo.setEnabled(not is_independent)
         self.view.grid_axis_combo.setEnabled(not is_independent)
         self.on_style_changed()
+    
+    def choose_global_grid_color(self) -> None:
+        """Choose color for global gridlines"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.global_grid_color = color.name()
+            self.view.global_grid_color_label.setText(self.global_grid_color)
+            self.view.global_grid_color_button.updateColors(base_color_hex=self.global_grid_color)
+            self.on_style_changed()
 
     def choose_x_major_grid_color(self):
         """Choose color for x-axis major gridlines"""
@@ -1673,9 +1668,6 @@ class PlotTab(PlotTabUI):
         """Handle plot type change"""
         if log:
             self.status_bar.log(f"Plot type changed to: {plot_type}")
-
-        description = self.plot_engine.PLOT_DESCRIPTIONS.get(plot_type, "")
-        self.view.description_label.setText(description)
         
         self.view.custom_tabs.setTabVisible(6, plot_type == "GeoSpatial")
 
@@ -1694,11 +1686,9 @@ class PlotTab(PlotTabUI):
             show_error_bars = True
         elif plot_type in hist_plots:
             self.view.advanced_stack.setCurrentIndex(1)
-            self.view.histogram_group.setVisible(True)
             show_error_bars = False
         elif plot_type in bar_plots or plot_type in ["Box", "Violin"]:
             self.view.advanced_stack.setCurrentIndex(1)
-            self.view.histogram_group.setVisible(False)
             show_error_bars = True
         elif plot_type in scatter_plots:
             self.view.advanced_stack.setCurrentIndex(2)
@@ -2964,8 +2954,8 @@ class PlotTab(PlotTabUI):
                 visible=True,
                 which=which_type,
                 axis=axis,
+                color=self.global_grid_color,
                 alpha=self.view.global_grid_alpha_slider.value() / 100.0
-                # Use style-defined defaults for color/linestyle/width
             )
 
     

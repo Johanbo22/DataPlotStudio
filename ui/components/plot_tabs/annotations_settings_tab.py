@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 
 class AnnotationsSettingsTab(QWidget):
@@ -20,10 +20,7 @@ class AnnotationsSettingsTab(QWidget):
         scroll_widget.setObjectName("ScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
-        self._setup_manual_annotations_group(scroll_layout)
-        scroll_layout.addSpacing(15)
-        self._setup_auto_annotations_group(scroll_layout)
-        self._setup_textbox_group(scroll_layout)
+        self._setup_annotation_tools_group(scroll_layout)
         scroll_layout.addSpacing(15)
         self._setup_datatable_group(scroll_layout)
         scroll_layout.addSpacing(15)
@@ -33,102 +30,124 @@ class AnnotationsSettingsTab(QWidget):
         scroll.setWidget(scroll_widget)
         main_layout.addWidget(scroll)
 
-    def _setup_manual_annotations_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Manual Annotations")
+    def _setup_annotation_tools_group(self, parent_layout: QVBoxLayout) -> None:
+        group = DataPlotStudioGroupBox("Annotation Tools")
         layout = QVBoxLayout()
-
-        layout.addWidget(QLabel("Annotation Text:"))
-        self.annotation_text = DataPlotStudioLineEdit()
-        self.annotation_text.setPlaceholderText("Enter text to add to plot")
-        layout.addWidget(self.annotation_text)
-
-        layout.addWidget(QLabel("X Position (0-1):"))
-        self.annotation_x_spin = DataPlotStudioDoubleSpinBox()
-        self.annotation_x_spin.setRange(0, 1)
-        self.annotation_x_spin.setValue(0.5)
-        self.annotation_x_spin.setSingleStep(0.05)
-        layout.addWidget(self.annotation_x_spin)
-
-        layout.addWidget(QLabel("Y Position (0-1):"))
-        self.annotation_y_spin = DataPlotStudioDoubleSpinBox()
-        self.annotation_y_spin.setRange(0, 1)
-        self.annotation_y_spin.setValue(0.5)
-        self.annotation_y_spin.setSingleStep(0.05)
-        layout.addWidget(self.annotation_y_spin)
-
-        layout.addWidget(QLabel("Font Size:"))
-        self.annotation_fontsize_spin = DataPlotStudioSpinBox()
-        self.annotation_fontsize_spin.setRange(6, 36)
-        self.annotation_fontsize_spin.setValue(12)
-        layout.addWidget(self.annotation_fontsize_spin)
-
-        layout.addWidget(QLabel("Font Color:"))
-        color_layout = QHBoxLayout()
-        self.annotation_color_button = DataPlotStudioButton("Choose", parent=self)
-        self.annotation_color_label = QLabel("Black")
-        color_layout.addWidget(self.annotation_color_button)
-        color_layout.addWidget(self.annotation_color_label)
-        layout.addLayout(color_layout)
-
-        self.add_annotation_button = DataPlotStudioButton("Add Annotation", parent=self)
-        layout.addWidget(self.add_annotation_button)
-
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
-
-    def _setup_auto_annotations_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Annotate Data Points")
-        layout = QVBoxLayout()
+        
+        tab_widget = DataPlotStudioTabWidget()
+        tab_widget.setMinimumHeight(350)
+        
+        # Auto Annotations Tab
+        auto_tab = QWidget()
+        auto_layout = QVBoxLayout(auto_tab)
 
         self.auto_annotate_check = DataPlotStudioToggleSwitch("Annotate All points")
         self.auto_annotate_check.setToolTip("Automatically set text labels to all data points")
-        layout.addWidget(self.auto_annotate_check)
+        auto_layout.addWidget(self.auto_annotate_check)
 
-        layout.addWidget(QLabel("Label Source Column:"))
+        auto_layout.addWidget(QLabel("Label Source Column:"))
         self.auto_annotate_col_combo = DataPlotStudioComboBox()
+        self.auto_annotate_col_combo.setMinimumHeight(20)
         self.auto_annotate_col_combo.setToolTip("Select the column to use for the point labels")
         self.auto_annotate_col_combo.addItem("Default (Y-value)")
         self.auto_annotate_col_combo.setEnabled(False)
-        layout.addWidget(self.auto_annotate_col_combo)
+        auto_layout.addWidget(self.auto_annotate_col_combo)
+        
+        auto_layout.addStretch()
+        tab_widget.addTab(auto_tab, "Data Points")
 
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
+        # Text Box Tab
+        textbox_tab = QWidget()
+        textbox_layout = QVBoxLayout(textbox_tab)
 
-    def _setup_textbox_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Text Box")
-        layout = QVBoxLayout()
-
-        layout.addWidget(QLabel("Text Box Content:"))
+        textbox_layout.addWidget(QLabel("Text Box Content:"))
         self.textbox_content = DataPlotStudioLineEdit()
+        self.textbox_content.setMinimumHeight(20)
         self.textbox_content.setPlaceholderText("Enter text for text box")
-        layout.addWidget(self.textbox_content)
+        textbox_layout.addWidget(self.textbox_content)
 
-        layout.addWidget(QLabel("Text Box Position:"))
+        textbox_layout.addWidget(QLabel("Text Box Position:"))
         self.textbox_position_combo = DataPlotStudioComboBox()
+        self.textbox_position_combo.setMinimumHeight(20)
         self.textbox_position_combo.addItems([
             'upper left', 'upper center', 'upper right', 'center left', 
             'center', 'center right', 'lower left', 'lower center', 'lower right'
         ])
-        layout.addWidget(self.textbox_position_combo)
+        textbox_layout.addWidget(self.textbox_position_combo)
 
-        layout.addWidget(QLabel("Text Box Style:"))
+        textbox_layout.addWidget(QLabel("Text Box Style:"))
         self.textbox_style_combo = DataPlotStudioComboBox()
+        self.textbox_style_combo.setMinimumHeight(20)
         self.textbox_style_combo.addItems(['round', 'square', 'round,pad=1', 'round4,pad=0.5'])
         self.textbox_style_combo.setItemText(0, 'Rounded')
         self.textbox_style_combo.setItemText(1, 'Square')
-        layout.addWidget(self.textbox_style_combo)
+        textbox_layout.addWidget(self.textbox_style_combo)
 
-        layout.addWidget(QLabel("Background Color:"))
+        textbox_layout.addWidget(QLabel("Background Color:"))
         bg_layout = QHBoxLayout()
         self.textbox_bg_button = DataPlotStudioButton("Choose", parent=self)
+        self.textbox_bg_button.setMinimumHeight(20)
         self.textbox_bg_label = QLabel("White")
         bg_layout.addWidget(self.textbox_bg_button)
         bg_layout.addWidget(self.textbox_bg_label)
-        layout.addLayout(bg_layout)
+        textbox_layout.addLayout(bg_layout)
 
         self.textbox_enable_check = DataPlotStudioToggleSwitch("Enable Text Box")
-        layout.addWidget(self.textbox_enable_check)
+        textbox_layout.addWidget(self.textbox_enable_check)
 
+        textbox_layout.addStretch()
+        tab_widget.addTab(textbox_tab, "Text Box")
+
+        # Manual Annotations Tab
+        manual_tab = QWidget()
+        manual_layout = QVBoxLayout(manual_tab)
+
+        manual_layout.addWidget(QLabel("Annotation Text:"))
+        self.annotation_text = DataPlotStudioLineEdit()
+        self.annotation_text.setMinimumHeight(20)
+        self.annotation_text.setPlaceholderText("Enter text to add to plot")
+        manual_layout.addWidget(self.annotation_text)
+
+        manual_layout.addWidget(QLabel("X Position (0-1):"))
+        self.annotation_x_spin = DataPlotStudioDoubleSpinBox()
+        self.annotation_x_spin.setMinimumHeight(20)
+        self.annotation_x_spin.setRange(0, 1)
+        self.annotation_x_spin.setValue(0.5)
+        self.annotation_x_spin.setSingleStep(0.05)
+        manual_layout.addWidget(self.annotation_x_spin)
+
+        manual_layout.addWidget(QLabel("Y Position (0-1):"))
+        self.annotation_y_spin = DataPlotStudioDoubleSpinBox()
+        self.annotation_y_spin.setMinimumHeight(20)
+        self.annotation_y_spin.setRange(0, 1)
+        self.annotation_y_spin.setValue(0.5)
+        self.annotation_y_spin.setSingleStep(0.05)
+        manual_layout.addWidget(self.annotation_y_spin)
+
+        manual_layout.addWidget(QLabel("Font Size:"))
+        self.annotation_fontsize_spin = DataPlotStudioSpinBox()
+        self.annotation_fontsize_spin.setMinimumHeight(20)
+        self.annotation_fontsize_spin.setRange(6, 36)
+        self.annotation_fontsize_spin.setValue(12)
+        manual_layout.addWidget(self.annotation_fontsize_spin)
+
+        manual_layout.addWidget(QLabel("Font Color:"))
+        color_layout = QHBoxLayout()
+        self.annotation_color_button = DataPlotStudioButton("Choose", parent=self)
+        self.annotation_color_button.setMinimumHeight(20)
+        self.annotation_color_label = QLabel("Black")
+        color_layout.addWidget(self.annotation_color_button)
+        color_layout.addWidget(self.annotation_color_label)
+        manual_layout.addLayout(color_layout)
+
+        self.add_annotation_button = DataPlotStudioButton("Add Annotation", parent=self)
+        self.add_annotation_button.setMinimumHeight(20)
+        manual_layout.addWidget(self.add_annotation_button)
+
+        manual_layout.addStretch()
+        tab_widget.addTab(manual_tab, "Manual Label")
+
+        layout.addWidget(tab_widget)
         group.setLayout(layout)
         parent_layout.addWidget(group)
 

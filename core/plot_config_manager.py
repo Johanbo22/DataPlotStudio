@@ -227,6 +227,7 @@ class PlotConfigManager:
             "global": {
                 "which": self.pt.grid_which_type_combo.currentText(),
                 "axis": self.pt.grid_axis_combo.currentText(),
+                "color": self.pt.global_grid_color,
                 "alpha": self.pt.global_grid_alpha_slider.value() / 100.0,
             },
             "x_major": {
@@ -572,6 +573,12 @@ class PlotConfigManager:
         self.pt.grid_which_type_combo.setCurrentText(glob.get("which", "major"))
         self.pt.grid_axis_combo.setCurrentText(glob.get("axis", "both"))
         self.pt.global_grid_alpha_slider.setValue(int(glob.get("alpha", 0.5) * 100))
+        
+        g_color = glob.get("color", "gray")
+        self.pt.global_grid_color = g_color
+        if hasattr(self.pt.view, "global_grid_color_label"):
+            self.pt.view.global_grid_color_label.setText(g_color)
+            self.pt.view.global_grid_color_button.updateColors(base_color_hex=g_color)
 
         # A function to color buttons correctly
         def load_grid_section(prefix, conf):

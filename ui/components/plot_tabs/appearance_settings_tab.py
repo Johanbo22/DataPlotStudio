@@ -3,7 +3,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 import shutil
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, HelpIcon, ColormapButton
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, HelpIcon, ColormapButton, DataPlotStudioTabWidget
 
 class AppearanceSettingsTab(QWidget):
     help_requested = pyqtSignal(str)
@@ -29,8 +29,7 @@ class AppearanceSettingsTab(QWidget):
         self._setup_font_group(scroll_layout)
         scroll_layout.addSpacing(15)
         self._setup_title_group(scroll_layout)
-        self._setup_xlabel_group(scroll_layout)
-        self._setup_ylabel_group(scroll_layout)
+        self._setup_labels_group(scroll_layout)
         self._setup_spines_group(scroll_layout)
         self._setup_figure_group(scroll_layout)
         self._setup_accessibility_group(scroll_layout)
@@ -143,61 +142,69 @@ class AppearanceSettingsTab(QWidget):
         group.setLayout(layout)
         parent_layout.addWidget(group)
 
-    def _setup_xlabel_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("X Label Options")
+    def _setup_labels_group(self, parent_layout: QVBoxLayout) -> None:
+        group = DataPlotStudioGroupBox("Axis Label Options")
         group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
+        
+        tab_widget = DataPlotStudioTabWidget()
+        
+        # X axis tab
+        x_tab = QWidget()
+        x_layout = QVBoxLayout(x_tab)
         
         self.xlabel_check = DataPlotStudioToggleSwitch("Show X Label")
         self.xlabel_check.setChecked(True)
-        layout.addWidget(self.xlabel_check)
-
-        layout.addWidget(QLabel("X Label:"))
+        x_layout.addWidget(self.xlabel_check)
+        
+        x_layout.addWidget(QLabel("X Label:"))
         self.xlabel_input = DataPlotStudioLineEdit()
         self.xlabel_input.setPlaceholderText("X axis label")
-        layout.addWidget(self.xlabel_input)
-
-        layout.addWidget(QLabel("X Label fontsize:"))
+        x_layout.addWidget(self.xlabel_input)
+        
+        x_layout.addWidget(QLabel("X Label Font-size:"))
         self.xlabel_size_spin = DataPlotStudioSpinBox()
         self.xlabel_size_spin.setRange(5, 32)
         self.xlabel_size_spin.setValue(12)
-        layout.addWidget(self.xlabel_size_spin)
-
-        layout.addWidget(QLabel("X Label Font Weight"))
+        x_layout.addWidget(self.xlabel_size_spin)
+        
+        x_layout.addWidget(QLabel("X Label Font Weight"))
         self.xlabel_weight_combo = DataPlotStudioComboBox()
         self.xlabel_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.xlabel_weight_combo.setCurrentText("normal")
-        layout.addWidget(self.xlabel_weight_combo)
-
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
-
-    def _setup_ylabel_group(self, parent_layout: QVBoxLayout) -> None:
-        group = DataPlotStudioGroupBox("Y Label Options")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
-        layout = QVBoxLayout()
+        x_layout.addWidget(self.xlabel_weight_combo)
+        
+        x_layout.addStretch()
+        tab_widget.addTab(x_tab, "X-Axis")
+        
+        y_tab = QWidget()
+        y_layout = QVBoxLayout(y_tab)
         
         self.ylabel_check = DataPlotStudioToggleSwitch("Show Y Label")
         self.ylabel_check.setChecked(True)
-        layout.addWidget(self.ylabel_check)
+        y_layout.addWidget(self.ylabel_check)
 
-        layout.addWidget(QLabel("Y Label:"))
+        y_layout.addWidget(QLabel("Y Label:"))
         self.ylabel_input = DataPlotStudioLineEdit()
         self.ylabel_input.setPlaceholderText("Y axis label")
-        layout.addWidget(self.ylabel_input)
+        y_layout.addWidget(self.ylabel_input)
 
-        layout.addWidget(QLabel("Y Label fontsize:"))
+        y_layout.addWidget(QLabel("Y Label Font-size:"))
         self.ylabel_size_spin = DataPlotStudioSpinBox()
         self.ylabel_size_spin.setRange(5, 32)
         self.ylabel_size_spin.setValue(12)
-        layout.addWidget(self.ylabel_size_spin)
+        y_layout.addWidget(self.ylabel_size_spin)
 
-        layout.addWidget(QLabel("Y Label Font Weight:"))
+        y_layout.addWidget(QLabel("Y Label Font Weight:"))
         self.ylabel_weight_combo = DataPlotStudioComboBox()
         self.ylabel_weight_combo.addItems(["normal", "bold", "light", "heavy"])
         self.ylabel_weight_combo.setCurrentText("normal")
-        layout.addWidget(self.ylabel_weight_combo)
-
+        y_layout.addWidget(self.ylabel_weight_combo)
+        
+        y_layout.addStretch()
+        tab_widget.addTab(y_tab, "Y-Axis")
+        
+        layout.addWidget(tab_widget)
         group.setLayout(layout)
         parent_layout.addWidget(group)
 
@@ -259,45 +266,65 @@ class AppearanceSettingsTab(QWidget):
         indiv_layout = QVBoxLayout(self.individual_spines_container)
         indiv_layout.setContentsMargins(0, 0, 0, 0)
 
+        spine_tabs = DataPlotStudioTabWidget()
+        
         # Top Spine
-        self.top_spine_visible_check, self.top_spine_width_spin, self.top_spine_color_button, self.top_spine_color_label = self._create_spine_ui("Top Spine", indiv_layout)
-        # Bottom Spine
-        self.bottom_spine_visible_check, self.bottom_spine_width_spin, self.bottom_spine_color_button, self.bottom_spine_color_label = self._create_spine_ui("Bottom Spine", indiv_layout)
-        # Left Spine
-        self.left_spine_visible_check, self.left_spine_width_spin, self.left_spine_color_button, self.left_spine_color_label = self._create_spine_ui("Left Spine", indiv_layout)
-        # Right Spine
-        self.right_spine_visible_check, self.right_spine_width_spin, self.right_spine_color_button, self.right_spine_color_label = self._create_spine_ui("Right Spine", indiv_layout)
+        top_tab = QWidget()
+        top_layout = QVBoxLayout(top_tab)
+        self.top_spine_visible_check, self.top_spine_width_spin, self.top_spine_color_button, self.top_spine_color_label = self._create_spine_ui("Top Spine", top_layout)
+        top_layout.addStretch()
+        spine_tabs.addTab(top_tab, "Top")
 
+        # Bottom Spine
+        bottom_tab = QWidget()
+        bottom_layout = QVBoxLayout(bottom_tab)
+        self.bottom_spine_visible_check, self.bottom_spine_width_spin, self.bottom_spine_color_button, self.bottom_spine_color_label = self._create_spine_ui("Bottom Spine", bottom_layout)
+        bottom_layout.addStretch()
+        spine_tabs.addTab(bottom_tab, "Bottom")
+
+        # Left Spine
+        left_tab = QWidget()
+        left_layout = QVBoxLayout(left_tab)
+        self.left_spine_visible_check, self.left_spine_width_spin, self.left_spine_color_button, self.left_spine_color_label = self._create_spine_ui("Left Spine", left_layout)
+        left_layout.addStretch()
+        spine_tabs.addTab(left_tab, "Left")
+
+        # Right Spine
+        right_tab = QWidget()
+        right_layout = QVBoxLayout(right_tab)
+        self.right_spine_visible_check, self.right_spine_width_spin, self.right_spine_color_button, self.right_spine_color_label = self._create_spine_ui("Right Spine", right_layout)
+        right_layout.addStretch()
+        spine_tabs.addTab(right_tab, "Right")
+
+        indiv_layout.addWidget(spine_tabs)
         layout.addWidget(self.individual_spines_container)
+        
         group.setLayout(layout)
         parent_layout.addWidget(group)
 
     def _create_spine_ui(self, title: str, parent_layout: QVBoxLayout) -> tuple:
         """Helper to create repetitive spine configurations."""
-        group = DataPlotStudioGroupBox(title)
-        layout = QVBoxLayout()
-
         vis_check = DataPlotStudioToggleSwitch(f"Show {title}")
         vis_check.setChecked(True)
-        layout.addWidget(vis_check)
+        parent_layout.addWidget(vis_check)
 
-        layout.addWidget(QLabel("Line Width:"))
+        parent_layout.addWidget(QLabel("Line Width:"))
         width_spin = DataPlotStudioDoubleSpinBox()
         width_spin.setRange(0.1, 5.0)
         width_spin.setValue(1.0)
         width_spin.setSingleStep(0.1)
-        layout.addWidget(width_spin)
+        parent_layout.addWidget(width_spin)
 
-        layout.addWidget(QLabel("Color:"))
+        parent_layout.addWidget(QLabel("Color:"))
         color_layout = QHBoxLayout()
         color_btn = DataPlotStudioButton("Choose Color", parent=self)
+        color_btn.setMinimumHeight(28)
         color_label = QLabel("Black")
         color_layout.addWidget(color_btn)
         color_layout.addWidget(color_label)
-        layout.addLayout(color_layout)
+        parent_layout.addLayout(color_layout)
 
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
+        return vis_check, width_spin, color_btn, color_label
 
         return vis_check, width_spin, color_btn, color_label
 
