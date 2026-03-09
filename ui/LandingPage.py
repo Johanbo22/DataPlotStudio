@@ -1,12 +1,12 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTextBrowser, QDialog, QDialogButtonBox)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTextBrowser, QDialog, QDialogButtonBox, QGraphicsDropShadowEffect)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QIcon, QAction
+from PyQt6.QtGui import QIcon, QAction, QColor, QPixmap
 from pathlib import Path
 import re
 from ui.icons import IconBuilder, IconType
 
 from core.resource_loader import get_resource_path
-from ui.styles.widget_styles import Label
+from ui.styles.widget_styles import Label, ScrollArea, Dialog
 from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
@@ -19,13 +19,13 @@ class ChangelogViewer(QDialog):
     def __init__(self, title: str, content_html: str, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(600, 500)
-        self.setStyleSheet("""
-            QDialog { background-color: white; }
-            QTextBrowser { border: none; }
-        """)
+        self.setMinimumSize(500, 400)
+        self.resize(700, 600)
+        self.setStyleSheet(Dialog.ChangelogViewer)
         
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         self.browser = QTextBrowser()
         self.browser.setHtml(content_html)
@@ -34,6 +34,9 @@ class ChangelogViewer(QDialog):
         
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         button_box.rejected.connect(self.close)
+        close_btn = button_box.button(QDialogButtonBox.StandardButton.Close)
+        if close_btn:
+            close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         layout.addWidget(button_box)
         self.setLayout(layout)
 
@@ -51,16 +54,24 @@ class LandingPage(QWidget):
         self.init_ui()
     
     def init_ui(self):
+        self.setStyleSheet("LandingPage { background-color: #f4f6f8; }")
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
         # A left panel where most actions would be stored
         actions_panel = QWidget()
         actions_layout = QVBoxLayout(actions_panel)
-        actions_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        actions_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        actions_layout.setContentsMargins(20, 60, 20, 20)
         actions_layout.setSpacing(20)
 
         # Logo and title
+        logo_label = QLabel()
+        logo_pixmap = QPixmap(get_resource_path("icons/DPS_icon.ico"))
+        if not logo_pixmap.isNull():
+            logo_label.setPixmap(logo_pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
         title_label = QLabel("DataPlotStudio")
         title_label.setStyleSheet(Label.LandingPageTitleLabel)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -69,6 +80,7 @@ class LandingPage(QWidget):
         subtitle_label.setStyleSheet(Label.LandingPageSubTitleLabel)
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        actions_layout.addWidget(logo_label)
         actions_layout.addWidget(title_label)
         actions_layout.addWidget(subtitle_label)
 
@@ -104,10 +116,22 @@ class LandingPage(QWidget):
         self.button_quit.setIcon(IconBuilder.build(IconType.Quit))
         self.button_quit.setFixedWidth(button_width)
         self.button_quit.clicked.connect(self.quit_clicked.emit)
+        
+        def create_section_label(text: str) -> QLabel:
+            label = QLabel(text.upper())
+            label.setStyleSheet(Label.LandingPageSectionLabel)
+            label.setFixedWidth(button_width)
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+            label.setContentsMargins(5, 0, 0, 0)
+            return label
 
+        actions_layout.addSpacing(10)
+        
+        actions_layout.addWidget(create_section_label("Start"))
         actions_layout.addWidget(self.button_open)
         actions_layout.addWidget(self.button_new)
-        actions_layout.addSpacing(10)
+        actions_layout.addSpacing(15)
+        actions_layout.addWidget(create_section_label("Import Data"))
         actions_layout.addWidget(self.button_import_file)
         actions_layout.addWidget(self.button_import_sheet)
         actions_layout.addWidget(self.button_import_db)
@@ -117,19 +141,36 @@ class LandingPage(QWidget):
         actions_layout.addStretch()
 
         # Right side. a whats new panel/updates
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("border: none;")
+        whats_new_scroll_area = QScrollArea()
+        whats_new_scroll_area.setWidgetResizable(True)
+        whats_new_scroll_area.setStyleSheet(ScrollArea.LandingPageScrollArea)
         info_panel = QFrame()
+        info_panel.setObjectName("InfoPanel")
         info_panel.setFrameShape(QFrame.Shape.StyledPanel)
         info_panel.setStyleSheet(Label.LandingPageWhatsNewInfoLabel)
+        
+        shadow_effect = QGraphicsDropShadowEffect(self)
+        shadow_effect.setBlurRadius(20)
+        shadow_effect.setColor(QColor(0, 0, 0, 80))
+        shadow_effect.setOffset(0, 4)
+        info_panel.setGraphicsEffect(shadow_effect)
+        
         info_layout = QVBoxLayout(info_panel)
         info_layout.setContentsMargins(30, 30, 30, 30)
+        info_layout.setSpacing(15)
 
+        whats_new_header_layout = QHBoxLayout()
+        whats_new_header_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        
         info_title = QLabel("What's New")
         info_title.setStyleSheet(Label.LandingPageWhatsNewInfoTitle)
+        
         app_version = QLabel(f"App. Ver. {APPLICATION_VERSION}")
         app_version.setStyleSheet(Label.LandingPageVersionLabel)
+        
+        whats_new_header_layout.addWidget(info_title)
+        whats_new_header_layout.addWidget(app_version)
+        whats_new_header_layout.addStretch()
 
         whats_new_content = "<h3 style='color:red'>Loading failed</h3>"
         try:
@@ -149,25 +190,35 @@ class LandingPage(QWidget):
         info_content.setWordWrap(True)
         info_content.setTextFormat(Qt.TextFormat.RichText)
         info_content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        info_content.setStyleSheet(Label.LandingPageInfoContentFontFamily)
         
         more_info_label = QLabel(
             '<br>'
-            '<a href="current_fixes" style="color: #2980b9; text-decoration: none; font-size: 13px;">View Current Bug Fixes & Changes</a><br>'
-            '<a href="past_versions" style="color: #2980b9; text-decoration: none; font-size: 13px;">View Version History</a>'
+            '<a href="current_fixes" style="color: #2980b9; text-decoration: none; font-weight: bold; font-size: 13px;">View Current Bug Fixes & Changes</a><br><br>'
+            '<a href="past_versions" style="color: #2980b9; text-decoration: none; font-weight: bold; font-size: 13px;">View Version History</a>'
         )
         more_info_label.setTextFormat(Qt.TextFormat.RichText)
         more_info_label.linkActivated.connect(self.handle_changelog_link)
         more_info_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        more_info_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        
+        header_separator = QFrame()
+        header_separator.setFixedHeight(1)
+        header_separator.setStyleSheet(Label.LandingPageHeaderSeparator)
 
-        info_layout.addWidget(info_title)
-        info_layout.addWidget(app_version)
+        info_layout.addLayout(whats_new_header_layout)
         info_layout.addWidget(info_content)
         info_layout.addWidget(more_info_label)
         info_layout.addStretch()
-        scroll.setWidget(info_panel)
+        whats_new_scroll_area.setWidget(info_panel)
+        
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(20, 40, 40, 40)
+        right_layout.addWidget(whats_new_scroll_area)
 
-        layout.addWidget(actions_panel, 1)
-        layout.addWidget(scroll, 1)
+        layout.addWidget(actions_panel, 4)
+        layout.addWidget(right_panel, 6)
         
     def handle_changelog_link(self, link: str) -> None:
         if link == "current_fixes":
