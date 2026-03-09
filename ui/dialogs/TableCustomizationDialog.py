@@ -179,6 +179,18 @@ class TableCustomizationDialog(QDialog):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
+        # Data representation group
+        representation_group = DataPlotStudioGroupBox("Data Representation")
+        rep_layout = QVBoxLayout()
+        
+        self.render_bools_check = DataPlotStudioToggleSwitch("Render Booleans as checkboxes")
+        self.render_bools_check.setChecked(self.settings.get("render_bools_as_checkboxes", True))
+        self.render_bools_check.setToolTip("Toggle to display boolean values as a checkbox or standard text")
+        rep_layout.addWidget(self.render_bools_check)
+        
+        representation_group.setLayout(rep_layout)
+        layout.addWidget(representation_group)
+        
         # Floating point precision options
         precision_group = DataPlotStudioGroupBox("Floating Point Precision")
         precision_layout = QVBoxLayout()
@@ -361,7 +373,8 @@ class TableCustomizationDialog(QDialog):
             "selection_behavior": selection_behavior,
             "float_precision": self.precision_spin.value(),
             "conditional_rules": conditional_rules,
-            "text_alignment": self.alignment_combo.currentText()
+            "text_alignment": self.alignment_combo.currentText(),
+            "render_bools_as_checkboxes": self.render_bools_check.isChecked()
         }
     
     def apply_settings(self) -> None:
@@ -383,6 +396,7 @@ class TableCustomizationDialog(QDialog):
         self.word_wrap_check.setChecked(False)
         self.alignment_combo.setCurrentText("Left")
         
+        self.render_bools_check.setChecked(True)
         self.precision_spin.setValue(DEFAULT_FLOAT_PRECISION)
         self.rule_list.clear()
         

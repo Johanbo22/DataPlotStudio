@@ -99,7 +99,7 @@ class ScriptEditorDialog(QDialog):
         if hasattr(self, "splitter"):
             settings.setValue("splitter_state", self.splitter.saveState())
         
-    def close_event(self, event):
+    def closeEvent(self, event):
         """
         Intercepts the dialog close event to restore system streams and 
         warn the user if there are unsaved code modifications.
@@ -537,7 +537,7 @@ class ScriptEditorDialog(QDialog):
             self.editor.setTextCursor(cursor)
             self.editor.setFocus()
 
-    def update_code(self, new_code):
+    def update_code(self, new_code: str) -> None:
         """Update the code from the GUI"""
         if self.auto_sync_check.isChecked():
             self.editor.blockSignals(True)
@@ -548,13 +548,13 @@ class ScriptEditorDialog(QDialog):
             self.editor.verticalScrollBar().setValue(scroll)
             self.editor.blockSignals(False)
 
-    def on_run_clicked(self):
+    def on_run_clicked(self) -> None:
         """Validate and emit code"""
-        code = self.editor.toPlainText()
+        code: str = self.editor.toPlainText()
 
-        blocked_modules = {"os", "sys", "subprocess", "shutil", "pathlib", "socket", "requests"}
-        blocked_funcs = {"eval", "exec", "__import__"}
-        found_threats = []
+        blocked_modules: set[str] = {"os", "sys", "subprocess", "shutil", "pathlib", "socket", "requests"}
+        blocked_funcs: set[str] = {"eval", "exec", "__import__"}
+        found_threats: list[str] = []
         
         try:
             tree = ast.parse(code)
@@ -592,11 +592,14 @@ class ScriptEditorDialog(QDialog):
         self.save_to_history(code)
 
         self.run_script_signal.emit(code)
+        
+        # Reset the modified flag since current code is now executed
+        self.is_code_modified = False
 
         self.run_script_animation = PlotGeneratedAnimation(parent=self, message="Run Script")
         self.run_script_animation.start(target_widget=self)
 
-    def save_to_history(self, code):
+    def save_to_history(self, code: str) -> None:
         """Save the current code to a list, cannot go more than 5, """
         #no saving dups
         if self.script_history and self.script_history[-1]["code"] == code:

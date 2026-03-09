@@ -83,6 +83,7 @@ class DataTab(QWidget):
         
         self.current_precision = 2
         self.current_formatting_rules = []
+        self.current_render_bools = True
 
         self.init_ui()
 
@@ -224,6 +225,7 @@ class DataTab(QWidget):
         self.operations_panel = DataOperationsPanel(parent=self, controller=self.controller)
 
         right_layout.addWidget(self.operations_panel)
+        self.right_widget = right_widget
 
         # Create splitter
         from PyQt6.QtWidgets import QSplitter
@@ -359,6 +361,8 @@ class DataTab(QWidget):
         
         if hasattr(self, "left_stack"):
             self.left_stack.setCurrentIndex(1)
+        if hasattr(self, "right_widget"):
+            self.right_widget.setVisible(True)
         
         # UI updaters
         self._update_data_model(reload_model)
@@ -375,6 +379,9 @@ class DataTab(QWidget):
         """Clears the UI when no data is loaded"""
         if hasattr(self, "left_stack"):
             self.left_stack.setCurrentIndex(0)
+        
+        if hasattr(self, "right_widget"):
+            self.right_widget.setVisible(False)
         
         if hasattr(self, "data_table") and self.data_table is not None:
             self.data_table.setModel(None)
@@ -399,6 +406,7 @@ class DataTab(QWidget):
             self.data_table.setSortingEnabled(False)
         else:
             self.model = DataTableModel(self.data_handler, editable=self.is_editing, float_precision=self.current_precision, conditional_rules=self.current_formatting_rules)
+            self.model.set_bool_render_style(getattr(self, "current_render_bools", True))
             self.data_table.setSortingEnabled(False)
             self.data_table.setModel(self.model)
         
@@ -702,7 +710,8 @@ class DataTab(QWidget):
             "selection_behavior": self.data_table.selectionBehavior(),
             "float_precision": self.current_precision,
             "conditional_rules": self.current_formatting_rules,
-            "text_alignment": getattr(self, "current_text_aligment", "Left")
+            "text_alignment": getattr(self, "current_text_alignment", "Left"),
+            "render_bools_as_checkboxes": getattr(self, "current_render_bools", True)
         }
 
         dialog = TableCustomizationDialog(current_settings, self)
@@ -720,6 +729,7 @@ class DataTab(QWidget):
         self.current_formatting_rules = settings.get("conditional_rules", [])
         
         self.current_text_alignment = settings.get("text_alignment", "Left")
+        self.current_render_bools = settings.get("render_bools_as_checkboxes", True)
 
         self.data_table.setAlternatingRowColors(settings["alternating_rows"])
         if settings["alternating_rows"]:
@@ -747,6 +757,7 @@ class DataTab(QWidget):
         if self.data_table.model() and isinstance(self.data_table.model(), DataTableModel):
             self.data_table.model().set_float_precision(self.current_precision)
             self.data_table.model().set_conditional_rules(self.current_formatting_rules)
+            self.data_table.model().set_bool_render_style(self.current_render_bools)
 
         self.status_bar.log("Table settings updated", "SUCCESS")
 

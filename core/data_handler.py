@@ -231,21 +231,23 @@ class DataHandler:
             elif extension == ".csv":
                 con = connect()
                 try:
-                    return con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).df()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).arrow()
+                    return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
                     print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
-                    return pd.read_csv(filepath)
+                    return pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
                 finally:
                     con.close()
             elif extension == ".txt":
                 con = connect()
                 try:
-                    return con.execute("SELECT * FROM read_csv_auto(?, delim='\\t')", [path.as_posix()]).df()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\\t')", [path.as_posix()]).arrow()
+                    return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
                     print(
                         f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas"
                     )
-                    return pd.read_csv(filepath, sep="\t")
+                    return pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
                 finally:
                     con.close()
             elif extension == ".json":
@@ -284,25 +286,24 @@ class DataHandler:
             elif extension == ".csv":
                 con = connect(database=":memory:", read_only=False)
                 try:
-                    self.df = con.execute(
-                        "SELECT * FROM read_csv_auto(?)", [path.as_posix()]).df()
+                    # Leverage DuckDB's native Arrow output for zero-copy transfer to PyArrow-backed Pandas
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).arrow()
+                    self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
-                    print(
-                        f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas"
-                    )
-                    self.df = pd.read_csv(filepath)
+                    print(f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas")
+                    self.df = pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
                 finally:
                     con.close()
             elif extension == ".txt":
                 con = connect(database=":memory:", read_only=False)
                 try:
-                    self.df = con.execute(
-                        "SELECT * FROM read_csv_auto(?, delim='\t')", [path.as_posix()]).df()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\t')", [path.as_posix()]).arrow()
+                    self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
                     print(
                         f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas"
                     )
-                    self.df = pd.read_csv(filepath, sep="\t")
+                    self.df = pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
                 finally:
                     con.close()
             elif extension == ".json":

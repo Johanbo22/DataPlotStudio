@@ -834,7 +834,7 @@ class DataTabController:
 
         except Exception as TextManipulationError:
             QMessageBox.critical(
-                self.view, "Text Manipulation Error", {str(TextManipulationError)}
+                self.view, "Text Manipulation Error", str(TextManipulationError)
             )
             self.status_bar.log(
                 f"Text manipulation failed: {str(TextManipulationError)}", "ERROR"
