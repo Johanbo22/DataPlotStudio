@@ -372,8 +372,6 @@ class DataTab(QWidget):
         self._update_data_source_status()
         self._update_subsets_status()
         self._update_history_list()
-        
-        self.status_bar.log(f"Data loaded: {self.data_handler.df.shape[0]} rows, {self.data_handler.df.shape[1]} columns")
     
     def _handle_empty_data_view(self) -> None:
         """Clears the UI when no data is loaded"""

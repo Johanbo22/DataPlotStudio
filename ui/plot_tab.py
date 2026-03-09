@@ -2430,9 +2430,13 @@ class PlotTab(PlotTabUI):
             self.plot_engine.current_ax.set_ylim(
                 self.view.y_min_spin.value(), self.view.y_max_spin.value()
             )
+        target_x_scale = self.view.x_scale_combo.currentText()
+        if self.plot_engine.current_ax.get_xscale() != target_x_scale:
+            self.plot_engine.current_ax.set_xscale(target_x_scale)
         
-        self.plot_engine.current_ax.set_xscale(self.view.x_scale_combo.currentText())
-        self.plot_engine.current_ax.set_yscale(self.view.y_scale_combo.currentText())
+        target_y_scale = self.view.y_scale_combo.currentText()
+        if self.plot_engine.current_ax.get_yscale() != target_y_scale:
+            self.plot_engine.current_ax.set_yscale(target_y_scale)
 
     def _execute_plot_strategy(self, plot_type, active_df, x_col, y_cols, axes_flipped, font_family, plot_kwargs, general_kwargs):
         """Executes the correct plotting strategy"""
@@ -2464,8 +2468,14 @@ class PlotTab(PlotTabUI):
         """Apply formatting """
         # Tick marks
         try:
-            self.plot_engine.current_ax.xaxis.set_major_locator(MaxNLocator(nbins=self.view.x_max_ticks_spin.value()))
-            self.plot_engine.current_ax.yaxis.set_major_locator(MaxNLocator(nbins=self.view.y_max_ticks_spin.value()))
+            allowed_locators = ["AutoLocator", "MaxNLocator", "LinearLocator", "MultipleLocator"]
+            x_locator_name = type(self.plot_engine.current_ax.xaxis.get_major_locator()).__name__
+            if x_locator_name in allowed_locators:
+                self.plot_engine.current_ax.xaxis.set_major_locator(MaxNLocator(nbins=self.view.x_max_ticks_spin.value()))
+                
+            y_locator_name = type(self.plot_engine.current_ax.yaxis.get_major_locator()).__name__
+            if y_locator_name in allowed_locators:
+                self.plot_engine.current_ax.yaxis.set_major_locator(MaxNLocator(nbins=self.view.y_max_ticks_spin.value()))
         except:
             pass
 

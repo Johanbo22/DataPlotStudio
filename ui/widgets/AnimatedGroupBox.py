@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGroupBox
 
@@ -25,7 +25,10 @@ class DataPlotStudioGroupBox(QGroupBox):
         self.leave_animation.setEndValue(self._base_border_color)
         self.leave_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
-        self._update_stylesheet(self._base_border_color)
+        QTimer.singleShot(0, self._apply_initial_style)
+    
+    def _apply_initial_style(self) -> None:
+        self.animated_border_color = self._base_border_color
 
     @pyqtProperty(QColor)
     def animated_border_color(self) -> QColor:

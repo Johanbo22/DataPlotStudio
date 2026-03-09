@@ -1286,7 +1286,7 @@ class DataHandler:
             raise ValueError(f"Column '{column}' not found")
         
         try:
-            if not hasattr(self.df[column], str):
+            if not (pd.api.types.is_string_dtype(self.df[column]) or pd.api.types.is_object_dtype(self.df[column])):
                 raise TypeError("Column does not support string operations")
             
             if operation == "lower":

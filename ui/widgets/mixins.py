@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget
 from ui.theme import ThemeColors
@@ -24,6 +24,11 @@ class HoverFocusAnimationMixin:
         self.animation = QPropertyAnimation(self, b"animated_border_color")
         self.animation.setDuration(150)
         self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
+        QTimer.singleShot(0, self._apply_initial_style)
+    
+    def _apply_initial_style(self) -> None:
+        self.animated_border_color = self._base_border_color
         
     
     @pyqtProperty(QColor)
