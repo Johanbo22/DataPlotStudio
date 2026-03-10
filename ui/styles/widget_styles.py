@@ -99,6 +99,88 @@ class Dialog:
                 background-color: #2980b9;
             }
         """
+    LogHistoryPopup: str = """
+            QWidget#LogPopup {
+                background-color: #1e1e1e;
+                border: 1px solid #454545;
+                border-radius: 6px;
+            }
+            QTextEdit {
+                background-color: transparent;
+                color: #cccccc;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                border: none;
+                padding: 8px;
+            }
+            QLabel#HeaderTitle {
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 12px;
+                padding-left: 5px;
+            }
+            QPushButton.IconButton {
+                background-color: transparent;
+                color: #aaaaaa;
+                border: none;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-weight: bold;
+            }
+            QPushButton.IconButton:hover {
+                background-color: #333333;
+                color: #ffffff;
+            }
+            QLineEdit#SearchBar {
+                background-color: #252526;
+                color: #cccccc;
+                border: 1px solid #454545;
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+            }
+            QLineEdit#SearchBar:focus {
+                border: 1px solid #007acc;
+            }
+            QPushButton.FilterPill {
+                background-color: transparent;
+                border: 1px solid #454545;
+                border-radius: 10px;
+                padding: 2px 10px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton#ErrorFilter { color: #aaaaaa; }
+            QPushButton#ErrorFilter:hover { border-color: #ff5555; color: #ff5555; }
+            QPushButton#ErrorFilter:checked { background-color: rgba(255, 0, 0, 0.15); color: #ff5555; border-color: #ff5555; }
+            
+            QPushButton#WarningFilter { color: #aaaaaa; }
+            QPushButton#WarningFilter:hover { border-color: #ffaa00; color: #ffaa00; }
+            QPushButton#WarningFilter:checked { background-color: rgba(255, 170, 0, 0.15); color: #ffaa00; border-color: #ffaa00; }
+            QPushButton#WrapToggle { color: #aaaaaa; border-color: #454545;}
+            QPushButton#WrapToggle:hover { color: #ffffff; border-color: #888888; }
+            QPushButton#WrapToggle:checked { background-color: #333333; color: #ffffff; border-color: #888888; }
+            QScrollBar:vertical {
+                background: #1e1e1e;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #424242;
+                min-height: 20px;
+                border-radius: 5px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #686868;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """
 
 class StatusBar:
     Statusbar: str = """
@@ -160,3 +242,10 @@ class StatusBar:
     ContextLabel: str = "color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;"
     AggregationContextLabel: str = "color: #8e44ad; font-weight: bold; font-size: 11px; padding-right: 10px;"
     SubsetContextLabel: str = "color: #e67e22; font-weight: bold; font-size: 11px; padding-right: 10px;"
+    IdleState: str ="background-color: transparent; color: #888888; border: 1px solid #555555; border-radius: 6px; padding: 2px 8px; font-weight: bold; font-size: 10px;"
+    TerminalContextMenu: str = """
+            QMenu { background-color: #252526; color: #cccccc; border: 1px solid #454545; }
+            QMenu::item { padding: 4px 20px 4px 20px; }
+            QMenu::item:selected { background-color: #007acc; color: white; }
+        """
+    IssueCounterLabel: str = "color: #aaaaaa; font-weight: bold; font-size: 11px; padding: 0 5px;"
