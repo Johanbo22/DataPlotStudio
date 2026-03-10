@@ -233,7 +233,9 @@ class DataTab(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setSizes([700, 300])
+        
+        splitter.setStretchFactor(0, 4)
+        splitter.setStretchFactor(1, 6)
 
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)

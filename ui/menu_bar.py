@@ -35,30 +35,43 @@ class MenuBar(QMenuBar):
         file_menu.addAction(self.file_save_as)
         
         file_menu.addSeparator()
+        import_submenu: DataPlotStudioMenu = DataPlotStudioMenu(self.tr("&Import"), self)
+        file_menu.addMenu(import_submenu)
         
-        self.import_file = QAction(IconBuilder.build(IconType.ImportFile), self.tr("&Import Data"), parent)
+        self.import_file = QAction(IconBuilder.build(IconType.ImportFile), self.tr("&Import from &Local File..."), parent)
         self.import_file.setShortcut("Ctrl+I")
         self.import_file.setToolTip(self.tr("Import data from a file on your computer"))
-        file_menu.addAction(self.import_file)
+        import_submenu.addAction(self.import_file)
         
-        self.import_sheets = QAction(IconBuilder.build(IconType.ImportGoogleSheets), self.tr("&Import from Google Sheets"), parent)
+        self.import_sheets = QAction(IconBuilder.build(IconType.ImportGoogleSheets), self.tr("&Import from Google Sheets..."), parent)
         self.import_sheets.setToolTip(self.tr("Import data from Google Sheet"))
-        file_menu.addAction(self.import_sheets)
+        import_submenu.addAction(self.import_sheets)
 
-        self.import_database = QAction(IconBuilder.build(IconType.ImportDatabase), self.tr("Import from &Database"), parent)
+        self.import_database = QAction(IconBuilder.build(IconType.ImportDatabase), self.tr("Import from &Database..."), parent)
         self.import_database.setToolTip(self.tr("Import data from a database (SQLite, PostgreSQL, MySQL)"))
-        file_menu.addAction(self.import_database)
+        import_submenu.addAction(self.import_database)
         
         file_menu.addSeparator()
         
-        self.export_code = QAction(QIcon(get_resource_path("icons/menu_bar/python-5.svg")), self.tr("&Export to Python (.py) file"), parent)
+        export_submenu: DataPlotStudioMenu = DataPlotStudioMenu(self.tr("&Export"), self)
+        file_menu.addMenu(export_submenu)
+        
+        self.export_data_action = QAction(IconBuilder.build(IconType.ExportFle), self.tr("Export &Data..."), parent)
+        self.export_data_action.setToolTip(self.tr("Export the current data view into a new file"))
+        export_submenu.addAction(self.export_data_action)
+        
+        self.export_sheets_action = QAction(IconBuilder.build(IconType.ExportGoogleSheets), self.tr("Export to Google &Sheets..."), parent)
+        self.export_sheets_action.setToolTip(self.tr("Export the current data directly to a cloud Google Sheet"))
+        export_submenu.addAction(self.export_sheets_action)
+        
+        self.export_code = QAction(QIcon(get_resource_path("icons/menu_bar/python-5.svg")), self.tr("&Export to Python (.py) file..."), parent)
         self.export_code.setShortcut("Ctrl+E")
         self.export_code.setToolTip(self.tr("Export the data manipulation and plotting code to an external Python (.py) file"))
-        file_menu.addAction(self.export_code)
+        export_submenu.addAction(self.export_code)
         
-        self.export_logs = QAction(QIcon(get_resource_path("icons/menu_bar/export_log.png")), self.tr("&Export Log file"), parent)
+        self.export_logs = QAction(QIcon(get_resource_path("icons/menu_bar/export_log.png")), self.tr("&Export Log file..."), parent)
         self.export_logs.setToolTip(self.tr("Export the .log file to view the logging of your session"))
-        file_menu.addAction(self.export_logs)
+        export_submenu.addAction(self.export_logs)
         
         file_menu.addSeparator()
         
@@ -101,19 +114,6 @@ class MenuBar(QMenuBar):
         self.zoom_out_action.setShortcut("Ctrl+-")
         self.zoom_out_action.setToolTip(self.tr("Zoom out from the plot"))
         view_menu.addAction(self.zoom_out_action)
-
-        # Export menu
-        export_menu = DataPlotStudioMenu(self.tr("&Export Data"), self)
-        self.addMenu(export_menu)
-
-        self.export_data_action = QAction(IconBuilder.build(IconType.ExportFle), self.tr("&Export Data"), parent)
-        self.export_data_action.setToolTip(self.tr("Export the current data view into a new file"))
-        export_menu.addAction(self.export_data_action)
-        
-        self.export_sheets_action = QAction(IconBuilder.build(IconType.ExportGoogleSheets), self.tr("Export to Google &Sheets"), parent)
-        self.export_sheets_action.setToolTip(self.tr("Export the current data directly to a cloud Google Sheet"))
-        export_menu.addAction(self.export_sheets_action)
-
         
         # Help Menu
         help_menu = DataPlotStudioMenu(self.tr("&Help"), self)
