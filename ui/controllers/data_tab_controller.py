@@ -2,11 +2,7 @@ import traceback
 from typing import TYPE_CHECKING
 import weakref
 
-from PyQt6.QtWidgets import (
-    QMessageBox,
-    QInputDialog,
-    QListWidgetItem
-)
+from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication
 from PyQt6.QtCore import Qt, QThreadPool
 from duckdb import duplicate
 from xlrd import colname
@@ -16,42 +12,11 @@ from core.aggregation_manager import AggregationManager
 from core.help_manager import HelpManager
 from core.subset_manager import SubsetManager
 
-from ui.animations import (
-    AggregationAnimation,
-    DataFilterAnimation,
-    DataTypeChangeAnimation,
-    DropColumnAnimation,
-    MeltDataAnimation,
-    OutlierDetectionAnimation,
-    RenameColumnAnimation,
-    DropMissingValueAnimation,
-    FillMissingValuesAnimation,
-    RemoveRowAnimation,
-    ResetToOriginalStateAnimation,
-    FailedAnimation,
-    NewDataFrameAnimation,
-    FileImportAnimation
-)
-from ui.dialogs import (
-    RenameColumnDialog,
-    FilterAdvancedDialog,
-    AggregationDialog,
-    FillMissingDialog,
-    HelpDialog,
-    MeltDialog,
-    OutlierDetectionDialog,
-    PivotDialog,
-    MergeDialog,
-    BinningDialog,
-    ComputedColumnDialog,
-    SubsetDataViewer,
-    SubsetManagerDialog,
-    ProgressDialog,
-    SplitColumnDialog,
-    RegexReplaceDialog,
-    AppendDialog
-)
-from ui.workers import GoogleSheetsImportWorker
+from ui.animations import AggregationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation
+
+from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog
+
+from ui.workers import GoogleSheetsImportWorker, AutoCreateSubsetsWorker
 
 if TYPE_CHECKING:
     from ui.data_tab import DataTab
@@ -1378,43 +1343,53 @@ class DataTabController:
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            try:
-                created = self.subset_manager.create_subset_from_unique_values(
-                    self.data_handler.df, column
-                )
+            self.progress_dialog = ProgressDialog(title="Auto-Creatin subsets", message=f"Creating subsets from '{column}'...", parent=self.view)
+            self.progress_dialog.setModal(True)
+            self.progress_dialog.show()
+            
+            worker = AutoCreateSubsetsWorker(self.subset_manager, self.data_handler.df, column)
+            worker.signals.progress.connect(self.progress_dialog.update_progress)
+            worker.signals.finished.connect(lambda created: self._on_quick_create_subsets_finished(created, column, unique_count))
+            worker.signals.error.connect(self._on_quick_create_subsets_error)
+            
+            QThreadPool.globalInstance().start(worker)
+    
+    def _on_quick_create_subsets_finished(self, created: list, column: str, unique_count: int) -> None:
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
+        
+        self.refresh_active_subsets()
+        
+        self.status_bar.log_action(f"Created {len(created)} subsets from column '{column}'",
+            details={
+                "column": column,
+                "subsets_created": len(created),
+                "unique_values": unique_count,
+                "operation": "auto_create_subsets",
+            },
+            level="SUCCESS",)
+        QMessageBox.information(
+            self.view,
+            "Success",
+            f"Created {len(created)} subsets from column '{column}'",
+        )
+    
+    def _on_quick_create_subsets_error(self, error: Exception) -> None:
+        """Callback for when subset auto-creation fails in the background"""
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
 
-                # Apply each to get row counts
-                for name in created:
-                    self.subset_manager.apply_subset(self.data_handler.df, name)
-
-                self.refresh_active_subsets()
-
-                self.status_bar.log_action(
-                    f"Created {len(created)} subsets from column '{column}'",
-                    details={
-                        "column": column,
-                        "subsets_created": len(created),
-                        "unique_values": unique_count,
-                        "operation": "auto_create_subsets",
-                    },
-                    level="SUCCESS",
-                )
-
-                QMessageBox.information(
-                    self.view,
-                    "Success",
-                    f"Created {len(created)} subsets from column '{column}'",
-                )
-            except Exception as QuickCreateSubsetsError:
-                self.status_bar.log(
-                    f"Failed to create subsets: {str(QuickCreateSubsetsError)}", "ERROR"
-                )
-                QMessageBox.critical(self.view, "Error", str(QuickCreateSubsetsError))
-                traceback.print_exc()
+        self.status_bar.log(
+            f"Failed to create subsets: {str(error)}", "ERROR"
+        )
+        QMessageBox.critical(self.view, "Error", str(error))
+        import traceback
+        traceback.print_exc()
 
     def refresh_active_subsets(self):
         """Refresh the list of active subsets"""
         try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             subset_data = []
 
             if self.data_handler.df is not None:
@@ -1435,6 +1410,8 @@ class DataTabController:
             self.view.operations_panel.update_active_subsets_list(subset_data)
         except Exception as RefreshSubsetListError:
             print(f"Warning: Could not refresh subset list: {RefreshSubsetListError}")
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def view_subset_quick(self):
         """Quick view of selected subset"""

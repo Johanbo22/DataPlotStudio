@@ -1,9 +1,10 @@
 from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioButton, DataPlotStudioListWidget
-from ui.dialogs import CreateSubsetDialog, SubsetDataViewer
+from ui.dialogs import CreateSubsetDialog, SubsetDataViewer, ProgressDialog
 from core.data_handler import DataHandler
 from core.subset_manager import SubsetManager
+from ui.workers import AutoCreateSubsetsWorker
 
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QThreadPool
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox, QSplitter, QTextEdit, QVBoxLayout, QWidget, QMenu, QApplication, QFileDialog
 
@@ -452,24 +453,39 @@ class SubsetManagerDialog(QDialog):
             )
 
             if reply == QMessageBox.StandardButton.Yes:
-                try:
-                    created = self.subset_manager.create_subset_from_unique_values(
-                        self.data_handler.df,
-                        column
-                    )
+                self.progress_dialog = ProgressDialog(
+                    title="Auto-Creating Subsets",
+                    message=f"Creating subsets from '{column}'...",
+                    parent=self
+                )
+                self.progress_dialog.setModal(True)
+                self.progress_dialog.show()
 
-                    #apply 
-                    for name in created:
-                        self.subset_manager.apply_subset(self.data_handler.df, name)
+                worker = AutoCreateSubsetsWorker(self.subset_manager, self.data_handler.df, column)
+                worker.signals.progress.connect(self.progress_dialog.update_progress)
+                worker.signals.finished.connect(lambda created: self._on_auto_create_finished(created, column))
+                worker.signals.error.connect(self._on_auto_create_error)
 
-                    self.refresh_subset_list()
-                    QMessageBox.information(
-                        self,
-                        "Success",
-                        f"Created {len(created)} subsets from column '{column}'"
-                    )
-                except Exception as AutoCreateSubsetError:
-                    QMessageBox.critical(self, "Error", str(AutoCreateSubsetError))
+                QThreadPool.globalInstance().start(worker)
+    
+    def _on_auto_create_finished(self, created: list, column: str) -> None:
+        """Handles completion of auto-creating subsets in the background."""
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
+
+        self.refresh_subset_list()
+        QMessageBox.information(
+            self,
+            "Success",
+            f"Created {len(created)} subsets from column '{column}'"
+        )
+
+    def _on_auto_create_error(self, error: Exception) -> None:
+        """Handles errors from the auto-create subsets worker."""
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.close()
+
+        QMessageBox.critical(self, "Error", str(error))
     
     def _clear_details_panel(self) -> None:
         """Resets the detail panel UI to its default, unselected state."""

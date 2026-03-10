@@ -505,6 +505,8 @@ class DataTab(QWidget):
             self.status_bar.set_view_context(f"Viewing Aggregation: {agg_name}")
         elif inserted_name:
             self.status_bar.set_view_context(f"Viewing Subset: {inserted_name}")
+        else:
+            self.status_bar.set_view_context("", "normal")
     
     def _update_history_list(self) -> None:
         """Updates the history list"""
