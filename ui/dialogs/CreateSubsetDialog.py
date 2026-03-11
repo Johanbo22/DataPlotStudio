@@ -1,22 +1,39 @@
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QStackedWidget, QDateEdit, QWidget
-from PyQt6.QtCore import QDate
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QStackedWidget, QDateEdit, QWidget, QScrollArea, QPushButton, QSizePolicy, QCompleter
+from PyQt6.QtCore import QDate, Qt
 import pandas as pd
 from typing import Dict, Any, List, Optional
 
 from ui.theme import ThemeColors
-from ui.widgets import (
-    DataPlotStudioButton,
-    DataPlotStudioComboBox,
-    DataPlotStudioGroupBox,
-    DataPlotStudioLineEdit,
-    DataPlotStudioDoubleSpinBox,
-    DataPlotStudioCheckBox
-)
+from ui.styles.widget_styles import ScrollArea
+from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioDoubleSpinBox, DataPlotStudioCheckBox
 
 
 class CreateSubsetDialog(QDialog):
     """Dialog for creating andediting subsets"""
 
+    ConditionMap = {
+        'Equals (==)': '==',
+        'Does Not Equal (!=)': '!=',
+        'Greater Than (>)': '>',
+        'Less Than (<)': '<',
+        'Greater or Equal (>=)': '>=',
+        'Less or Equal (<=)': '<=',
+        'Contains Text': 'contains',
+        'In List': 'in',
+        'Is Null': 'Is Null',
+        'Is Not Null': 'Is Not Null'
+    }
+    
+    NumericConditions = [
+        'Equals (==)', 'Does Not Equal (!=)', 'Greater Than (>)', 'Less Than (<)',
+        'Greater or Equal (>=)', 'Less or Equal (<=)', 'Is Null', 'Is Not Null'
+    ]
+    
+    StringConditions = [
+        'Equals (==)', 'Does Not Equal (!=)', 'Contains Text', 'In List',
+        'Is Null', 'Is Not Null'
+    ]
+    
     def __init__(self, data_handler, parent=None, existing_subset=None):
         super().__init__(parent)
         self.data_handler = data_handler
@@ -26,7 +43,7 @@ class CreateSubsetDialog(QDialog):
 
         self.setWindowTitle("Create Subset" if not existing_subset else "Edit Subset")
         self.setModal(True)
-        self.resize(750, 600)
+        self.resize(900, 750)
 
         self.init_ui()
 
@@ -59,93 +76,34 @@ class CreateSubsetDialog(QDialog):
         #filter headers
         layout.addWidget(QLabel("Filters:"))
         
-        for i in range(5):
-            filter_group = DataPlotStudioGroupBox(f"Filter {i+1}", parent=self)
-            filter_layout = QHBoxLayout()
-            
-            logic_combo = DataPlotStudioComboBox()
-            logic_combo.addItems(["AND", "OR"])
-            logic_combo.setFixedWidth(70)
-            logic_combo.setToolTip("Operator with previeous result")
-            
-            if i == 0:
-                logic_combo.setVisible(False)
-                filter_layout.addWidget(QLabel("       "))
-            else:
-                filter_layout.addWidget(logic_combo)
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll_area.setStyleSheet(ScrollArea.TransparentScrollArea)
+        
+        scroll_widget = QWidget()
+        scroll_widget.setObjectName("ScrollContent")
+        scroll_widget.setStyleSheet("QWidget#ScrollContent { background-color: transparent; }")
+        self.scroll_layout = QVBoxLayout(scroll_widget)
+        self.scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.scroll_layout.addStretch()
+        
+        scroll_area.setWidget(scroll_widget)
+        layout.addWidget(scroll_area, 1)
 
-            # activation checkbox
-            enable_check = DataPlotStudioCheckBox("Active")
-            enable_check.setChecked(i == 0)
-            filter_layout.addWidget(enable_check)
+        add_btn_layout = QHBoxLayout()
+        self.add_filter_btn = DataPlotStudioButton("+ Add Filter", parent=self)
+        self.add_filter_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.add_filter_btn.setToolTip("Add another filter condition")
+        self.add_filter_btn.clicked.connect(self.add_filter_row)
+        add_btn_layout.addWidget(self.add_filter_btn)
+        add_btn_layout.addStretch()
+        layout.addLayout(add_btn_layout)
+        
+        if not self.existing_subset:
+            self.add_filter_row()
             
-            column_combo = DataPlotStudioComboBox()
-            column_combo.addItems(self.columns)
-            column_combo.setMinimumWidth(120)
-            filter_layout.addWidget(QLabel("Column:"))
-            filter_layout.addWidget(column_combo, 2)
-
-            condition_combo = DataPlotStudioComboBox()
-            condition_combo.addItems(['==', '!=', '>', '<', '>=', '<=', 'contains', 'in', 'Is Null', 'Is Not Null'])
-            condition_combo.setMinimumWidth(100)
-            filter_layout.addWidget(QLabel("Condition:"))
-            filter_layout.addWidget(condition_combo, 1)
-            
-            # Stacking widget
-            input_stack = QStackedWidget()
-            
-            # 0 == text 
-            text_input = DataPlotStudioLineEdit()
-            text_input.setPlaceholderText("Value...")
-            input_stack.addWidget(text_input)
-            
-            # 1 == numbers
-            number_input = DataPlotStudioDoubleSpinBox()
-            number_input.setRange(-999999999.0, 999999999.0)
-            number_input.setDecimals(4)
-            input_stack.addWidget(number_input)
-            
-            # 2 == categories
-            category_input = DataPlotStudioComboBox()
-            input_stack.addWidget(category_input)
-            
-            # 3 == dates
-            date_input = QDateEdit()
-            date_input.setCalendarPopup(True)
-            date_input.setDate(QDate.currentDate())
-            input_stack.addWidget(date_input)
-            
-            # 4 == empty
-            input_stack.addWidget(QWidget())
-            
-            filter_layout.addWidget(QLabel("Value:"))
-            filter_layout.addWidget(input_stack, 3)
-            
-            filter_group.setLayout(filter_layout)
-            layout.addWidget(filter_group)
-            
-            row_data = {
-                'group': filter_group,
-                'logic': logic_combo,
-                'active': enable_check,
-                'column': column_combo,
-                'condition': condition_combo,
-                'stack': input_stack,
-                'inputs': {
-                    'text': text_input,
-                    'number': number_input,
-                    'category': category_input,
-                    'date': date_input
-                }
-            }
-            self.filter_rows.append(row_data)
-            
-            # Signals
-            column_combo.currentTextChanged.connect(lambda _, idx=i: self.update_row_ui(idx))
-            condition_combo.currentTextChanged.connect(lambda _, idx=i: self.update_row_ui(idx))
-            
-            self.update_row_ui(i)
-        layout.addStretch()
+        layout.addSpacing(20)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -161,48 +119,238 @@ class CreateSubsetDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
     
-    def update_row_ui(self, row_index):
-        """Updates the input widget based on the column data type"""
-        row = self.filter_rows[row_index]
+    def add_filter_row(self) -> None:
+        """Adds a new filter configuration row to the dialog."""
+        row_index = len(self.filter_rows)
+        filter_group = DataPlotStudioGroupBox(f"Filter {row_index + 1}", parent=self)
+        filter_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        filter_layout = QHBoxLayout()
+        
+        logic_combo = DataPlotStudioComboBox()
+        logic_combo.addItems(["AND", "OR"])
+        logic_combo.setFixedWidth(70)
+        logic_combo.setToolTip("Logical operator to combine with preceding filters")
+        
+        sizepolicy = logic_combo.sizePolicy()
+        sizepolicy.setRetainSizeWhenHidden(True)
+        logic_combo.setSizePolicy(sizepolicy)
+        
+        if row_index == 0:
+            logic_combo.setVisible(False)
+        filter_layout.addWidget(logic_combo)
+
+        # Column selector
+        column_combo = DataPlotStudioComboBox()
+        column_combo.addItems(self.columns)
+        column_combo.setMinimumWidth(120)
+        column_combo.setToolTip("Type to search or select a column")
+        column_combo.setEditable(True)
+        column_combo.setInsertPolicy(DataPlotStudioComboBox.InsertPolicy.NoInsert)
+        column_combo.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        
+        col_label = QLabel("Column:")
+        col_label.setFixedWidth(55)
+        filter_layout.addWidget(col_label)
+        filter_layout.addWidget(column_combo, 1)
+
+        # Condition selector
+        condition_combo = DataPlotStudioComboBox()
+        condition_combo.addItems(list(self.ConditionMap.keys()))
+        condition_combo.setMinimumWidth(170)
+        condition_combo.setSizeAdjustPolicy(DataPlotStudioComboBox.SizeAdjustPolicy.AdjustToContents)
+        cond_label = QLabel("Condition:")
+        cond_label.setFixedWidth(65)
+        filter_layout.addWidget(cond_label)
+        filter_layout.addWidget(condition_combo, 0)
+        
+        input_stack = QStackedWidget()
+
+        # Text input (0)
+        text_input = DataPlotStudioLineEdit()
+        text_input.setPlaceholderText("Enter text...")
+        text_input.setClearButtonEnabled(True)
+        input_stack.addWidget(text_input)
+        
+        # Numerical input (1)
+        number_input = DataPlotStudioDoubleSpinBox()
+        number_input.setRange(-999999999.0, 999999999.0)
+        number_input.setDecimals(4)
+        number_input.setGroupSeparatorShown(True)
+        input_stack.addWidget(number_input)
+        
+        # Categorical input (2)
+        category_input = DataPlotStudioComboBox()
+        input_stack.addWidget(category_input)
+        
+        # Date input (3)
+        date_input = QDateEdit()
+        date_input.setCalendarPopup(True)
+        date_input.setDisplayFormat("yyyy-MM-dd")
+        date_input.setDate(QDate.currentDate())
+        input_stack.addWidget(date_input)
+        
+        # Empty input for Null checks (4)
+        empty_widget = DataPlotStudioLineEdit()
+        empty_widget.setPlaceholderText("No value required")
+        empty_widget.setEnabled(False)
+        input_stack.addWidget(empty_widget)
+        
+        val_label = QLabel("Value:")
+        val_label.setFixedWidth(40)
+        filter_layout.addWidget(val_label)
+        filter_layout.addWidget(input_stack, 2)
+        
+        remove_btn = QPushButton("✕")
+        remove_btn.setToolTip("Remove this filter")
+        remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        remove_btn.setFixedWidth(30)
+        remove_btn.setStyleSheet("QPushButton { color: #d9534f; font-weight: bold; border: none; } QPushButton:hover { background-color: #fdf0f0; border-radius: 4px; }")
+        filter_layout.addWidget(remove_btn)
+
+        filter_group.setLayout(filter_layout)
+        self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, filter_group)
+
+        row_data = {
+            'logic': logic_combo,
+            'column': column_combo,
+            'condition': condition_combo,
+            'stack': input_stack,
+            'inputs': {
+                'text': text_input,
+                'number': number_input,
+                'category': category_input,
+                'date': date_input
+            },
+            'group': filter_group
+        }
+        self.filter_rows.append(row_data)
+        
+        column_combo.currentTextChanged.connect(lambda _, r=row_data: self.update_row_ui(r))
+        condition_combo.currentTextChanged.connect(lambda _, r=row_data: self.update_row_ui(r))
+        remove_btn.clicked.connect(lambda _, r=row_data: self.remove_filter_row(r))
+        
+        self.update_row_ui(row_data)
+        
+        if row_index > 0:
+            column_combo.setFocus()
+    
+    def remove_filter_row(self, row_data: Dict[str, Any]) -> None:
+        """Remove a specific filter row and update UI"""
+        if len(self.filter_rows) <= 1:
+            if row_data["column"].count() > 0:
+                row_data["column"].setCurrentIndex(0)
+            row_data["condition"].setCurrentIndex(0)
+            row_data['inputs']['text'].clear()
+            row_data['inputs']['number'].setValue(0.0)
+            return
+        
+        self.filter_rows.remove(row_data)
+        row_data["group"].deleteLater()
+        
+        for i, row in enumerate(self.filter_rows):
+            row["group"].setTitle(f"Filter {i+1}")
+            if i == 0:
+                row["logic"].setVisible(False)
+            else:
+                row["logic"].setVisible(True)
+    
+    
+    def update_row_ui(self, row: Dict[str, Any]) -> None:
+        """Updates the input widget based on the column data type and condition"""
         col_name = row["column"].currentText()
-        condition = row["condition"].currentText()
+        cond_combo = row["condition"]
+        
+        df = self.data_handler.df
+        if df is None or col_name not in df.columns:
+            col_dtype = pd.Series(dtype="object").dtype
+        else:
+            col_dtype = df[col_name].dtype
+            
+        if pd.api.types.is_numeric_dtype(col_dtype) or pd.api.types.is_datetime64_any_dtype(col_dtype):
+            valid_conditions = self.NumericConditions
+        else:
+            valid_conditions = self.StringConditions
+            
+        current_cond = cond_combo.currentText()
+        current_items = [cond_combo.itemText(i) for i in range(cond_combo.count())]
+        
+        if current_items != valid_conditions:
+            cond_combo.blockSignals(True)
+            cond_combo.clear()
+            cond_combo.addItems(valid_conditions)
+            if current_cond in valid_conditions:
+                cond_combo.setCurrentText(current_cond)
+            else:
+                cond_combo.setCurrentIndex(0)
+            cond_combo.blockSignals(False)
+            
+        cond_display = cond_combo.currentText()
+        condition = self.ConditionMap.get(cond_display, cond_display)
         stack = row["stack"]
         
         if condition in ["Is Null", "Is Not Null"]:
             stack.setCurrentIndex(4)
             return
         
-        df = self.data_handler.df
-        if df is None or col_name not in df.columns:
-            stack.setCurrentIndex(0)
-            return
-        
-        col_dtype = df[col_name].dtype
-        
         if pd.api.types.is_numeric_dtype(col_dtype):
             stack.setCurrentIndex(1)
+            valid_numbers = df[col_name].dropna()
+            if not valid_numbers.empty:
+                min_val = float(valid_numbers.min())
+                max_val = float(valid_numbers.max())
+                margin = abs(max_val - min_val) * 0.1 if max_val != min_val else 10.0
+                row["inputs"]["number"].setRange(min_val - margin, max_val + margin)
         elif pd.api.types.is_datetime64_any_dtype(col_dtype):
             stack.setCurrentIndex(3)
-        elif pd.api.types.is_object_dtype(col_dtype) or pd.api.types.is_categorical_dtype(col_dtype):
+            valid_dates = df[col_name].dropna()
+            if not valid_dates.empty:
+                max_date = valid_dates.max()
+                try:
+                    qdate = QDate(max_date.year, max_date.month, max_date.day)
+                    if qdate.isValid():
+                        row["inputs"]["date"].setDate(qdate)
+                except Exception:
+                    pass
+        elif pd.api.types.is_object_dtype(col_dtype) or pd.api.types.is_categorical_dtype(col_dtype) or pd.api.types.is_string_dtype(col_dtype):
             unique_vals = df[col_name].dropna().unique()
-            if len(unique_vals) < 50:
+            if len(unique_vals) < 1000:
                 stack.setCurrentIndex(2)
                 combo = row["inputs"]["category"]
-                current_text = combo.currentText()
-                if combo.count() != len(unique_vals):
+                sorted_vals = sorted([str(v) for v in unique_vals])
+                current_vals = [combo.itemText(i) for i in range(combo.count())]
+                if current_vals != sorted_vals:
                     combo.clear()
-                    combo.addItems([str(value) for value in sorted(unique_vals)])
-                    combo.setCurrentText(current_text)
+                    combo.addItems(sorted_vals)
+                combo.setEditable(True)
+                combo.setInsertPolicy(DataPlotStudioComboBox.InsertPolicy.NoInsert)
+                
+                completer = QCompleter(sorted_vals, combo)
+                completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+                completer.setFilterMode(Qt.MatchFlag.MatchContains)
+                completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+                combo.setCompleter(completer)
             else:
                 stack.setCurrentIndex(0)
+                self._update_text_placeholder(row, condition)
         else:
             stack.setCurrentIndex(0)
+            self._update_text_placeholder(row, condition)
+    
+    def _update_text_placeholder(self, row: Dict[str, Any], condition: str) -> None:
+        """Dynamically update placeholder text to guide the user based on the selected condition."""
+        text_widget = row["inputs"]["text"]
+        if condition == "contains":
+            text_widget.setPlaceholderText("Enter substring...")
+        elif condition == "in":
+            text_widget.setPlaceholderText("e.g. val1, val2, val3")
+        else:
+            text_widget.setPlaceholderText("Enter text...")
     
     def get_current_value(self, row: Dict[str, Any]) -> Any:
         """Retrieve the value from the active widget"""
         idx = row["stack"].currentIndex()
         if idx == 0:
-            return row["inputs"]["text"].text()
+            return row["inputs"]["text"].text().strip()
         if idx == 1:
             return row["inputs"]["number"].value()
         if idx == 2:
@@ -218,21 +366,29 @@ class CreateSubsetDialog(QDialog):
         filters = self.existing_subset.filters
         legacy_logic = getattr(self.existing_subset, "logic", "AND")
         
-        for i, row in enumerate(self.filter_rows):
-            if i < len(filters):
-                f_def = filters[i]
-                row["active"].setChecked(True)
-                row["column"].setCurrentText(f_def["column"])
-                row["condition"].setCurrentText(f_def["condition"])
+        for i, f_def in enumerate(filters):
+            if i >= len(self.filter_rows):
+                self.add_filter_row()
                 
-                val = f_def["value"]
+            row = self.filter_rows[i]
+            row["column"].setCurrentText(f_def["column"])
+            
+            saved_cond = f_def["condition"]
+            display_cond = next((k for k, v in self.ConditionMap.items() if v == saved_cond), saved_cond)
+            row["condition"].setCurrentText(display_cond)
+            
+            val = f_def["value"]
+            if val is not None:
                 row["inputs"]["text"].setText(str(val))
                 try:
                     if isinstance(val, (int, float)):
                         row["inputs"]["number"].setValue(float(val))
                 except ValueError:
                     pass
-                if row["inputs"]["category"].findText(str(val)) != 1:
+                
+                if row["inputs"]["category"].findText(str(val)) != -1:
+                    row["inputs"]["category"].setCurrentText(str(val))
+                else:
                     row["inputs"]["category"].setCurrentText(str(val))
                 
                 try:
@@ -242,9 +398,9 @@ class CreateSubsetDialog(QDialog):
                 except Exception:
                     pass
                 
-                if i > 0:
-                    op = f_def.get("operator", legacy_logic)
-                    row["logic"].setCurrentText(op if op else "AND")
+            if i > 0:
+                op = f_def.get("operator", legacy_logic)
+                row["logic"].setCurrentText(op if op else "AND")
 
     def validate_and_accept(self) -> None:
         """Validate and accept"""
@@ -254,35 +410,33 @@ class CreateSubsetDialog(QDialog):
                 QMessageBox.warning(self, "Validation Error", "Please enter a subset name")
                 return
 
-        #check if a filter is active
-        active_count = sum(1 for row in self.filter_rows if row["active"].isChecked())
-        if active_count == 0:
-            QMessageBox.warning(self, "Validation Error", "Please activate at least one filter")
+        if not self.filter_rows:
+            QMessageBox.warning(self, "Validation Error", "Please create at least one filter")
             return
 
         for row in self.filter_rows:
-            if row["active"].isChecked():
-                cond = row["condition"].currentText()
-                val = self.get_current_value(row)
-                if cond not in ["Is Null", "Is Not Null"] and (val is None or (isinstance(val, str) and not val.strip())):
-                    QMessageBox.warning(self, "Validation Error", "Please enter values for all active filters")
+            cond_display = row["condition"].currentText()
+            cond = self.ConditionMap.get(cond_display, cond_display)
+            val = self.get_current_value(row)
+            
+            if cond not in ["Is Null", "Is Not Null"]:
+                if isinstance(val, str) and not val.strip():
+                    QMessageBox.warning(self, "Validation Error", "Please enter values for all filters")
                     return
         self.accept()
 
     def get_config(self) -> Dict[str, Any]:
         """Returns the subset config"""
         filters: List[Dict[str, Any]] = []
-        is_first_active = True
         
-        for row in self.filter_rows:
-            if row['active'].isChecked():
-                filters.append({
-                    'operator': None if is_first_active else row["logic"].currentText(),
-                    'column': row['column'].currentText(),
-                    'condition': row['condition'].currentText(),
-                    'value': self.get_current_value(row)
-                })
-                is_first_active = False
+        for i, row in enumerate(self.filter_rows):
+            cond_display = row['condition'].currentText()
+            filters.append({
+                'operator': None if i == 0 else row["logic"].currentText(),
+                'column': row['column'].currentText(),
+                'condition': self.ConditionMap.get(cond_display, cond_display),
+                'value': self.get_current_value(row)
+            })
 
         config: Dict[str, Any] = {
             'description': self.desc_input.text().strip(),

@@ -162,7 +162,7 @@ class OutlierDetectionDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-    def apply_detection(self):
+    def apply_detection(self) -> None:
         try:
             selected_col_text = self.column_combo.currentText()
             columns = (
@@ -229,7 +229,12 @@ class OutlierDetectionDialog(QDialog):
             return
 
         col_name = columns[0]
-        data = self.data_handler.df[col_name].dropna()
+        data = self.data_handler.df[col_name]
+        import pandas as pd
+        if isinstance(data, pd.DataFrame):
+            data = data.iloc[:, 0]
+        
+        data = data.dropna()
 
         if data.empty:
             return

@@ -1772,23 +1772,33 @@ class DataHandler:
 
             for column in columns:
                 if column in numeric_df.columns:
-                    z_scores = np.abs(stats.zscore(self.df[column].dropna()))
-                    outliers = self.df[column].dropna().index[z_scores > threshold]
+                    col_data = self.df[column]
+                    if isinstance(col_data, pd.DataFrame):
+                        col_data = col_data.iloc[:, 0]
+                    
+                    col_data = col_data.dropna()
+                    if col_data.empty:
+                        continue
+                    z_scores = np.abs(stats.zscore(col_data.to_numpy()))
+                    outliers = col_data.index[z_scores > threshold]
                     outlier_indicies.update(outliers)
 
         elif method == "iqr":
             multiplier = kwargs.get("multiplier", 1.5)
             for column in columns:
                 if column in numeric_df.columns:
-                    Q1 = self.df[column].quantile(0.25)
-                    Q3 = self.df[column].quantile(0.75)
+                    col_data = self.df[column]
+                    if isinstance(col_data, pd.DataFrame):
+                        col_data = col_data.iloc[:, 0]
+                        
+                    Q1 = col_data.quantile(0.25)
+                    Q3 = col_data.quantile(0.75)
                     IQR = Q3 - Q1
                     lower_bound = Q1 - multiplier * IQR
                     upper_bound = Q3 + multiplier * IQR
 
-                    outliers = self.df[
-                        (self.df[column] < lower_bound)
-                        | (self.df[column] > upper_bound)
+                    outliers = col_data[
+                        (col_data < lower_bound) | (col_data > upper_bound)
                     ].index.tolist()
                     outlier_indicies.update(outliers)
 
