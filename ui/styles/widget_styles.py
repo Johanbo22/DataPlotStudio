@@ -181,6 +181,14 @@ class Dialog:
                 background: none;
             }
         """
+    ComputedColumnExpressionInput: str = """
+            QPlainTextEdit {
+                background-color: #282a36;
+                color: #f8f8f2;
+                border: 1px solid #555;
+                border-radius: 4px;
+            }
+        """
 
 class StatusBar:
     Statusbar: str = """
