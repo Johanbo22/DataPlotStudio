@@ -1,3 +1,4 @@
+from ui.styles.widget_styles import Dialog
 from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioButton, DataPlotStudioListWidget
 from ui.dialogs import CreateSubsetDialog, SubsetDataViewer, ProgressDialog
 from core.data_handler import DataHandler
@@ -6,15 +7,22 @@ from ui.workers import AutoCreateSubsetsWorker
 
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QThreadPool
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox, QSplitter, QTextEdit, QVBoxLayout, QWidget, QMenu, QApplication, QFileDialog
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox, QSplitter, QTextEdit, QVBoxLayout, QWidget, QMenu, QApplication, QFileDialog, QFormLayout, QFrame, QDialogButtonBox
 
 from typing import Optional, Any
 
 class SubsetDialogConstants:
     Title: str = "Data Subsets Tool"
-    ModalWidth: int = 900
+    ModalWidth: int = 1115
     ModalHeight: int = 600
+    MinModalWidth: int = 800
+    MinModalHeight: int = 500
     PlaceholderText: str = "(No subsets created yet)"
+    
+    DescriptionMaxHeight: int = 60
+    FiltersMaxHeight: int = 150
+    ButtonSpacing: int = 10
+    
 
 class SubsetManagerDialog(QDialog):
     """Dialog for handling data susbets"""
@@ -27,6 +35,7 @@ class SubsetManagerDialog(QDialog):
         self.setWindowTitle(SubsetDialogConstants.Title)
         self.setModal(True)
         self.resize(SubsetDialogConstants.ModalWidth, SubsetDialogConstants.ModalHeight)
+        self.setMinimumSize(SubsetDialogConstants.MinModalWidth, SubsetDialogConstants.MinModalHeight)
 
         self.init_ui()
         print(f"DEBUG: SubsetManager has {len(self.subset_manager.list_subsets())} subsets")
@@ -79,8 +88,8 @@ class SubsetManagerDialog(QDialog):
         layout = QVBoxLayout()
 
         #title
-        title = QLabel("Data Subset Creation Tool")
-        title.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        title = QLabel(SubsetDialogConstants.Title)
+        title.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
         layout.addWidget(title)
 
         #info
@@ -94,26 +103,40 @@ class SubsetManagerDialog(QDialog):
 
         #main content splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setHandleWidth(4)
+        splitter.setStyleSheet(Dialog.SubsetManagerDialogSplitterStyle)
 
         #left subset list
         left_widget = QWidget()
+        left_widget.setMinimumWidth(250)
         left_layout = QVBoxLayout(left_widget)
-
-        left_layout.addWidget(QLabel("Existing Subsets"))
+        left_layout.setContentsMargins(0, 0, 5, 0)
+        
+        self.list_group = DataPlotStudioGroupBox("Existing Subsets", parent=self)
+        list_group_layout = QVBoxLayout()
         
         self.search_bar = DataPlotStudioLineEdit()
         self.search_bar.setPlaceholderText("Search subsets...")
         self.search_bar.setClearButtonEnabled(True)
+        self.search_bar.setToolTip("Search existing subsets (Ctrl+F)")
         self.search_bar.textChanged.connect(self.filter_subset_list)
-        left_layout.addWidget(self.search_bar)
+        list_group_layout.addWidget(self.search_bar)
+        
+        self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.search_shortcut.activated.connect(self.search_bar.setFocus)
+        
+        self.clear_search_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self.search_bar)
+        self.clear_search_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self.clear_search_shortcut.activated.connect(self._clear_search_and_focus_list)
 
         self.subset_list = DataPlotStudioListWidget()
+        self.subset_list.setStyleSheet(Dialog.SubsetManagerDialogSubsetListStyle)
         self.subset_list.setAlternatingRowColors(True)
         self.subset_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.subset_list.customContextMenuRequested.connect(self.show_context_menu)
         self.subset_list.itemClicked.connect(self.on_subset_selected)
         self.subset_list.itemDoubleClicked.connect(self.view_subset_data)
-        left_layout.addWidget(self.subset_list)
+        list_group_layout.addWidget(self.subset_list)
         
         self.del_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Delete), self.subset_list)
         self.del_shortcut.activated.connect(self.delete_subset)
@@ -143,93 +166,111 @@ class SubsetManagerDialog(QDialog):
             self.auto_create_btn.setToolTip("Please load data to create subsets.")
         list_buttons.addWidget(self.auto_create_btn)
 
-        left_layout.addLayout(list_buttons)
+        list_group_layout.addLayout(list_buttons)
+        self.list_group.setLayout(list_group_layout)
+        left_layout.addWidget(self.list_group)
 
         splitter.addWidget(left_widget)
 
         #right subset detials
         right_widget = QWidget()
+        right_widget.setMinimumWidth(400)
         right_layout = QVBoxLayout(right_widget)
 
         self.details_group = DataPlotStudioGroupBox("Subset Details", parent=self)
         details_layout = QVBoxLayout()
-
+        
         #name
-        name_layout = QHBoxLayout()
-        name_layout.addWidget(QLabel("Name:"))
-        self.name_label = QLabel("(Select a Subset)")
-        self.name_label.setStyleSheet("font-weight: bold;")
-        name_layout.addWidget(self.name_label)
-        name_layout.addStretch()
-        details_layout.addLayout(name_layout)
+        self.name_label = QLabel(SubsetDialogConstants.PlaceholderText)
+        self.name_label.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
+        self.name_label.setStyleSheet(f"color: #333333; margin-top: 5px;")
+        self.name_label.setWordWrap(True)
+        details_layout.addWidget(self.name_label)
+        
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setStyleSheet(Dialog.SubsetManagerDialogSeparatorStyle)
+        details_layout.addWidget(separator)
+        
+        form_layout = QFormLayout()
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        form_layout.setSpacing(10)
+        
+        self.rows_label = QLabel("-")
+        form_layout.addRow("Rows:", self.rows_label)
+        
+        self.created_label = QLabel("-")
+        form_layout.addRow("Created:", self.created_label)
 
         #description
-        details_layout.addWidget(QLabel("Description:"))
         self.description_text = QTextEdit()
         self.description_text.setReadOnly(True)
-        self.description_text.setMaximumHeight(60)
-        self.description_text.setStyleSheet("QTextEdit { border: none; background-color: transparent; }")
-        details_layout.addWidget(self.description_text)
-
-        #stats
-        stats_layout = QHBoxLayout()
-        stats_layout.addWidget(QLabel("Rows:"))
-        self.rows_label = QLabel("-")
-        stats_layout.addWidget(self.rows_label)
-        stats_layout.addSpacing(20)
-        stats_layout.addWidget(QLabel("Created:"))
-        self.created_label = QLabel("-")
-        stats_layout.addWidget(self.created_label)
-        stats_layout.addStretch()
-        details_layout.addLayout(stats_layout)
+        self.description_text.setMaximumHeight(SubsetDialogConstants.DescriptionMaxHeight)
+        self.description_text.setStyleSheet(Dialog.SubsetManagerDialogTextEditStyle)
+        form_layout.addRow("Description:", self.description_text)
 
         #filters
-        details_layout.addWidget(QLabel("Filters:"))
         self.filters_text = QTextEdit()
         self.filters_text.setReadOnly(True)
-        self.filters_text.setMaximumHeight(150)
-        details_layout.addWidget(self.filters_text)
+        self.filters_text.setMaximumHeight(SubsetDialogConstants.FiltersMaxHeight)
+        self.filters_text.setStyleSheet(Dialog.SubsetManagerDialogTextEditStyle)
+        form_layout.addRow("Filters:", self.filters_text)
+        
+        details_layout.addLayout(form_layout)
+        details_layout.addSpacing(10)
 
         # Action buttons
-        action_buttons = QHBoxLayout()
+        action_buttons_layout = QHBoxLayout()
+        action_buttons_layout.setSpacing(SubsetDialogConstants.ButtonSpacing)
 
+        data_actions_layout = QHBoxLayout()
+        
         self.view_btn = DataPlotStudioButton("View Data", parent=self)
         self.view_btn.clicked.connect(self.view_subset_data)
         self.view_btn.setToolTip("Open a new window to inspect the filtered dataset.")
         self.view_btn.setEnabled(False)
-        action_buttons.addWidget(self.view_btn)
+        data_actions_layout.addWidget(self.view_btn)
 
         self.plot_btn = DataPlotStudioButton("Plot Subset", parent=self)
         self.plot_btn.clicked.connect(self.plot_subset)
         self.plot_btn.setToolTip("Switch to the Plot tab to visualize this specific subset.")
         self.plot_btn.setEnabled(False)
-        action_buttons.addWidget(self.plot_btn)
-        
-        self.duplicate_btn = DataPlotStudioButton("Duplicate", parent=self)
-        self.duplicate_btn.clicked.connect(self.duplicate_subset)
-        self.duplicate_btn.setToolTip("Create an exact copy of this subset's configuration")
-        self.duplicate_btn.setEnabled(False)
-        action_buttons.addWidget(self.duplicate_btn)
+        data_actions_layout.addWidget(self.plot_btn)
         
         self.export_button = DataPlotStudioButton("Export Subset", parent=self)
         self.export_button.clicked.connect(self.export_subset)
         self.export_button.setToolTip("Export the subset to a CSV file")
         self.export_button.setEnabled(False)
-        action_buttons.addWidget(self.export_button)
+        data_actions_layout.addWidget(self.export_button)
+        
+        data_actions_layout.addStretch()
+        action_buttons_layout.addLayout(data_actions_layout)
+        
+        management_actions_layout = QHBoxLayout()
 
         self.edit_btn = DataPlotStudioButton("Edit", parent=self)
         self.edit_btn.clicked.connect(self.edit_subset)
         self.edit_btn.setToolTip("Modify the filter conditions or description.")
         self.edit_btn.setEnabled(False)
-        action_buttons.addWidget(self.edit_btn)
+        management_actions_layout.addWidget(self.edit_btn)
+        
+        self.duplicate_btn = DataPlotStudioButton("Duplicate", parent=self)
+        self.duplicate_btn.clicked.connect(self.duplicate_subset)
+        self.duplicate_btn.setToolTip("Create an exact copy of this subset's configuration")
+        self.duplicate_btn.setEnabled(False)
+        management_actions_layout.addWidget(self.duplicate_btn)
 
         self.delete_btn = DataPlotStudioButton("Delete", parent=self)
+        self.delete_btn.setObjectName("DestructiveDeleteBtn")
         self.delete_btn.clicked.connect(self.delete_subset)
         self.delete_btn.setToolTip("Permanently delete this subset configuration.")
         self.delete_btn.setEnabled(False)
-        action_buttons.addWidget(self.delete_btn)
+        management_actions_layout.addWidget(self.delete_btn)
 
-        details_layout.addLayout(action_buttons)
+        management_actions_layout.addStretch()
+        action_buttons_layout.addLayout(management_actions_layout)
+        details_layout.addLayout(action_buttons_layout)
 
         self.details_group.setLayout(details_layout)
         right_layout.addWidget(self.details_group)
@@ -238,21 +279,25 @@ class SubsetManagerDialog(QDialog):
 
         splitter.addWidget(right_widget)
         splitter.setSizes([300, 600])
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
 
         layout.addWidget(splitter)
 
         # bottom buttons [lmao 
-        bottom_buttons = QHBoxLayout()
-        bottom_buttons.addStretch()
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        self.button_box.rejected.connect(self.reject)
 
-        close_btn = DataPlotStudioButton("Close", parent=self)
-        close_btn.clicked.connect(self.accept)
-        bottom_buttons.addWidget(close_btn)
-
-        layout.addLayout(bottom_buttons)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
+        
+        self.setStyleSheet(Dialog.SubsetManagerDialogWidget)
 
         print("DEBUG init_ui: UI initialization complete")
+    
+    def _clear_search_and_focus_list(self) -> None:
+        self.search_bar.clear()
+        self.subset_list.setFocus()
 
     def refresh_subset_list(self):
         """Refreshes the list of subsets"""
@@ -290,6 +335,9 @@ class SubsetManagerDialog(QDialog):
 
                 item = QListWidgetItem(item_text)
                 item.setData(Qt.ItemDataRole.UserRole, name)
+                
+                desc = subset.description if subset.description else "No description"
+                item.setToolTip(f"<b>Description:</b> {desc}<br><b>Logic:</b> {subset.logic}")
                 self.subset_list.addItem(item)
                 print(f"DEBUG refresh_subset_list: Addded: {name}")
 
@@ -340,6 +388,8 @@ class SubsetManagerDialog(QDialog):
     
     def filter_subset_list(self, search_text: str) -> None:
         """Filters the subset list visually based on the search query."""
+        has_visible_selection = False
+        
         for index in range(self.subset_list.count()):
             item = self.subset_list.item(index)
             # Skip the placeholder item 
@@ -351,6 +401,13 @@ class SubsetManagerDialog(QDialog):
                 # Show item if search is in the subsetname, case-insensitive
                 is_match = search_text.lower() in subset_name.lower()
                 item.setHidden(not is_match)
+                
+                if item.isSelected() and is_match:
+                    has_visible_selection = True
+                    
+        if not has_visible_selection and self.subset_list.currentItem():
+            self.subset_list.clearSelection()
+            self._clear_details_panel()
 
     def on_subset_selected(self, item):
         """Subset selection"""
@@ -423,6 +480,11 @@ class SubsetManagerDialog(QDialog):
                 self.subset_manager.apply_subset(self.data_handler.df, config["name"])
 
                 self.refresh_subset_list()
+                items = self.subset_list.findItems(config["name"], Qt.MatchFlag.MatchExactly)
+                if items:
+                    self.subset_list.setCurrentItem(items[0])
+                    self.on_subset_selected(items[0])
+
                 QMessageBox.information(self, "Success", f"Subset '{config['name']}' created")
             except ValueError as CreateNewSubsetError:
                 QMessageBox.warning(self, "Error", str(CreateNewSubsetError))
@@ -573,6 +635,7 @@ class SubsetManagerDialog(QDialog):
             return
 
         name = item.data(Qt.ItemDataRole.UserRole)
+        current_row = self.subset_list.currentRow()
 
         reply = QMessageBox.question(
             self,
@@ -584,7 +647,18 @@ class SubsetManagerDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             self.subset_manager.delete_subset(name)
             self.refresh_subset_list()
-            self._clear_details_panel()
+
+            if self.subset_list.count() > 0:
+                first_item = self.subset_list.item(0)
+                if not (first_item.flags() & Qt.ItemFlag.NoItemFlags):
+                    next_row = min(current_row, self.subset_list.count() - 1)
+                    next_item = self.subset_list.item(next_row)
+                    self.subset_list.setCurrentItem(next_item)
+                    self.on_subset_selected(next_item)
+                else:
+                    self._clear_details_panel()
+            else:
+                self._clear_details_panel()
     
     def duplicate_subset(self) -> None:
         """Creates an exact copy of the selected subset to allow rapid iteration."""

@@ -1,4 +1,7 @@
 
+from ui.theme import ThemeColors
+
+
 class ToolBox:
     PlotToolBoxStylesheet: str = """
     QToolBox::tab {
@@ -187,6 +190,44 @@ class Dialog:
                 color: #f8f8f2;
                 border: 1px solid #555;
                 border-radius: 4px;
+            }
+        """
+    SubsetManagerDialogWidget: str = """
+            #DestructiveDeleteBtn {
+                background-color: #E74C3C; 
+                font-weight: bold; 
+            }
+            #DestructiveDeleteBtn:disabled {
+                font-weight: normal; 
+            }
+        """
+    SubsetManagerDialogSplitterStyle: str = "QSplitter::handle { background-color: #dcdcdc; margin: 4px 0px; border-radius: 2px; }"
+    SubsetManagerDialogSeparatorStyle: str = "background-color: #e0e0e0; margin-bottom: 5px;"
+    SubsetManagerDialogTextEditStyle: str = """
+            QTextEdit { 
+                background-color: rgba(128, 128, 128, 0.08); 
+                border: 1px solid rgba(128, 128, 128, 0.2); 
+                border-radius: 4px; 
+                padding: 4px; 
+            }
+        """
+    SubsetManagerDialogSubsetListStyle: str = """
+            DataPlotStudioListWidget {
+                border: 1px solid rgba(128, 128, 128, 0.2);
+                border-radius: 4px;
+                outline: 0;
+            }
+            DataPlotStudioListWidget::item {
+                padding: 6px;
+                margin: 2px 4px;
+                border-radius: 4px;
+            }
+            DataPlotStudioListWidget::item:hover {
+                background-color: rgba(128, 128, 128, 0.1);
+            }
+            DataPlotStudioListWidget::item:selected {
+                background-color: #2b5797;
+                color: white;
             }
         """
 
