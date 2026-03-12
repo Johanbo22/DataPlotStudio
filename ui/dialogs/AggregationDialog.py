@@ -2,6 +2,7 @@ from enum import Enum
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut, QIcon
 from PyQt6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QTableWidget, QHeaderView, QAbstractItemView, QTableWidgetItem, QMenu, QSplitter, QWidget, QListWidgetItem
 from PyQt6.QtCore import Qt, QThreadPool, QTimer, QPoint
+from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioComboBox, DataPlotStudioListWidget
 import pandas as pd
 from ui.workers import AggregationWorker
@@ -78,8 +79,17 @@ class AggregationDialog(QDialog):
         group_layout = QVBoxLayout()
 
         group_info = QLabel("Select columns to group by:")
-        group_info.setStyleSheet("color: #666; font-size: 9pt;")
+        group_font = group_info.font()
+        group_font.setPointSize(9)
+        group_info.setFont(group_font)
         group_layout.addWidget(group_info)
+        
+        # Search bar for the group by list
+        self.group_by_search_input = DataPlotStudioLineEdit()
+        self.group_by_search_input.setPlaceholderText("Search columns...")
+        self.group_by_search_input.setClearButtonEnabled(True)
+        self.group_by_search_input.textChanged.connect(self.filter_group_by_columns)
+        group_layout.addWidget(self.group_by_search_input)
 
         self.group_by_list = DataPlotStudioListWidget()
         self.group_by_list.setSelectionMode(
@@ -119,14 +129,21 @@ class AggregationDialog(QDialog):
         # Search bar to filter columns
         self.column_search_input = DataPlotStudioLineEdit()
         self.column_search_input.setPlaceholderText("Search columns...")
+        self.column_search_input.setClearButtonEnabled(True)
         self.column_search_input.textChanged.connect(self.filter_available_columns)
+        
+        self.column_search_input.returnPressed.connect(self.add_first_visible_column_to_agg)
+        
         available_layout.addWidget(self.column_search_input)
         
         self.available_list = DataPlotStudioListWidget()
         self._populate_list_with_icons(self.available_list, self.columns)
         self.available_list.setSelectionMode(DataPlotStudioListWidget.SelectionMode.ExtendedSelection)
-        
         self.available_list.itemDoubleClicked.connect(self.add_single_column_to_agg)
+        
+        self.available_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.available_list.customContextMenuRequested.connect(self._show_available_list_context_menu)
+        
         available_layout.addWidget(self.available_list)
         selection_layout.addLayout(available_layout)
 
@@ -134,13 +151,20 @@ class AggregationDialog(QDialog):
         button_layout = QVBoxLayout()
         button_layout.addStretch()
         self.button_add = DataPlotStudioButton("Add >", parent=self)
+        self.button_add.setToolTip("Add selected columns to aggregation setup")
+        self.button_add.setMaximumWidth(120)
         self.button_add.clicked.connect(self.add_column_to_agg)
         button_layout.addWidget(self.button_add)
+        
         self.button_remove = DataPlotStudioButton("< Remove", parent=self)
+        self.button_remove.setToolTip("Remove selected columns from aggregation setup")
+        self.button_remove.setMaximumWidth(120)
         self.button_remove.clicked.connect(self.remove_column_from_agg)
         button_layout.addWidget(self.button_remove)
         
         self.button_clear_all = DataPlotStudioButton("<< Clear All", parent=self)
+        self.button_clear_all.setToolTip("Remove all columns from aggregation setup")
+        self.button_clear_all.setMaximumWidth(120)
         self.button_clear_all.clicked.connect(self.clear_all_aggregations)
         button_layout.addWidget(self.button_clear_all)
         
@@ -150,18 +174,22 @@ class AggregationDialog(QDialog):
         # Selected columns table
         selected_layout = QVBoxLayout()
         selected_layout.addWidget(QLabel("Selected:"))
+        
+        table_and_controls_layout = QHBoxLayout()
+        
         self.agg_table = QTableWidget()
+        self.agg_table.setAlternatingRowColors(True)
         self.agg_table.setColumnCount(2)
         self.agg_table.setHorizontalHeaderLabels(["Column", "Function"])
-        self.agg_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
-        self.agg_table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        self.agg_table.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
-        )
+        
+        header_font = self.agg_table.horizontalHeader().font()
+        header_font.setBold(True)
+        self.agg_table.horizontalHeader().setFont(header_font)
+        self.agg_table.verticalHeader().setDefaultSectionSize(35)
+        
+        self.agg_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.agg_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.agg_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.agg_table.verticalHeader().setVisible(False)
         self.agg_table.cellDoubleClicked.connect(self.remove_single_column_from_agg)
         
@@ -175,7 +203,25 @@ class AggregationDialog(QDialog):
         self.backspace_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Backspace), self.agg_table)
         self.backspace_shortcut.activated.connect(self.remove_column_from_agg)
         
-        selected_layout.addWidget(self.agg_table)
+        table_and_controls_layout.addWidget(self.agg_table)
+        
+        reorder_layout = QVBoxLayout()
+        self.btn_move_up = DataPlotStudioButton("", parent=self)
+        self.btn_move_up.setIcon(QIcon("icons/ui_styling/arrow-big-up.svg"))
+        self.btn_move_up.setToolTip("Move selected column up")
+        self.btn_move_up.clicked.connect(self.move_agg_row_up)
+        
+        self.btn_move_down = DataPlotStudioButton("", parent=self)
+        self.btn_move_down.setIcon(QIcon("icons/ui_styling/arrow-big-down.svg"))
+        self.btn_move_down.setToolTip("Move selected column down")
+        self.btn_move_down.clicked.connect(self.move_agg_row_down)
+        
+        reorder_layout.addWidget(self.btn_move_up)
+        reorder_layout.addWidget(self.btn_move_down)
+        reorder_layout.addStretch()
+        
+        table_and_controls_layout.addLayout(reorder_layout)
+        selected_layout.addLayout(table_and_controls_layout)
         selection_layout.addLayout(selected_layout)
 
         agg_layout.addLayout(selection_layout)
@@ -198,9 +244,17 @@ class AggregationDialog(QDialog):
         self.preview_table.verticalHeader().setVisible(False)
         self.preview_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.preview_table.setMaximumHeight(PREVIEW_TABLE_MAX_HEIGHT)
+        
+        preview_header_font = self.preview_table.horizontalHeader().font()
+        preview_header_font.setBold(True)
+        self.preview_table.horizontalHeader().setFont(preview_header_font)
+        self.preview_table.setGridStyle(Qt.PenStyle.DotLine)
+        
         bottom_layout.addWidget(self.preview_table)
 
         self.main_splitter.addWidget(bottom_widget)
+        
+        self.main_splitter.setSizes([DIALOG_HEIGHT - PREVIEW_TABLE_MAX_HEIGHT, PREVIEW_TABLE_MAX_HEIGHT])
 
         main_layout.addWidget(self.main_splitter)
         main_layout.addSpacing(10)
@@ -222,14 +276,10 @@ class AggregationDialog(QDialog):
 
         # buttons for accept and reject
         btn_layout = QHBoxLayout()
-        self.apply_button = DataPlotStudioButton(
-            "Apply Aggregation",
-            parent=self,
-            base_color_hex="#4caf50",
-            text_color_hex="white",
-        )
+        self.apply_button = DataPlotStudioButton("Apply Aggregation", parent=self, base_color_hex=ThemeColors.MainColor)
         self.apply_button.clicked.connect(self.validate_and_accept)
         self.apply_button.setEnabled(False)
+        self.apply_button.setDefault(True)
         btn_layout.addWidget(self.apply_button)
 
         cancel_button = DataPlotStudioButton("Cancel", parent=self)
@@ -237,8 +287,9 @@ class AggregationDialog(QDialog):
         btn_layout.addWidget(cancel_button)
 
         main_layout.addLayout(btn_layout)
-
         self.setLayout(main_layout)
+        
+        self.column_search_input.setFocus()
         self.update_preview()
 
     def on_group_selection_change(self):
@@ -263,14 +314,69 @@ class AggregationDialog(QDialog):
             #Hide all other items
             item.setHidden(search_text.lower() not in item.text().lower())
     
+    def filter_group_by_columns(self, search_text: str) -> None:
+        """Filter the group by column list based on user's search query"""
+        for i in range(self.group_by_list.count()):
+            item = self.group_by_list.item(i)
+            item.setHidden(search_text.lower() not in item.text().lower())
+    
     def add_single_column_to_agg(self, item: QTableWidgetItem) -> None:
         """Handle double-click event to add a single column directly to the aggregation config."""
         self._add_specific_column_to_agg(item.text())
         self.update_preview()
         
+    def add_first_visible_column_to_agg(self) -> None:
+        """Add the top visible column in the available list wehen hittin ENter/Return key"""
+        for i in range(self.available_list.count()):
+            item = self.available_list.item(i)
+            if not item.isHidden():
+                self._add_specific_column_to_agg(item.text())
+                self.column_search_input.clear()
+                self.update_preview()
+                break
+        
     def clear_all_aggregations(self) -> None:
         """Remove all currently selected columns from the aggregation table."""
         self.agg_table.setRowCount(0)
+        self.update_preview()
+    
+    def _show_available_list_context_menu(self, position: QPoint) -> None:
+        """Display a right-click context menu for the available columns list."""
+        menu = QMenu(self)
+        select_all_action = menu.addAction("Select All")
+        
+        action = menu.exec(self.available_list.viewport().mapToGlobal(position))
+        
+        if action == select_all_action:
+            self.available_list.selectAll()
+    
+    def move_agg_row_up(self) -> None:
+        """Move the currently selected aggregation row up by one position."""
+        row: int = self.agg_table.currentRow()
+        if row > 0:
+            self._swap_agg_rows(row, row - 1)
+    
+    def move_agg_row_down(self) -> None:
+        """Move the currently selected aggregation row down by one position."""
+        row: int = self.agg_table.currentRow()
+        if row >= 0 and row < self.agg_table.rowCount() - 1:
+            self._swap_agg_rows(row, row + 1)
+    
+    def _swap_agg_rows(self, row1: int, row2: int) -> None:
+        """Helper to swap table row data and their widgets"""
+        col1: str = self.agg_table.item(row1, 0).text()
+        func1: str = self.agg_table.cellWidget(row1, 1).currentText()
+        
+        col2: str = self.agg_table.item(row2, 0).text()
+        func2: str = self.agg_table.cellWidget(row2, 1).currentText()
+        
+        self.agg_table.item(row1, 0).setText(col2)
+        self.agg_table.cellWidget(row1, 1).setCurrentText(func2)
+        
+        self.agg_table.item(row2, 0).setText(col1)
+        self.agg_table.cellWidget(row2, 1).setCurrentText(func1)
+        
+        self.agg_table.selectRow(row2)
         self.update_preview()
     
     def _show_agg_table_context_menu(self, position: QPoint) -> None:
@@ -402,6 +508,9 @@ class AggregationDialog(QDialog):
 
     def update_preview(self) -> None:
         """Restarts the debounce timer. The actual preview is generated on timeout."""
+        group_cols, agg_config, _ = self.get_current_config()
+        self._evaluate_apply_button_state(group_cols, agg_config)
+        
         self.preview_table.clear()
         self.preview_table.setRowCount(1)
         self.preview_table.setColumnCount(1)
@@ -410,12 +519,9 @@ class AggregationDialog(QDialog):
         self.preview_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.preview_timer.start()
     
-    def _execute_preview(self):
+    def _execute_preview(self) -> None:
         """Generate and display aggragation preview"""
         group_cols, agg_config, date_grouping = self.get_current_config()
-        
-        # Evaluate apply button state based on latest config
-        self._evaluate_apply_button_state(group_cols, agg_config)
 
         if not group_cols and not agg_config:
             self.preview_table.clear()
