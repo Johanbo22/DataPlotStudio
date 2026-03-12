@@ -167,98 +167,24 @@ class PlotEngine:
             return """
             <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
             <h3 style='color:red;'>Plotly library not found</h3>
-            <p>Please install it to use interactive plotting:</p>
+            <p>Please install it to use plotly for plotting:</p>
             <code>pip install plotly</code>
             </body></html>
             """
-        
         try:
-            fig = None
-            title = kwargs.get("title", f"{plot_type} Plot")
-            hue = kwargs.get("hue")
-
-            px_kwargs = {
-                "title": title,
-                "template": "plotly_white"
-            }
-            if hue:
-                px_kwargs["color"] = hue
-            
-            if plot_type == "Line":
-                if len(y) == 1:
-                    fig = px.line(df, x=x, y=y[0], **px_kwargs)
-                else:
-                    fig = px.line(df, x=x, y=y, **px_kwargs)
-            elif plot_type == "Bar":
-                y_col = y[0] if y else None
-                if len(y) > 1:
-                    fig = px.bar(df, x=x, y=y, barmode="group", **px_kwargs)
-                else:
-                    if kwargs.get("horizontal", False):
-                        fig = px.bar(df, x=y_col, y=x, orientation="h", **px_kwargs)
-                    else:
-                        fig = px.bar(df, x=x, y=y_col, **px_kwargs)
-
-            elif plot_type == "Histogram":
-                data_column = y[0] if y else None
-                if not data_column: data_column = x
-
-                bins = kwargs.get("bins", 30)
-                fig = px.histogram(df, x=data_column, nbins=bins, **px_kwargs)
-
-                if kwargs.get("show_kde", False):
-                    fig.update_traces(opacity=0.75)
-            
-            elif plot_type == "Box":
-                fig = px.box(df, y=y, x=x if x else None, **px_kwargs)
-            
-            elif plot_type == "Violin":
-                fig = px.violin(df, y=y[0], x=x if x else None, box=True, points="all", **px_kwargs)
-            
-            elif plot_type == "Heatmap":
-                numeric_df = df.select_dtypes(include=[np.number])
-                correlation = numeric_df.corr()
-                fig = px.imshow(correlation, text_auto=True, title=title, color_continuous_scale="RdBu_r")
-            
-            elif plot_type == "Pie":
-                y_col = y[0] if y else None
-                if x and y_col:
-                    fig = px.pie(df, names=x, values=y_col, **px_kwargs)
-                elif x:
-                    fig = px.pie(df, names=x, **px_kwargs)
-            
-            elif plot_type == "Area":
-                if len(y) == 1:
-                    fig = px.area(df, x=x, y=y[0], **px_kwargs)
-                else:
-                    fig = px.area(df, x=x, y=y, **px_kwargs)
-            
-            elif plot_type == "3D Scatter" or (plot_type == "Scatter" and len(y) > 1 and kwargs.get("3d", False)):
-                pass
-            
-            if fig is None and plot_type == "Scatter":
-                if len(y) == 1:
-                     fig = px.scatter(df, x=x, y=y[0], **px_kwargs)
-                else:
-                     fig = px.scatter(df, x=x, y=y, **px_kwargs)
-
+            from core.plot_strategies.plotly_strategies import PlotlyStrategyRegistry
+            strategy = PlotlyStrategyRegistry.get_strategy(plot_type)
+            fig = strategy.execute(df, x, y, **kwargs)
             if fig is None:
-                return f"""
-                <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
-                <h3 style='color:orange;'>Interactive mode not supported for '{plot_type}'</h3>
-                <p>Showing static plot instead.</p>
-                </body></html>
-                """
-            
-            fig.update_layout(
-                xaxis_title=kwargs.get("xlabel", x),
-                yaxis_title=kwargs.get("ylabel", str(y)),
-                legend_title=hue if hue else "Legend",
-                margin=dict(l=40, r=40, t=40, b=40)
-            )
-
+                raise ValueError("Figure returned None.")
             return fig
-
+        except ValueError as val_err:
+            return f"""
+            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
+            <h3 style='color:orange;'>Interactive mode not supported for '{plot_type}'</h3>
+            <p>Showing static plot instead. Reason: {str(val_err)}</p>
+            </body></html>
+            """
         except Exception as PlotlyError:
             return f"""
             <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
@@ -266,8 +192,6 @@ class PlotEngine:
             <pre>{str(PlotlyError)}</pre>
             </body></html>
             """
-
-
 
     def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
         """Subplot layout grid"""
