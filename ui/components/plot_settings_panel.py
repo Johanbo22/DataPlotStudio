@@ -85,7 +85,6 @@ class PlotSettingsPanel(QWidget):
         self.current_plot_label = self.basic_tab.current_plot_label
         self.plot_type = self.basic_tab.plot_type
         self.add_subplots_check = self.basic_tab.add_subplots_check
-        self.use_plotly_check = self.basic_tab.use_plotly_check
         self.use_subset_check = self.basic_tab.use_subset_check
         
         self.subplot_group = self.basic_tab.subplot_group

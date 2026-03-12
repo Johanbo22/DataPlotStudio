@@ -18,11 +18,6 @@ try:
 except ImportError:
     gpd = None
 try:
-    import plotly.express as px
-    PLOTLY_AVAILABLE = True
-except:
-    PLOTLY_AVAILABLE = False
-try:
     import contextily as ctx
 except ImportError:
     ctx = None
@@ -157,41 +152,6 @@ class PlotEngine:
             self.current_ax.legend()
         
         self.current_figure.tight_layout()
-    
-    def generate_plotly_plot(self, df: pd.DataFrame, plot_type: str, x: str, y: List[str], **kwargs) -> str:
-        """
-        Generates a Plotly figure object
-        Returns a plotly.graph_objects.Figure or an HTML string with the error occurred
-        """
-        if not PLOTLY_AVAILABLE:
-            return """
-            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
-            <h3 style='color:red;'>Plotly library not found</h3>
-            <p>Please install it to use plotly for plotting:</p>
-            <code>pip install plotly</code>
-            </body></html>
-            """
-        try:
-            from core.plot_strategies.plotly_strategies import PlotlyStrategyRegistry
-            strategy = PlotlyStrategyRegistry.get_strategy(plot_type)
-            fig = strategy.execute(df, x, y, **kwargs)
-            if fig is None:
-                raise ValueError("Figure returned None.")
-            return fig
-        except ValueError as val_err:
-            return f"""
-            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
-            <h3 style='color:orange;'>Interactive mode not supported for '{plot_type}'</h3>
-            <p>Showing static plot instead. Reason: {str(val_err)}</p>
-            </body></html>
-            """
-        except Exception as PlotlyError:
-            return f"""
-            <html><body style='font-family:sans-serif; text-align:center; padding-top:20px;'>
-            <h3 style='color:red;'>Error generating interactive plot</h3>
-            <pre>{str(PlotlyError)}</pre>
-            </body></html>
-            """
 
     def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
         """Subplot layout grid"""

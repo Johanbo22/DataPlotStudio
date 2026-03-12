@@ -51,11 +51,6 @@ class GeneralSettingsTab(QWidget):
         self.add_subplots_check.setChecked(False)
         layout.addWidget(self.add_subplots_check)
 
-        self.use_plotly_check = DataPlotStudioToggleSwitch("Use Plotly backend")
-        self.use_plotly_check.setChecked(False)
-        self.use_plotly_check.setToolTip("Switch to the Plotly backend")
-        layout.addWidget(self.use_plotly_check)
-
         self.use_subset_check = DataPlotStudioToggleSwitch("Use Subset")
         self.use_subset_check.setChecked(False)
         layout.addWidget(self.use_subset_check)

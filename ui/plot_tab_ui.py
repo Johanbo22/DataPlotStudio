@@ -15,15 +15,6 @@ from ui.widgets import (
 from ui.components.plot_settings_panel import PlotSettingsPanel
 from ui.icons import IconBuilder, IconType
 
-try:
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
-    WEB_ENGINE_AVAILABLE = True
-    print(WEB_ENGINE_AVAILABLE)
-except:
-    WEB_ENGINE_AVAILABLE = False
-    print(f"{WEB_ENGINE_AVAILABLE} QtWebEngineWidgets not installed")
-    from PyQt6.QtWidgets import QLabel as QWebEngineView
-
 class PlotTabUI(QWidget):
     """"""
     def __init__(self) -> None:
@@ -36,20 +27,7 @@ class PlotTabUI(QWidget):
         self.canvas = canvas
         self.toolbar = toolbar
         left_layout.addWidget(self.toolbar)
-        self.plot_stack = QStackedWidget()
-        self.plot_stack.addWidget(self.canvas)
-        
-        if WEB_ENGINE_AVAILABLE:
-            self.web_view = QWebEngineView()
-            self.web_view.setHtml("<html><body><h3 style='color:gray; font-family:sans-serif; text-align:center; margin-top:20%;'>Plotly Plot Area</h3></body></html>")
-        else:
-            self.web_view = QLabel("Interactive plotting requires 'PyQt6-WebEngine'.\nPlease install it: pip install PyQt6-WebEngine")
-            self.web_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.web_view.setStyleSheet("QLabel { background-color: white; color: red; font-size: 14px; }")
-        
-        self.plot_stack.addWidget(self.web_view)
-        
-        left_layout.addWidget(self.plot_stack, 1)
+        left_layout.addWidget(self.canvas, 1)
         
         right_layout = QVBoxLayout()
         

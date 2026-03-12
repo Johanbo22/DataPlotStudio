@@ -261,7 +261,6 @@ class PlotTab(PlotTabUI):
         self.view.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         self.view.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         self.view.use_subset_check.stateChanged.connect(self.use_subset)
-        self.view.use_plotly_check.stateChanged.connect(self.toggle_plotly_backend)
         self.view.secondary_y_check.stateChanged.connect(lambda state: self._toggle_secondary_input(bool(state)))
     
     def _connect_appearance_tab_signals(self) -> None:
