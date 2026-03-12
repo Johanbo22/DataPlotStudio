@@ -15,6 +15,19 @@ class PiePlotStrategy(BasePlotStrategy):
         general_kwargs["explode_first"] = plot_tab.pie_explode_check.isChecked()
         general_kwargs["explode_distance"] = plot_tab.pie_explode_distance_spin.value()
         general_kwargs["shadow"] = plot_tab.pie_shadow_check.isChecked()
+        
+        is_donut_enabled: bool = False
+        if hasattr(plot_tab, "pie_donut_check"):
+            is_donut_enabled = plot_tab.pie_donut_check.isChecked()
+        
+        if is_donut_enabled:
+            donut_ring_width: float = 0.3
+            if hasattr(plot_tab, "pie_donut_width_spin"):
+                donut_ring_width = float(plot_tab.pie_donut_width_spin.value())
+                
+                current_wedgeprops: Dict[str, Any] = general_kwargs.get("wedgeprops", {})
+                current_wedgeprops["width"] = donut_ring_width
+                general_kwargs["wedgeprops"] = current_wedgeprops
 
         plot_method = getattr(engine, engine.AVAILABLE_PLOTS["Pie"])
         plot_method(plot_tab.data_handler.df, y_col, x_col, **general_kwargs)

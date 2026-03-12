@@ -393,6 +393,8 @@ class PlotSettingsPanel(QWidget):
         self.pie_explode_check = cust_tab.pie_explode_check
         self.pie_explode_distance_spin = cust_tab.pie_explode_distance_spin
         self.pie_shadow_check = cust_tab.pie_shadow_check
+        self.pie_donut_check = cust_tab.pie_donut_check
+        self.pie_donut_width_spin = cust_tab.pie_donut_width_spin
 
         # Marker Properties
         self.marker_group = cust_tab.marker_group
@@ -407,6 +409,13 @@ class PlotSettingsPanel(QWidget):
         # Error Bars Properties
         self.error_bars_group = cust_tab.error_bars_group
         self.error_bars_combo = cust_tab.error_bars_combo
+        self.error_bar_color_button = cust_tab.error_bar_color_button
+        self.error_bar_linewidth_spin = cust_tab.error_bar_linewidth_spin
+        self.error_bar_capsize_spin = cust_tab.error_bar_capsize_spin
+        self.error_bar_alpha_slider = cust_tab.error_bar_alpha_slider
+        self.error_bar_zorder_spin = cust_tab.error_bar_zorder_spin
+        self.error_bar_color_label = cust_tab.error_bar_color_label
+        self.error_bar_alpha_label = cust_tab.error_bar_alpha_label
 
         # Transparency Properties
         self.alpha_slider = cust_tab.alpha_slider

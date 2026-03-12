@@ -272,6 +272,27 @@ class CustomizationSettingsTab(QWidget):
         self.pie_shadow_check = DataPlotStudioToggleSwitch("Add Shadow")
         self.pie_shadow_check.setChecked(False)
         pie_layout.addWidget(self.pie_shadow_check)
+        
+        self.pie_donut_check = DataPlotStudioToggleSwitch("Donut Chart")
+        self.pie_donut_check.setChecked(False)
+        pie_layout.addWidget(self.pie_donut_check)
+        
+        self.pie_donut_width_label = QLabel("Donut Ring Width:")
+        pie_layout.addWidget(self.pie_donut_width_label)
+        
+        self.pie_donut_width_spin = DataPlotStudioDoubleSpinBox()
+        self.pie_donut_width_spin.setRange(0.1, 0.9)
+        self.pie_donut_width_spin.setValue(0.3)
+        self.pie_donut_width_spin.setSingleStep(0.05)
+        pie_layout.addWidget(self.pie_donut_width_spin)
+        
+        def toggle_donut_width() -> None:
+            is_donut = self.pie_donut_check.isChecked()
+            self.pie_donut_width_label.setVisible(is_donut)
+            self.pie_donut_width_spin.setVisible(is_donut)
+        
+        self.pie_donut_check.stateChanged.connect(toggle_donut_width)
+        toggle_donut_width()
 
         self.pie_group.setLayout(pie_layout)
         layout.addWidget(self.pie_group)
@@ -331,9 +352,49 @@ class CustomizationSettingsTab(QWidget):
     def _setup_error_bars_group(self, parent_layout: QVBoxLayout) -> None:
         self.error_bars_group = DataPlotStudioGroupBox("Error Bars")
         layout = QVBoxLayout()
+        
+        layout.addWidget(QLabel("Error Bar Type:"))
         self.error_bars_combo = DataPlotStudioComboBox()
         self.error_bars_combo.addItems(["None", "Standard Deviation", "Standard Error", "Custom"])
         layout.addWidget(self.error_bars_combo)
+        
+        layout.addWidget(QLabel("Color:"))
+        color_layout = QHBoxLayout()
+        self.error_bar_color_button = DataPlotStudioButton("Choose", parent=self)
+        self.error_bar_color_label = QLabel("Black")
+        color_layout.addWidget(self.error_bar_color_button)
+        color_layout.addWidget(self.error_bar_color_label)
+        layout.addLayout(color_layout)
+        
+        layout.addWidget(QLabel("Line Width:"))
+        self.error_bar_linewidth_spin = DataPlotStudioDoubleSpinBox()
+        self.error_bar_linewidth_spin.setRange(0.1, 5.0)
+        self.error_bar_linewidth_spin.setValue(1.5)
+        self.error_bar_linewidth_spin.setSingleStep(0.1)
+        layout.addWidget(self.error_bar_linewidth_spin)
+
+        layout.addWidget(QLabel("Cap Size:"))
+        self.error_bar_capsize_spin = DataPlotStudioDoubleSpinBox()
+        self.error_bar_capsize_spin.setRange(0.0, 20.0)
+        self.error_bar_capsize_spin.setValue(4.0)
+        self.error_bar_capsize_spin.setSingleStep(0.5)
+        layout.addWidget(self.error_bar_capsize_spin)
+
+        layout.addWidget(QLabel("Transparency:"))
+        self.error_bar_alpha_slider = DataPlotStudioSlider(Qt.Orientation.Horizontal)
+        self.error_bar_alpha_slider.setRange(10, 100)
+        self.error_bar_alpha_slider.setValue(50)
+        self.error_bar_alpha_label = QLabel("50%")
+
+        layout.addWidget(self.error_bar_alpha_slider)
+        layout.addWidget(self.error_bar_alpha_label)
+
+        layout.addWidget(QLabel("Z-Order:"))
+        self.error_bar_zorder_spin = DataPlotStudioSpinBox()
+        self.error_bar_zorder_spin.setRange(-10, 100)
+        self.error_bar_zorder_spin.setValue(10)
+        layout.addWidget(self.error_bar_zorder_spin)
+        
         self.error_bars_group.setLayout(layout)
         parent_layout.addWidget(self.error_bars_group)
 

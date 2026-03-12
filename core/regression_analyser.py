@@ -114,37 +114,3 @@ class RegressionAnalyser:
         se_line = residual_std * np.sqrt(1/n + (x_line - x_mean)**2 / np.sum((x_data - x_mean)**2))
         t_val = t_dist.ppf((1 + confidence_level) / 2, n - 2)
         return t_val * se_line
-    
-    @staticmethod
-    def compute_error_bars_std(x_data: np.ndarray, y_data: np.ndarray, residuals: np.ndarray, n_bins: int = 20) -> Tuple[List[float], List[float], List[float]]:
-        n_bins = min(n_bins, len(x_data) // 5)
-        if n_bins <= 1:
-            return [], [], []
-        
-        sorted_indices = np.argsort(x_data)
-        x_sorted, y_sorted, residuals_sorted = x_data[sorted_indices], y_data[sorted_indices], residuals[sorted_indices]
-        
-        bin_size = len(x_data) // n_bins
-        x_centers, y_centers, y_errors = [], [], []
-        
-        for i in range(n_bins):
-            start = i * bin_size
-            end = start + bin_size if i < n_bins - 1 else len(x_data)
-            
-            if end - start > 1:
-                x_centers.append(float(np.mean(x_sorted[start:end])))
-                y_centers.append(float(np.mean(y_sorted[start:end])))
-                y_errors.append(float(np.std(residuals_sorted[start:end])))
-        
-        return x_centers, y_centers, y_errors
-    
-    @staticmethod
-    def compute_error_bars_se(x_data: np.ndarray, residuals: np.ndarray) -> np.ndarray:
-        n = len(x_data)
-        residual_std = np.sqrt(np.sum(residuals**2) / (n - 2)) if n > 2 else 0
-        x_mean = np.mean(x_data)
-        sum_sq_diff = np.sum((x_data - x_mean)**2)
-        
-        if sum_sq_diff == 0:
-            return np.zeros_like(x_data)
-        return residual_std * np.sqrt(1/n + (x_data - x_mean)**2 / sum_sq_diff)

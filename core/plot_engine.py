@@ -1351,14 +1351,6 @@ class PlotEngine:
             
             self._render_regression_statistics(plot_tab, result.metrics, flipped)
             
-            error_bar_str = plot_tab.view.error_bars_combo.currentText()
-            try:
-                error_bar_type = ErrorBarType(error_bar_str)
-            except ValueError:
-                error_bar_type = ErrorBarType.NONE
-            
-            if error_bar_type != ErrorBarType.NONE:
-                self._render_regression_error_bars(x_data, y_data, result.residuals, error_bar_type, flipped)
             plot_tab.status_bar.log(
             f"Regression ({reg_type.value}): R²={result.metrics.r_squared:.4f}, RMSE={result.metrics.rmse:.4f}",
             "SUCCESS"
@@ -1415,34 +1407,89 @@ class PlotEngine:
                 fontfamily=font_family, zorder=15
             )
     
-    def _render_regression_error_bars(self, x_data: np.ndarray, y_data: np.ndarray, residuals: np.ndarray, error_bar_type: Any, flipped: bool) -> None:
-        from core.regression_analyser import RegressionAnalyser, ErrorBarType
+    def add_error_bars(self, df: pd.DataFrame, x_col: str, y_cols: List[str], error_bar_type_str: str, flipped: bool = False, plot_tab: "PlotTab" = None) -> None:
+        """Computes standard deviation and standard error bars"""
+        from core.regression_analyser import ErrorBarType
         import numpy as np
         
-        if error_bar_type == ErrorBarType.STANDARD_DEVIATION:
-            x_centers, y_centers, y_errors = RegressionAnalyser.compute_error_bars_std(x_data, y_data, residuals)
-            if x_centers:
-                err_args = (x_centers, y_centers)
-                err_kwargs = {"yerr": y_errors} if not flipped else {"xerr": y_errors}
-                self.current_ax.errorbar(
-                    *err_args, **err_kwargs,
-                    fmt="o", markersize=3, ecolor="black", alpha=0.5,
-                    capsize=4, zorder=10, markerfacecolor="none",
-                    markeredgecolor="gray", linestyle="none"
-                )
+        try:
+            error_bar_type = ErrorBarType(error_bar_type_str)
+        except ValueError:
+            error_bar_type = ErrorBarType.NONE
+            
+        if error_bar_type == ErrorBarType.NONE:
+            return
+        
+        ecolor = "black"
+        elinewidth = 1.5
+        capsize = 4.0
+        alpha = 0.5
+        zorder = 10
+        
+        if plot_tab is not None:
+            if hasattr(plot_tab, "error_bar_color"): 
+                ecolor = plot_tab.error_bar_color
+            if hasattr(plot_tab, "view") and plot_tab.view is not None:
+                if hasattr(plot_tab.view, "error_bar_linewidth_spin"): 
+                    elinewidth = plot_tab.view.error_bar_linewidth_spin.value()
+                if hasattr(plot_tab.view, "error_bar_capsize_spin"): 
+                    capsize = plot_tab.view.error_bar_capsize_spin.value()
+                if hasattr(plot_tab.view, "error_bar_alpha_slider"): 
+                    alpha = plot_tab.view.error_bar_alpha_slider.value() / 100.0
+                if hasattr(plot_tab.view, "error_bar_zorder_spin"): 
+                    zorder = plot_tab.view.error_bar_zorder_spin.value()
+            
+        for y_col in y_cols:
+            clean_df = df[[x_col, y_col]].dropna()
+            if clean_df.empty:
+                continue
                 
-        elif error_bar_type == ErrorBarType.STANDARD_ERROR:
-            se_points = RegressionAnalyser.compute_error_bars_se(x_data, residuals)
-            step = max(1, len(x_data) // 30)
-            err_args = (x_data[::step], y_data[::step])
-            err_kwargs = {"yerr": se_points[::step]} if not flipped else {"xerr": se_points[::step]}
-            self.current_ax.errorbar(
+            grouped = clean_df.groupby(x_col)[y_col]
+            x_centers = grouped.mean().index.to_numpy()
+            y_centers = grouped.mean().to_numpy(dtype=float)
+            
+            if error_bar_type == ErrorBarType.STANDARD_DEVIATION:
+                errors = grouped.std().fillna(0).to_numpy(dtype=float)
+            elif error_bar_type == ErrorBarType.STANDARD_ERROR:
+                errors = grouped.sem().fillna(0).to_numpy(dtype=float)
+            else:
+                continue
+            
+            if np.all(errors == 0):
+                x_centers = clean_df[x_col].to_numpy()
+                y_centers = clean_df[y_col].to_numpy(dtype=float)
+                
+                if error_bar_type == ErrorBarType.STANDARD_DEVIATION:
+                    global_err = clean_df[y_col].std()
+                else:
+                    global_err = clean_df[y_col].sem()
+                
+                if pd.isna(global_err) or global_err == 0:
+                    continue
+                    
+                errors = np.full(len(y_centers), global_err)
+                
+            err_args = (x_centers, y_centers) if not flipped else (y_centers, x_centers)
+            err_kwargs = {"yerr": errors} if not flipped else {"xerr": errors}
+            
+            data_line, caplines, barcols = self.current_ax.errorbar(
                 *err_args, **err_kwargs,
-                fmt="none", ecolor="gray", markersize=3, alpha=0.5,
-                capsize=4, zorder=8, markerfacecolor="none",
-                markeredgecolor="none", elinewidth=1,
-                linestyle="none"
+                fmt="none", ecolor=ecolor, alpha=alpha,
+                capsize=capsize, zorder=zorder, elinewidth=elinewidth
             )
+            if data_line is not None:
+                data_line.set_gid("error_bar")
+            
+            if caplines is not None:
+                for cap in caplines:
+                    if cap is not None:
+                        cap.set_linestyle('none')
+                        cap.set_gid("error_bar")
+                    
+            if barcols is not None:
+                for col in barcols:
+                    if col is not None:
+                        col.set_gid("error_bar")
                 
     # Plot strategies
     def execute_strategy(self, plot_type: str, plot_tab: "PlotTab", x_col: str, y_cols: List[str], axes_flipped: bool, font_family: str, plot_kwargs: Dict[str, Any], general_kwargs: Dict[str, Any]) -> Optional[str]:

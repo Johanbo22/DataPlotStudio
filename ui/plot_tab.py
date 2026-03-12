@@ -106,6 +106,7 @@ class PlotTab(PlotTabUI):
         self.y_minor_grid_color = "lightgray"
         self.geo_missing_color = "lightgray"
         self.geo_edge_color = "black"
+        self.error_bar_color = "black"
 
         self.line_customizations = {}
         self.bar_customizations = {}
@@ -426,7 +427,16 @@ class PlotTab(PlotTabUI):
         self.view.pie_explode_check.stateChanged.connect(self.on_data_changed)
         self.view.pie_explode_distance_spin.valueChanged.connect(self.on_data_changed)
         self.view.pie_shadow_check.stateChanged.connect(self.on_data_changed)
+        self.view.pie_donut_check.stateChanged.connect(self.on_data_changed)
+        self.view.pie_donut_width_spin.valueChanged.connect(self.on_data_changed)
         self.view.error_bars_combo.currentTextChanged.connect(self.on_data_changed)
+        
+        self.view.error_bar_color_button.clicked.connect(self.choose_error_bar_color)
+        self.view.error_bar_linewidth_spin.valueChanged.connect(self.on_data_changed)
+        self.view.error_bar_capsize_spin.valueChanged.connect(self.on_data_changed)
+        self.view.error_bar_alpha_slider.valueChanged.connect(lambda v: self.view.error_bar_alpha_label.setText(f"{v}%"))
+        self.view.error_bar_alpha_slider.valueChanged.connect(self.on_data_changed)
+        self.view.error_bar_zorder_spin.valueChanged.connect(self.on_data_changed)
         
     def _connect_annotation_tab_signals(self) -> None:
         """Connect signals for the Annotations tab"""
@@ -718,7 +728,7 @@ class PlotTab(PlotTabUI):
             self.status_bar.log(f"Selected text element: {artist.get_text()}", "INFO")
         
         elif isinstance(artist, Line2D):
-            if artist.get_gid() in ["regression_line", "confidence_interval"]:
+            if artist.get_gid() in ["regression_line", "confidence_interval", "error_bar"]:
                 return
             
             self.custom_tabs.setCurrentIndex(4)
@@ -733,7 +743,7 @@ class PlotTab(PlotTabUI):
                     self.view.line_selector_combo.setCurrentIndex(index)
                     self.status_bar.log(f"Selected line: {label}", "INFO")
                 else:
-                    lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+                    lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval", "error_bar"]]
                     if artist in lines:
                         idx = lines.index(artist)
                         if idx < self.view.line_selector_combo.count():
@@ -1211,7 +1221,7 @@ class PlotTab(PlotTabUI):
         """Initialize customizations dict for all lines with their current state"""
         if not self.plot_engine.current_ax:
             return
-        lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+        lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval", "error_bar"]]
         for i, line in enumerate(lines):
             line_name = line.get_label() if not line.get_label().startswith("_") else f"Line {i+1}"
             if line_name not in self.line_customizations:
@@ -1257,7 +1267,7 @@ class PlotTab(PlotTabUI):
         self.view.line_selector_combo.clear()
         
         if self.plot_engine.current_ax:
-            lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+            lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval", "error_bar"]]
             for i, line in enumerate(lines):
                 label = line.get_label()
                 if label.startswith("_"):
@@ -1287,7 +1297,7 @@ class PlotTab(PlotTabUI):
         if line_idx is None:
             return
         
-        lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+        lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval", "error_bar"]]
 
         if line_idx < len(lines):
             line = lines[line_idx]
@@ -1447,6 +1457,15 @@ class PlotTab(PlotTabUI):
             self.view.annotation_color_label.setText(self.annotation_color)
             self.view.annotation_color_button.updateColors(base_color_hex=self.annotation_color)
             self.on_style_changed()
+    
+    def choose_error_bar_color(self):
+        """Open color picker for error bar color"""
+        color = QColorDialog.getColor(QColor(self.error_bar_color), self)
+        if color.isValid():
+            self.error_bar_color = color.name()
+            self.view.error_bar_color_label.setText(self.error_bar_color)
+            self.view.error_bar_color_button.updateColors(base_color_hex=self.error_bar_color)
+            self.on_data_changed()
     
     def choose_textbox_bg_color(self):
         """Open color picker for text box background"""
@@ -2638,7 +2657,7 @@ class PlotTab(PlotTabUI):
 
         # customize lines
         if self.view.multiline_custom_check.isChecked():
-            lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval"]]
+            lines = [l for l in self.plot_engine.current_ax.get_lines() if l.get_gid() not in ["regression_line", "confidence_interval", "error_bar"]]
             for i, line in enumerate(lines):
                 line_name = line.get_label() if not line.get_label().startswith("_") else f"Line {i+1}"
                 if line_name in self.line_customizations:
@@ -2678,7 +2697,7 @@ class PlotTab(PlotTabUI):
                     line.set_alpha(alpha)
         else:
             for line in self.plot_engine.current_ax.get_lines():
-                if line.get_gid() in ["regression_line", "confidence_interval"]:
+                if line.get_gid() in ["regression_line", "confidence_interval", "error_bar"]:
                     continue
 
                 if linestyle_val != "None":
@@ -2698,7 +2717,7 @@ class PlotTab(PlotTabUI):
         
         # apply to collections (e.g., scatter plots)
         for collection in self.plot_engine.current_ax.collections:
-            if collection.get_gid() == "confidence_interval":
+            if collection.get_gid() in ["confidence_interval", "error_bar"]:
                 continue
             collection.set_alpha(alpha)
             if marker_color:

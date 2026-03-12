@@ -63,5 +63,9 @@ class LinePlotStrategy(BasePlotStrategy):
                 )
             except Exception: 
                 pass
+        
+        error_bar_type_str = plot_tab.error_bars_combo.currentText() if hasattr(plot_tab, "error_bars_combo") else "None"
+        if error_bar_type_str != "None":
+            engine.add_error_bars(plot_tab.data_handler.df, x_col, y_cols, error_bar_type_str, axes_flipped, plot_tab=plot_tab)
                 
         return None

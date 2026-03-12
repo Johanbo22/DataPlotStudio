@@ -291,6 +291,14 @@ class PlotConfigManager:
                 "show_kde": self.pt.histogram_show_kde_check.isChecked(),
             },
             "global_alpha": self.pt.alpha_slider.value() / 100.0,
+            "global_error_bar": {
+                "type": self.pt.error_bars_combo.currentText(),
+                "color": self.pt.error_bar_color,
+                "linewidth": self.pt.error_bar_linewidth_spin.value(),
+                "capsize": self.pt.error_bar_capsize_spin.value(),
+                "alpha": self.pt.error_bar_alpha_slider.value() / 100.0,
+                "zorder": self.pt.error_bar_zorder_spin.value(),
+            },
             "scatter": {
                 "show_regression": self.pt.regression_line_check.isChecked(),
                 "show_ci": self.pt.confidence_interval_check.isChecked(),
@@ -648,6 +656,21 @@ class PlotConfigManager:
         self.pt.histogram_show_kde_check.setChecked(hist.get("show_kde", False))
         
         self.pt.alpha_slider.setValue(int(config.get("global_alpha", 1.0) * 100))
+        
+        geb = config.get("global_error_bar") or {}
+        if geb:
+            self.pt.error_bars_combo.setCurrentText(geb.get("type", "None"))
+            self.pt.error_bar_color = geb.get("color", "black")
+            if hasattr(self.pt.view, "error_bar_color_label"):
+                self.pt.view.error_bar_color_label.setText(self.pt.error_bar_color)
+                self.pt.view.error_bar_color_button.updateColors(base_color_hex=self.pt.error_bar_color)
+            if hasattr(self.pt.view, "error_bar_linewidth_spin"):
+                self.pt.view.error_bar_linewidth_spin.setValue(geb.get("linewidth", 1.5))
+                self.pt.view.error_bar_capsize_spin.setValue(geb.get("capsize", 4.0))
+                self.pt.view.error_bar_alpha_slider.setValue(int(geb.get("alpha", 0.5) * 100))
+                self.pt.view.error_bar_zorder_spin.setValue(geb.get("zorder", 10))
+        elif "scatter" in config and "error_bars" in config["scatter"]:
+            self.pt.error_bars_combo.setCurrentText(config["scatter"].get("error_bars", "None"))
         
         scat = config.get("scatter") or {}
         self.pt.regression_line_check.setChecked(scat.get("show_regression", False))

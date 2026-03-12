@@ -64,11 +64,14 @@ class ScatterPlotStrategy(BasePlotStrategy):
                     plot_tab.data_handler.df[y_col]
                 )
             except: pass
-
+        
+        error_bar_type_str = plot_tab.error_bars_combo.currentText() if hasattr(plot_tab, "error_bars_combo") else "None"
+        if error_bar_type_str != "None":
+            engine.add_error_bars(plot_tab.data_handler.df, x_col, [y_col], error_bar_type_str, axes_flipped, plot_tab=plot_tab)
+        
         #Regression analysis - Run after plotting, handle flipped axes inside
-        if (plot_tab.regression_line_check.isChecked() or plot_tab.show_r2_check.isChecked() or 
-            plot_tab.show_rmse_check.isChecked() or plot_tab.show_equation_check.isChecked() or 
-            plot_tab.error_bars_combo.currentText() != "None"):
+        if (plot_tab.view.regression_line_check.isChecked() or plot_tab.view.show_r2_check.isChecked() or 
+            plot_tab.view.show_rmse_check.isChecked() or plot_tab.view.show_equation_check.isChecked()):
             
             if axes_flipped:
                 engine._helper_add_regression_analysis(plot_tab, y_col, x_col, flipped=True)
