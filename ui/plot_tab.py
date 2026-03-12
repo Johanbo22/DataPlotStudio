@@ -36,6 +36,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PathCollection
 from typing import Optional
 
+from ui.styles.widget_styles import ToolBox
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.ColorBlindnessEffect import ColorBlindnessEffect
 from ui.dialogs.PlotExportDialog import PlotExportDialog
@@ -507,9 +508,11 @@ class PlotTab(PlotTabUI):
             list_widget.setViewMode(DataPlotStudioListWidget.ViewMode.IconMode)
             list_widget.setResizeMode(DataPlotStudioListWidget.ResizeMode.Adjust)
             list_widget.setMovement(DataPlotStudioListWidget.Movement.Static)
+            
+            list_widget.setGridSize(QSize(105, 100))
             list_widget.setSpacing(8)
-            list_widget.setIconSize(QSize(42, 42))
-            list_widget.setStyleSheet("QListWidget { background-color: white; border: none; } QListWidget::item { padding: 5px; } QListWidget::item:selected { background-color: #e3f2fd; border-radius: 5px; color: black; border: 1px solid #2196F3; }")
+            list_widget.setIconSize(QSize(48, 48))
+            list_widget.setStyleSheet(ToolBox.PlotToolBoxListWidgetStyle)
 
             list_widget.itemClicked.connect(self._on_plot_list_item_clicked)
 

@@ -66,11 +66,21 @@ class StatisticsGenerator:
     def _generate_overview_section(self, df: pd.DataFrame, info: dict) -> str:
         """Generates the general overview section of the statistics"""
         html = "<h2>Dataset Overview</h2>"
-        html += "<div class='info-box'>"
-        html += f"<div class='info-item'><span class='info-label'>Total Rows:</span> <span class='info-value'>{info.get('shape', [0])[0]:,}</span></div>"
-        html += f"<div class='info-item'><span class='info-label'>Total Columns:</span> <span class='info-value'>{len(info.get('columns', []))}</span></div>"
+        html += "<div class='overview-grid'>"
         
-        # Memory usage information
+        # Total Rows Card
+        html += "<div class='stat-card'>"
+        html += "<div class='stat-label'>Total Rows</div>"
+        html += f"<div class='stat-value'>{info.get('shape', [0])[0]:,}</div>"
+        html += "</div>"
+        
+        # Total Columns Card
+        html += "<div class='stat-card'>"
+        html += "<div class='stat-label'>Total Columns</div>"
+        html += f"<div class='stat-value'>{len(info.get('columns', []))}</div>"
+        html += "</div>"
+        
+        # Memory usage information Card
         try:
             total_memory_bytes = df.memory_usage(deep=True).sum()
             total_memory = total_memory_bytes / 1024
@@ -81,22 +91,31 @@ class StatisticsGenerator:
         except Exception:
             memory_str = "N/A"
         
-        html += f"<div class='info-item'><span class='info-label'>Memory Usage:</span> <span class='info-value'>{memory_str}</span></div>"
+        html += "<div class='stat-card'>"
+        html += "<div class='stat-label'>Memory Usage</div>"
+        html += f"<div class='stat-value'>{memory_str}</div>"
+        html += "</div>"
         
+        # Missing Values Card
         try:
             total_missing = sum(info.get("missing_values", {}).values())
         except Exception:
             total_missing = 0
         
-        html += f"<div class='info-item'><span class='info-label'>Total Missing Values:</span> <span class='info-value'>{total_missing:,}</span></div>"
+        html += "<div class='stat-card' style='border-left-color: " + ("#ef4444" if total_missing > 0 else "#22c55e") + "'>"
+        html += "<div class='stat-label'>Missing Values</div>"
+        html += f"<div class='stat-value'>{total_missing:,}</div>"
+        html += "</div>"
+        
         html += "</div>"
         return html
     
     def _generate_column_info_section(self, info: dict) -> str:
         """Generates the information table of the columns"""
         html = "<h2>Column Information</h2>"
+        html += "<div class='table-container'>"
         html += "<table>"
-        html += "<tr><th>Column Name</th><th>Data Type</th><th>Non-Null Count</th><th>Missing Values</th><th>Missing %</th></tr>"
+        html += "<tr><th>Column Name</th><th>Data Type</th><th class='numeric-col'>Non-Null Count</th><th class='numeric-col'>Missing Values</th><th class='numeric-col'>Missing %</th></tr>"
         
         total_rows = info.get("shape", [0])[0]
         total_missing_check = 0
@@ -109,32 +128,37 @@ class StatisticsGenerator:
                 non_null = total_rows - missing
                 missing_pct = (missing / total_rows * 100) if total_rows > 0 else 0
                 
-                row_class = ""
+                # Assign modern badges for missing percentages
                 if missing_pct > 50:
-                    row_class = "style='background-color: #ffebee;'"
+                    badge_html = f"<span class='badge badge-danger'>{missing_pct:.1f}%</span>"
                 elif missing_pct > 20:
-                    row_class = "style='background-color: #fff9c4;'"
+                    badge_html = f"<span class='badge badge-warning'>{missing_pct:.1f}%</span>"
+                elif missing_pct > 0:
+                    badge_html = f"<span style='color: #854d0e;'>{missing_pct:.1f}%</span>"
+                else:
+                    badge_html = f"<span class='badge badge-success'>0.0%</span>"
                 
-                html += f"<tr {row_class}>"
+                html += "<tr>"
                 html += f"<td><strong>{col}</strong></td>"
                 html += f"<td>{dtype}</td>"
                 html += f"<td class='numeric-col'>{non_null:,}</td>"
                 html += f"<td class='numeric-col'>{missing:,}</td>"
-                html += f"<td class='numeric-col'>{missing_pct:.1f}%</td>"
+                html += f"<td class='numeric-col'>{badge_html}</td>"
                 html += "</tr>"
             except Exception:
                 continue
         
         html += "</table>"
+        html += "</div>"
         
         # Warning for missing values
         if total_missing_check > 0:
             high_missing_cols = [col for col, missing in info.get("missing_values", {}).items() if missing > 0]
             
             if high_missing_cols:
-                html += "<div class='warning'>"
-                html += f"<strong>Warning:</strong> {len(high_missing_cols)} column(s) contain missing values. "
-                html += "Consider using data cleaning operations."
+                html += "<div class='warning-box'>"
+                html += f"<strong>Data Quality Alert:</strong> {len(high_missing_cols)} column(s) contain missing values. "
+                html += "Consider applying data cleaning operations."
                 html += "</div>"
         
         return html
@@ -146,13 +170,14 @@ class StatisticsGenerator:
             numeric_df = df.select_dtypes(include=["int64", "int32", "float64", "float32"])
             
             if len(numeric_df.columns) > 0:
-                html += "<h2>Descriptive Statistics (Numeric Columns)</h2>"
+                html += "<h2>Descriptive Statistics for Numerical Columns </h2>"
+                html += "<div class='table-container'>"
                 df_describe = numeric_df.describe()
                 
                 html += "<table>"
                 html += "<tr><th>Statistics</th>"
                 for col in df_describe.columns:
-                    html += f"<th>{col}</th>"
+                    html += f"<th class='numeric-col'>{col}</th>"
                 html += "</tr>"
 
                 stats_labels = {
@@ -171,9 +196,9 @@ class StatisticsGenerator:
                             html += f"<td class='numeric-col'>{value:.4f}</td>"
                     html += "</tr>"
 
-                html += "</table>"
+                html += "</table></div>"
         except Exception as UpdateNumericalStatisticsError:
-            html += f"<div class='warning'>Unable to calculate numeric statistics: {str(UpdateNumericalStatisticsError)}</div>"
+            html += f"<div class='warning-box'>Unable to calculate numeric statistics: {str(UpdateNumericalStatisticsError)}</div>"
         
         return html
     
@@ -185,12 +210,13 @@ class StatisticsGenerator:
 
             if len(numeric_df.columns) > 1:
                 html += "<h2>Correlation Matrix</h2>"
+                html += "<div class='table-container'>"
                 corr = numeric_df.corr()
 
                 html += "<table>"
                 html += "<tr><th></th>"
                 for col in corr.columns:
-                    html += f"<th>{col}</th>"
+                    html += f"<th class='numeric-col'>{col}</th>"
                 html += "</tr>"
 
                 for idx in corr.index:
@@ -201,24 +227,24 @@ class StatisticsGenerator:
                         # Color coding
                         cell_style = ""
                         if abs(value) >= 0.8 and idx != col:
-                            cell_style = "background-color: #c8e6c9; font-weight: bold;"
+                            cell_style = "background-color: #bbf7d0; border-radius: 4px;"
                         elif abs(value) >= 0.5 and idx != col:
-                            cell_style = "background-color: #fff9c4;"
+                            cell_style = "background-color: #fef08a; border-radius: 4px;"
                         elif idx == col:
-                            cell_style = "background-color: #e3f2fd;"
+                            cell_style = "background-color: #e2e8f0; color: #94a3b8;"
 
                         html += f"<td class='numeric-col' style='{cell_style}'>{value:.3f}</td>"
                     html += "</tr>"
 
-                html += "</table>"
+                html += "</table></div>"
                 
-                html += "<div class='info-box'>"
-                html += "<strong>Legend:</strong> "
-                html += "<span style='background-color: #c8e6c9; padding: 2px 6px; border-radius: 3px;'>Strong correlation (≥0.8)</span> "
-                html += "<span style='background-color: #fff9c4; padding: 2px 6px; border-radius: 3px;'>Moderate correlation (≥0.5)</span>"
+                html += "<div class='legend-box'>"
+                html += "<strong>Legend:</strong>"
+                html += "<div class='legend-item'><div class='legend-color' style='background: #bbf7d0;'></div> Strong (≥0.8)</div>"
+                html += "<div class='legend-item'><div class='legend-color' style='background: #fef08a;'></div> Moderate (≥0.5)</div>"
                 html += "</div>"
         except Exception as UpdateCorrelationMatrixError:
-            html += f"<div class='warning'>Unable to calculate correlation matrix: {str(UpdateCorrelationMatrixError)}</div>"
+            html += f"<div class='warning-box'>Unable to calculate correlation matrix: {str(UpdateCorrelationMatrixError)}</div>"
             
         return html
     
@@ -230,8 +256,9 @@ class StatisticsGenerator:
 
             if len(categorical_df.columns) > 0:
                 html += "<h2>Categorical Column Statistics</h2>"
+                html += "<div class='table-container'>"
                 html += "<table>"
-                html += "<tr><th>Column</th><th>Unique Values</th><th>Most Common</th><th>Frequency</th></tr>"
+                html += "<tr><th>Column</th><th class='numeric-col'>Unique Values</th><th>Most Common</th><th class='numeric-col'>Frequency</th></tr>"
 
                 for col in categorical_df.columns:
                     try:
@@ -244,15 +271,15 @@ class StatisticsGenerator:
 
                             html += "<tr>"
                             html += f"<td><strong>{col}</strong></td>"
-                            html += f"<td class='numeric-col'>{unique_count}</td>"
+                            html += f"<td class='numeric-col'>{unique_count:,}</td>"
                             html += f"<td>{most_common}</td>"
                             html += f"<td class='numeric-col'>{most_common_freq:,}</td>"
                             html += "</tr>"
                     except Exception:
                         continue
 
-                html += "</table>"
+                html += "</table></div>"
         except Exception as UpdateCategoricalStatisticsError:
-            html += f"<div class='warning'>Unable to calculate categorical statistics: {str(UpdateCategoricalStatisticsError)}</div>"
+            html += f"<div class='warning-box'>Unable to calculate categorical statistics: {str(UpdateCategoricalStatisticsError)}</div>"
             
         return html

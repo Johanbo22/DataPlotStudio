@@ -1773,28 +1773,47 @@ class DataTabController:
                 p_val = results['p_value']
                 test_name = results['test']
                 interpretation = results['interpretation']
+                if not hasattr(self, "test_results_history"):
+                    self.test_results_history = []
+                
                 html_result = f"""
-                <div style='margin-bottom: 15px; padding: 15px; border: 1px solid #bdc3c7; border-radius: 6px; background-color: #f8f9fa;'>
-                    <h3 style='margin-top: 0; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 5px;'>{test_name}</h3>
-                    <p><b>Compared Columns:</b> <span style='color: #2980b9;'>{col1}</span> vs <span style='color: #2980b9;'>{col2}</span></p>
-                    <table style='width: 100%; margin-bottom: 10px;'>
-                        <tr>
-                            <td><b>Test Statistic:</b> {stat_val:.4f}</td>
-                            <td><b>P-Value:</b> {p_val:.4e}</td>
-                        </tr>
-                    </table>
-                    <div style='background-color: #e8f4f8; padding: 10px; border-left: 4px solid #3498db; border-radius: 3px;'>
-                        <b>Interpretation:</b><br>
-                        {interpretation}
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border-left: 4px solid #3b82f6;">
+                    <h3 style="margin-top: 0; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; font-size: 16px; font-weight: 700;">{test_name}</h3>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;"><b>Compared Columns:</b> <span style="color: #3b82f6; font-weight: 600;">{col1}</span> vs <span style="color: #3b82f6; font-weight: 600;">{col2}</span></p>
+                    <div style="display: flex; gap: 20px; margin-bottom: 24px;">
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; flex: 1;">
+                            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em;">Test Statistic</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #0f172a; font-family: 'JetBrains Mono', 'Consolas', monospace;">{stat_val:.4f}</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; flex: 1;">
+                            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em;">P-Value</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #0f172a; font-family: 'JetBrains Mono', 'Consolas', monospace;">{p_val:.4e}</div>
+                        </div>
+                    </div>
+                    <div style="background-color: #eff6ff; padding: 16px 20px; border-left: 4px solid #3b82f6; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #1e3a8a;">
+                        <b style="color: #1e40af; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Interpretation</b><br>
+                        <div style="margin-top: 6px;">{interpretation}</div>
                     </div>
                 </div>
                 """
-                current_html = self.view.test_results_text.toHtml()
-                if "Statistical Test Suite" in current_html and "How to run a statistical test:" in current_html:
-                    self.view.test_results_text.clear()
-                    
-                self.view.test_results_text.append(html_result)
+                self.test_results_history.insert(0, html_result)
+                full_page = f"""
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: 'Inter', system-ui, sans-serif; padding: 40px; background-color: #f1f5f9; margin: 0; color: #1e293b; -webkit-font-smoothing: antialiased; }}
+                        h2 {{ color: #0f172a; font-size: 18px; font-weight: 800; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 16px; }}
+                        h2::after {{ content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, #e2e8f0, transparent); }}
+                    </style>
+                </head>
+                <body>
+                    <h2>Statistical Analysis Results</h2>
+                    {"".join(self.test_results_history)}
+                </body>
+                </html>
+                """
                 
+                self.view.test_results_text.setHtml(full_page)
                 self.view.data_tabs.setCurrentWidget(self.view.test_results_text)
                 self.status_bar.log(
                     f"Ran {test_name} on '{col1}' and '{col2}' (p={p_val:.4e})", 

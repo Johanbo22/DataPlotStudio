@@ -4,18 +4,55 @@ from ui.theme import ThemeColors
 
 class ToolBox:
     PlotToolBoxStylesheet: str = """
-    QToolBox::tab {
-        background: #E0E0E0;
-        border-radius: 2px;
-        color: #333;
-        font-weight: bold;
-        padding-left: 5px;
-    }
-    QToolBox::tab:selected { 
-        background: #D0D0D0;
-        color: black;
-    }
-"""
+            QToolBox {
+                background: transparent;
+            }
+            QToolBox::tab {
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f8fafc);
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                color: #334155;
+                font-size: 13px;
+                font-weight: bold;
+                padding-left: 15px;
+            }
+            QToolBox::tab:hover {
+                background: #f1f5f9;
+                color: #2563eb;
+            }
+            QToolBox::tab:selected {
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #eff6ff, stop: 1 #e0e7ff);
+                color: #1e40af;
+                border: 1px solid #bfdbfe;
+                border-left: 4px solid #3b82f6;
+            }
+        """
+    PlotToolBoxListWidgetStyle: str = """
+                QListWidget {
+                    background-color: transparent;
+                    border: none;
+                    outline: none;
+                }
+                QListWidget::item {
+                    background-color: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding-top: 8px;
+                    color: #475569;
+                }
+                QListWidget::item:hover {
+                    background-color: #f8fafc;
+                    border: 1px solid #cbd5e1;
+                    color: #0f172a;
+                }
+                QListWidget::item:selected {
+                    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #ffffff, stop: 1 #eff6ff);
+                    color: #1d4ed8;
+                    border: 2px solid #3b82f6;
+                    border-radius: 10px;
+                    font-weight: bold;
+                }
+            """
 class Label:
     LandingPageTitleLabel: str = "font-size: 36px; font-weight: bold; color: #2c3e50;"
     LandingPageSubTitleLabel: str = "font-size: 12px; font-weight: bold; color: #95a5a6; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 30px;"
