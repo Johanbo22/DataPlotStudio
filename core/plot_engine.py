@@ -408,6 +408,14 @@ class PlotEngine:
         secondary_y = kwargs.pop("secondary_y", None)
         secondary_plot_type = kwargs.pop("secondary_plot_type", "Line")
         
+        size_col = kwargs.pop("size", None)
+        size_min = kwargs.pop("size_min", 30)
+        size_max = kwargs.pop("size_max", 500)
+        
+        s_min_global, s_max_global = 0.0, 0.0
+        if size_col and size_col in df.columns:
+            s_min_global, s_max_global = df[size_col].min(), df[size_col].max()
+        
         if hue:
             groups = df[hue].unique()
             colors = self._get_colors_from_cmap(cmap_name, len(groups))
@@ -415,10 +423,26 @@ class PlotEngine:
             for i, group in enumerate(groups):
                 mask = (df[hue] == group) & df[x].notna() & df[y].notna()
                 if colors: kwargs["color"] = colors[i]
+                
+                if size_col and size_col in df.columns:
+                    s_data = df.loc[mask, size_col]
+                    if s_min_global == s_max_global or pd.isna(s_min_global):
+                        kwargs["s"] = size_min
+                    else:
+                        kwargs["s"] = size_min + (size_max - size_min) * (s_data - s_min_global) / (s_max_global - s_min_global)
+                        
                 self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], label=group, picker=5, **kwargs)
         else:
             if cmap_name: kwargs["cmap"] = cmap_name
             mask = df[x].notna() & df[y].notna()
+            
+            if size_col and size_col in df.columns:
+                s_data = df.loc[mask, size_col]
+                if s_min_global == s_max_global or pd.isna(s_min_global):
+                    kwargs["s"] = size_min
+                else:
+                    kwargs["s"] = size_min + (size_max - size_min) * (s_data - s_min_global) / (s_max_global - s_min_global)
+                    
             self.current_ax.scatter(df.loc[mask, x], df.loc[mask, y], picker=5, **kwargs)
         
         ax2 = None
@@ -431,7 +455,24 @@ class PlotEngine:
             if ax2:
                 self._consolidate_legends(self.current_ax, ax2)
             else:
-                self.current_ax.legend()
+                handles, labels = self.current_ax.get_legend_handles_labels()
+                
+                if size_col and size_col in df.columns and s_min_global != s_max_global:
+                    if not labels:
+                        labels = []
+                        
+                    labels.append(f"{size_col} (Size)")
+                    handles.append(self.current_ax.scatter([], [], s=0, color='none'))
+                    
+                    for val in np.linspace(s_min_global, s_max_global, 4):
+                        marker_size = size_min + (size_max - size_min) * (val - s_min_global) / (s_max_global - s_min_global)
+                        dummy = self.current_ax.scatter([], [], s=marker_size, color='gray', alpha=0.5)
+                        
+                        handles.append(dummy)
+                        labels.append(f"{int(val)}" if float(val).is_integer() else f"{val:.2f}")
+                        
+                if handles:
+                    self.current_ax.legend(handles, labels)
     
     def plot_bar(self, df: pd.DataFrame, x: str, y: str, **kwargs) -> None:
         """Create a bar plot"""

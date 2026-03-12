@@ -18,8 +18,7 @@ class PlotlyLineStrategy(BasePlotlyStrategy):
         else:
             fig = px.line(df, x=x, y=y, **px_kwargs)
             
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyBarStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Union["go.Figure", None]:
@@ -34,8 +33,7 @@ class PlotlyBarStrategy(BasePlotlyStrategy):
             else:
                 fig = px.bar(df, x=x, y=y_col, **px_kwargs)
                 
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyHistogramStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
@@ -49,22 +47,19 @@ class PlotlyHistogramStrategy(BasePlotlyStrategy):
         if kwargs.get("show_kde", False):
             fig.update_traces(opacity=0.75)
         
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyBoxStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
         px_kwargs = self._extract_common_kwargs(x, y, **kwargs)
         fig = px.box(df, y=y, x=x if x else None, **px_kwargs)
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyViolinStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
         px_kwargs = self._extract_common_kwargs(x, y, **kwargs)
         fig = px.violin(df, y=y[0], x=x if x else None, box=True, points="all", **px_kwargs)
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyHeatmapStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Union["go.Figure", None]:
@@ -81,8 +76,7 @@ class PlotlyHeatmapStrategy(BasePlotlyStrategy):
             color_continuous_scale="RdBu_r"
         )
         
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyPieStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
@@ -93,8 +87,7 @@ class PlotlyPieStrategy(BasePlotlyStrategy):
         elif x:
             fig = px.pie(df, names=x, **px_kwargs)
         
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyAreaStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
@@ -104,21 +97,25 @@ class PlotlyAreaStrategy(BasePlotlyStrategy):
         else:
             fig = px.area(df, x=x, y=y, **px_kwargs)
         
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 
 class PlotlyScatterStrategy(BasePlotlyStrategy):
     def execute(self, df: pd.DataFrame, x: str, y: List[str], **kwargs: Dict[str, Any]) -> Any | None:
         px_kwargs = self._extract_common_kwargs(x, y, **kwargs)
+        
+        size_col = kwargs.get("size")
+        if size_col and size_col in df.columns:
+            px_kwargs["size"] = size_col
+            px_kwargs["size_max"] = kwargs.get("size_max", 40)
+            
         if len(y) == 1:
             fig = px.scatter(df, x=x, y=y[0], **px_kwargs)
         else:
             fig = px.scatter(df, x=x, y=y, **px_kwargs)
         
-        self._apply_layout_updates(fig, x, y, **kwargs)
-        return fig
+        return self._apply_layout_updates(fig, df, x, y, **kwargs)
 class PlotlyStrategyRegistry:
-    """Registry to dynamically map plot types to Plotly strategies."""
+    """Registry to map plot types to Plotly strategies."""
     
     _strategies: Dict[str, BasePlotlyStrategy] = {
         "Line": PlotlyLineStrategy(),
