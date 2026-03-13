@@ -16,9 +16,10 @@ class AxesSettingsTab(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setProperty("styleClass", "transparent_scroll_area")
 
         scroll_widget = QWidget()
-        scroll_widget.setObjectName("ScrollContent")
+        scroll_widget.setObjectName("TransparentScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
         self._setup_axes_group(scroll_layout)
@@ -33,7 +34,6 @@ class AxesSettingsTab(QWidget):
 
     def _setup_axes_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Axis Options")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
         
         tab_widget = DataPlotStudioTabWidget()
@@ -243,7 +243,6 @@ class AxesSettingsTab(QWidget):
 
     def _setup_axis_orientation_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Axis Orientation")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
 
         self.flip_axes_check = DataPlotStudioToggleSwitch("Flip Axis (Swap X and Y axis)")
@@ -342,7 +341,7 @@ class AxesSettingsTab(QWidget):
         )
         self.format_help.setVisible(False)
         self.format_help.setWordWrap(True)
-        self.format_help.setStyleSheet(ThemeColors.HelpBoxStylesheet)
+        self.format_help.setProperty("styleClass", "help_box")
         layout.addWidget(self.format_help)
         self.custom_datetime_check.toggled.connect(self.format_help.setVisible)
 

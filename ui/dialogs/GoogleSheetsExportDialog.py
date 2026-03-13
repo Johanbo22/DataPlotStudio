@@ -58,7 +58,7 @@ class GoogleSheetsExportDialog(QDialog):
             "and granted it 'Editor' permissions."
         )
         help_text.setWordWrap(True)
-        help_text.setStyleSheet("color: #444444; background-color: #f5f5f5; padding: 10px; border-radius: 4px;")
+        help_text.setProperty("styleClass", "help_box")
         layout.addWidget(help_text)
 
         layout.addSpacing(15)

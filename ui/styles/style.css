@@ -299,3 +299,12 @@ QMenuBar::item:selected {
 QMenuBar::item:pressed {
     background-color: #c6c6c6;
 }
+
+AnimatedGroupBox {
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+DataPlotStudioToggleSwitch:disabled {
+    color: #a0a0a0;
+}

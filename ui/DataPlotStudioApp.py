@@ -136,7 +136,14 @@ class DataPlotStudio(QMainWindow):
         if settings["dark_mode"]:
             base_css = self.get_dark_theme()
         else:
-            base_css = self.load_stylesheet("ui/styles/style.css")
+            styles_dir = Path(get_resource_path("ui/styles"))
+            
+            light_stylesheets = ["ui/styles/style.css"]
+            if styles_dir.exists():
+                for css_file in styles_dir.glob("*.css"):
+                    if css_file.name not in ["style.css", "dark_theme.css"]:
+                        light_stylesheets.append(f"ui/styles/{css_file.name}")
+            base_css = self.load_stylesheets(light_stylesheets)
         
         different_css = base_css + f"""
             QWidget {{
@@ -151,9 +158,18 @@ class DataPlotStudio(QMainWindow):
         QApplication.instance().setStyleSheet(different_css)
     
     def get_dark_theme(self):
-        return self.load_stylesheet("ui/styles/dark_theme.css")
+        return self.load_stylesheets("ui/styles/dark_theme.css")
     
     @classmethod
     def load_stylesheet(cls, relative_path: str) -> str:
         path = Path(get_resource_path(relative_path))
         return path.read_text(encoding="utf-8")
+
+    @classmethod
+    def load_stylesheets(cls, relative_paths: list[str]) -> str:
+        combined_css = ""
+        for rel_path in relative_paths:
+            path = Path(get_resource_path(rel_path))
+            if path.exists():
+                combined_css += path.read_text(encoding="utf-8") + "\n"
+        return combined_css

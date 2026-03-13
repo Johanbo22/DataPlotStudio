@@ -36,7 +36,6 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PathCollection
 from typing import Optional
 
-from ui.styles.widget_styles import ToolBox
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.ColorBlindnessEffect import ColorBlindnessEffect
 from ui.dialogs.PlotExportDialog import PlotExportDialog
@@ -521,7 +520,7 @@ class PlotTab(PlotTabUI):
             list_widget.setGridSize(QSize(105, 100))
             list_widget.setSpacing(8)
             list_widget.setIconSize(QSize(48, 48))
-            list_widget.setStyleSheet(ToolBox.PlotToolBoxListWidgetStyle)
+            list_widget.setObjectName("plot_type_list")
 
             list_widget.itemClicked.connect(self._on_plot_list_item_clicked)
 
@@ -1906,11 +1905,6 @@ class PlotTab(PlotTabUI):
             self._last_data_signature = current_data_signature
         
         redraw_needed = True
-
-        # Handle the plotly backend
-        if self.view.use_plotly_check.isChecked():
-            self._generate_plotly_plot(active_df, plot_type, x_col, y_cols, hue)
-            return
 
         # Generate main plot
         self._generate_main_plot(

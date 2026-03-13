@@ -28,7 +28,7 @@ class FillMissingDialog(QDialog):
         layout = QVBoxLayout()
 
         info = QLabel("Select how to fill missing values (NaN) in your dataset.")
-        info.setStyleSheet("color: #666;")
+        info.setProperty("styleClass", "info_text")
         layout.addWidget(info)
 
         layout.addSpacing(10)
@@ -43,28 +43,17 @@ class FillMissingDialog(QDialog):
 
         # Stats frame
         self.stats_frame = QFrame()
-        self.stats_frame.setStyleSheet(
-            "background-color: #2b2b2b; border-radius: 5px; padding: 5px;"
-        )
+        self.stats_frame.setObjectName("fill_missing_stats_frame")
         stats_layout = QVBoxLayout(self.stats_frame)
 
         self.stats_label = QLabel("Missing Values: N/A")
-        self.stats_label.setStyleSheet("color: #ddd; font-size: 11px;")
+        self.stats_label.setObjectName("fill_missing_stats_label")
         stats_layout.addWidget(self.stats_label)
 
         self.missing_progress = QProgressBar()
         self.missing_progress.setTextVisible(False)
-        self.missing_progress.setStyleSheet("""
-            QProgressBar {
-                border: 1px solid #444;
-                border-radius: 3px;
-                background-color: #333;
-                height: 8px;
-            }
-            QProgressBar::chunk {
-                background-color: #ff5252;
-            }
-        """)
+        self.missing_progress.setObjectName("fill_missing_progress")
+        self.missing_progress.setProperty("severity", "high")
         stats_layout.addWidget(self.missing_progress)
 
         layout.addWidget(self.stats_frame)
@@ -194,23 +183,15 @@ class FillMissingDialog(QDialog):
         
         self.missing_progress.setValue(int(missing_count))
 
-        chunk_color: str = "#4caf50"
+        severity = "low"
         if percentage > 0 and percentage < 10:
-            chunk_color = "#ffb74d"
+            severity = "medium"
         elif percentage >= 10:
-            chunk_color = "#ff5252"
+            severity = "high"
         
-        self.missing_progress.setStyleSheet(f"""
-            QProgressBar {{
-                border: 1px solid #444;
-                border-radius: 3px;
-                background-color: #333;
-                height: 8px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {chunk_color};
-            }}
-        """)
+        self.missing_progress.setProperty("severity", severity)
+        self.missing_progress.style().unpolish(self.missing_progress)
+        self.missing_progress.style().polish(self.missing_progress)
 
     def get_config(self) -> dict[str, str | None]:
         """Get the user selection"""

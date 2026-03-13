@@ -4,7 +4,6 @@ import pandas as pd
 from typing import Dict, Any, List, Optional
 
 from ui.theme import ThemeColors
-from ui.styles.widget_styles import ScrollArea
 from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioDoubleSpinBox, DataPlotStudioCheckBox
 
 
@@ -79,11 +78,10 @@ class CreateSubsetDialog(QDialog):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
-        scroll_area.setStyleSheet(ScrollArea.TransparentScrollArea)
+        scroll_area.setProperty("styleClass", "transparent_scroll_area")
         
         scroll_widget = QWidget()
-        scroll_widget.setObjectName("ScrollContent")
-        scroll_widget.setStyleSheet("QWidget#ScrollContent { background-color: transparent; }")
+        scroll_widget.setObjectName("TransparentScrollContent")
         self.scroll_layout = QVBoxLayout(scroll_widget)
         self.scroll_layout.setContentsMargins(0, 0, 0, 0)
         self.scroll_layout.addStretch()
@@ -204,7 +202,7 @@ class CreateSubsetDialog(QDialog):
         remove_btn.setToolTip("Remove this filter")
         remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         remove_btn.setFixedWidth(30)
-        remove_btn.setStyleSheet("QPushButton { color: #d9534f; font-weight: bold; border: none; } QPushButton:hover { background-color: #fdf0f0; border-radius: 4px; }")
+        remove_btn.setProperty("styleClass", "remove_filter_btn")
         filter_layout.addWidget(remove_btn)
 
         filter_group.setLayout(filter_layout)

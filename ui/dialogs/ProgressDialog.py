@@ -36,7 +36,7 @@ class ProgressDialog(QDialog):
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
-        self.progress_bar.setStyleSheet("QProgressBar { border: 2px solid #3498db; border-radius: 5px; text-align: center; font-weight: bold; background-color: #ecf0f1;} QProgressBar::chunk { background-color: #3498db; border-radius: 3px;}")
+        self.progress_bar.setObjectName("main_progress_bar")
         layout.addWidget(self.progress_bar)
 
         layout.addSpacing(10)
@@ -44,7 +44,7 @@ class ProgressDialog(QDialog):
         #status lbl
         self.status_label = QLabel("Initializing")
         self.status_label.setFont(QFont("Arial", 10))
-        self.status_label.setStyleSheet("color: #7f8c8d")
+        self.status_label.setProperty("styleClass", "muted_text")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
 

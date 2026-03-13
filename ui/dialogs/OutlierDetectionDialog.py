@@ -98,7 +98,7 @@ class OutlierDetectionDialog(QDialog):
 
         # INfo
         self.info_label = QLabel("Ready")
-        self.info_label.setStyleSheet("font-weight: bold; color: #e74c3c;")
+        self.info_label.setObjectName("outlier_info_label")
         layout.addWidget(self.info_label)
 
         # Plot area for visualization
@@ -120,7 +120,7 @@ class OutlierDetectionDialog(QDialog):
         self.figure = Figure(figsize=(5, 3), dpi=100)
         self.figure.patch.set_facecolor("#2b2b2b")
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setStyleSheet("background-color: #2b2b2b;")
+        self.canvas.setObjectName("outlier_canvas_container")
 
         plot_layout.addWidget(self.canvas)
         plot_group.setLayout(plot_layout)

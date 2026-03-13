@@ -29,7 +29,7 @@ class AppendDialog(QDialog):
             "file will be added to the bottom of your current active dataframe"
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet(ThemeColors.InfoStylesheet)
+        info_label.setProperty("styleClass", "info_text")
         layout.addWidget(info_label)
         
         # File selection layout

@@ -5,7 +5,6 @@ import re
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QAbstractItemView, QGridLayout, QTreeWidget, QTreeWidgetItem, QSplitter, QWidget, QListWidgetItem
 from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QTextCursor, QShortcut, QKeySequence, QCloseEvent, QFontDatabase
-from ui.styles.widget_styles import Dialog
 from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton, DataPlotStudioLineEdit, DataPlotStudioGroupBox, DataPlotStudioListWidget
 from ui.dialogs.CodeEditor import CodeEditor
@@ -62,12 +61,11 @@ class ComputedColumnDialog(QDialog):
         input_layout.addWidget(QLabel("Expression"))
         expression_layout = QHBoxLayout()
         equals_label = QLabel("=")
-        equals_label.setStyleSheet(
-            "font-size: 14pt; font-weight: bold; margin-right: 5px;"
-        )
+        equals_label.setObjectName("equals_label")
         expression_layout.addWidget(equals_label)
 
         self.expression_input = CodeEditor()
+        self.expression_input.setObjectName("computed_column_expression")
         self.expression_input.setPlaceholderText("e.g., Price * Quantity")
         self.expression_input.setToolTip("Construct your mathematical or logical expression here. Columns with spaces must be wrapped in backticks.")
         self.expression_input.setMaximumHeight(100)
@@ -76,7 +74,6 @@ class ComputedColumnDialog(QDialog):
         self.expression_input.setFont(fixed_font)
         
         self.highlighter = PythonHighlighter(self.expression_input.document())
-        self.expression_input.setStyleSheet(Dialog.ComputedColumnExpressionInput)
         expression_layout.addWidget(self.expression_input)
         
         clear_expression_button = DataPlotStudioButton("Clear")
@@ -103,6 +100,7 @@ class ComputedColumnDialog(QDialog):
         input_layout.addLayout(operators_layout)
         
         self.status_label = QLabel("")
+        self.status_label.setObjectName("validation_status_label")
         self.status_label.setMinimumHeight(20)
         self.status_label.setWordWrap(True)
         input_layout.addWidget(self.status_label)
@@ -111,7 +109,7 @@ class ComputedColumnDialog(QDialog):
             "Use column names exactly as they appear below.\n"
             "If columns have spaces, wrap them in backticks: `Column Name`"
         )
-        help_text.setStyleSheet(ThemeColors.InfoStylesheet)
+        help_text.setProperty("styleClass", "info_text")
         help_text.setWordWrap(True)
         input_layout.addWidget(help_text)
 
@@ -127,9 +125,7 @@ class ComputedColumnDialog(QDialog):
         column_layout.setContentsMargins(0, 0, 5, 0)
 
         insert_column_info = QLabel("Available Columns:")
-        insert_column_info.setStyleSheet(
-            "color: #666; font-weight: bold; font-size: 9pt;"
-        )
+        insert_column_info.setProperty("styleClass", "list_header_info")
         insert_column_info.setWordWrap(True)
         column_layout.addWidget(insert_column_info)
         
@@ -153,9 +149,7 @@ class ComputedColumnDialog(QDialog):
         function_layout.setContentsMargins(5, 0, 0, 0)
 
         insert_func_info = QLabel("Function Library:")
-        insert_func_info.setStyleSheet(
-            "color: #666; font-weight: bold; font-size: 9pt;"
-        )
+        insert_func_info.setProperty("styleClass", "list_header_info")
         function_layout.addWidget(insert_func_info)
         
         self.function_filter_input = DataPlotStudioLineEdit()
@@ -313,12 +307,16 @@ class ComputedColumnDialog(QDialog):
         
         if not name and not expression:
             self.status_label.setText("")
+            self.status_label.setProperty("status", "idle")
         elif is_valid:
             self.status_label.setText(error_message)
-            self.status_label.setStyleSheet("color: #40c862; font-weight: bold; font-size: 9pt;")
+            self.status_label.setProperty("status", "success")
         else:
             self.status_label.setText(error_message)
-            self.status_label.setStyleSheet("color: #ff5555; font-weight: bold; font-size: 9pt;")
+            self.status_label.setProperty("status", "error")
+        
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
 
     def populate_functions(self) -> None:
         """Populate the function library with some functions (math, trigs, etc)"""

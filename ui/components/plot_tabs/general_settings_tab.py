@@ -4,7 +4,6 @@ from PyQt6.QtGui import QFont
 
 from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioListWidget, QuickFilterEdit, HelpIcon, DataPlotStudioTabWidget
-from ui.styles.widget_styles import ToolBox
 
 class GeneralSettingsTab(QWidget):
     help_requested = pyqtSignal(str)
@@ -20,9 +19,10 @@ class GeneralSettingsTab(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setProperty("styleClass", "transparent_scroll_area")
         
         scroll_widget = QWidget()
-        scroll_widget.setObjectName("ScrollContent")
+        scroll_widget.setObjectName("TransparentScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
         
         self._setup_plot_type_group(scroll_layout)
@@ -39,12 +39,12 @@ class GeneralSettingsTab(QWidget):
         layout = QVBoxLayout()
 
         self.current_plot_label = QLabel("Selected Plot: None")
-        self.current_plot_label.setStyleSheet(ThemeColors.SectionHeaderStylesheet)
+        self.current_plot_label.setProperty("styleClass", "section_header")
         layout.addWidget(self.current_plot_label)
 
         self.plot_type = QToolBox()
+        self.plot_type.setObjectName("plot_type_toolbox")
         self.plot_type.setMinimumHeight(350)
-        self.plot_type.setStyleSheet(ToolBox.PlotToolBoxStylesheet)
         layout.addWidget(self.plot_type)
 
         self.add_subplots_check = DataPlotStudioToggleSwitch("Add subplots")
@@ -67,7 +67,7 @@ class GeneralSettingsTab(QWidget):
             "This tool allows you to control how many subplots you wish to add to the current canvas.\n"
             "The rows adjust horizontal plots and columns control vertical plots."
         )
-        info.setStyleSheet(ThemeColors.InfoStylesheet)
+        info.setProperty("styleClass", "info_text")
         info.setWordWrap(True)
         layout.addWidget(info)
 
@@ -116,7 +116,6 @@ class GeneralSettingsTab(QWidget):
 
     def _setup_data_configuration_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Data Configuration")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
 
         tab_widget = DataPlotStudioTabWidget()
@@ -158,7 +157,7 @@ class GeneralSettingsTab(QWidget):
         var_layout.addLayout(multi_btns)
 
         self.multi_y_info = QLabel("Tip: Hold Ctrl/Cmd to select multiple columns")
-        self.multi_y_info.setStyleSheet(ThemeColors.MutedTextStylesheet)
+        self.multi_y_info.setProperty("styleClass", "muted_text")
         self.multi_y_info.setVisible(False)
         var_layout.addWidget(self.multi_y_info)
 
@@ -202,7 +201,7 @@ class GeneralSettingsTab(QWidget):
         
         subset_info = QLabel("Plot a specific subset of your data. Enable 'Use Subset' in the Plot Type group above.")
         subset_info.setWordWrap(True)
-        subset_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        subset_info.setProperty("styleClass", "info_text")
         filter_layout.addWidget(subset_info)
 
         self.subset_combo = DataPlotStudioComboBox()

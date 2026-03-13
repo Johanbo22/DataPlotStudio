@@ -47,7 +47,8 @@ class MergeDialog(QDialog):
         file_layout = QHBoxLayout()
         
         self.file_label = QLabel("No file selected")
-        self.file_label.setStyleSheet("color: #666; font-style: italic;")
+        self.file_label.setObjectName("merge_file_label")
+        self.file_label.setProperty("status", "unselected")
         
         self.browse_button = DataPlotStudioButton("Browse...", parent=self)
         self.browse_button.setIcon(IconBuilder.build(IconType.OpenProject))
@@ -131,7 +132,9 @@ class MergeDialog(QDialog):
                 self.right_file_path = filepath
                 
                 self.file_label.setText(f"{Path(filepath).name} ({len(self.right_df)} rows)")
-                self.file_label.setStyleSheet("color: black; font-weight: bold;")
+                self.file_label.setProperty("status", "selected")
+                self.file_label.style().unpolish(self.file_label)
+                self.file_label.style().polish(self.file_label)
                 
                 self.right_on_combo.clear()
                 self.right_on_combo.addItems(list(self.right_df.columns))

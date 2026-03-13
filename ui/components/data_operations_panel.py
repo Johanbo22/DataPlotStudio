@@ -5,7 +5,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from typing import TYPE_CHECKING, Optional
 
-from ui.styles.widget_styles import ScrollArea
 
 if TYPE_CHECKING:
     from ui.controllers.data_tab_controller import DataTabController
@@ -62,7 +61,7 @@ class DataOperationsPanel(QWidget):
 
         clean_info = QLabel("This tab includes operations to clean your dataset.")
         clean_info.setWordWrap(True)
-        clean_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        clean_info.setProperty("styleClass", "info_text")
         cleaning_layout.addWidget(clean_info)
 
         # Remove Duplicates
@@ -170,13 +169,13 @@ class DataOperationsPanel(QWidget):
 
         filter_info = QLabel("This tab has operations which help you filter your dataset based on your own criteria. Use the 'Advanced Filter' dialog to apply more than one filter")
         filter_info.setWordWrap(True)
-        filter_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        filter_info.setProperty("styleClass", "info_text")
         filter_layout.addWidget(filter_info)
 
         filter_layout.addWidget(QLabel("Column:"))
         filter_column_info = QLabel("Select the column you wish to apply a filter to")
         filter_column_info.setWordWrap(True)
-        filter_column_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        filter_column_info.setProperty("styleClass", "info_text")
         filter_layout.addWidget(filter_column_info)
 
         self.filter_column = DataPlotStudioComboBox()
@@ -184,7 +183,7 @@ class DataOperationsPanel(QWidget):
 
         filter_layout.addWidget(QLabel("Condition:"))
         filter_condition_info = QLabel("Select which conditional to apply to column. N.B. Uses Python Syntax")
-        filter_condition_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        filter_condition_info.setProperty("styleClass", "info_text")
         filter_condition_info.setWordWrap(True)
         filter_layout.addWidget(filter_condition_info)
 
@@ -195,7 +194,7 @@ class DataOperationsPanel(QWidget):
         filter_layout.addWidget(QLabel("Value:"))
         filter_value_info = QLabel("Enter the value you want the column to be evaluate to.\nNote: reference your data. This is case-sensitive")
         filter_value_info.setWordWrap(True)
-        filter_value_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        filter_value_info.setProperty("styleClass", "info_text")
         filter_layout.addWidget(filter_value_info)
 
         self.filter_value = DataPlotStudioLineEdit()
@@ -257,21 +256,20 @@ class DataOperationsPanel(QWidget):
         column_scroll_area = QScrollArea()
         column_scroll_area.setWidgetResizable(True)
         column_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        column_scroll_area.setStyleSheet(ScrollArea.TransparentScrollArea)
+        column_scroll_area.setProperty("styleClass", "transparent_scroll_area")
         
         column_tab = QWidget()
-        column_tab.setObjectName("ScrollContent")
-        column_tab.setStyleSheet("QWidget#ScrollContent { background-color: transparent; }")
+        column_tab.setObjectName("TransparentScrollContent")
         column_layout = QVBoxLayout(column_tab)
 
         column_info = QLabel("This tab allows you to change certain elements to the columns of your data")
         column_info.setWordWrap(True)
-        column_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        column_info.setProperty("styleClass", "info_text")
         column_layout.addWidget(column_info)
 
         column_column_info = QLabel("Select the column you wish to work with")
         column_column_info.setWordWrap(True)
-        column_column_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        column_column_info.setProperty("styleClass", "info_text")
         column_layout.addWidget(column_column_info)
 
         self.column_list = DataPlotStudioListWidget()
@@ -350,7 +348,7 @@ class DataOperationsPanel(QWidget):
 
         data_type_info = QLabel("This operation allows you to change the datatype of your selected column.")
         data_type_info.setWordWrap(True)
-        data_type_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        data_type_info.setProperty("styleClass", "info_text")
         type_layout.addWidget(data_type_info)
 
         type_layout.addWidget(QLabel("Change selected columns DataType to:"))
@@ -387,7 +385,7 @@ class DataOperationsPanel(QWidget):
 
         text_info = QLabel("Standardize text data in the selected column.\nRemove whitespace, fix casing etc.")
         text_info.setWordWrap(True)
-        text_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        text_info.setProperty("styleClass", "info_text")
         text_layout.addWidget(text_info)
 
         self.text_operation_combo = DataPlotStudioComboBox()
@@ -450,7 +448,7 @@ class DataOperationsPanel(QWidget):
         
         binning_info = QLabel("Convert continuous numeric variables into categorical buckets (e.g., Age -> Age Groups).")
         binning_info.setWordWrap(True)
-        binning_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        binning_info.setProperty("styleClass", "info_text")
         binning_layout.addWidget(binning_info)
         
         binning_btn_layout = QHBoxLayout()
@@ -478,7 +476,7 @@ class DataOperationsPanel(QWidget):
         
         norm_info = QLabel("Scale numeric data to a standard range or distribution")
         norm_info.setWordWrap(True)
-        norm_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        norm_info.setProperty("styleClass", "info_text")
         norm_layout.addWidget(norm_info)
         
         self.norm_method_combo = DataPlotStudioComboBox()
@@ -514,7 +512,7 @@ class DataOperationsPanel(QWidget):
 
         transform_info = QLabel("This tab allows you to alter your input data by grouping and aggregation.")
         transform_info.setWordWrap(True)
-        transform_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        transform_info.setProperty("styleClass", "info_text")
         transform_layout.addWidget(transform_info)
 
         # Aggregate
@@ -591,7 +589,7 @@ class DataOperationsPanel(QWidget):
 
         sorting_info = QLabel("Permanently sort your dataset by a column.")
         sorting_info.setWordWrap(True)
-        sorting_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        sorting_info.setProperty("styleClass", "info_text")
         sorting_layout.addWidget(sorting_info)
 
         sort_controls = QHBoxLayout()
@@ -622,7 +620,7 @@ class DataOperationsPanel(QWidget):
 
         saved_agg_info = QLabel("Save aggregations to switch between different views of your dataset")
         saved_agg_info.setWordWrap(True)
-        saved_agg_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        saved_agg_info.setProperty("styleClass", "info_text")
         saved_agg_layout.addWidget(saved_agg_info)
 
         self.saved_agg_list = DataPlotStudioListWidget()
@@ -667,7 +665,7 @@ class DataOperationsPanel(QWidget):
         
         dt_info = QLabel("Extract date components from dates or calculate duration between datetime columns")
         dt_info.setWordWrap(True)
-        dt_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        dt_info.setProperty("styleClass", "info_text")
         dt_layout.addWidget(dt_info)
         
         extract_group = DataPlotStudioGroupBox("Extract Date Components")
@@ -745,7 +743,7 @@ class DataOperationsPanel(QWidget):
 
         subset_info = QLabel("This tab allows you to create and manage data subsets.")
         subset_info.setWordWrap(True)
-        subset_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        subset_info.setProperty("styleClass", "info_text")
         subset_layout.addWidget(subset_info)
         subset_layout.addSpacing(10)
 
@@ -821,7 +819,7 @@ class DataOperationsPanel(QWidget):
 
         inject_info = QLabel("Insert the selected subset into the active DataFrame to work directly with it.")
         inject_info.setWordWrap(True)
-        inject_info.setStyleSheet(ThemeColors.WarningInfoStylesheet)
+        inject_info.setProperty("styleClass", "warning_info_text")
         inject_layout.addWidget(inject_info)
         inject_layout.addSpacing(10)
 
@@ -838,9 +836,8 @@ class DataOperationsPanel(QWidget):
         inject_layout.addWidget(self.inject_subset_tbn)
 
         self.injection_status_label = QLabel("Status: Working with original data")
-        self.injection_status_label.setStyleSheet(
-            ThemeColors.SuccessStatusStylesheet
-        )
+        self.injection_status_label.setObjectName("injection_status_label")
+        self.injection_status_label.setProperty("statusState", "success")
         inject_layout.addWidget(self.injection_status_label)
         inject_layout.addSpacing(10)
 
@@ -869,7 +866,7 @@ class DataOperationsPanel(QWidget):
 
         history_info = QLabel("View and revert to a previous state of data state")
         history_info.setWordWrap(True)
-        history_info.setStyleSheet(ThemeColors.InfoStylesheet)
+        history_info.setProperty("styleClass", "info_text")
         history_layout.addWidget(history_info)
 
         self.history_list = DataPlotStudioListWidget()
@@ -879,7 +876,7 @@ class DataOperationsPanel(QWidget):
 
         history_help = QLabel("Click on a state to go back/forwards to it.\nGray items are undone operations.")
         history_help.setWordWrap(True)
-        history_help.setStyleSheet(ThemeColors.MutedTextStylesheet)
+        history_help.setProperty("styleClass", "muted_text")
         history_layout.addWidget(history_help)
 
         history_icon = IconBuilder.build(IconType.History)
@@ -1006,18 +1003,17 @@ class DataOperationsPanel(QWidget):
         """
         if is_subset_active:
             self.injection_status_label.setText(f"Status: Working with a subset: '{subset_name}'")
-            self.injection_status_label.setStyleSheet(
-                ThemeColors.WarningStatusStylesheet
-            )
+            self.injection_status_label.setProperty("statusState", "warning")
             self.restore_original_btn.setEnabled(True)
             self.inject_subset_tbn.setEnabled(False)
         else:
             self.injection_status_label.setText("Status: Working with original data")
-            self.injection_status_label.setStyleSheet(
-                ThemeColors.SuccessStatusStylesheet
-            )
+            self.injection_status_label.setProperty("statusState", "success")
             self.restore_original_btn.setEnabled(False)
             self.inject_subset_tbn.setEnabled(True)
+        
+        self.injection_status_label.style().unpolish(self.injection_status_label)
+        self.injection_status_label.style().polish(self.injection_status_label)
     
     def select_history_item_by_index(self, target_index: int) -> None:
         """Select the history item corresponding to the given index."""

@@ -33,7 +33,6 @@ class HelpDialog(QDialog):
         # Title
         self.title_label = QLabel(title)
         self.title_label.setObjectName("HelpDialogTitle")
-        self.title_label.setStyleSheet("font-size: 18pt; font-weight: bold; margin-bottom: 10px; color: #4a90e2;")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title_label)
 
@@ -67,7 +66,7 @@ class HelpDialog(QDialog):
         self.description_label.setWordWrap(True)
         self.description_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.description_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self.description_label.setStyleSheet("line-height: 1.4;") 
+        self.description_label.setProperty("styleClass", "help_description")
         
         scroll_layout.addWidget(self.description_label)
         scroll_area.setWidget(scroll_content)
@@ -105,10 +104,10 @@ class HelpDialog(QDialog):
         
         return self._create_placeholder("Preview unavailable")
 
-    def _create_placeholder(self, text):
+    def _create_placeholder(self, text) -> QLabel:
         lbl = QLabel(text)
         lbl.setFixedSize(450, 300)
-        lbl.setStyleSheet("border: 2px dashed #444; color: #888; background: #222;")
+        lbl.setObjectName("help_animation_placeholder")
         lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         return lbl
 

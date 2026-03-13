@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QTextEdit, QVBoxLayout, QWidget, QLabel, QApplicatio
 from PyQt6.QtCore import Qt, QTimer, QPoint
 from PyQt6.QtGui import QClipboard, QMouseEvent, QKeyEvent
 from typing import List, Optional, Any
-from ui.styles.widget_styles import Dialog
 
 class LogHistoryPopup(QWidget):
     """Popup dialog for the viewing of log"""
@@ -14,7 +13,6 @@ class LogHistoryPopup(QWidget):
         self.setMinimumSize(450, 250)
         self._full_history: List[str] = history.copy()
         self._drag_pos: Optional[QPoint] = None
-        self.setStyleSheet(Dialog.LogHistoryPopup)
         self.setObjectName("LogPopup")
 
         main_layout = QVBoxLayout(self)

@@ -100,6 +100,7 @@ class ExportDialog(QDialog):
         selection_layout.addWidget(self.cols_radio_specific)
 
         self.column_list = DataPlotStudioListWidget()
+        self.column_list.setObjectName("export_column_list")
         self.column_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         self.column_list.setMaximumHeight(300)
 
@@ -144,8 +145,8 @@ class ExportDialog(QDialog):
         options_layout.addWidget(self.include_index_check)
 
         self.description_label = QLabel()
+        self.description_label.setProperty("styleClass", "muted_text")
         self.description_label.setWordWrap(True)
-        self.description_label.setStyleSheet("color: #888888; font-style: italic; font-size: 11px;")
         options_layout.addWidget(self.description_label)
 
         options_group.setLayout(options_layout)
@@ -187,10 +188,6 @@ class ExportDialog(QDialog):
         """toggle the column list"""
         is_specific = self.cols_radio_specific.isChecked()
         self.column_list.setEnabled(is_specific)
-        if is_specific and self.available_columns:
-            self.column_list.setStyleSheet("background-color: white; border: 1px solid #ccc;")
-        else:
-            self.column_list.setStyleSheet("background-color: #f0f0f0; border: 1px solid #ddd; color: #888;")
 
     def update_format_info(self) -> None:
         """Update a description label based on selected format and current optins"""

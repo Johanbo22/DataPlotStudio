@@ -70,23 +70,23 @@ class StatusBar(QStatusBar):
         self.clear_timer.setSingleShot(True)
         self.clear_timer.timeout.connect(self._reset_to_idle_state)
 
-        self.setStyleSheet(widget_styles.StatusBar.Statusbar)
+        self.setObjectName("main_status_bar")
 
         # Adding a label of data stat
         self.stats_label = QLabel("No Data")
-        self.stats_label.setStyleSheet(widget_styles.StatusBar.StatsLabel)
+        self.stats_label.setObjectName("stats_label")
 
         # Adding some progress
         self.progress_bar = QProgressBar()
+        self.progress_bar.setObjectName("status_progress_bar")
         self.progress_bar.setFixedWidth(150)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet(widget_styles.StatusBar.ProgressBar)
         self.progress_bar.hide()
         
         # Terminal-like output area
         self.terminal = QLineEdit()
         self.terminal.setReadOnly(True)
-        self.terminal.setStyleSheet(widget_styles.StatusBar.Terminal)
+        self.terminal.setObjectName("status_terminal")
         self.terminal.setCursor(Qt.CursorShape.PointingHandCursor)
         self.terminal.setToolTip("Click to view Log History")
         self.terminal.installEventFilter(self)
@@ -100,7 +100,7 @@ class StatusBar(QStatusBar):
         self.history_button.setToolTip("View Log History")
         self.history_button.setFixedWidth(24)
         self.history_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.history_button.setStyleSheet(widget_styles.StatusBar.HistoryButton)
+        self.history_button.setObjectName("status_history_button")
         self.history_button.clicked.connect(self.show_log_history)
         
         self.error_count: int = 0
@@ -109,13 +109,14 @@ class StatusBar(QStatusBar):
         self.issue_counter_label = QLabel("")
         self.issue_counter_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.issue_counter_label.setToolTip("Click to view issues in Log History")
-        self.issue_counter_label.setStyleSheet(widget_styles.StatusBar.IssueCounterLabel)
+        self.issue_counter_label.setObjectName("issue_counter_label")
         self.issue_counter_label.hide()
         self.issue_counter_label.installEventFilter(self)
         
         # Status label
         self.status_label = QLabel()
-        self.status_label.setStyleSheet(widget_styles.StatusBar.StatusLabel)
+        self.status_label.setObjectName("status_state_label")
+        self.status_label.setProperty("logLevel", "IDLE")
         
         # Auto hide progress bar
         self.progress_hide_timer: QTimer = QTimer()
@@ -130,13 +131,13 @@ class StatusBar(QStatusBar):
         self.addWidget(self.history_button)
 
         self.source_label = QLabel("")
-        self.source_label.setStyleSheet(widget_styles.StatusBar.SourceLabel)
+        self.source_label.setObjectName("source_label")
         self.source_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.source_label.installEventFilter(self)
         self._full_source_path: str = ""
 
         self.view_context_label = QLabel("")
-        self.view_context_label.setStyleSheet(widget_styles.StatusBar.ContextLabel)
+        self.view_context_label.setObjectName("view_context_label")
         
         self.addPermanentWidget(self._create_separator())
         self.addPermanentWidget(self.progress_bar)
@@ -151,7 +152,7 @@ class StatusBar(QStatusBar):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.VLine)
         line.setFrameShadow(QFrame.Shadow.Plain)
-        line.setStyleSheet("color: #454545;")
+        line.setProperty("styleClass", "status_separator")
         return line
 
     def set_logger(self, logger: Logger) -> None:
@@ -182,24 +183,22 @@ class StatusBar(QStatusBar):
             self.popup.append_live_log(html_log)
         
         status_text: str = "Ready"
-        status_style: str = ""
+        
         if level == LogLevel.WARNING:
             status_text = "Warning"
             self.warning_count += 1
             self._update_issue_counters()
-            status_style = f"background-color: {color}; color: #1e1e1e; border-radius: 6px; padding: 2px 8px; font-weight: bold; font-size: 10px;"
         elif level == LogLevel.ERROR:
             status_text = "Error"
             self.error_count += 1
             self._update_issue_counters()
-            status_style = f"background-color: {color}; color: #ffffff; border-radius: 6px; padding: 2px 8px; font-weight: bold; font-size: 10px;"
-        else:
-            status_style = f"background-color: transparent; color: {color}; border: 1px solid {color}; border-radius: 6px; padding: 2px 8px; font-weight: bold; font-size: 10px;"
         
         self.status_label.setText(status_text)
-        self.status_label.setStyleSheet(status_style)
+        self.status_label.setProperty("logLevel", level.name)
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
         
-        self.message_queue.append((log_message, color))
+        self.message_queue.append((log_message, level.name))
         if not self.is_typing:
             self._process_next_message()
 
@@ -227,26 +226,35 @@ class StatusBar(QStatusBar):
         
         self.is_typing = True
         self.clear_timer.stop()
-        log_message, color = self.message_queue.pop(0)
+        log_message, level_name = self.message_queue.pop(0)
         
-        base_style = widget_styles.StatusBar.Terminal if hasattr(widget_styles.StatusBar, "Terminal") else ""
-        self.terminal.setStyleSheet(f"{base_style} QLineEdit {{ color: {color}; }}")
+        self.terminal.setProperty("logLevel", level_name)
         
-        if color == LogColor.ERROR.value:
-            self.terminal.setStyleSheet(f"{base_style} QLineEdit {{ color: {color}; background-color: rgba(255, 0, 0, 0.15); }}")
-            QTimer.singleShot(400, lambda: self.terminal.setStyleSheet(f"{base_style} QLineEdit {{ color: {color}; background-color: transparent; }}"))
+        if level_name == "ERROR":
+            self.terminal.setProperty("errorFlash", True)
+            QTimer.singleShot(400, self._clear_error_flash)
         else:
-            self.terminal.setStyleSheet(f"{base_style} QLineEdit {{ color: {color}; background-color: transparent; }}")
+            self.terminal.setProperty("errorFlash", False)
+            
+        self.terminal.style().unpolish(self.terminal)
+        self.terminal.style().polish(self.terminal)
         
         self.terminal.setToolTip(f"Current log:\n{log_message}\n\nClick to view log history")
         self._start_typing(log_message)
+    
+    def _clear_error_flash(self) -> None:
+        self.terminal.setProperty("errorFlash", False)
+        self.terminal.style().unpolish(self.terminal)
+        self.terminal.style().polish(self.terminal)
     
     def _reset_to_idle_state(self) -> None:
         """Visually reset the status bar to prevent stale messages"""
         self.terminal.setText("")
         self.terminal.setToolTip("Click to view log history")
         self.status_label.setText("Idle")
-        self.status_label.setStyleSheet(widget_styles.StatusBar.IdleState)
+        self.status_label.setProperty("logLevel", "IDLE")
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
         
     def _start_typing(self, text: str) -> None:
         """Initialize the typewriter effect"""
@@ -421,7 +429,7 @@ class StatusBar(QStatusBar):
     def _show_terminal_context_menu(self, position: QPoint) -> None:
         """Right-click context menu on the terminal bar"""
         menu = QMenu(self)
-        menu.setStyleSheet(widget_styles.StatusBar.TerminalContextMenu)
+        menu.setObjectName("terminal_context_menu")
         
         open_action = QAction("Open Log History", self)
         open_action.triggered.connect(self.show_log_history)
@@ -483,7 +491,6 @@ class StatusBar(QStatusBar):
         self.view_context_label.show()
 
         # Colors
-        if context_type == "aggregation":
-            self.view_context_label.setStyleSheet(widget_styles.StatusBar.AggregationContextLabel)
-        else:
-            self.view_context_label.setStyleSheet(widget_styles.StatusBar.SubsetContextLabel)
+        self.view_context_label.setProperty("contextType", context_type)
+        self.view_context_label.style().unpolish(self.view_context_label)
+        self.view_context_label.style().polish(self.view_context_label)

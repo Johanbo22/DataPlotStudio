@@ -241,7 +241,7 @@ class TableCustomizationDialog(QDialog):
         self.rule_color_button = DataPlotStudioButton("Text")
         self.rule_color_button.setFixedWidth(60)
         self.rule_color_code = DEFAULT_RULE_TEXT_COLOR
-        self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: white;")
+        self.rule_color_button.updateColors(base_color_hex=self.rule_color_code, text_color_hex="white")
         self.rule_color_button.clicked.connect(self.choose_rule_text_color)
         add_rule_layout.addWidget(self.rule_color_button)
         
@@ -249,7 +249,7 @@ class TableCustomizationDialog(QDialog):
         self.rule_bg_color_button = DataPlotStudioButton("Fill")
         self.rule_bg_color_button.setFixedWidth(50)
         self.rule_bg_color_code = DEFAULT_RULE_BG_COLOR
-        self.rule_bg_color_button.setStyleSheet(f"background-color: {self.rule_bg_color_code}; color: black")
+        self.rule_bg_color_button.updateColors(base_color_hex=self.rule_bg_color_code, text_color_hex="black")
         self.rule_bg_color_button.clicked.connect(self.choose_rule_bg_color)
         add_rule_layout.addWidget(self.rule_bg_color_button)
         
@@ -307,7 +307,7 @@ class TableCustomizationDialog(QDialog):
         if color.isValid():
             self.rule_color_code = color.name()
             text_color = "black" if color.lightness() > 128 else "white"
-            self.rule_color_button.setStyleSheet(f"background-color: {self.rule_color_code}; color: {text_color};")
+            self.rule_color_button.updateColors(base_color_hex=self.rule_color_code, text_color_hex=text_color)
     
     def choose_rule_bg_color(self) -> None:
         """Opens the color dialog for the rule background color"""
@@ -315,7 +315,7 @@ class TableCustomizationDialog(QDialog):
         if color.isValid():
             self.rule_bg_color_code = color.name()
             text_color = "black" if color.lightness() > 128 else "white"
-            self.rule_bg_color_button.setStyleSheet(f"background-color: {self.rule_bg_color_code}; color: {text_color}")
+            self.rule_bg_color_button.updateColors(base_color_hex=self.rule_bg_color_code, text_color_hex=text_color)
     
     def add_rule(self):
         """Adds new rule to the list"""

@@ -4,7 +4,6 @@ from PyQt6.QtCore import QDate, QThreadPool, Qt
 import pandas as pd
 from typing import List, Dict, Any, Optional
 
-from ui.styles.widget_styles import ScrollArea
 from ui.theme import ThemeColors
 from ui.workers import FilterWorker
 from ui.widgets import DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioCheckBox
@@ -73,16 +72,15 @@ class FilterAdvancedDialog(QDialog):
         # preview text
         self.preview_label = QLabel("Preview: No filters active")
         self.preview_label.setWordWrap(True)
-        self.preview_label.setStyleSheet("background-color: #f0f0f0; color: #333333; padding: 10px; border: 1px solid #ccc; border-radius: 4px;")
+        self.preview_label.setObjectName("filter_preview_label")
         
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
-        scroll_area.setStyleSheet(ScrollArea.TransparentScrollArea)
+        scroll_area.setProperty("styleClass", "transparent_scroll_area")
         
         scroll_widget = QWidget()
-        scroll_widget.setObjectName("ScrollContent")
-        scroll_widget.setStyleSheet("QWidget#ScrollContent { background-color: transparent; }")
+        scroll_widget.setObjectName("TransparentScrollContent")
         self.scroll_layout = QVBoxLayout(scroll_widget)
         self.scroll_layout.setContentsMargins(0, 0, 0, 0)
         self.scroll_layout.addStretch()
@@ -215,7 +213,7 @@ class FilterAdvancedDialog(QDialog):
         remove_btn.setToolTip("Remove this filter")
         remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         remove_btn.setFixedWidth(30)
-        remove_btn.setStyleSheet("QPushButton { color: #d9534f; font-weight: bold; border: none; } QPushButton:hover { background-color: #fdf0f0; border-radius: 4px; }")
+        remove_btn.setProperty("styleClass", "remove_filter_btn")
         filter_layout.addWidget(remove_btn)
 
         filter_group.setLayout(filter_layout)
@@ -442,7 +440,9 @@ class FilterAdvancedDialog(QDialog):
         if text:
             is_fully_valid = True
             for row in self.filter_rows:
-                row["inputs"]["text"].setStyleSheet("")
+                row["inputs"]["text"].setProperty("validationState", "normal")
+                row["inputs"]["text"].style().unpolish(row["inputs"]["text"])
+                row["inputs"]["text"].style().polish(row["inputs"]["text"])
                 
                 cond_display = row["condition"].currentText()
                 cond = self.ConditionMap.get(cond_display, cond_display)
@@ -451,7 +451,9 @@ class FilterAdvancedDialog(QDialog):
                     if isinstance(val, str) and not val:
                         is_fully_valid = False
                         if row["stack"].currentIndex() == 0:
-                            row["inputs"]["text"].setStyleSheet("border: 1px solid #d9534f; background-color: #fdf0f0;")
+                            row["inputs"]["text"].setProperty("validationState", "error")
+                            row["inputs"]["text"].style().unpolish(row["inputs"]["text"])
+                            row["inputs"]["text"].style().polish(row["inputs"]["text"])
 
         if hasattr(self, 'apply_button'):
             self.apply_button.setEnabled(is_fully_valid)

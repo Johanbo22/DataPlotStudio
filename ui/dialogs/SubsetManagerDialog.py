@@ -1,4 +1,3 @@
-from ui.styles.widget_styles import Dialog
 from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioLineEdit, DataPlotStudioButton, DataPlotStudioListWidget
 from ui.dialogs import CreateSubsetDialog, SubsetDataViewer, ProgressDialog
 from core.data_handler import DataHandler
@@ -98,13 +97,13 @@ class SubsetManagerDialog(QDialog):
             "Subsets do not modify your original data"
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #666; font-style: italic; margin-bottom: 10px;")
+        info.setProperty("styleClass", "info_text")
         layout.addWidget(info)
 
         #main content splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("subset_manager_splitter")
         splitter.setHandleWidth(4)
-        splitter.setStyleSheet(Dialog.SubsetManagerDialogSplitterStyle)
 
         #left subset list
         left_widget = QWidget()
@@ -130,7 +129,7 @@ class SubsetManagerDialog(QDialog):
         self.clear_search_shortcut.activated.connect(self._clear_search_and_focus_list)
 
         self.subset_list = DataPlotStudioListWidget()
-        self.subset_list.setStyleSheet(Dialog.SubsetManagerDialogSubsetListStyle)
+        self.subset_list.setObjectName("subset_manager_list")
         self.subset_list.setAlternatingRowColors(True)
         self.subset_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.subset_list.customContextMenuRequested.connect(self.show_context_menu)
@@ -183,14 +182,14 @@ class SubsetManagerDialog(QDialog):
         #name
         self.name_label = QLabel(SubsetDialogConstants.PlaceholderText)
         self.name_label.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
-        self.name_label.setStyleSheet(f"color: #333333; margin-top: 5px;")
+        self.name_label.setObjectName("subset_name_label")
         self.name_label.setWordWrap(True)
         details_layout.addWidget(self.name_label)
         
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet(Dialog.SubsetManagerDialogSeparatorStyle)
+        separator.setObjectName("subset_details_separator")
         details_layout.addWidget(separator)
         
         form_layout = QFormLayout()
@@ -207,14 +206,14 @@ class SubsetManagerDialog(QDialog):
         self.description_text = QTextEdit()
         self.description_text.setReadOnly(True)
         self.description_text.setMaximumHeight(SubsetDialogConstants.DescriptionMaxHeight)
-        self.description_text.setStyleSheet(Dialog.SubsetManagerDialogTextEditStyle)
+        self.description_text.setProperty("styleClass", "subset_details_text")
         form_layout.addRow("Description:", self.description_text)
 
         #filters
         self.filters_text = QTextEdit()
         self.filters_text.setReadOnly(True)
         self.filters_text.setMaximumHeight(SubsetDialogConstants.FiltersMaxHeight)
-        self.filters_text.setStyleSheet(Dialog.SubsetManagerDialogTextEditStyle)
+        self.filters_text.setProperty("styleClass", "subset_details_text")
         form_layout.addRow("Filters:", self.filters_text)
         
         details_layout.addLayout(form_layout)
@@ -291,8 +290,6 @@ class SubsetManagerDialog(QDialog):
         layout.addWidget(self.button_box)
         self.setLayout(layout)
         
-        self.setStyleSheet(Dialog.SubsetManagerDialogWidget)
-
         print("DEBUG init_ui: UI initialization complete")
     
     def _clear_search_and_focus_list(self) -> None:

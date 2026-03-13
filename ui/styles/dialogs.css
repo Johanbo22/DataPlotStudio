@@ -1,0 +1,483 @@
+/* Computed Column Dialog styling */
+QLabel#equals_label {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+CodeEditor#computed_column_expression {
+    background-color: #282a36;
+    color: #f8f8f2;
+    border: 1px solid #555;
+    border-radius: 4px;
+}
+
+QLabel[styleClass="list_header_info"] {
+    color: #666;
+    font-weight: bold;
+    font-size: 9pt;
+}
+
+QLabel#validation_status_label {
+    font-weight: bold;
+    font-size: 9pt;
+}
+
+QLabel#validation_status_label[status="success"] {
+    color: #40c862;
+}
+
+QLabel#validation_status_label[status="error"] {
+    color: #ff5555;
+}
+
+/* Filter Advanced Dialog styling*/
+QLabel#filter_preview_label {
+    background-color: #f0f0f0;
+    color: #333333;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+QPushButton[styleClass="remove_filter_btn"] {
+    color: #d9534f;
+    font-weight: bold;
+    border: none;
+}
+
+QPushButton[styleClass="remove_filter_btn"]:hover {
+    background-color: #fdf0f0;
+    border-radius: 4px;
+}
+
+DataPlotStudioLineEdit[validationState="error"] {
+    border: 1px solid #d9534f;
+    background-color: #fdf0f0;
+}
+
+/* Fill Missing Dialog stling */
+QFrame#fill_missing_stats_frame {
+    background-color: #2b2b2b;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+QLabel#fill_missing_stats_label {
+    color: #ddd;
+    font-size: 11px;
+}
+
+QProgressBar#fill_missing_progress {
+    border: 1px solid #444;
+    border-radius: 3px;
+    background-color: #333;
+    min-height: 8px;
+    max-height: 8px;
+}
+
+QProgressBar#fill_missing_progress::chunk {
+    border-radius: 2px;
+}
+
+QProgressBar#fill_missing_progress[severity="low"]::chunk {
+    background-color: #4caf50;
+}
+
+QProgressBar#fill_missing_progress[severity="medium"]::chunk {
+    background-color: #ffb74d;
+}
+
+QProgressBar#fill_missing_progress[severity="high"]::chunk {
+    background-color: #ff5252;
+}
+
+/* SubsetManagerDialog styling */
+QSplitter#subset_manager_splitter::handle {
+    background-color: #e0e0e0;
+    width: 4px;
+    margin: 0 4px;
+    border-radius: 2px;
+}
+
+QSplitter#subset_manager_splitter::handle:hover {
+    background-color: #bdc3c7;
+}
+
+DataPlotStudioListWidget#subset_manager_list {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+
+QLabel#subset_name_label {
+    color: #333333;
+    margin-top: 5px;
+}
+
+QFrame#subset_details_separator {
+    color: #e0e0e0;
+}
+
+QTextEdit[styleClass="subset_details_text"] {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px;
+    color: #495057;
+}
+
+/* Script Eitor Dialog styles */
+QLabel#script_security_label {
+    color: #d32f2f;
+    font-size: 11pt;
+    font-style: italic;
+}
+
+QMenu#script_snippet_menu {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+    border: 1px solid #555;
+}
+
+QMenu#script_snippet_menu::item {
+    padding: 5px 20px;
+}
+
+QMenu#script_snippet_menu::item:selected {
+    background-color: #4a9c4d;
+}
+
+CodeEditor#script_code_editor {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+DataPlotStudioLineEdit#script_variable_search {
+    background-color: #1e1e1e;
+    color: #000000;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QTreeWidget#script_variable_explorer {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+    border: 1px solid #555;
+    border-radius: 4px;
+}
+
+QTreeWidget#script_variable_explorer QHeaderView::section {
+    background-color: #383838;
+    color: #ddd;
+    padding: 4px;
+    border: 1px solid #555;
+}
+
+QTreeWidget#script_variable_explorer::item {
+    padding: 4px;
+}
+
+QPlainTextEdit#script_console_output {
+    background-color: #1e1e1e;
+    color: #f8f8f2;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px;
+    font-family: Consolas, Monaco, monospace;
+}
+
+/* Pivot Dialog styling */
+QLabel#pivot_preview_label {
+    font-size: 10pt;
+}
+
+QLabel#pivot_preview_label[status="normal"] {
+    color: #333333;
+}
+
+QLabel#pivot_preview_label[status="success"] {
+    color: #333333;
+    font-weight: bold;
+}
+
+QLabel#pivot_preview_label[status="error"] {
+    color: #d9534f;
+    font-weight: bold;
+}
+
+/* Melt Dialog styleing */
+QLabel#melt_preview_label {
+    padding: 5px;
+    border-radius: 4px;
+}
+
+QLabel#melt_preview_label[status="success"] {
+    color: #333333;
+    font-weight: bold;
+    background-color: #e0e0e0;
+}
+
+QLabel#melt_preview_label[status="warning"] {
+    color: #d32f2f;
+    font-weight: bold;
+    background-color: #ffebee;
+}
+
+QLabel#melt_preview_label[status="error"] {
+    color: #d9534f;
+    font-weight: bold;
+    background-color: transparent;
+}
+
+/* Database ConnectionDialog styling */
+QLabel#db_icon_label {
+    border: none;
+    background: transparent;
+}
+
+QLabel#query_status_label {
+    font-weight: bold;
+}
+
+QLabel#query_status_label[status="valid"] {
+    color: #388e3c;
+}
+
+QLabel#query_status_label[status="invalid"] {
+    color: #d32f2f;
+}
+
+/* Export Dialogstyles */
+DataPlotStudioListWidget#export_column_list {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+}
+
+DataPlotStudioListWidget#export_column_list:disabled {
+    background-color: #f0f0f0;
+    border: 1px solid #dddddd;
+    color: #888888;
+}
+
+/* Help Dialog */
+QLabel#HelpDialogTitle {
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #4a90e2;
+}
+
+QLabel[styleClass="help_description"] {
+    line-height: 1.4;
+}
+
+QLabel#help_animation_placeholder {
+    border: 2px dashed #444;
+    color: #888;
+    background-color: #222222;
+}
+
+/* Binning Dialog */
+QLabel#binning_hint_label {
+    font-style: italic;
+}
+
+QLabel#binning_hint_label[status="success"] {
+    color: #2e7d32;
+}
+
+QLabel#binning_hint_label[status="error"] {
+    color: #d32f2f;
+}
+
+/* Google Sheets  */
+QLabel[styleClass="blue_help_box"] {
+    color: #333333;
+    background-color: #e8f4f8;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+/* Log History Popup */
+QWidget#LogPopup {
+    background-color: #1e1e1e;
+    border: 1px solid #454545;
+    border-radius: 6px;
+}
+
+QWidget#LogPopup QTextEdit {
+    background-color: transparent;
+    color: #cccccc;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    border: none;
+    padding: 8px;
+}
+
+QLabel#HeaderTitle {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 12px;
+    padding-left: 5px;
+}
+
+QPushButton[class="IconButton"] {
+    background-color: transparent;
+    color: #aaaaaa;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: bold;
+}
+
+QPushButton[class="IconButton"]:hover {
+    background-color: #333333;
+    color: #ffffff;
+}
+
+QLineEdit#SearchBar {
+    background-color: #252526;
+    color: #cccccc;
+    border: 1px solid #454545;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+QLineEdit#SearchBar:focus {
+    border: 1px solid #007acc;
+}
+
+QPushButton[class="FilterPill"] {
+    background-color: transparent;
+    border: 1px solid #454545;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+QPushButton#ErrorFilter {
+    color: #aaaaaa;
+}
+
+QPushButton#ErrorFilter:hover {
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+QPushButton#ErrorFilter:checked {
+    background-color: rgba(255, 0, 0, 0.15);
+    color: #ff5555;
+    border-color: #ff5555;
+}
+
+QPushButton#WarningFilter {
+    color: #aaaaaa;
+}
+
+QPushButton#WarningFilter:hover {
+    border-color: #ffaa00;
+    color: #ffaa00;
+}
+
+QPushButton#WarningFilter:checked {
+    background-color: rgba(255, 170, 0, 0.15);
+    color: #ffaa00;
+    border-color: #ffaa00;
+}
+
+QPushButton#WrapToggle {
+    color: #aaaaaa;
+    border-color: #454545;
+}
+
+QPushButton#WrapToggle:hover {
+    color: #ffffff;
+    border-color: #888888;
+}
+
+QPushButton#WrapToggle:checked {
+    background-color: #333333;
+    color: #ffffff;
+    border-color: #888888;
+}
+
+QWidget#LogPopup QScrollBar:vertical {
+    background: #1e1e1e;
+    width: 10px;
+    margin: 0px;
+}
+
+QWidget#LogPopup QScrollBar::handle:vertical {
+    background: #424242;
+    min-height: 20px;
+    border-radius: 5px;
+    margin: 2px;
+}
+
+QWidget#LogPopup QScrollBar::handle:vertical:hover {
+    background: #686868;
+}
+
+QWidget#LogPopup QScrollBar::add-line:vertical,
+QWidget#LogPopup QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QWidget#LogPopup QScrollBar::add-page:vertical,
+QWidget#LogPopup QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* Merge Dialog */
+QLabel#merge_file_label {
+    font-style: italic;
+    color: #666666;
+}
+
+QLabel#merge_file_label[status="selected"] {
+    font-style: normal;
+    font-weight: bold;
+    color: #000000;
+}
+
+/* Outlier Detection Dialog */
+QLabel#outlier_info_label {
+    font-weight: bold;
+    color: #e74c3c;
+}
+
+QWidget#outlier_canvas_container {
+    background-color: #2b2b2b;
+}
+
+/* Progress Dialog */
+QProgressBar#main_progress_bar {
+    border: 2px solid #3498db;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    background-color: #ecf0f1;
+}
+
+QProgressBar#main_progress_bar::chunk {
+    background-color: #3498db;
+    border-radius: 3px;
+}
+
+/* Search Results Dialog */
+QLabel[styleClass="search_instruction"] {
+    font-weight: bold;
+    color: #555555;
+}
+
+/* Subset Data Viewer */
+QLabel#subset_info_label {
+    font-weight: bold;
+}

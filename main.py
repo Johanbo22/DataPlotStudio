@@ -13,9 +13,6 @@ def main():
     if translator.load(QLocale.system(), "dataplotstudio", "_", "translations"):
         app.installTranslator(translator)
 
-    main_application_theme = DataPlotStudio.load_stylesheet("ui/styles/style.css")
-    app.setStyleSheet(main_application_theme)
-
     window = DataPlotStudio()
     window.showMaximized()
     sys.exit(app.exec())

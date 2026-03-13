@@ -19,9 +19,10 @@ class AppearanceSettingsTab(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setProperty("styleClass", "transparent_scroll_area")
 
         scroll_widget = QWidget()
-        scroll_widget.setObjectName("ScrollContent")
+        scroll_widget.setObjectName("TransparentScrollContent")
         scroll_layout = QVBoxLayout(scroll_widget)
 
         self._setup_theme_group(scroll_layout)
@@ -44,7 +45,7 @@ class AppearanceSettingsTab(QWidget):
         layout = QVBoxLayout()
 
         info = QLabel("Save or load custom visual styles")
-        info.setStyleSheet(ThemeColors.InfoStylesheet)
+        info.setProperty("styleClass", "info_text")
         layout.addWidget(info)
 
         load_layout = QHBoxLayout()
@@ -76,7 +77,6 @@ class AppearanceSettingsTab(QWidget):
 
     def _setup_font_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Font Settings")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
 
         layout.addWidget(QLabel("Font Family:"))
@@ -95,7 +95,6 @@ class AppearanceSettingsTab(QWidget):
 
         if not self.has_latex:
             self.usetex_checkbox.setEnabled(False)
-            self.usetex_checkbox.setStyleSheet("color: gray;")
             self.usetex_checkbox.setToolTip("LaTeX installation not found in system PATH.\n"
                                             "Please install TeX Live (Linux/Windows) or MacTeX (macOS)\n"
                                             "and ensure 'latex' is in your PATH to enable this feature.")
@@ -109,7 +108,6 @@ class AppearanceSettingsTab(QWidget):
 
     def _setup_title_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Title Options")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
         
         self.title_check = DataPlotStudioToggleSwitch("Show Title")
@@ -144,7 +142,6 @@ class AppearanceSettingsTab(QWidget):
 
     def _setup_labels_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Axis Label Options")
-        group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
         
         tab_widget = DataPlotStudioTabWidget()
@@ -213,7 +210,7 @@ class AppearanceSettingsTab(QWidget):
         layout = QVBoxLayout()
 
         info = QLabel("Customize the four borders (spines) of the plotting axes")
-        info.setStyleSheet(ThemeColors.InfoStylesheet)
+        info.setProperty("styleClass", "info_text")
         layout.addWidget(info)
         layout.addSpacing(10)
 
@@ -326,11 +323,8 @@ class AppearanceSettingsTab(QWidget):
 
         return vis_check, width_spin, color_btn, color_label
 
-        return vis_check, width_spin, color_btn, color_label
-
     def _setup_figure_group(self, parent_layout: QVBoxLayout) -> None:
         self.figure_size_group = DataPlotStudioGroupBox("Figure Settings")
-        self.figure_size_group.setStyleSheet(ThemeColors.GroupBoxHeaderStyle)
         layout = QVBoxLayout()
         
         layout.addWidget(QLabel("Figure Width:"))

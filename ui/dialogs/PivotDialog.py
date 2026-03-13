@@ -33,7 +33,7 @@ class PivotDialog(QDialog):
             "2. Columns: Keys to group by on the columns.\n"
             "3. Values: Column(s) to aggregate by."
         )
-        info_description.setStyleSheet(ThemeColors.InfoStylesheet)
+        info_description.setProperty("styleClass", "info_text")
         info_description.setWordWrap(True)
         layout.addWidget(info_description)
         
@@ -90,6 +90,8 @@ class PivotDialog(QDialog):
         preview_layout = QVBoxLayout()
         
         self.preview_label = QLabel("Select parameters and click 'Update Preview'")
+        self.preview_label.setObjectName("pivot_preview_label")
+        self.preview_label.setProperty("status", "normal")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         preview_layout.addWidget(self.preview_label)
         
@@ -133,14 +135,18 @@ class PivotDialog(QDialog):
         
         if not index_cols:
             self.preview_label.setText("Error: Please select at least one Index column")
-            self.preview_label.setStyleSheet("color: red;")
+            self.preview_label.setProperty("status", "error")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
             return
         
         column_col = column_col_list[0] if column_col_list else None
         
         if not value_cols:
             self.preview_label.setText("Error: Please select at least one Value column")
-            self.preview_label.setStyleSheet("color: red;")
+            self.preview_label.setProperty("status", "error")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
             return
         
         try:
@@ -172,11 +178,15 @@ class PivotDialog(QDialog):
                     self.preview_table.setItem(row, col, QTableWidgetItem(val))
             
             self.preview_label.setText(f"Result Shape: {preview_df.shape} (Showing the first 20 rows)")
-            self.preview_label.setStyleSheet("color: #333; font-weight: bold;")
+            self.preview_label.setProperty("status", "success")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
         
         except Exception as Error:
             self.preview_label.setText(f"Preview error: {str(Error)}")
-            self.preview_label.setStyleSheet("color: red;")
+            self.preview_label.setProperty("status", "error")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
             print(Error)
     
     def validate_and_accept(self):

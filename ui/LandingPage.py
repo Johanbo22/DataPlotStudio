@@ -6,7 +6,6 @@ import re
 from ui.icons import IconBuilder, IconType
 
 from core.resource_loader import get_resource_path
-from ui.styles.widget_styles import Label, ScrollArea, Dialog
 from ui.theme import ThemeColors
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from resources.version import APPLICATION_VERSION
@@ -21,7 +20,6 @@ class ChangelogViewer(QDialog):
         self.setWindowTitle(title)
         self.setMinimumSize(500, 400)
         self.resize(700, 600)
-        self.setStyleSheet(Dialog.ChangelogViewer)
         
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -54,7 +52,6 @@ class LandingPage(QWidget):
         self.init_ui()
     
     def init_ui(self):
-        self.setStyleSheet("LandingPage { background-color: #f4f6f8; }")
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -73,11 +70,11 @@ class LandingPage(QWidget):
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         title_label = QLabel("DataPlotStudio")
-        title_label.setStyleSheet(Label.LandingPageTitleLabel)
+        title_label.setObjectName("landing_title")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         subtitle_label = QLabel("Data Manipulation and Visualization Tool")
-        subtitle_label.setStyleSheet(Label.LandingPageSubTitleLabel)
+        subtitle_label.setObjectName("landing_subtitle")
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         actions_layout.addWidget(logo_label)
@@ -119,7 +116,7 @@ class LandingPage(QWidget):
         
         def create_section_label(text: str) -> QLabel:
             label = QLabel(text.upper())
-            label.setStyleSheet(Label.LandingPageSectionLabel)
+            label.setProperty("styleClass", "landing_section_label")
             label.setFixedWidth(button_width)
             label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
             label.setContentsMargins(5, 0, 0, 0)
@@ -143,11 +140,11 @@ class LandingPage(QWidget):
         # Right side. a whats new panel/updates
         whats_new_scroll_area = QScrollArea()
         whats_new_scroll_area.setWidgetResizable(True)
-        whats_new_scroll_area.setStyleSheet(ScrollArea.LandingPageScrollArea)
+        whats_new_scroll_area.setObjectName("landing_scroll_area")
         info_panel = QFrame()
         info_panel.setObjectName("InfoPanel")
         info_panel.setFrameShape(QFrame.Shape.StyledPanel)
-        info_panel.setStyleSheet(Label.LandingPageWhatsNewInfoLabel)
+        info_panel.setObjectName("InfoPanel")
         
         shadow_effect = QGraphicsDropShadowEffect(self)
         shadow_effect.setBlurRadius(20)
@@ -163,10 +160,10 @@ class LandingPage(QWidget):
         whats_new_header_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
         info_title = QLabel("What's New")
-        info_title.setStyleSheet(Label.LandingPageWhatsNewInfoTitle)
+        info_title.setObjectName("whats_new_title")
         
         app_version = QLabel(f"App. Ver. {APPLICATION_VERSION}")
-        app_version.setStyleSheet(Label.LandingPageVersionLabel)
+        app_version.setObjectName("app_version_label")
         
         whats_new_header_layout.addWidget(info_title)
         whats_new_header_layout.addWidget(app_version)
@@ -190,7 +187,7 @@ class LandingPage(QWidget):
         info_content.setWordWrap(True)
         info_content.setTextFormat(Qt.TextFormat.RichText)
         info_content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        info_content.setStyleSheet(Label.LandingPageInfoContentFontFamily)
+        info_content.setObjectName("whats_new_content")
         
         more_info_label = QLabel(
             '<br>'
@@ -204,7 +201,7 @@ class LandingPage(QWidget):
         
         header_separator = QFrame()
         header_separator.setFixedHeight(1)
-        header_separator.setStyleSheet(Label.LandingPageHeaderSeparator)
+        header_separator.setObjectName("landing_header_separator")
 
         info_layout.addLayout(whats_new_header_layout)
         info_layout.addWidget(info_content)

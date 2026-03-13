@@ -64,7 +64,7 @@ class GoogleSheetsDialog(QDialog):
 
         delimiter_info = QLabel("Google Sheets exports data as a CSV. Choose the delimitter used in your sheet")
         delimiter_info.setWordWrap(True)
-        delimiter_info.setStyleSheet("font-weight: normal; color: #555;")
+        delimiter_info.setProperty("styleClass", "muted_text")
         delimiter_layout.addWidget(delimiter_info)
 
         #delimter box
@@ -139,7 +139,7 @@ class GoogleSheetsDialog(QDialog):
             "6. Paste the ID and sheet name below"
         )
         help_text.setFont(QFont("Arial", 9))
-        help_text.setStyleSheet("color: #333333; background-color: #e8f4f8; padding: 12px; border-radius: 4px;")
+        help_text.setProperty("styleClass", "blue_help_box")
         help_text.setWordWrap(True)
         layout.addWidget(help_text)
 

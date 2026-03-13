@@ -7,8 +7,6 @@ from ui.widgets import DataPlotStudioButton, DataPlotStudioListWidget, DataPlotS
 class SearchResultsDialog(QDialog):
     """Dialog to display search results from a table search"""
     
-    InstructionLabelStyle: str = "font-weight: bold; color: #555555;"
-    StatusLabelStyle: str = "font-size: 11px; color: #888888;"
     def __init__(self, matches: list, parent=None):
         super().__init__(parent)
         # Storing results as a list of (row_index, column_index, column_name, value)
@@ -26,7 +24,7 @@ class SearchResultsDialog(QDialog):
         layout.setSpacing(10)
         
         instruction_label = QLabel("Select a search result to navigate to its location")
-        instruction_label.setStyleSheet(self.InstructionLabelStyle)
+        instruction_label.setProperty("styleClass", "search_instruction")
         layout.addWidget(instruction_label)
         
         self.filter_input = DataPlotStudioLineEdit()
@@ -36,7 +34,7 @@ class SearchResultsDialog(QDialog):
         layout.addWidget(self.filter_input)
         
         self.status_label = QLabel(f"Showing {len(self.matches)} of {len(self.matches)} matches")
-        self.status_label.setStyleSheet(self.StatusLabelStyle)
+        self.status_label.setProperty("styleClass", "muted_text")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.status_label)
         

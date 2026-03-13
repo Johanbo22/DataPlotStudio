@@ -1,0 +1,145 @@
+QStatusBar#main_status_bar {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border-top: 1px solid #3e3e42;
+    padding: 4px;
+}
+
+QStatusBar#main_status_bar::item {
+    border: none;
+}
+
+QLabel#stats_label {
+    color: #858585;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 11px;
+    padding-right: 15px;
+}
+
+QLabel#source_label {
+    color: #3498db;
+    font-size: 11px;
+    padding-right: 10px;
+}
+
+QLabel#issue_counter_label {
+    color: #aaaaaa;
+    font-weight: bold;
+    font-size: 11px;
+    padding: 0 5px;
+}
+
+QFrame[styleClass="status_separator"] {
+    color: #454545;
+}
+
+QProgressBar#status_progress_bar {
+    border: none;
+    background-color: #2d2d2d;
+    border-radius: 2px;
+    min-height: 4px;
+    max-height: 4px;
+}
+
+QProgressBar#status_progress_bar::chunk {
+    background-color: #007acc;
+    border-radius: 2px;
+}
+
+QLineEdit#status_terminal {
+    background-color: #1e1e1e;
+    font-family: Consolas, monospace;
+    font-size: 10px;
+    border: 1px solid #444;
+    padding: 4px;
+}
+
+QLineEdit#status_terminal[logLevel="SUCCESS"],
+QLineEdit#status_terminal[logLevel="INFO"] {
+    color: #00ff00;
+}
+
+QLineEdit#status_terminal[logLevel="WARNING"] {
+    color: #ffaa00;
+}
+
+QLineEdit#status_terminal[logLevel="ERROR"] {
+    color: #ff0000;
+}
+
+QLineEdit#status_terminal[errorFlash="true"] {
+    background-color: rgba(255, 0, 0, 0.15);
+}
+
+QMenu#terminal_context_menu {
+    background-color: #252526;
+    color: #cccccc;
+    border: 1px solid #454545;
+}
+
+QMenu#terminal_context_menu::item {
+    padding: 4px 20px 4px 20px;
+}
+
+QMenu#terminal_context_menu::item:selected {
+    background-color: #007acc;
+    color: white;
+}
+
+DataPlotStudioButton#status_history_button {
+    background-color: #333;
+    color: #ddd;
+    border: 1px solid #444;
+    font-weight: bold;
+}
+
+DataPlotStudioButton#status_history_button:hover {
+    background-color: #444;
+    color: #fff;
+}
+
+QLabel#status_state_label {
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+QLabel#status_state_label[logLevel="IDLE"] {
+    background-color: transparent;
+    color: #888888;
+    border: 1px solid #555555;
+}
+
+QLabel#status_state_label[logLevel="SUCCESS"],
+QLabel#status_state_label[logLevel="INFO"] {
+    background-color: transparent;
+    color: #00ff00;
+    border: 1px solid #00ff00;
+}
+
+QLabel#status_state_label[logLevel="WARNING"] {
+    background-color: #ffaa00;
+    color: #1e1e1e;
+    border: none;
+}
+
+QLabel#status_state_label[logLevel="ERROR"] {
+    background-color: #ff0000;
+    color: #ffffff;
+    border: none;
+}
+
+QLabel#view_context_label {
+    font-weight: bold;
+    font-size: 11px;
+    padding-right: 10px;
+}
+
+QLabel#view_context_label[contextType="aggregation"] {
+    color: #8e44ad;
+}
+
+QLabel#view_context_label[contextType="subset"] {
+    color: #e67e22;
+}

@@ -83,7 +83,6 @@ class PlotConfigManager:
             "secondary_y_column": self.pt.secondary_y_column.currentText(),
             "secondary_plot_type": self.pt.secondary_plot_type_combo.currentText(),
             "quick_filter": self.pt.quick_filter_input.text(),
-            "use_plotly": self.pt.use_plotly_check.isChecked(),
             "subplots": {
                 "enabled": self.pt.add_subplots_check.isChecked(),
                 "rows": self.pt.subplot_rows_spin.value(),
@@ -411,10 +410,7 @@ class PlotConfigManager:
                 if index >= 0:
                     self.pt.subset_combo.setCurrentIndex(index)
         self.pt.use_subset()
-        
-        # Plotly and Subplots
-        self.pt.use_plotly_check.setChecked(config.get("use_plotly", False))
-        
+                
         sub_conf = config.get("subplots", {})
         self.pt.add_subplots_check.setChecked(sub_conf.get("enabled", False))
         self.pt.subplot_rows_spin.setValue(sub_conf.get("rows", 1))

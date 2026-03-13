@@ -16,32 +16,12 @@ class SubplotOverlay(QWidget):
         self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.update_notice_label = QLabel("Data has changed. Click 'Generate Plot' to update")
-        self.update_notice_label.setStyleSheet("""
-            QLabel {
-                background-color: rgba(231, 76, 60, 0.9);
-                color: white;
-                font-weight: bold;
-                padding: 10px 20px;
-                border: 2px solid #c0392b;
-                border-radius: 8px;
-                font-size: 12pt;
-            }
-        """)
+        self.update_notice_label.setObjectName("update_notice_label")
         self.update_notice_label.hide()
         self.v_layout.addWidget(self.update_notice_label)
         
         self.label_widget = QLabel()
-        self.label_widget.setStyleSheet(
-            """
-            QLabel {
-                background-color: rgba(33, 150, 243, 0.8);
-                color: white;
-                font-weight: bold;
-                padding: 4px 8px;
-                border-radius: 4px;
-            }
-        """
-        )
+        self.label_widget.setObjectName("subplot_overlay_label")
         self.v_layout.addWidget(self.label_widget)
 
         self.opacity_effect = QGraphicsOpacityEffect(self)

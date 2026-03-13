@@ -17,7 +17,7 @@ class SubsetDataViewer(QDialog):
 
         # Info
         info = QLabel(f"Showing {len(df):,} rows x {len(df.columns)} columns")
-        info.setStyleSheet("font-weight: bold;")
+        info.setObjectName("susbet_info_label")
         layout.addWidget(info)
 
         # Table

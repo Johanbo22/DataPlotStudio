@@ -143,7 +143,7 @@ class DatabaseConnectionDialog(QDialog):
         # Database icons
         self.db_icon_label = QLabel()
         self.db_icon_label.setFixedHeight(24)
-        self.db_icon_label.setStyleSheet("border: none; background: transparent;")
+        self.db_icon_label.setObjectName("db_icon_label")
         test_connection_layout.addWidget(self.db_icon_label)
 
         test_connection_layout.addStretch()
@@ -180,7 +180,7 @@ class DatabaseConnectionDialog(QDialog):
         self.query_status_icon = QLabel()
         self.query_status_icon.setFixedSize(16, 16)
         self.query_status_label = QLabel(" ")
-        self.query_status_label.setStyleSheet("font-weight: bold;")
+        self.query_status_label.setObjectName("query_status_label")
 
         status_layout = QHBoxLayout()
         status_layout.setSpacing(6)
@@ -415,16 +415,18 @@ class DatabaseConnectionDialog(QDialog):
 
         if valid:
             icon = style.standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton)
-            color = "#388e3c"
+            status_state = "valid"
         else:
             icon = style.standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
-            color = "#d32f2f"
+            status_state = "invalid"
         
         self.query_status_icon.setPixmap(icon.pixmap(16, 16))
         self.query_status_label.setText(f"{message}")
-        self.query_status_label.setStyleSheet(
-            f"color: {color}; font-weight: bold;"
-        )
+        
+        self.query_status_label.setProperty("status", status_state)
+        self.query_status_label.style().unpolish(self.query_status_label)
+        self.query_status_label.style().polish(self.query_status_label)
+        
         self.query_status_icon.setVisible(True)
         self.query_status_label.setVisible(True)
 

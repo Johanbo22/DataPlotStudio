@@ -129,13 +129,13 @@ class ScriptEditorDialog(QDialog):
         #header and information
         info_layout = QHBoxLayout()
         info_label = QLabel("<b>Script</b><br>Edit the <code>create_plot(df)</code> function below. Click the 'Run' button to update the plot.")
-        info_label.setStyleSheet("color: #333;")
+        info_label.setProperty("styleClass", "info_text")
         info_layout.addWidget(info_label)
         layout.addLayout(info_layout)
 
         #security
         security_label = QLabel("Restricted Environment: System calls are blocked in this editor.")
-        security_label.setStyleSheet("color: #d32f2f; font-size: 11pt; font-style: italic;")
+        security_label.setObjectName("script_security_label")
         layout.addWidget(security_label)
 
         #tools
@@ -153,11 +153,7 @@ class ScriptEditorDialog(QDialog):
         self.snippet_button.setCursor(Qt.CursorShape.PointingHandCursor)
         
         self.snippet_menu = QMenu(self)
-        self.snippet_menu.setStyleSheet("""
-            QMenu { background-color: #2b2b2b; color: #f8f8f2; border: 1px solid #555; }
-            QMenu::item { padding: 5px 20px; }
-            QMenu::item:selected { background-color: #4a9c4d; }
-        """)
+        self.snippet_menu.setObjectName("script_snippet_menu")
         
         categorized_snippets: dict[str, dict[str, str]] = {
             "Reference Lines": {
@@ -198,6 +194,7 @@ class ScriptEditorDialog(QDialog):
 
         #editor
         self.editor = CodeEditor()
+        self.editor.setObjectName("script_code_editor")
         self.editor.setPlainText(code if code else "")
         self.editor.setMinimumHeight(400)
         
@@ -208,15 +205,6 @@ class ScriptEditorDialog(QDialog):
         
         font_metrics = QFontMetrics(editor_font)
         self.editor.setTabStopDistance(font_metrics.horizontalAdvance(" ")*4)
-        self.editor.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #2b2b2b; 
-                color: #f8f8f2; 
-                border: 1px solid #555;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
         self.editor.textChanged.connect(self.on_text_changed)
         
         self.comment_shortcut = QShortcut(QKeySequence("Ctrl+Shift+7"), self.editor)
@@ -234,16 +222,8 @@ class ScriptEditorDialog(QDialog):
         variable_panel.setContentsMargins(0, 0, 0, 0)
         
         self.variable_search_bar = DataPlotStudioLineEdit()
+        self.variable_search_bar.setObjectName("script_variable_search")
         self.variable_search_bar.setPlaceholderText("Search Columns...")
-        self.variable_search_bar.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                color: #000000;
-                border: 1px solid #555;
-                border-radius: 4px;
-                padding: 4px;
-            }
-        """)
         self.variable_search_bar.textChanged.connect(self.filter_variables)
         variable_panel.addWidget(self.variable_search_bar)
         
@@ -273,19 +253,10 @@ class ScriptEditorDialog(QDialog):
         layout.addLayout(console_header_layout)
         
         self.console_output = QPlainTextEdit()
+        self.console_output.setObjectName("script_console_output")
         self.console_output.setReadOnly(True)
         self.console_output.setMinimumHeight(50)
         self.console_output.setMaximumHeight(120)
-        self.console_output.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #1e1e1e; 
-                color: #f8f8f2; 
-                border: 1px solid #555;
-                border-radius: 4px;
-                padding: 5px;
-                font-family: Consolas, Monaco, monospace;
-            }
-        """)
         layout.addWidget(self.console_output, 1)
     
         #buttons
@@ -312,27 +283,13 @@ class ScriptEditorDialog(QDialog):
         Context menus for code insertion as well as double click event handling to cursor position
         """
         tree = QTreeWidget()
+        tree.setObjectName("script_variable_explorer")
         tree.setHeaderLabels(["Variable", "Info"])
         tree.setColumnWidth(0, 160)
         tree.setIndentation(15)
         tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         tree.customContextMenuRequested.connect(self.show_explorer_context_menu)
         tree.itemDoubleClicked.connect(self.on_explorer_double_click)
-        tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: #2b2b2b; 
-                color: #f8f8f2; 
-                border: 1px solid #555;
-                border-radius: 4px;
-            }
-            QHeaderView::section {
-                background-color: #383838;
-                color: #ddd;
-                padding: 4px;
-                border: 1px solid #555;
-            }
-            QTreeWidget::item { padding: 4px; }
-        """)
         
         if self.df is not None:
             root = QTreeWidgetItem(tree)
@@ -442,7 +399,7 @@ class ScriptEditorDialog(QDialog):
             return
         
         menu = QMenu()
-        menu.setStyleSheet("QMenu { background-color: #2b2b2b; color: white; }")
+        menu.setObjectName("script_snippet_menu")
         
         data = item.data(0, Qt.ItemDataRole.UserRole)
         node_text = item.text(0)

@@ -126,6 +126,7 @@ class BinningDialog(QDialog):
         self.settings_layout.addRow(self.drop_original_checkbox)
         
         self.hint_label = QLabel()
+        self.hint_label.setObjectName("binning_hint_label")
         self.settings_layout.addRow(self.hint_label)
         
         settings_group.setLayout(self.settings_layout)
@@ -267,10 +268,13 @@ class BinningDialog(QDialog):
 
         if is_valid:
             self.hint_label.setText("Ready to create bins.")
-            self.hint_label.setStyleSheet("color: #2e7d32; font-style: italic;")
+            self.hint_label.setProperty("status", "success")
         else:
             self.hint_label.setText(hint_text)
-            self.hint_label.setStyleSheet("color: #d32f2f; font-style: italic;")
+            self.hint_label.setProperty("status", "error")
+            
+        self.hint_label.style().unpolish(self.hint_label)
+        self.hint_label.style().polish(self.hint_label)
 
         self.apply_button.setEnabled(is_valid)
     

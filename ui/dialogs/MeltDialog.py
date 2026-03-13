@@ -35,7 +35,7 @@ class MeltDialog(QDialog):
             "1. Select ID variables (columns to keep as identifers).\n"
             "2. Select Value Variables (columns to unpivot into rows)."
         )
-        info_description.setStyleSheet(ThemeColors.InfoStylesheet)
+        info_description.setProperty("styleClass", "info_text")
         info_description.setWordWrap(True)
         layout.addWidget(info_description)
 
@@ -67,7 +67,10 @@ class MeltDialog(QDialog):
         value_widget = QWidget()
         value_layout = QVBoxLayout(value_widget)
         value_layout.addWidget(QLabel("Value Variables (Unpivot these):"))
-        value_layout.addWidget(QLabel("(Leave empty to unpivot all non-ID columns)", styleSheet="color: gray; font-size: 8pt"))
+        
+        hint_label = QLabel("(Leave empty to unpivot all non-ID columns)")
+        hint_label.setProperty("styleClass", "muted_text")
+        value_layout.addWidget(hint_label)
 
         self.value_list = QListWidget()
         self.value_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
@@ -107,6 +110,7 @@ class MeltDialog(QDialog):
         preview_layout = QVBoxLayout()
 
         self.preview_label = QLabel("Click 'Update Preview' to see changes")
+        self.preview_label.setObjectName("melt_preview_label")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         preview_layout.addWidget(self.preview_label)
 
@@ -150,7 +154,9 @@ class MeltDialog(QDialog):
         overlap = set(id_vars) & set(value_vars)
         if overlap:
             self.preview_label.setText(f"Error: Overlap in ID and Value variables: {', '.join(overlap)}")
-            self.preview_label.setStyleSheet("color: red; font-weight: bold;")
+            self.preview_label.setProperty("status", "error")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
             self.preview_table.clear()
             self.preview_table.setRowCount(0)
             self.preview_table.setColumnCount(0)
@@ -189,18 +195,22 @@ class MeltDialog(QDialog):
                 f"Original Shape: {self.df.shape}  ->  "
                 f"Result Shape: ({new_rows}, {new_cols})"
             )
-            style = "color: #333; font-weight: bold; padding: 5px; background-color: #e0e0e0; border-radius: 4px;"
+            status_state = "success"
             
             if new_rows > 1_000_000 or (self.row_count > 0 and new_rows > self.row_count * 20):
                 text += f"\nWarning: Row count will increase by {num_value_vars}x!"
-                style = "color: #d32f2f; font-weight: bold; padding: 5px; background-color: #ffebee; border-radius: 4px;"
+                status_state = "warning"
 
             self.preview_label.setText(text)
-            self.preview_label.setStyleSheet(style)
+            self.preview_label.setProperty("status", status_state)
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
         
         except Exception as PreviewMeltError:
             self.preview_label.setText(f"Preview Error: {str(PreviewMeltError)}")
-            self.preview_label.setStyleSheet("color: red;")
+            self.preview_label.setProperty("status", "error")
+            self.preview_label.style().unpolish(self.preview_label)
+            self.preview_label.style().polish(self.preview_label)
             print(PreviewMeltError)
 
     def validate_and_accept(self):
