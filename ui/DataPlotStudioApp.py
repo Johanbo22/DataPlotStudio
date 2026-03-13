@@ -22,6 +22,8 @@ class DataPlotStudio(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"DataPlotStudio - v{APPLICATION_VERSION}")
         self.setWindowIcon(QIcon(get_resource_path("icons/DPS_icon.ico")))
+        self.setMinimumSize(800, 600)
+        self.resize(1280, 720)
 
         # Initialize the core managers
         self.project_manager = ProjectManager()
@@ -59,7 +61,6 @@ class DataPlotStudio(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self._connect_signals()
-        self.show()
     
     def _connect_signals(self) -> None:
         """Routing signals to the main widget"""
@@ -159,11 +160,6 @@ class DataPlotStudio(QMainWindow):
     
     def get_dark_theme(self):
         return self.load_stylesheets("ui/styles/dark_theme.css")
-    
-    @classmethod
-    def load_stylesheet(cls, relative_path: str) -> str:
-        path = Path(get_resource_path(relative_path))
-        return path.read_text(encoding="utf-8")
 
     @classmethod
     def load_stylesheets(cls, relative_paths: list[str]) -> str:

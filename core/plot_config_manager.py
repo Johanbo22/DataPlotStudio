@@ -313,6 +313,8 @@ class PlotConfigManager:
                 "explode_first": self.pt.pie_explode_check.isChecked(),
                 "explode_distance": self.pt.pie_explode_distance_spin.value(),
                 "shadow": self.pt.pie_shadow_check.isChecked(),
+                "donut_enabled": self.pt.pie_donut_check.isChecked(),
+                "donut_width": self.pt.pie_donut_width_spin.value()
             },
         }
     
@@ -683,6 +685,8 @@ class PlotConfigManager:
         self.pt.pie_explode_check.setChecked(pie.get("explode_first", False))
         self.pt.pie_explode_distance_spin.setValue(pie.get("explode_distance", 0.1))
         self.pt.pie_shadow_check.setChecked(pie.get("shadow", False))
+        self.pt.pie_donut_check.setChecked(pie.get("donut_enabled", False))
+        self.pt.pie_donut_width_spin.setValue(pie.get("donut_width", 0.3))
 
         self.pt.toggle_line_selector()
         self.pt.toggle_bar_selector()

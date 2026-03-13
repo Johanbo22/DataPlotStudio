@@ -661,8 +661,16 @@ class CodeExporter:
         start = pie_cfg.get("start_angle", 0)
         shadow = pie_cfg.get("shadow", False)
         
+        is_donut = pie_cfg.get("donut_enabled", False)
+        
+        if is_donut:
+            donut_width = pie_cfg.get("donut_width", 0.3)
+            wedgeprops_str = f"{{'width': {donut_width}}}"
+            lines.append(f"        ax.pie(data, labels=data.index, autopct={autopct}, startangle={start}, explode={explode_list}, shadow={shadow}, wedgeprops={wedgeprops_str})")
+        else:
+            lines.append(f"        ax.pie(data, labels=data.index, autopct={autopct}, startangle={start}, explode={explode_list}, shadow={shadow})")
+        
         lines.extend([
-            f"        ax.pie(data, labels=data.index, autopct={autopct}, startangle={start}, explode={explode_list}, shadow={shadow})",
             "        ax.set_ylabel('')",
             "    except Exception as e: print(f'Pie chart error: {e}')"
         ])

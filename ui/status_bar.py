@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from core.logger import Logger
 from ui.widgets.AnimatedButton import DataPlotStudioButton
 from ui.dialogs.LogHistoryPopup import LogHistoryPopup
-from ui.styles import widget_styles
 
 class LogLevel(Enum):
     """Defines the logging levels"""
