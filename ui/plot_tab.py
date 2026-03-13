@@ -570,22 +570,6 @@ class PlotTab(PlotTabUI):
                             list_w.clearSelection()
                     self.on_plot_type_changed(plot_type_name)
                 break
-
-    def toggle_plotly_backend(self):
-
-        is_plotly = self.view.use_plotly_check.isChecked()
-
-        if is_plotly:
-            self.plot_stack.setCurrentIndex(1)
-            self.toolbar.setVisible(False)
-
-            self.view.add_subplots_check.setEnabled(False)
-            self.view.add_subplots_check.setChecked(False)
-        else:
-            self.plot_stack.setCurrentIndex(0)
-            self.toolbar.setVisible(True)
-            self.view.add_subplots_check.setEnabled(True)
-
     
     def toggle_individual_spines(self):
         """Toggles the customization of spines for each"""
@@ -673,24 +657,51 @@ class PlotTab(PlotTabUI):
         
         try:
             default_export_dpi = 300
-            dialog = PlotExportDialog(current_dpi=default_export_dpi, parent=self)
+            
+            overlay_was_visible: bool = False
+            if hasattr(self, "selection_overlay") and self.selection_overlay.isVisible():
+                overlay_was_visible = True
+                self.selection_overlay.hide()
+                
+            preview_pixmap = self.canvas.grab()
+            if overlay_was_visible:
+                self.selection_overlay.show()
+            
+            fig_width, fig_height = self.plot_engine.current_figure.get_size_inches()
+            
+            dialog = PlotExportDialog(current_dpi=default_export_dpi, preview_pixmap=preview_pixmap, fig_width=fig_width, fig_height=fig_height, parent=self)
             if dialog.exec():
                 config = dialog.get_config()
-                filepath = config["filepath"]
+                filepath: str | None = config.get("filepath")
 
                 if filepath:
                     kwargs = {
                         "dpi": config["dpi"],
-                        "bbox_inches": "tight" if self.view.tight_layout_check.isChecked() else None,
+                        "bbox_inches": "tight" if config["tight_layout"] else None,
                         "transparent": config["transparent"]
                     }
                     if not config["transparent"]:
                         kwargs["facecolor"] = self.bg_color
                     
-                    self.plot_engine.current_figure.savefig(filepath, **kwargs)
+                    original_size = self.plot_engine.current_figure.get_size_inches()
+                    target_size = (config["width"], config["height"])
+                    
+                    try:
+                        self.plot_engine.current_figure.set_size_inches(*target_size)
+                        self.plot_engine.current_figure.savefig(filepath, **kwargs)
+                    finally:
+                        self.plot_engine.current_figure.set_size_inches(*original_size)
+                        self.canvas.draw_idle()
                     
                 self.status_bar.log_action(f"Plot saved to {filepath}", level="SUCCESS")
                 QMessageBox.information(self, "Success", f"Plot saved successfully to:\n{filepath}")
+        except PermissionError:
+            self.status_bar.log("Permission denied: Target file might be open in another program.", "ERROR")
+            QMessageBox.critical(
+                self, 
+                "Save Error", 
+                "Cannot save the file.\n\nIf you are trying to overwrite an existing file (like a PDF), please ensure it is closed in your viewer/editor before saving."
+            )
         except Exception as ExportPlotAsImageError:
             self.status_bar.log(f"Failed to save plot: {str(ExportPlotAsImageError)}", "ERROR")
             QMessageBox.critical(self, "Save Error", f"Could not save plot:\n{str(ExportPlotAsImageError)}")
