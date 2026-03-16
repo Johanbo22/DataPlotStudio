@@ -19,7 +19,8 @@ from PyQt6.QtCore import (
     Qt,
     QPropertyAnimation,
     QEasingCurve,
-    pyqtSignal
+    pyqtSignal,
+    QSize
 )
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 import numpy as np
@@ -523,45 +524,96 @@ class DataTab(QWidget):
         history_operations = history_information["history"]
         current_index = history_information["current_index"]
         
+        item_height = 32
+        
+        def style_item(item: QListWidgetItem, index: int, text: str) -> None:
+            item.setSizeHint(QSize(0, item_height))
+            font = item.font()
+            font.setPointSize(9)
+            
+            if index == current_index:
+                # Active State
+                item.setText(f"{text}  ← Active")
+                font.setWeight(QFont.Weight.Bold)
+                item.setFont(font)
+                try:
+                    active_color = QColor(ThemeColors.MainColor)
+                    bg_color = QColor(ThemeColors.MainColor)
+                    bg_color.setAlpha(25)
+                except Exception:
+                    active_color = QColor("#2563eb")
+                    bg_color = QColor("#dbeafe")
+                item.setForeground(active_color)
+                item.setBackground(bg_color)
+            elif index < current_index:
+                item.setText(text)
+                font.setWeight(QFont.Weight.Medium)
+                item.setFont(font)
+                item.setForeground(QColor("#334155"))
+            else:
+                item.setText(text)
+                font.setItalic(True)
+                item.setFont(font)
+                item.setForeground(QColor("#94A3B8"))
+                
+        
         initial_item = QListWidgetItem("0. Initial Data")
         initial_item.setData(Qt.ItemDataRole.UserRole, 0)
-        
-        if current_index == 0:
-            initial_item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
-            initial_item.setForeground(Qt.GlobalColor.black)
-            initial_item.setIcon(IconBuilder.build(IconType.Checkmark))
+        initial_item.setIcon(IconBuilder.build(IconType.DataExplorerIcon))
+        initial_item.setToolTip("The original data state upon import or creation")
         
         panel.history_list.addItem(initial_item)
         
         for i, operation in enumerate(history_operations):
             history_index = i + 1
+            operation_type = operation.get("type", "Unknown")
             operation_text = self._format_operation_text(operation)
+            
             item = QListWidgetItem(f"{history_index}. {operation_text}")
             item.setData(Qt.ItemDataRole.UserRole, history_index)
+            item.setIcon(self._get_icon_for_operation(operation_type))
             
-            if history_index == current_index:
-                item.setFont(QFont("Consolas", 9, QFont.Weight.Bold))
-                item.setForeground(Qt.GlobalColor.black)
-                item.setIcon(IconBuilder.build(IconType.Checkmark))
-                item.setBackground(Qt.GlobalColor.white)
-            elif history_index > current_index:
-                item.setForeground(Qt.GlobalColor.gray)
-                font = item.font()
-                font.setItalic(True)
-                item.setFont(font)
+            details = "".join(f"<li><b>{k}</b>: {v}</li>" for k, v in operation.items() if k != "type")
+            item.setToolTip(f"<b>Operation Details:</b><br><ul style='margin-top: 4px; margin-bottom: 0px;'>{details}</ul>")
             
+            style_item(item, history_index, f"{history_index}. {operation_text}")
             panel.history_list.addItem(item)
         
         if panel.history_list.count() > 0:
             panel.history_list.scrollToItem(panel.history_list.item(current_index))
-
-    def get_subset_manager(self):
-        """
-        DEPRECATED: Use self.subset_manager directly.
-        Return the subset manager instance
-        """
-        # This function is no longer needed as subset_manager is passed in
-        return self.subset_manager
+    
+    def _get_icon_for_operation(self, operation_type: str) -> QIcon:
+        match operation_type:
+            case "filter" | "filter_multiple":
+                return IconBuilder.build(IconType.Filter)
+            case "drop_column":
+                return IconBuilder.build(IconType.DropColumn)
+            case "rename_column":
+                return IconBuilder.build(IconType.RenameColumn)
+            case "change_data_type":
+                return IconBuilder.build(IconType.ChangeDataType)
+            case "fill_missing":
+                return IconBuilder.build(IconType.FillMissingValues)
+            case "drop_missing":
+                return IconBuilder.build(IconType.DropMissingValues)
+            case "drop_duplicates":
+                return IconBuilder.build(IconType.RemoveDuplicates)
+            case "aggregate" | "melt" | "pivot" | "merge" | "concatenate" | "bin_column" | "normalize":
+                return IconBuilder.build(IconType.DataTransform)
+            case "sort":
+                return IconBuilder.build(IconType.Sort)
+            case "computed_column":
+                return IconBuilder.build(IconType.Calculator)
+            case "text_manipulation" | "split_column" | "regex_replace":
+                return IconBuilder.build(IconType.TextOperation)
+            case "duplicate_column":
+                return IconBuilder.build(IconType.DuplicateColumn)
+            case "extract_date_component" | "calculate_date_difference":
+                return IconBuilder.build(IconType.DatetimeTools)
+            case "remove_rows" | "clip_outliers" | "flag_outliers":
+                return IconBuilder.build(IconType.DataCleaning)
+            case _:
+                return IconBuilder.build(IconType.History)
 
     def switch_to_plot_tab(self):
         """Helper to swtich to the plot tab"""
@@ -619,28 +671,65 @@ class DataTab(QWidget):
         match operation_type:
             case "filter":
                 return f"Filter: {operation.get('column')} {operation.get('condition')} '{operation.get('value')}'"
+            case "filter_multiple":
+                filters = operation.get("filters", [])
+                return f"Advanced Filter ({len(filters)} conditions)"
             case "drop_column":
-                return f"Drop Column: {operation.get('column')}"
+                cols = operation.get("columns", operation.get("column", ""))
+                if isinstance(cols, list):
+                    return f"Drop Columns: {', '.join(cols)}"
+                return f"Drop Column: {cols}"
             case "rename_column":
                 return f"Rename: {operation.get('old_name')} -> {operation.get('new_name')}"
             case "change_data_type":
                 return f"Data type change: {operation.get('column')} -> {operation.get('new_type')}"
             case "fill_missing":
-                return f"Fill missing Values: {operation.get('column')} ({operation.get('method')})"
+                col = operation.get("column", "All Columns")
+                return f"Fill missing: {col} ({operation.get('method')})"
             case "drop_missing":
                 return "Drop missing Values"
             case "drop_duplicates":
                 return "Remove Duplicate Values"
             case "aggregate":
-                if "agg_func" in operation:
-                    return f"Aggregation: {operation.get('agg_func')} on {len(operation.get('agg_columns', []))} columns"
-                else:
-                    return f"Aggregation: Grouped by {len(operation.get('group_by', []))} cols"
+                group_by = operation.get("group_by", [])
+                return f"Aggregate: Grouped by {len(group_by)} cols"
             case "melt":
-                return "Melt/Pivot Data"
+                return "Melt/Unpivot Data"
+            case "pivot":
+                index_cols = operation.get("index", [])
+                return f"Pivot Table (Index: {index_cols})"
+            case "merge":
+                return f"Merge Data ({operation.get('how', 'inner')})"
+            case "concatenate":
+                return "Append / Concatenate Data"
             case "sort":
                 direction = "Asc" if operation.get("ascending") else "Desc"
                 return f"Sort: {operation.get('column')} ({direction})"
+            case "computed_column":
+                return f"Compute: {operation.get('new_column')}"
+            case "bin_column":
+                return f"Bin: {operation.get('column')} -> {operation.get('new_column')}"
+            case "text_manipulation":
+                return f"Text Op: {operation.get('operation')} on {operation.get('column')}"
+            case "split_column":
+                return f"Split: {operation.get('column')}"
+            case "regex_replace":
+                return f"Regex Replace on {operation.get('column')}"
+            case "remove_rows":
+                rows = operation.get("rows", [])
+                return f"Remove Rows ({len(rows)} rows)"
+            case "clip_outliers":
+                return f"Clip Outliers ({operation.get('method')})"
+            case "duplicate_column":
+                return f"Duplicate: {operation.get('column')} -> {operation.get('new_column')}"
+            case "normalize":
+                return f"Normalize ({operation.get('method')})"
+            case "extract_date_component":
+                return f"Extract: {operation.get('component')} from {operation.get('column')}"
+            case "calculate_date_difference":
+                return f"Date Diff: {operation.get('end_column')} - {operation.get('start_column')}"
+            case "flag_outliers":
+                return f"Flag Outliers: {operation.get('new_column_name')}"
             case _:
                 return f"{operation_type.replace('_', ' ').title()}"
 

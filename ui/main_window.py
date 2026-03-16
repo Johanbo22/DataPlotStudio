@@ -102,7 +102,6 @@ class MainWindow(QWidget):
     
     def _connect_subset_managers(self) -> None:
         """Connect the subset manager used in both DataTab and PlotTab"""
-        subset_manager = self.data_tab.get_subset_manager()
         self.plot_tab.set_subset_manager(self.subset_manager)
         self.data_tab.set_plot_tab(self.plot_tab)
         self.tabs.currentChanged.connect(self._on_tab_changed)

@@ -1,7 +1,7 @@
 # ui/plot_tab.py
 
 from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog
-from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QIcon, QColor, QFont
 import json
 import os
@@ -71,6 +71,7 @@ class PlotTab(PlotTabUI):
         self.dragged_annotation = None
         self.ignore_next_click = False
         self.config_manager = PlotConfigManager(self)
+        self.thread_pool = QThreadPool.globalInstance()
         
         self._is_data_dirty = False
         self._is_clearing = False
@@ -1898,28 +1899,46 @@ class PlotTab(PlotTabUI):
             quick_filter
         ]
         current_data_signature = tuple(data_params)
-        processed_df = None
-        
         if (hasattr(self, "_last_data_signature") and self._last_data_signature == current_data_signature and hasattr(self, "_cached_active_df") and self._cached_active_df is not None):
-            processed_df = self._cached_active_df
             self.status_bar.log("Using cached data for plotting", "INFO")
-        else:
-            processed_df = active_df.copy()
-            if quick_filter:
-                processed_df = self._apply_quick_filter(processed_df, quick_filter)
-                if processed_df is None:
-                    return
-            
-            processed_df = self._sample_data_if_needed(processed_df, plot_type)
-            self._convert_datetime_columns(processed_df, x_col, y_cols)
-            self._cached_active_df = processed_df
-            self._last_data_signature = current_data_signature
-        
-        redraw_needed = True
+            self._generate_main_plot(
+                self._cached_active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=True
+            )
+            return
 
-        # Generate main plot
+        self._last_data_signature = current_data_signature
+        
+        self.status_bar.log("Preparing data in background...", "INFO")
+        self._prep_progress_dialog = ProgressDialog(title="Preparing Data", message="Initializing background task...", parent=self)
+        self._prep_progress_dialog.show()
+        
+        from ui.workers import PlotDataPrepWorker
+        worker = PlotDataPrepWorker(active_df, plot_type, x_col, y_cols, quick_filter)
+        worker.signals.progress.connect(self._prep_progress_dialog.update_progress)
+        worker.signals.log.connect(lambda msg: self.status_bar.log(msg, "INFO"))
+        worker.signals.error.connect(self._on_prep_error)
+        worker.signals.finished.connect(
+            lambda processed_df: self._on_prep_finished(
+                processed_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter
+            )
+        )
+        self.thread_pool.start(worker)
+    
+    def _on_prep_error(self, error: Exception) -> None:
+        """Handle errors from the background data preparation worker."""
+        if hasattr(self, "_prep_progress_dialog") and self._prep_progress_dialog:
+            self._prep_progress_dialog.accept()
+        self.status_bar.log(f"Data preparation failed: {str(error)}", "ERROR")
+        QMessageBox.critical(self, "Data Preparation Error", f"An error occurred during data processing:\n{str(error)}")
+
+    def _on_prep_finished(self, processed_df: pd.DataFrame, plot_type: str, x_col: str, y_cols: list[str], hue: str, subset_name: str, current_subplot_index: int, quick_filter: str) -> None:
+        """Called when background data preparation completes successfully."""
+        if hasattr(self, "_prep_progress_dialog") and self._prep_progress_dialog:
+            self._prep_progress_dialog.accept()
+            
+        self._cached_active_df = processed_df
         self._generate_main_plot(
-            active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=not redraw_needed
+            processed_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter, keep_data=False
         )
     
     def _apply_quick_filter(self, df: pd.DataFrame, query: str) -> Optional[pd.DataFrame]:
@@ -2137,34 +2156,6 @@ class PlotTab(PlotTabUI):
             kwargs["show_kde"] = self.view.histogram_show_kde_check.isChecked()
 
         return kwargs
-
-    def _sample_data_if_needed(self, active_df, plot_type):
-        """Sample data for better performance if necessary"""
-        MAX_PLOT_POINTS = 500_000
-        PLOTS_TO_SAMPLE = ["Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"]
-
-        if len(active_df) > MAX_PLOT_POINTS and plot_type in PLOTS_TO_SAMPLE:
-            self.status_bar.log(f"Dataset is too large ({len(active_df)} rows) for '{plot_type}' "
-            f"Plotting a random sample of {MAX_PLOT_POINTS:,} points",
-            "WARNING"
-            )
-            return active_df.sample(n=MAX_PLOT_POINTS, random_state=42)
-        return active_df
-    
-    def _convert_datetime_columns(self, active_df, x_col, y_cols) -> None:
-        """Convert datetime columns if needded"""
-        try:
-            if x_col and self.plot_engine._helper_is_datetime_column(self, active_df[x_col]):
-                if not pd.api.types.is_datetime64_any_dtype(active_df[x_col]):
-                    active_df[x_col] = pd.to_datetime(active_df[x_col], utc=True, errors="coerce")
-                    self.status_bar.log(f"Converted column: '{x_col}' to datetime", "INFO")
-            for y_col in y_cols:
-                if y_col and self.plot_engine._helper_is_datetime_column(self, active_df[y_col]):
-                    if not pd.api.types.is_datetime64_any_dtype(active_df[y_col]):
-                        active_df[y_col] = pd.to_datetime(active_df[y_col], utc=True, errors="coerce")
-                        self.status_bar.log(f"Converted column: '{y_col}' to datetime", "INFO")
-        except Exception as ConvertColumnToDatetimeError:
-            self.status_bar.log(f"Warning: Could not convert datetime columns: {str(ConvertColumnToDatetimeError)}", "ERROR")
     
     def _generate_main_plot(self, active_df, plot_type, x_col, y_cols, hue, subset_name, current_subplot_index, quick_filter="", keep_data=False, animate=True):
         """Generate plot using matplotlib settings"""
@@ -2532,7 +2523,7 @@ class PlotTab(PlotTabUI):
         """Finalize plot and save configs"""
         try:
             if self.view.tight_layout_check.isChecked():
-                self.plot_engine.current_figure.tight_layout()
+                self.plot_engine.finalize_layout()
         except Exception as TightLayoutError:
             self.status_bar.log(f"Tight layout not applied due to error: {str(TightLayoutError)}", "ERROR")
         

@@ -4,7 +4,7 @@ import pandas as pd
 import keyword
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, Callable
 import requests
 import atexit
 from sqlalchemy import create_engine
@@ -98,6 +98,26 @@ class DataHandler:
 
         # Register clean up upon exit
         atexit.register(self.cleanup_temp_files)
+    
+    def _setup_operation_registry(self) -> None:
+        self._operation_registry: Dict[DataOperation, Callable[..., None]] = {
+            DataOperation.DROP_DUPLICATES: self._drop_duplicates,
+            DataOperation.DROP_MISSING: self._drop_missing,
+            DataOperation.FILL_MISSING: self._fill_missing,
+            DataOperation.DROP_COLUMN: self._drop_column,
+            DataOperation.RENAME_COLUMN: self._rename_column,
+            DataOperation.CHANGE_DATA_TYPE: self._change_data_type,
+            DataOperation.TEXT_MANIPULATION: self._text_manipulation,
+            DataOperation.SPLIT_COLUMN: self._split_column,
+            DataOperation.REGEX_REPLACE: self._regex_replace,
+            DataOperation.REMOVE_ROWS: self._remove_rows,
+            DataOperation.CLIP_OUTLIERS: self._clip_outliers,
+            DataOperation.DUPLICATE_COLUMN: self._duplicate_column,
+            DataOperation.NORMALIZE: self._normalize_data,
+            DataOperation.EXTRACT_DATE_COMPONENT: self._extract_date_component,
+            DataOperation.CALCULATE_DATE_DIFFERENCE: self._calculate_date_difference,
+            DataOperation.FLAG_OUTLIERS: self._flag_outliers,
+        }
 
     def cleanup_temp_files(self):
         """Delete temp csv file"""
@@ -1176,6 +1196,14 @@ class DataHandler:
         except Exception as ConcatenateDataError:
             raise Exception(f"Concatenate operation failed: {str(ConcatenateDataError)}")
     
+    def _drop_duplicates(self, **kwargs: Any) -> None:
+        """Method to remove duplicate rows from the dataframe"""
+        self.df = self.df.drop_duplicates()
+    
+    def _drop_missing(self, **kwargs: Any) -> None:
+        """Method to drop rows with missing values"""
+        self.df = self.df.dropna()
+    
     def _fill_missing(self, **kwargs) -> None:
         """Method to to fill missing values in the datafr4ame"""
         raw_method = kwargs.get("method", FillMethod.FFILL)
@@ -1564,54 +1592,21 @@ class DataHandler:
             try:
                 action = DataOperation(action)
             except ValueError:
-                raise ValueError(f"Unsupported cleaning action requested: {action}")
+                raise ValueError(f"Unsupported operation: {action}")
+        
+        if action not in self._operation_registry:
+            raise ValueError(f"No handler registered for action: {action}")
 
         try:
-            # Save state before changes
             self._save_state()
-
-            # Execute the appropriate cleaning action
-            if action == DataOperation.DROP_DUPLICATES:
-                self.df = self.df.drop_duplicates()
-            elif action == DataOperation.DROP_MISSING:
-                self.df = self.df.dropna()
-            elif action == DataOperation.FILL_MISSING:
-                self._fill_missing(**kwargs)
-            elif action == DataOperation.DROP_COLUMN:
-                self._drop_column(**kwargs)
-            elif action == DataOperation.RENAME_COLUMN:
-                self._rename_column(**kwargs)
-            elif action == DataOperation.CHANGE_DATA_TYPE:
-                self._change_data_type(**kwargs)
-            elif action == DataOperation.TEXT_MANIPULATION:
-                self._text_manipulation(**kwargs)
-            elif action == DataOperation.SPLIT_COLUMN:
-                self._split_column(**kwargs)
-            elif action == DataOperation.REGEX_REPLACE:
-                self._regex_replace(**kwargs)
-            elif action == DataOperation.REMOVE_ROWS:
-                self._remove_rows(**kwargs)
-            elif action == DataOperation.CLIP_OUTLIERS:
-                self._clip_outliers(**kwargs)
-            elif action == DataOperation.DUPLICATE_COLUMN:
-                self._duplicate_column(**kwargs)
-            elif action == DataOperation.NORMALIZE:
-                self._normalize_data(**kwargs)
-            elif action == DataOperation.EXTRACT_DATE_COMPONENT:
-                self._extract_date_component(**kwargs)
-            elif action == DataOperation.CALCULATE_DATE_DIFFERENCE:
-                self._calculate_date_difference(**kwargs)
-            elif action == DataOperation.FLAG_OUTLIERS:
-                self._flag_outliers(**kwargs)
-            else:
-                raise ValueError(f"Unsupported cleaning action requested: {action}")
-
+            
+            handler_method = self._operation_registry[action]
+            handler_method(**kwargs)
+            
             log_entry = {"type": action.value, **kwargs}
             self.operation_log.append(log_entry)
-
-            print(f"DEBUG: clean_data({action.value}) completed. Undo stack: {len(self.undo_stack)}")
-            return self.df
             
+            return self.df
         except Exception as CleanDataError:
             raise Exception(f"Error cleaning data: {str(CleanDataError)}")
 

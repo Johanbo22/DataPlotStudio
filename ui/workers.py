@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
+import pandas as pd
 
 from core.data_handler import DataHandler
 from sqlalchemy import create_engine, text
@@ -173,3 +174,70 @@ class AutoCreateSubsetsWorker(QRunnable):
             self.signals.finished.emit(created)
         except Exception as Error:
             self.signals.error.emit(Error)
+
+class PlotDataPrepWorker(QRunnable):
+    def __init__(self, df: pd.DataFrame, plot_type: str, x_col: str, y_cols: list[str], quick_filter: str):
+        super().__init__()
+        self.df = df
+        self.plot_type = plot_type
+        self.x_col = x_col
+        self.y_cols = y_cols
+        self.quick_filter = quick_filter
+        self.signals = WorkerSignals()
+        
+    def _is_datetime_column(self, data: pd.Series) -> bool:
+        if pd.api.types.is_datetime64_any_dtype(data):
+            return True
+        if data.dtype == "object":
+            if data.empty:
+                return False
+            sample_val = data.dropna().head(1)
+            if sample_val.empty:
+                return False
+            val = sample_val.iloc[0]
+            if not isinstance(val, str):
+                return False
+            try:
+                pd.to_datetime(val, utc=True)
+                return True
+            except (ValueError, TypeError):
+                return False
+        return False
+    
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.signals.progress.emit(10, "Copying data...")
+            processed_df = self.df.copy()
+            
+            if self.quick_filter:
+                self.signals.progress.emit(20, f"Applying quick filter: {self.quick_filter}...")
+                processed_df = processed_df.query(self.quick_filter)
+                if processed_df.empty:
+                    raise ValueError(f"The filter '{self.quick_filter}' returned an empty dataset")
+            
+            self.signals.progress.emit(50, "Sampling data...")
+            MAX_PLOT_POINTS = 500_000
+            PLOTS_TO_SAMPLE = ["Scatter", "Line", "2D Density", "Hexbin", "Stem", "Stairs", "Eventplot", "ECDF", "2D Histogram", "Tricontour", "Tricontourf", "Tripcolor", "Triplot"]
+
+            if len(processed_df) > MAX_PLOT_POINTS and self.plot_type in PLOTS_TO_SAMPLE:
+                self.signals.log.emit(f"Dataset is too large ({len(processed_df)} rows) for '{self.plot_type}'. Plotting a random sample of {MAX_PLOT_POINTS:,} points.")
+                processed_df = processed_df.sample(n=MAX_PLOT_POINTS, random_state=42)
+            
+            self.signals.progress.emit(75, "Converting datetime columns...")
+            if self.x_col and self.x_col in processed_df.columns:
+                if self._is_datetime_column(processed_df[self.x_col]):
+                    if not pd.api.types.is_datetime64_any_dtype(processed_df[self.x_col]):
+                        processed_df[self.x_col] = pd.to_datetime(processed_df[self.x_col], utc=True, errors="coerce")
+                        self.signals.log.emit(f"Converted column '{self.x_col}' to datetime format.")
+            if self.y_cols:
+                for y_col in self.y_cols:
+                    if y_col and y_col in processed_df.columns:
+                        if self._is_datetime_column(processed_df[y_col]):
+                            if not pd.api.types.is_datetime64_any_dtype(processed_df[y_col]):
+                                processed_df[y_col] = pd.to_datetime(processed_df[y_col], utc=True, errors="coerce")
+                                self.signals.log.emit(f"Converted column '{y_col}' to datetime format.")
+            self.signals.progress.emit(100, "Data preparation complete.")
+            self.signals.finished.emit(processed_df)
+        except Exception as e:
+            self.signals.error.emit(e)

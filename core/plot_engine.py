@@ -150,8 +150,10 @@ class PlotEngine:
             self.current_ax.set_ylabel(ylabel, fontsize=12, picker=True)
         if legend:
             self.current_ax.legend()
-        
-        self.current_figure.tight_layout()
+    
+    def finalize_layout(self) -> None:
+        if self.current_figure is not None:
+            self.current_figure.tight_layout()
 
     def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
         """Subplot layout grid"""
