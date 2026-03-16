@@ -1,4 +1,6 @@
 # core/data_handler.py
+from os import error
+
 from duckdb import connect
 import pandas as pd
 import keyword
@@ -95,7 +97,9 @@ class DataHandler:
         # Track database creds
         self.last_db_connection_string: Optional[str] = None
         self.last_db_query: Optional[str] = None
-
+        
+        self._setup_operation_registry()
+        
         # Register clean up upon exit
         atexit.register(self.cleanup_temp_files)
     
@@ -1684,7 +1688,8 @@ class DataHandler:
         except ImportError:
             raise ImportError(f"The gspread library is required to export to Google Sheets.\nPlease install it first.")
         except Exception as ExportError:
-            raise Exception(f"Failed to export data to Google Sheets:\n{str(ExportError)}")
+            error_message: str = str(ExportError).replace(str(credentials_path), "[REDACTED_CREDENTIALS_PATH]")
+            raise Exception(f"Failed to export data to Google Sheets:\n{error_message}")
 
     def get_data_source_info(self) -> Dict[str, Any]:
         """Get info about the data source"""
@@ -1752,6 +1757,106 @@ class DataHandler:
                 temporary_log = state_log
 
         return {"history": full_log + redo_operations, "current_index": current_index}
+
+    def export_pipeline_macro(self, filepath: str) -> None:
+        """
+        Exports the current sequence of data operations (history) as a reusable macro in JSON format.
+        
+        Args:
+            filepath (str): Target destination for the JSON file.
+        """
+        import json
+        if not self.operation_log:
+            raise ValueError("No data operations to save")
+        
+        with open(filepath, "w") as macro_file:
+            json.dump(self.operation_log, macro_file, indent=4)
+    
+    def apply_pipeline_macro(self, filepath: str) -> None:
+        """
+        Loads a macro from a JSON file and applies its operations sequentially to the dataset.
+        
+        Args:
+            filepath (str): Source JSON file path.
+        """
+        import json
+        if self.df is None:
+            raise ValueError("No data loaded to apply")
+        
+        with open(filepath, "r") as macro:
+            operations = json.load(macro)
+        
+        if not isinstance(operations, list):
+            raise ValueError("Invalid file format. Expected a list of operations i a JSON format")
+        
+        for operation in operations:
+            op_type = operation.get("type")
+            if not op_type:
+                continue
+            
+            kwargs = operation.copy()
+            kwargs.pop("type", None)
+            
+            try:
+                if op_type == "filter":
+                    self.filter_data(
+                        column=kwargs.get("column"),
+                        condition=kwargs.get("condition"),
+                        value=kwargs.get("value")
+                    )
+                elif op_type == "filter_multiple":
+                    self.filter_data(advanced_filters=kwargs.get("filters"))
+                elif op_type == "sort":
+                    self.sort_data(
+                        column=kwargs.get("column"),
+                        ascending=kwargs.get("ascending", True)
+                    )
+                elif op_type == "computed_column":
+                    self.create_computed_column(
+                        new_column_name=kwargs.get("new_column"),
+                        expression=kwargs.get("expression")
+                    )
+                elif op_type == "aggregate":
+                    self.aggregate_data(
+                        group_by=kwargs.get("group_by", []),
+                        agg_config=kwargs.get("agg_config", {}),
+                        date_grouping=kwargs.get("date_grouping", {})
+                    )
+                elif op_type == "melt":
+                    self.melt_data(
+                        id_vars=kwargs.get("id_vars", []),
+                        value_vars=kwargs.get("value_vars", []),
+                        var_name=kwargs.get("var_name", "variable"),
+                        value_name=kwargs.get("value_name", "value")
+                    )
+                elif op_type == "pivot":
+                    self.pivot_data(
+                        index=kwargs.get("index", []),
+                        columns=kwargs.get("columns", ""),
+                        values=kwargs.get("values", []),
+                        aggfunc=kwargs.get("aggfunc", "mean")
+                    )
+                elif op_type == "bin_column":
+                    self.bin_column(
+                        column=kwargs.get("column"),
+                        new_column_name=kwargs.get("new_column"),
+                        method=kwargs.get("method"),
+                        bins=kwargs.get("bins"),
+                        labels=kwargs.get("labels")
+                    )
+                elif op_type == "update_cell":
+                    self.update_cell(
+                        row_index=kwargs.get("row"),
+                        column_index=kwargs.get("col"),
+                        value=kwargs.get("value")
+                    )
+                elif op_type in ["merge", "concatenate", "export_google_sheets"]:
+                    print(f"Skipping '{op_type}' macro step (requires external state/datasets).")
+                    continue
+                else:
+                    self.clean_data(action=op_type, **kwargs)
+            except Exception as errr:
+                raise Exception(f"Failed to apply operation '{op_type}': {str(errr)}")
 
     def jump_to_history_index(self, target_index: int) -> None:
         """Go to a specific point in the history based on an index"""

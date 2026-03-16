@@ -81,7 +81,10 @@ class ProjectManager:
                 """)
                 metadata = save_data.get("metadata", {})
                 for key, value in metadata.items():
-                    cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (str(key), str(value)))
+                    key_str: str = str(key)
+                    if "credential" in key_str.lower() or "token" in key_str.lower():
+                        value = "[REDACTED]"
+                    cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (key_str, str(value)))
                 conn.commit()
                 conn.close()
                 

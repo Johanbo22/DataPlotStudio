@@ -878,6 +878,34 @@ class DataOperationsPanel(QWidget):
         history_help.setWordWrap(True)
         history_help.setProperty("styleClass", "muted_text")
         history_layout.addWidget(history_help)
+        
+        macro_group = DataPlotStudioGroupBox("Data Pipeline Macros")
+        macro_layout = QVBoxLayout()
+        
+        macro_info = QLabel("Save your current sequence of data operations as a macro, or apply an existing macro to this dataset")
+        macro_info.setWordWrap(True)
+        macro_info.setProperty("styleClass", "info_text")
+        macro_layout.addWidget(macro_info)
+        
+        macro_buttons_layout = QHBoxLayout()
+        
+        self.save_macro_btn = DataPlotStudioButton("Save Macro", parent=self)
+        self.save_macro_btn.setIcon(IconBuilder.build(IconType.SaveProject))
+        self.save_macro_btn.setToolTip("Export the current history as a JSON macro file")
+        if self.controller:
+            self.save_macro_btn.clicked.connect(self.controller.save_pipeline_macro)
+        macro_buttons_layout.addWidget(self.save_macro_btn)
+        
+        self.load_macro_btn = DataPlotStudioButton("Apply Macro", parent=self)
+        self.load_macro_btn.setIcon(IconBuilder.build(IconType.ImportFile))
+        self.load_macro_btn.setToolTip("Load and execute a JSON macro file on this data")
+        if self.controller:
+            self.load_macro_btn.clicked.connect(self.controller.load_pipeline_macro)
+        macro_buttons_layout.addWidget(self.load_macro_btn)
+        
+        macro_layout.addLayout(macro_buttons_layout)
+        macro_group.setLayout(macro_layout)
+        history_layout.addWidget(macro_group)
 
         history_icon = IconBuilder.build(IconType.History)
         self.ops_tabs.addTab(history_tab, history_icon, "History")

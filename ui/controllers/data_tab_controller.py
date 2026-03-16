@@ -2,10 +2,8 @@ import traceback
 from typing import TYPE_CHECKING
 import weakref
 
-from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication
+from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication, QFileDialog
 from PyQt6.QtCore import Qt, QThreadPool
-from duckdb import duplicate
-from xlrd import colname
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -1728,6 +1726,52 @@ class DataTabController:
 
         except Exception as HistoryError:
             self.status_bar.log(f"Failed to go to state: {str(HistoryError)}", "ERROR")
+        
+    def save_pipeline_macro(self) -> None:
+        """Saves the current data operations to a JSON file"""
+        if not self.data_handler.operation_log:
+            QMessageBox.warning(self.view, "No operations", "There are no data operations in the history to save as a macro.")
+            return
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.view,
+            "Save Macro",
+            "",
+            "JSON Files (*.json);;All Files (*)"
+        )
+        if file_path:
+            try:
+                self.data_handler.export_pipeline_macro(file_path)
+                self.status_bar.log(f"Macro saved to {file_path}", "SUCCESS")
+            except Exception as err:
+                self.status_bar.log(f"Failed to save pipeline macro: {str(err)}", "ERROR")
+    
+    def load_pipeline_macro(self) -> None:
+        """Loads a JSON macro file and executes the pipeline on the currently active DataFrame."""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load a dataset first before applying a macro.")
+            return
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.view,
+            "Load Macro",
+            "",
+            "JSON Files (*.json);;All Files (*)"
+        )
+        if file_path:
+            reply = QMessageBox.question(
+                self.view,
+                "Confirm Apply Macro",
+                "Applying this macro will automatically execute a sequence of operations on the current dataset.\n\nDo you want to continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                try:
+                    self.data_handler.apply_pipeline_macro(file_path)
+                    self.view.refresh_data_view()
+                    self.status_bar.log(f"Applied macro from {file_path}", "SUCCESS")
+                except Exception as err:
+                    self.status_bar.log(f"Failed to apply pipeline macro: {str(err)}", "ERROR")
     
     def run_statistical_test_from_selection(self) -> None:
         """Handles the selection of columns and triggers a statistical test"""
