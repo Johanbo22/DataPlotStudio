@@ -73,6 +73,7 @@ class DataHandler:
         self.file_path: Optional[Path] = None
         self.undo_stack: List[tuple[pd.DataFrame, list]] = []
         self.redo_stack: List[tuple[pd.DataFrame, list]] = []
+        self.max_history_memory_bytes: int = 1024 * 1024 * 1024
         # operation log
         self.operation_log: List[Dict[str, Any]] = []
 
@@ -103,14 +104,45 @@ class DataHandler:
         cleanup_temp_csv_files(self.temp_csv_path)
         self.temp_csv_path = None
         self.is_temp_file = False
+    
+    def _get_dataframe_memory_bytes(self, dataframe: pd.DataFrame) -> int:
+        """Calculates the usage of a Datafreme inn bytes"""
+        if dataframe is None or dataframe.empty:
+            return 0
+        return dataframe.memory_usage(deep=True).sum()
+
+    def _enforce_history_memory_limits(self) -> None:
+        """
+        Enforce the memory limit on the undo and redo stacks to prevent MemoryError.
+        Removes the oldest history states from undo_stack (then redo_stack if necessary) 
+        until total memory is under the threshold."""
+        while True:
+            undo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack)
+            redo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack)
+            total_bytes = undo_bytes + redo_bytes
+            
+            if total_bytes <= self.max_history_memory_bytes:
+                break
+            
+            if self.undo_stack:
+                dropped_state = self.undo_stack.pop(0)
+                dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
+                print(f"DEBUG: Memory limit reached. Dropped oldest undo state freeing {dropped_bytes / (1024 * 1024):.2f} MB.")
+            elif self.redo_stack:
+                dropped_state = self.redo_stack.pop(0)
+                dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
+                print(f"DEBUG: Memory limit reached. Dropped oldest redo state freeing {dropped_bytes / (1024 * 1024):.2f} MB.")
+            else:
+                break
 
     def _save_state(self) -> None:
         """Save current state to undo stack"""
         if self.df is not None:
             # make deep copy
-            self.undo_stack.append((self.df.copy(), self.operation_log.copy()))
+            self.undo_stack.append((self.df.copy(), self.operation_log.copy(), self.sort_state))
             # clear redo stack when new action is perfoermed
             self.redo_stack.clear()
+            self._enforce_history_memory_limits()
             print(f"DEBUG: State saved: Undo stack size: {len(self.undo_stack)}")
 
     def undo(self) -> bool:
@@ -133,6 +165,8 @@ class DataHandler:
 
         self.df = restored_df.copy()
         self.operation_log = restored_log.copy()
+        
+        self._enforce_history_memory_limits()
         print(f"DEBUG: Undo complete. Remaining stack: {len(self.undo_stack)}")
         return True
 
@@ -159,6 +193,8 @@ class DataHandler:
 
         self.df = restored_df.copy()
         self.operation_log = restored_log.copy()
+        
+        self._enforce_history_memory_limits()
         print(f"DEBUG: Redo complete. Remaining stack: {len(self.redo_stack)}")
         return True
 
