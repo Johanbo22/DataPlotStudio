@@ -1,12 +1,11 @@
 #ui/main_window.py
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFileDialog, QMessageBox, QApplication)
-from PyQt6.QtCore import QThreadPool, pyqtSlot, QTimer
-from PyQt6.QtGui import QIcon, QDragEnterEvent, QDropEvent
+from PyQt6.QtCore import QThreadPool, pyqtSlot, QTimer, pyqtSignal
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from pathlib import Path
 import traceback
 
 
-from core.resource_loader import get_resource_path
 from resources.version import APPLICATION_VERSION, SCRIPT_FILE_NAME, LOG_FILE_NAME
 from core.subset_manager import SubsetManager
 from ui.workers import FileImportWorker, GoogleSheetsImportWorker
@@ -25,6 +24,8 @@ from ui.icons import IconBuilder, IconType
 class MainWindow(QWidget):
     """Main widget"""
 
+    window_title_changed = pyqtSignal(str)
+    
     def __init__(self, data_handler: DataHandler, project_manager: ProjectManager, code_exporter: CodeExporter, logger: Logger, status_bar: StatusBar):
         super().__init__()
 
@@ -44,7 +45,7 @@ class MainWindow(QWidget):
 
         self.setAcceptDrops(True)
 
-        self.unsaved_changes: bool = False
+        self._unsaved_changes: bool = False
         self.init_ui()
 
         self._connect_subset_managers()
@@ -67,6 +68,7 @@ class MainWindow(QWidget):
         self.data_tab.request_import_sheets.connect(self.import_google_sheets)
         self.data_tab.request_import_db.connect(self.import_from_database)
         self.data_tab.request_quit.connect(QApplication.instance().quit)
+        self.data_tab.data_modified.connect(self._mark_as_unsaved)
         
         self.tabs.addTab(self.data_tab, data_icon, data_explorer_name)
 
@@ -109,6 +111,39 @@ class MainWindow(QWidget):
         """Handle tab change events"""
         if self.tabs.widget(index) == self.plot_tab:
             self.plot_tab.refresh_subset_list()
+            
+    def _mark_as_unsaved(self) -> None:
+        if self.data_handler.df is not None:
+            self.unsaved_changes = True
+    
+    @property
+    def unsaved_changes(self) -> bool:
+        return self._unsaved_changes
+    
+    @unsaved_changes.setter
+    def unsaved_changes(self, state: bool) -> None:
+        self._unsaved_changes = state
+        self._update_window_title()
+    
+    def _update_window_title(self) -> None:
+        if self.data_handler.df is None:
+            title = f"DataPlotStudio - v{APPLICATION_VERSION}"
+        else:
+            project_path = self.project_manager.get_current_project_path()
+            if project_path:
+                project_name = Path(project_path).name
+                base_title = f"DataPlotStudio - {project_name}"
+            else:
+                base_title = f"DataPlotStudio - Untitled Project"
+            
+            indicator = " *" if self._unsaved_changes else ""
+            title = f"{base_title}{indicator}"
+        
+        self.window_title_changed.emit(title)
+        
+        top_level = self.window()
+        if top_level and top_level != self:
+            top_level.setWindowTitle(title)
 
     def new_project(self):
         """Creates a new project"""
@@ -120,6 +155,7 @@ class MainWindow(QWidget):
             # Forces an update of the UI to switch from the welcome screen to project screen
             self.data_handler.create_empty_dataframe(0, 0)
             self.data_tab.refresh_data_view()
+            self.unsaved_changes = False
             self.status_bar.log("New Project Created")
     
     def open_project(self) -> None:
@@ -159,7 +195,7 @@ class MainWindow(QWidget):
         # Automatically generate the plot based on the loaded configs
         self.plot_tab.generate_plot()
         
-        self.unsaved_changes = False
+        self._unsaved_changes = False
 
     def save_project(self) -> bool:
         """Saves the current project"""
@@ -180,7 +216,7 @@ class MainWindow(QWidget):
             self.saved_animation.start(target_widget=self)
 
             if saved_path:
-                self.unsaved_changes = False
+                self._unsaved_changes = False
                 op_name = "save_project_as" if force_dialog else "save_project"
                 self.status_bar.log_action(f"Project Saved: {Path(saved_path).name}",details={"filepath": saved_path, "operation": op_name}, level="SUCCESS")
 
@@ -219,7 +255,7 @@ class MainWindow(QWidget):
     
     def _confirm_discard_changes(self) -> bool:
         """Returns True if its safe to proceed, False if not"""
-        if self.unsaved_changes:
+        if self._unsaved_changes:
             reply = QMessageBox.question(
                 self, "Unsaved Changes",
                 "You have unsaved changes. Do you want to save before proceeding?",
@@ -306,7 +342,7 @@ class MainWindow(QWidget):
             self.progress_dialog.update_progress(90, "Updating Interface")
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
-        self.unsaved_changes = True
+        self._unsaved_changes = True
         self.status_bar.update_data_stats(loaded_dataframe)
         
         self.tabs.setCurrentWidget(self.data_tab)
@@ -378,7 +414,7 @@ class MainWindow(QWidget):
             self.progress_dialog.update_progress(90, "Updating Interface")
         self.data_tab.refresh_data_view()
         self.plot_tab.update_column_combo()
-        self.unsaved_changes = True
+        self._unsaved_changes = True
 
         self.status_bar.update_data_stats(loaded_dataframe)
         
@@ -423,7 +459,7 @@ class MainWindow(QWidget):
                 self.progress_dialog.update_progress(90, "Updating Interface")
                 self.data_tab.refresh_data_view()
                 self.plot_tab.update_column_combo()
-                self.unsaved_changes = True
+                self._unsaved_changes = True
                 self.status_bar.update_data_stats(self.data_handler.df)
 
                 self.status_bar.set_progress(100)

@@ -60,6 +60,7 @@ class DataTab(QWidget):
     request_import_sheets = pyqtSignal()
     request_import_db = pyqtSignal()
     request_quit = pyqtSignal()
+    data_modified = pyqtSignal()
 
     def __init__(
         self,
@@ -373,6 +374,7 @@ class DataTab(QWidget):
         self._update_data_source_status()
         self._update_subsets_status()
         self._update_history_list()
+        self.data_modified.emit()
     
     def _handle_empty_data_view(self) -> None:
         """Clears the UI when no data is loaded"""

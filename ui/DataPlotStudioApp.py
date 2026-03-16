@@ -61,9 +61,12 @@ class DataPlotStudio(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self._connect_signals()
+        
+        self.main_widget._update_window_title()
     
     def _connect_signals(self) -> None:
         """Routing signals to the main widget"""
+        self.main_widget.window_title_changed.connect(self.setWindowTitle)
         #File menu
         self.menu_bar.file_new.triggered.connect(self.main_widget.new_project)
         self.menu_bar.file_open.triggered.connect(self.main_widget.open_project)
@@ -93,7 +96,7 @@ class DataPlotStudio(QMainWindow):
     
     def closeEvent(self, event: QCloseEvent) -> None:
         """Checks for unsaved changes before exiting"""
-        if hasattr(self.main_widget, "unsaved_changes") and self.main_widget.unsaved_changes:
+        if hasattr(self.main_widget, "unsaved_changes") and self.main_widget._unsaved_changes:
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
