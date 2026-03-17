@@ -872,8 +872,15 @@ class DataOperationsPanel(QWidget):
         self.history_list = DataPlotStudioListWidget()
         if self.controller:
             self.history_list.itemClicked.connect(self.controller.on_history_clicked)
+        self.history_list.setVisible(False)
         history_layout.addWidget(self.history_list)
 
+        from ui.widgets.PipelineGraphView import PipelineGraphView
+        self.pipeline_graph = PipelineGraphView(self)
+        if self.controller:
+            self.pipeline_graph.node_selected.connect(self._on_graph_node_selected)
+        history_layout.addWidget(self.pipeline_graph)
+        
         history_help = QLabel("Click on a state to go back/forwards to it.\nGray items are undone operations.")
         history_help.setWordWrap(True)
         history_help.setProperty("styleClass", "muted_text")
@@ -909,6 +916,15 @@ class DataOperationsPanel(QWidget):
 
         history_icon = IconBuilder.build(IconType.History)
         self.ops_tabs.addTab(history_tab, history_icon, "History")
+    
+    def _on_graph_node_selected(self, index: int) -> None:
+        if not self.controller:
+            return
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == index:
+                self.controller.on_history_clicked(item)
+                break
     
     ###### Getters for widgets
     def get_filter_parameters(self) -> tuple[str, str, str]:

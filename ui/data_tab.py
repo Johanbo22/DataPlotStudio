@@ -581,6 +581,9 @@ class DataTab(QWidget):
         
         if panel.history_list.count() > 0:
             panel.history_list.scrollToItem(panel.history_list.item(current_index))
+        
+        if hasattr(panel, "pipeline_graph"):
+            panel.pipeline_graph.build_graph(history_operations, current_index, self._format_operation_text)
     
     def _get_icon_for_operation(self, operation_type: str) -> QIcon:
         match operation_type:
