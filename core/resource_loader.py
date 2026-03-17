@@ -1,10 +1,11 @@
 import sys
-import os
+from pathlib import Path
 
 def get_resource_path(relative_path: str) -> str:
     try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        base_path: Path = Path(sys._MEIPASS)
+    except AttributeError:
+        base_path: Path = Path(__file__).resolve().parent.parent
     
-    return os.path.join(base_path, relative_path)
+    target_path: Path = base_path / relative_path
+    return str(target_path)

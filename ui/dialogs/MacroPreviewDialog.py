@@ -1,5 +1,5 @@
 import json
-import os
+from pathlib import Path
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QListWidget, QDialogButtonBox, QListWidgetItem, QWidget, QFrame, QHBoxLayout
 from PyQt6.QtCore import Qt, QSize
 
@@ -32,7 +32,7 @@ class MacroPreviewDialog(QDialog):
         except Exception:
             pass
         
-        filename = os.path.basename(self.filepath)
+        filename = Path(self.filepath).name
         
         info_label = QLabel(f"<b>Previewing Macro:</b><br>{filename}<br><br>The following operations will be applied in sequence:")
         info_label.setToolTip(self.filepath)

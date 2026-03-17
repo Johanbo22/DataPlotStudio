@@ -29,8 +29,10 @@ from .GoogleSheetsExportDialog import GoogleSheetsExportDialog
 from .SplitColumnDialog import SplitColumnDialog
 from .RegexReplaceDialog import RegexReplaceDialog
 from .AppendDialog import AppendDialog
+from .MacroPreviewDialog import MacroPreviewDialog
 
 __all__ = [
+    "MacroPreviewDialog",
     "AggregationDialog",
     "AppendDialog",
     "SplitColumnDialog",

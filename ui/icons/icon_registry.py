@@ -2,7 +2,7 @@ from enum import Enum, auto
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import QByteArray
 from ui.theme import ThemeColors
-import os
+from pathlib import Path
 import tempfile
 
 
@@ -224,10 +224,9 @@ class IconBuilder:
         
         safe_color = color.replace("#", "")
         file_name = f"dps_{icon_type.name}_{safe_color}.svg"
-        file_path = os.path.join(tempfile.gettempdir(), file_name)
+        file_path = Path(tempfile.gettempdir()) / file_name
         
-        if not os.path.exists(file_path):
-            with open(file_path, "w", encoding="utf-8") as file:
-                file.write(svg_str)
+        if not file_path.exists():
+            file_path.write_text(svg_str, encoding="utf-8")
                 
-        return file_path.replace("\\", "/")
+        return file_path.as_posix()

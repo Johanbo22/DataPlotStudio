@@ -2,9 +2,9 @@
 
 from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog
 from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal, QThreadPool
-from PyQt6.QtGui import QIcon, QColor, QFont
+from PyQt6.QtGui import QIcon, QColor
 import json
-import os
+from pathlib import Path
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.widgets import SpanSelector
@@ -148,9 +148,8 @@ class PlotTab(PlotTabUI):
         self._select_plot_in_toolbox("Line")
 
         # Initialize the themes
-        self.theme_dir = os.path.join(os.getcwd(), "resources", "themes")
-        if not os.path.exists(self.theme_dir):
-            os.makedirs(self.theme_dir, exist_ok=True)
+        self.theme_dir = Path.cwd() / "resources" / "themes"
+        self.theme_dir.mkdir(parents=True, exist_ok=True)
         self.default_theme_names = ["Dark_Mode", "Publication_Ready", "Presentation_Big", "Default"]
         self.refresh_theme_list()
         if hasattr(self, 'dpi_spin'):
@@ -3448,8 +3447,8 @@ class PlotTab(PlotTabUI):
         self.view.theme_combo.clear()
         self.view.theme_combo.addItem("Select a theme...")
 
-        if os.path.exists(self.theme_dir):
-            themes = [theme_file for theme_file in os.listdir(self.theme_dir) if theme_file.endswith(".json")]
+        if self.theme_dir.exists():
+            themes = [file.name for file in self.theme_dir.glob("*.json")]
             for theme in sorted(themes):
                 self.view.theme_combo.addItem(theme.replace(".json", ""), userData=theme)
         
@@ -3481,7 +3480,7 @@ class PlotTab(PlotTabUI):
             if text in self.default_theme_names:
                 QMessageBox.warning(self, "Action Denied", f"'{text}' is the name of a default theme. Please choose another theme name")
             filename = "".join(x for x in text if x.isalnum() or x in " _-") + ".json"
-            filepath = os.path.join(self.theme_dir, filename)
+            filepath = self.theme_dir / filename
 
             theme_data = self.get_theme_config()
 
@@ -3506,8 +3505,8 @@ class PlotTab(PlotTabUI):
         if not theme_file:
             return
         
-        filepath = os.path.join(self.theme_dir, theme_file)
-        if not os.path.exists(filepath):
+        filepath = self.theme_dir / theme_file
+        if not filepath.exists():
             self.status_bar.log(f"Theme file not found: {filepath}", "ERROR")
             return
         
@@ -3552,9 +3551,9 @@ class PlotTab(PlotTabUI):
 
         if confirm == QMessageBox.StandardButton.Yes:
             try:
-                filepath = os.path.join(self.theme_dir, theme_file)
-                if os.path.exists(filepath):
-                    os.remove(filepath)
+                filepath = self.theme_dir / theme_file
+                if filepath.exists():
+                    filepath.unlink()
                     self.refresh_theme_list()
                     self.status_bar.log(f"Theme '{theme_name}' deleted", "INFO")
             except Exception as DeleteThemeError:
@@ -3568,8 +3567,8 @@ class PlotTab(PlotTabUI):
         if not theme_file or theme_name == "Select a theme...":
             return
         
-        filepath = os.path.join(self.theme_dir, theme_file)
-        if not os.path.exists(filepath):
+        filepath = self.theme_dir / theme_file
+        if not filepath.exists():
             return
         
         try:
@@ -3586,7 +3585,7 @@ class PlotTab(PlotTabUI):
                 if is_protected and dialog.new_theme_name:
                     save_name = dialog.new_theme_name
                     filename = "".join(x for x in save_name if x.isalnum() or x in " _-") + ".json"
-                    save_path = os.path.join(self.theme_dir, filename)
+                    save_path = self.theme_dir / filename
                 else:
                     save_name = theme_name
                     save_path = filepath

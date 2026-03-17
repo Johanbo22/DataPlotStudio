@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayo
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QPixmap
 
-import os
+from pathlib import Path
 
 from ui.icons.icon_registry import IconBuilder, IconType
 from ui.theme import ThemeColors
@@ -238,8 +238,8 @@ class PlotExportDialog(QDialog):
             "raw": "Raw Image (*.raw)",
             "rgba": "RGBA Image (*rgba)"
         }
-        last_dir = self.settings.value("last_export_dir", os.path.expanduser("~"))
-        default_path = os.path.join(last_dir, f"plot.{extension}")
+        last_dir = self.settings.value("last_export_dir", str(Path.home()))
+        default_path = str(Path(last_dir) / f"plot.{extension}")
         
         filepath, _ = QFileDialog.getSaveFileName(
             self,
@@ -249,7 +249,7 @@ class PlotExportDialog(QDialog):
         )
         if filepath:
             self.filepath = filepath
-            self.settings.setValue("last_export_dir", os.path.dirname(filepath))
+            self.settings.setValue("last_export_dir", str(Path(filepath).parent))
             self._save_preferences()
             self.accept()
     

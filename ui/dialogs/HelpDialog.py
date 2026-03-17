@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QDialog, QDialogButtonBox, QFrame, QLabel, 
     QScrollArea, QVBoxLayout, QWidget, QPushButton
 )
-import os
+from pathlib import Path
 import sys
 import importlib.util
 from core.resource_loader import get_resource_path
@@ -37,15 +37,16 @@ class HelpDialog(QDialog):
         layout.addWidget(self.title_label)
 
         #Animation area
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        ui_dir = os.path.dirname(current_dir)
-        project_root = os.path.dirname(ui_dir)
+        current_dir = Path(__file__).resolve().parent
+        ui_dir = current_dir.parent
+        project_root = ui_dir.parent
 
         if project_root not in sys.path:
             sys.path.insert(0, project_root)
         
         clean_filename = f"{str(topic_id).lower()}.py"
-        anim_path = get_resource_path(os.path.join(project_root, "resources", "help_animations", clean_filename))
+        anim_path_obj = project_root / "resources" / "help_animations" / clean_filename
+        anim_path = get_resource_path(str(anim_path_obj))
 
         animation_widget = self._load_animation(topic_id, anim_path)
         layout.addWidget(animation_widget, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -86,7 +87,7 @@ class HelpDialog(QDialog):
         layout.addWidget(button_box)
     
     def _load_animation(self, topic_id, path):
-        if not os.path.exists(path):
+        if not Path(path).exists():
             print(f"HelpDialog: Animation file missing at {path}")
             return self._create_placeholder(f"No animation found for '{topic_id}'")
 

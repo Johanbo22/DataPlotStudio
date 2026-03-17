@@ -220,7 +220,7 @@ class SubsetManager:
             cache_path = self._get_cache_path(name)
             if cache_path.exists():
                 try:
-                    os.remove(cache_path)
+                    cache_path.unlink()
                 except OSError as delete_cached_error:
                     print(f"WARNING: Failed to deleted cached directory at {cache_path}: {delete_cached_error}")
         else:
