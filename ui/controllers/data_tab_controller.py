@@ -2,7 +2,7 @@ import traceback
 from typing import TYPE_CHECKING
 import weakref
 
-from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication, QFileDialog
+from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication, QFileDialog, QDialog
 from PyQt6.QtCore import Qt, QThreadPool
 
 from core.data_handler import DataHandler
@@ -12,7 +12,7 @@ from core.subset_manager import SubsetManager
 
 from ui.animations import AggregationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation
 
-from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog
+from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog
 
 from ui.workers import GoogleSheetsImportWorker, AutoCreateSubsetsWorker
 
@@ -1759,19 +1759,16 @@ class DataTabController:
             "JSON Files (*.json);;All Files (*)"
         )
         if file_path:
-            reply = QMessageBox.question(
-                self.view,
-                "Confirm Apply Macro",
-                "Applying this macro will automatically execute a sequence of operations on the current dataset.\n\nDo you want to continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            if reply == QMessageBox.StandardButton.Yes:
+            preview_dialog = MacroPreviewDialog(filepath=file_path, parent=self.view)
+            if preview_dialog.exec() == QDialog.DialogCode.Accepted:
+                ops_to_execute = preview_dialog.get_selected_operations()
                 try:
-                    self.data_handler.apply_pipeline_macro(file_path)
+                    self.data_handler.apply_pipeline_macro(ops_to_execute)
                     self.view.refresh_data_view()
-                    self.status_bar.log(f"Applied macro from {file_path}", "SUCCESS")
+                    self.status_bar.log(f"Applied pipeline macro from {file_path}", "SUCCESS")
                 except Exception as err:
-                    self.status_bar.log(f"Failed to apply pipeline macro: {str(err)}", "ERROR")
+                    self.status_bar.log(f"Applying macro failed: {str(err)}", "ERROR")
+                    QMessageBox.critical(self.view, "Macro Execution Failed", str(err))
     
     def run_statistical_test_from_selection(self) -> None:
         """Handles the selection of columns and triggers a statistical test"""
