@@ -4,13 +4,15 @@ from core.data_handler import DataHandler
 from core.logger import Logger
 from core.project_manager import ProjectManager
 from ui.dialogs import SettingsDialog, AboutDialog
+from ui.icons.icon_registry import IconBuilder, IconType
 from ui.main_window import MainWindow
 from ui.menu_bar import MenuBar
 from ui.status_bar import StatusBar
 from core.resource_loader import get_resource_path
 
-from PyQt6.QtGui import QCloseEvent, QFont, QIcon
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt6.QtGui import QCloseEvent, QFont, QIcon, QShortcut, QKeySequence, QAction
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QDockWidget, QPushButton, QTabBar
+from PyQt6.QtCore import Qt, QSettings
 from pathlib import Path
 
 from resources.version import APPLICATION_VERSION
@@ -59,14 +61,102 @@ class DataPlotStudio(QMainWindow):
             self.status_bar_widget
         )
         self.setCentralWidget(self.main_widget)
+        self._setup_dock_widgets()
 
         self._connect_signals()
+        self._restore_window_state()
         
         self.main_widget._update_window_title()
+    
+    def _restore_window_state(self) -> None:
+        """
+        Recovers the user's previous window size, monitor placement, and dock layout.
+        Synchronizes the Tab UI if the Plot Studio was left undocked in the previous session.
+        """
+        settings = QSettings("DataPlotStudio", "AppLayout")
+        if settings.contains("geometry") and settings.contains("windowState"):
+            self.restoreGeometry(settings.value("geometry"))
+            self.restoreState(settings.value("windowState"))
+            
+            if self.plot_dock.isVisible():
+                current_index = self.main_widget.tabs.indexOf(self.main_widget.plot_tab)
+                if current_index != -1:
+                    self.main_widget.tabs.removeTab(current_index)
+                    self.plot_dock.setWidget(self.main_widget.plot_tab)
+    
+    def _setup_dock_widgets(self) -> None:
+        """Setup of the docking panels"""
+        self.plot_dock: QDockWidget = QDockWidget("Plot Studio", self)
+        self.plot_dock.setObjectName("plotStudioDock")
+        self.plot_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+        self.plot_dock.setMinimumWidth(450)
+        self.plot_dock.setWindowIcon(IconBuilder.build(IconType.Undocked))
+        self.plot_dock.hide()
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.plot_dock)
+        
+        # Have to save location data so tab can be remade
+        self.plot_tab_index: int = self.main_widget.tabs.indexOf(self.main_widget.plot_tab)
+        self.plot_tab_icon: QIcon = self.main_widget.tabs.tabIcon(self.plot_tab_index)
+        self.plot_tab_text: str = self.main_widget.tabs.tabText(self.plot_tab_index)
+        
+        self.main_widget.tabs.tabBar().setTabButton(self.plot_tab_index, QTabBar.ButtonPosition.RightSide, self._create_undock_button())
+        
+        self.plot_dock.visibilityChanged.connect(self._on_dock_visibility_changed)
+        
+        self.toggle_dock_shortcut = QShortcut(QKeySequence("Ctrl+D"), self)
+        self.toggle_dock_shortcut.activated.connect(self._toggle_plot_dock_state)
+    
+    def _toggle_plot_dock_state(self) -> None:
+        if self.plot_dock.isVisible():
+            self.plot_dock.close()
+        else:
+            self._undock_plot_tab()
+    
+    def _create_undock_button(self) -> QPushButton:
+        # Need to create button again because pointer is destroyed when tab is self.main_widget.tabs.removeTab(current_index)
+        btn = QPushButton()
+        btn.setIcon(IconBuilder.build(IconType.Docked))
+        btn.setObjectName("undockTabButton")
+        btn.setToolTip("Undock Plot Studio to side panel")
+        btn.setFlat(True)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setFixedSize(24, 24)
+        btn.clicked.connect(self._undock_plot_tab)
+        return btn
+        
+    def _undock_plot_tab(self) -> None:
+        """Removes the plot tab from the QTabWidget and places it into the QDockWidget."""
+        current_index = self.main_widget.tabs.indexOf(self.main_widget.plot_tab)
+        if current_index != -1:
+            self.main_widget.tabs.removeTab(current_index)
+            self.plot_dock.setWidget(self.main_widget.plot_tab)
+            self.plot_dock.show()
+            
+            self.plot_dock.raise_()
+            self.plot_dock.activateWindow()
+            self.main_widget.plot_tab.setFocus()
+    
+    def _on_dock_visibility_changed(self, visible: bool) -> None:
+        """Restores the plot widget back to a standard tab when the dock is closed."""
+        if not visible and self.plot_dock.widget() == self.main_widget.plot_tab:
+            self.plot_dock.setWidget(None)
+            
+            new_index = self.main_widget.tabs.addTab(self.main_widget.plot_tab, self.plot_tab_icon, self.plot_tab_text)
+            self.main_widget.tabs.tabBar().setTabButton(new_index, QTabBar.ButtonPosition.RightSide, self._create_undock_button())
+            self.main_widget.tabs.setCurrentIndex(new_index)
     
     def _connect_signals(self) -> None:
         """Routing signals to the main widget"""
         self.main_widget.window_title_changed.connect(self.setWindowTitle)
+        
+        # Window state signals
+        window_menu = self.menuBar().addMenu("&Window")
+        reset_layout_action = QAction("Reset Window Layout", self)
+        reset_layout_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        reset_layout_action.setToolTip("Restores all docks and tabs to their default position")
+        reset_layout_action.triggered.connect(self._reset_window_layout)
+        window_menu.addAction(reset_layout_action)
+        
         #File menu
         self.menu_bar.file_new.triggered.connect(self.main_widget.new_project)
         self.menu_bar.file_open.triggered.connect(self.main_widget.open_project)
@@ -94,8 +184,22 @@ class DataPlotStudio(QMainWindow):
         self.menu_bar.settings_action.triggered.connect(self.open_settings)
         self.menu_bar.about_action.triggered.connect(self.show_about)
     
+    def _reset_window_layout(self) -> None:
+        """Panic button for lost docks: returns the UI to a tabbed starting state."""
+        self.plot_dock.close()
+        self.plot_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.plot_dock)
+        self.status_bar_widget.log("Window layout reset to default", "INFO")
+    
     def closeEvent(self, event: QCloseEvent) -> None:
         """Checks for unsaved changes before exiting"""
+        
+        def save_layout():
+            """Helper to save UI state before the application teardown."""
+            settings = QSettings("DataPlotStudio", "AppLayout")
+            settings.setValue("geometry", self.saveGeometry())
+            settings.setValue("windowState", self.saveState())
+        
         if hasattr(self.main_widget, "unsaved_changes") and self.main_widget._unsaved_changes:
             reply = QMessageBox.question(
                 self,
@@ -106,14 +210,17 @@ class DataPlotStudio(QMainWindow):
             )
             if reply == QMessageBox.StandardButton.Save:
                 if self.main_widget.save_project():
+                    save_layout()
                     event.accept()
                 else:
                     event.ignore()
             elif reply == QMessageBox.StandardButton.Discard:
+                save_layout()
                 event.accept()
             else:
                 event.ignore()
         else:
+            save_layout()
             event.accept()
     
     def open_settings(self) -> None:
