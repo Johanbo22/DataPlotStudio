@@ -18,6 +18,11 @@ class ProjectManager:
     def __init__(self) -> None:
         self.current_project_path: Optional[Path] = None
         self.project_data: Dict[str, Any] = {}
+        
+        # Workspace and autosave configurations
+        self.autosave_dir: Path = Path.home() / ".dataplotstudio"
+        self.autosave_dir.mkdir(parents=True, exist_ok=True)
+        self.autosave_path: Path = self.autosave_dir / "DataPlotStudioAutosave.dps"
     
     def new_project(self) -> None:
         
@@ -47,57 +52,88 @@ class ProjectManager:
         filepath_obj = Path(filepath)
         if not filepath_obj.suffix == ".dps":
             filepath_obj = filepath_obj.with_suffix(".dps")
-        
         try:
-            save_data: Dict[str, Any] = project_data.copy()
-            dataframe: Optional[pd.DataFrame] = save_data.pop("data", None) if isinstance(save_data.get("data"), pd.DataFrame) else None
-            
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_dir_path = Path(temp_dir)
-                
-                # First we archive the raw data using parquet serialization
-                if dataframe is not None:
-                    dataframe.to_parquet(temp_dir_path / "data.parquet", engine="pyarrow", index=True)
-                
-                # Then archive plot configerations which are .json files
-                plot_config_path = temp_dir_path / "plot_config.json"
-                with open(plot_config_path, "w", encoding="utf-8") as config_file:
-                    json.dump(save_data.get("plot_config", {}), config_file, indent=4)
-                
-                # Then archive the total operation log which also a .json file'
-                operations_path = temp_dir_path / "operations_log.json"
-                with open(operations_path, "w", encoding="utf-8") as operations_file:
-                    json.dump(save_data.get("operations", []), operations_file, indent=4)
-                
-                # Create a metadata for the session states as a SQLITE database
-                db_path = temp_dir_path / "session.db"
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE session_metadata (
-                        key TEXT PRIMARY KEY,
-                        value TEXT
-                    )
-                """)
-                metadata = save_data.get("metadata", {})
-                for key, value in metadata.items():
-                    key_str: str = str(key)
-                    if "credential" in key_str.lower() or "token" in key_str.lower():
-                        value = "[REDACTED]"
-                    cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (key_str, str(value)))
-                conn.commit()
-                conn.close()
-                
-                # last we compress all files into a .dps package
-                with zipfile.ZipFile(filepath_obj, "w", zipfile.ZIP_DEFLATED) as zip_package:
-                    for file_to_zip in temp_dir_path.iterdir():
-                        zip_package.write(file_to_zip, arcname=file_to_zip.name)
-            
+            self._create_dps_package(project_data, filepath_obj)
             self.current_project_path = filepath_obj
             return str(filepath_obj)
-        
         except Exception as SaveProjectError:
-            raise Exception(f"Error packaging project files: {str(SaveProjectError)}")
+            raise Exception(f"Error packing project files: {str(SaveProjectError)}")
+    
+    def _create_dps_package(self, project_data: Dict[str, Any], filepath_obj: Path) -> None:
+        """
+        Serializing and zipping project data into the .dps package format
+        """
+        save_data: Dict[str, Any] = project_data.copy()
+        dataframe: Optional[pd.DataFrame] = save_data.pop("data", None) if isinstance(save_data.get("data"), pd.DataFrame) else None
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
+            
+            # First we archive the raw data using parquet serialization
+            if dataframe is not None:
+                dataframe.to_parquet(temp_dir_path / "data.parquet", engine="pyarrow", index=True)
+            
+            # Then archive plot configuretion which are .json files
+            plot_config_path = temp_dir_path / "plot_config.json"
+            with open(plot_config_path, "w", encoding="utf-8") as config_file:
+                json.dump(save_data.get("plot_config", {}), config_file, indent=4)
+            
+            # Then archive the total operation log which is also a. json file
+            operations_path = temp_dir_path / "operations_log.json"
+            with open(operations_path, "w", encoding="utf-8") as operations_file:
+                json.dump(save_data.get("operations", []), operations_file, indent=4)
+            
+            # Create metadata file for the session states a SSQLITE database
+            db_path = temp_dir_path / "session.db"
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE session_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                )
+            """)
+            metadata = save_data.get("metadata", {})
+            for key, value in metadata.items():
+                key_str: str = str(key)
+                if "credential" in key_str.lower() or "token" in key_str.lower():
+                    value = "[REDACTED]"
+                cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (key_str, str(value)))
+            conn.commit()
+            conn.close()
+
+            # Compress all files into a package
+            with zipfile.ZipFile(filepath_obj, "w", zipfile.ZIP_DEFLATED) as zip_package:
+                for file_to_zip in temp_dir_path.iterdir():
+                    zip_package.write(file_to_zip, arcname=file_to_zip.name)
+    
+    def auto_save(self, project_data: Dict[str, Any]) -> None:
+        """
+        Serializes the current state of the autosave file
+        to prevent data loss
+        """
+        try:
+            self._create_dps_package(project_data, self.autosave_path)
+        except Exception:
+            pass
+    
+    def has_autosave(self) -> bool:
+        return self.autosave_path.exists() and self.autosave_path.is_file()
+
+    def recover_autosave(self) -> Dict[str, Any]:
+        return self.load_project(str(self.autosave_path))
+
+    def cleanup_autosave(self) -> None:
+        """
+        Removes the autosave file upon normal
+        application exit or discarding project
+        """
+        try:
+            if self.has_autosave():
+                self.autosave_path.unlink()
+        except Exception:
+            pass
+        
     
     def load_project(self, filepath: str) -> Dict[str, Any]:
         filepath_obj = Path(filepath)

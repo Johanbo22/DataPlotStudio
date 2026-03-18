@@ -49,6 +49,14 @@ class MainWindow(QWidget):
         self.init_ui()
 
         self._connect_subset_managers()
+        
+        # Setup of autosave timers
+        self.autosave_interval_ms: int = 5 * 60 * 1000
+        self.autosave_timer = QTimer()
+        self.autosave_timer.timeout.connect(self._perform_autosave)
+        self.autosave_timer.start(self.autosave_interval_ms)
+        
+        QTimer.singleShot(0, self._check_recovery)
     
     def init_ui(self) -> None:
         """Init the main ui"""
@@ -110,6 +118,41 @@ class MainWindow(QWidget):
         """Handle tab change events"""
         if self.tabs.widget(index) == self.plot_tab:
             self.plot_tab.refresh_subset_list()
+    
+    @pyqtSlot()
+    def _perform_autosave(self) -> None:
+        """
+        Executes the autosave if there are unsaved changes
+        """
+        if self.unsaved_changes and self.data_handler.df is not None:
+            self.project_manager.auto_save(self.get_project_data())
+    
+    @pyqtSlot()
+    def _check_recovery(self) -> None:
+        """
+        Checks for an existing autosave file and
+        prompts to recovery after a crash
+        """
+        if self.project_manager.has_autosave():
+            reply = QMessageBox.question(
+                self, 
+                "Recover Project",
+                "Last session was not existed properly. Would you like to recover the unsaved data?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                try:
+                    project_data = self.project_manager.recover_autosave()
+                    self.load_project(project_data)
+                    self.status_bar.log("Session recovered", "SUCCESS")
+                    self.unsaved_changes = True
+                except Exception as err:
+                    QMessageBox.warning(self, "Recovery Failed", f"Could not recover the session: {str(err)}")
+                    self.project_manager.cleanup_autosave()
+            else:
+                self.project_manager.cleanup_autosave()
+        
             
     def _mark_as_unsaved(self) -> None:
         if self.data_handler.df is not None:
@@ -148,6 +191,7 @@ class MainWindow(QWidget):
         """Creates a new project"""
         if self._confirm_discard_changes():
             self.project_manager.new_project()
+            self.project_manager.cleanup_autosave()
             self.clear_all()
             
             # Create an empty dataframe (0x0) to start the table view
@@ -216,6 +260,7 @@ class MainWindow(QWidget):
 
             if saved_path:
                 self._unsaved_changes = False
+                self.project_manager.cleanup_autosave()
                 op_name = "save_project_as" if force_dialog else "save_project"
                 self.status_bar.log_action(f"Project Saved: {Path(saved_path).name}",details={"filepath": saved_path, "operation": op_name}, level="SUCCESS")
 
@@ -281,6 +326,13 @@ class MainWindow(QWidget):
                 return False
         
         return True
+
+    def closeEvent(self, event) -> None:
+        if self._confirm_discard_changes():
+            self.project_manager.cleanup_autosave()
+            event.accept()
+        else:
+            event.ignore()
     
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle the drag event for filre imports"""
