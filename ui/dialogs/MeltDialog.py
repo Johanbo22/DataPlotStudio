@@ -1,18 +1,18 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox, QPushButton, QSplitter, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QHeaderView
-from typing import List
+from typing import List, Tuple, Optional, Dict, Any
 
 import pandas as pd
+from core.resource_loader import get_resource_path
 from ui.theme import ThemeColors
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets import DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioLineEdit
 
 
 class MeltDialog(QDialog):
     """Dialog for using the melt function"""
 
-    def __init__(self, df: pd.DataFrame, parent=None):
+    def __init__(self, df: pd.DataFrame, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle("Melt Data")
         self.setModal(True)
@@ -25,10 +25,23 @@ class MeltDialog(QDialog):
     def init_ui(self):
         layout = QVBoxLayout(self)
 
-        #info
-        info_label = QLabel("Melt data together")
-        info_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        layout.addWidget(info_label)
+        banner_widget = QWidget()
+        banner_layout = QHBoxLayout(banner_widget)
+        banner_layout.setContentsMargins(0, 0, 0, 5)
+        
+        icon_label = QLabel()
+        icon_pixmap = QIcon(get_resource_path("icons/data_operations/melt_data.svg")).pixmap(42, 42)
+        icon_label.setPixmap(icon_pixmap)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        banner_layout.addWidget(icon_label)
+        
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(2)
+        
+        info_label = QLabel("Melt Data")
+        info_label.setFont(QFont("Consolas", 12, QFont.Weight.Bold))
+        text_layout.addWidget(info_label)
+        
 
         info_description = QLabel(
             "Using melt you unpivot your data fra a wide format to a long format.\n"
@@ -37,62 +50,35 @@ class MeltDialog(QDialog):
         )
         info_description.setProperty("styleClass", "info_text")
         info_description.setWordWrap(True)
-        layout.addWidget(info_description)
+        text_layout.addWidget(info_description)
+        
+        banner_layout.addLayout(text_layout)
+        banner_layout.addStretch()
+        
+        layout.addWidget(banner_widget)
+        layout.addSpacing(5)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        #id vars
-        id_variable_widget = QWidget()
-        id_variable_layout = QVBoxLayout(id_variable_widget)
-        id_variable_layout.addWidget(QLabel("ID variables (Keep these columns):"))
-
-        self.id_variable_list = QListWidget()
-        self.id_variable_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self.id_variable_list.addItems(self.columns)
-        id_variable_layout.addWidget(self.id_variable_list)
-
-        #buttons
-        id_buttons = QHBoxLayout()
-        id_select_all = QPushButton("Select All")
-        id_select_all.clicked.connect(lambda: self.id_variable_list.selectAll())
-        id_buttons.addWidget(id_select_all)
-        id_clear_all = QPushButton("Clear All")
-        id_clear_all.clicked.connect(lambda: self.id_variable_list.clearSelection())
-        id_buttons.addWidget(id_clear_all)
-        id_variable_layout.addLayout(id_buttons)
-
-        splitter.addWidget(id_variable_widget)
-
-        #value vars
-        value_widget = QWidget()
-        value_layout = QVBoxLayout(value_widget)
-        value_layout.addWidget(QLabel("Value Variables (Unpivot these):"))
+        splitter.setHandleWidth(20)
+        splitter.setChildrenCollapsible(False)
         
-        hint_label = QLabel("(Leave empty to unpivot all non-ID columns)")
-        hint_label.setProperty("styleClass", "muted_text")
-        value_layout.addWidget(hint_label)
-
-        self.value_list = QListWidget()
-        self.value_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self.value_list.addItems(self.columns)
-        value_layout.addWidget(self.value_list)
-
-        value_buttons = QHBoxLayout()
-        value_select_all = QPushButton("Select All")
-        value_select_all.clicked.connect(lambda: self.value_list.selectAll())
-        value_buttons.addWidget(value_select_all)
-        value_clear_all = QPushButton("Clear All")
-        value_clear_all.clicked.connect(lambda: self.value_list.clearSelection())
-        value_buttons.addWidget(value_clear_all)
-        value_layout.addLayout(value_buttons)
-
-        splitter.addWidget(value_widget)
+        id_panel, self.id_variable_list, self.id_search_input = self._create_column_selection_panel(
+            title="ID variables (Keep these columns)"
+        )
+        splitter.addWidget(id_panel)
+        
+        
+        value_panel, self.value_list, self.value_search_input = self._create_column_selection_panel(
+            title="Value Variables (Unpivot these):",
+            hint="(Leave empty to unpivot all non-ID columns)"
+        )
+        splitter.addWidget(value_panel)
+        
         layout.addWidget(splitter)
-
         layout.addSpacing(15)
 
         #naming
-        naming_group = QGroupBox("New Column Names")
+        naming_group = DataPlotStudioGroupBox("New Column Names")
         naming_layout = QFormLayout()
 
         self.variable_name_input = QLineEdit("variable")
@@ -117,7 +103,9 @@ class MeltDialog(QDialog):
         self.preview_table = QTableWidget()
         self.preview_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.preview_table.setAlternatingRowColors(True)
-        self.preview_table.horizontalHeader().setStretchLastSection(True)
+        header = self.preview_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setStretchLastSection(True)
         self.preview_table.verticalHeader().setVisible(False)
         self.preview_table.setMinimumHeight(200)
         preview_layout.addWidget(self.preview_table)
@@ -129,10 +117,7 @@ class MeltDialog(QDialog):
 
         #buttons
         button_layout = QHBoxLayout()
-
-        preview_button = DataPlotStudioButton("Update Preview")
-        preview_button.clicked.connect(self.update_preview)
-        button_layout.addWidget(preview_button)
+        button_layout.addStretch()
 
         apply_button = DataPlotStudioButton("Melt Data", base_color_hex=ThemeColors.MainColor)
         apply_button.setMinimumWidth(120)
@@ -145,6 +130,87 @@ class MeltDialog(QDialog):
         button_layout.addWidget(cancel_button)
 
         layout.addLayout(button_layout)
+        
+        self.id_variable_list.itemSelectionChanged.connect(self.update_preview)
+        self.value_list.itemSelectionChanged.connect(self.update_preview)
+        self.variable_name_input.textChanged.connect(self.update_preview)
+        self.value_name_input.textChanged.connect(self.update_preview)
+        
+        self.update_preview()
+    
+    def _create_column_selection_panel(self, title: str, hint: str = "") -> Tuple[QWidget, DataPlotStudioListWidget, DataPlotStudioLineEdit]:
+        panel_widget = QWidget()
+        layout = QVBoxLayout(panel_widget)
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        
+        header_label = QLabel(title)
+        header_label.setFont(QFont("Consolas", 10, QFont.Weight.Bold))
+        header_layout.addWidget(header_label)
+        
+        header_layout.addStretch()
+        
+        list_widget = DataPlotStudioListWidget()
+        list_widget.setSelectionMode(DataPlotStudioListWidget.SelectionMode.MultiSelection)
+        list_widget.addItems(self.columns)
+        
+        select_all_btn = DataPlotStudioButton("Select All")
+        select_all_btn.setFlat(True)
+        select_all_btn.setProperty("styleClass", "secondary_button")
+        select_all_btn.clicked.connect(lambda: self._select_all_visible(list_widget))
+        header_layout.addWidget(select_all_btn)
+        
+        clear_all_btn = DataPlotStudioButton("Clear All")
+        clear_all_btn.setFlat(True)
+        clear_all_btn.setProperty("styleClass", "secondary_button")
+        clear_all_btn.clicked.connect(list_widget.clearSelection)
+        header_layout.addWidget(clear_all_btn)
+        
+        layout.addLayout(header_layout)
+        
+        if hint:
+            hint_label = QLabel(hint)
+            hint_label.setProperty("styleClass", "muted_text")
+            layout.addWidget(hint_label)
+        
+        search_input = DataPlotStudioLineEdit()
+        search_input.setPlaceholderText("Filter columns...")
+        search_input.setClearButtonEnabled(True)
+        search_input.setProperty("styleClass", "seach_input")
+        layout.addWidget(search_input)
+        
+        layout.addWidget(list_widget)
+        
+        count_label = QLabel()
+        count_label.setProperty("styleClass", "muted_text")
+        count_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(count_label)
+        
+        def update_selection_count() -> None:
+            count = len(list_widget.selectedItems())
+            total = list_widget.count()
+            count_label.setText(f"{count} / {total} selected")
+        list_widget.itemSelectionChanged.connect(update_selection_count)
+        update_selection_count()
+        
+        search_input.textChanged.connect(lambda text, lw=list_widget: self._filter_list_widget(text, lw))
+
+        return panel_widget, list_widget, search_input
+    
+    def _filter_list_widget(self, text: str, list_widget: DataPlotStudioListWidget) -> None:
+        search_text = text.lower()
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            if item is not None:
+                item.setHidden(search_text not in item.text().lower())
+    
+    def _select_all_visible(self, list_widget: DataPlotStudioListWidget) -> None:
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            if item is not None and not item.isHidden():
+                item.setSelected(True)
 
     def update_preview(self):
         """Calculate and display the expected shape of the new dataframe"""
@@ -173,23 +239,39 @@ class MeltDialog(QDialog):
         new_cols = len(id_vars) + 2
         try:
             df_slice = self.df.head(15).copy()
+            
+            var_name = self.variable_name_input.text() or "variable"
+            value_name = self.value_name_input.text() or "value"
 
             preview_df = pd.melt(
                 df_slice,
                 id_vars=id_vars,
                 value_vars=v_vars,
-                var_name=self.variable_name_input.text() or "variable",
-                value_name=self.value_name_input.text() or "value"
+                var_name=var_name,
+                value_name=value_name
             )
 
             self.preview_table.setRowCount(preview_df.shape[0])
             self.preview_table.setColumnCount(preview_df.shape[1])
             self.preview_table.setHorizontalHeaderLabels(list(preview_df.columns))
+            
+            bold_font = QFont()
+            bold_font.setBold(True)
 
             for row in range(preview_df.shape[0]):
                 for col in range(preview_df.shape[1]):
-                    val = str(preview_df.iat[row, col])
-                    self.preview_table.setItem(row, col, QTableWidgetItem(val))
+                    raw_val = preview_df.iat[row, col]
+                    
+                    if isinstance(raw_val, float):
+                        val_str = f"{raw_val:.4f}"
+                    else:
+                        val_str = str(raw_val)
+                    item = QTableWidgetItem(val_str)
+                    
+                    col_name = preview_df.columns[col]
+                    if col_name in (var_name, value_name):
+                        item.setFont(bold_font)
+                    self.preview_table.setItem(row, col, item)
             
             text = (
                 f"Original Shape: {self.df.shape}  ->  "
@@ -222,18 +304,29 @@ class MeltDialog(QDialog):
         if overlap:
             QMessageBox.warning(self, "Validation Error", f"Columns cannot be both ID and value variables:\n{', '.join(overlap)}")
             return
+        
+        var_name = self.variable_name_input.text().strip()
+        value_name = self.value_name_input.text().strip()
 
-        if not self.variable_name_input.text().strip():
-            QMessageBox.warning(self, "Validation Error", "Please enter a name for the Variable column")
+        if not var_name:
+            QMessageBox.warning(self, "Validation Error", "Please enter a name for the Variable column.")
             return
 
-        if not self.value_name_input.text().strip():
-            QMessageBox.warning(self, "Validation Error", "Please enter a name for the Value column")
+        if not value_name:
+            QMessageBox.warning(self, "Validation Error", "Please enter a name for the Value column.")
+            return
+            
+        if var_name == value_name:
+            QMessageBox.warning(self, "Validation Error", "The Variable Column Name and Value Column Name cannot be identical.")
+            return
+            
+        if var_name in id_vars or value_name in id_vars:
+            QMessageBox.warning(self, "Validation Error", "The new column names cannot conflict with existing ID variables.")
             return
 
         self.accept()
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         """Return the config for this dialog"""
         return {
             "id_vars": [item.text() for item in self.id_variable_list.selectedItems()],

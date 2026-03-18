@@ -133,7 +133,7 @@ class DataHandler:
         """Calculates the usage of a Datafreme inn bytes"""
         if dataframe is None or dataframe.empty:
             return 0
-        return dataframe.memory_usage(deep=True).sum()
+        return dataframe.memory_usage(deep=False).sum()
 
     def _enforce_history_memory_limits(self) -> None:
         """
