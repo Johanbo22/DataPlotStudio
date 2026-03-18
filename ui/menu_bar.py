@@ -94,6 +94,12 @@ class MenuBar(QMenuBar):
         self.redo_action.setShortcut("Ctrl+Y")
         self.redo_action.setToolTip(self.tr("Redo the previous action"))
         edit_menu.addAction(self.redo_action)
+        
+        edit_menu.addSeparator()
+        self.python_console_action = QAction(QIcon(get_resource_path("icons/menu_bar/python-5.svg")), self.tr("Python &Console"), parent)
+        self.python_console_action.setShortcut("Ctrl+`")
+        self.python_console_action.setToolTip(self.tr("Open the Python console for direct data manipulation of the DataFrame"))
+        edit_menu.addAction(self.python_console_action)
 
         edit_menu.addSeparator()
         self.settings_action = QAction(IconBuilder.build(IconType.Settings), self.tr("&Settings"), parent)

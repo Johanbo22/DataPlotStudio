@@ -148,6 +148,7 @@ class DataPlotStudio(QMainWindow):
     def _connect_signals(self) -> None:
         """Routing signals to the main widget"""
         self.main_widget.window_title_changed.connect(self.setWindowTitle)
+        self.main_widget.data_tab.request_python_console.connect(self.main_widget.open_python_console)
         
         # Window state signals
         window_menu = self.menuBar().addMenu("&Window")
@@ -175,6 +176,7 @@ class DataPlotStudio(QMainWindow):
         # Edit menu
         self.menu_bar.undo_action.triggered.connect(self.main_widget.undo)
         self.menu_bar.redo_action.triggered.connect(self.main_widget.redo)
+        self.menu_bar.python_console_action.triggered.connect(self.main_widget.open_python_console)
 
         # View menu
         self.menu_bar.zoom_in_action.triggered.connect(self.main_widget.zoom_in)

@@ -17,7 +17,7 @@ from core.code_exporter import CodeExporter
 from core.logger import Logger
 from ui.status_bar import StatusBar
 from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
-from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog)
+from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog, ConsoleDialog)
 from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 from ui.icons import IconBuilder, IconType
 
@@ -239,6 +239,20 @@ class MainWindow(QWidget):
             "subsets": self.subset_manager.export_subsets(),
             "metadata": {"version": APPLICATION_VERSION, "name": "DataPlotStudio Project"}
         }
+        
+    def open_python_console(self) -> None:
+        if self.data_handler.df is None:
+            QMessageBox.warning(self, "Warning", "Please load data before opening the console.")
+            return
+
+        self.console_dialog = ConsoleDialog(self.data_handler, self._on_console_sync, self)
+        self.console_dialog.show()
+    
+    def _on_console_sync(self) -> None:
+        self.data_tab.refresh_data_view()
+        self.plot_tab.update_column_combo()
+        self.unsaved_changes = True
+        self.status_bar.update_data_stats(self.data_handler.df)
     
     def clear_all(self) -> None:
         """Clear all data"""

@@ -61,6 +61,7 @@ class DataTab(QWidget):
     request_import_sheets = pyqtSignal()
     request_import_db = pyqtSignal()
     request_quit = pyqtSignal()
+    request_python_console = pyqtSignal()
     data_modified = pyqtSignal()
 
     def __init__(
@@ -158,6 +159,15 @@ class DataTab(QWidget):
         toolbar_layout.addWidget(self.data_source_refresh_button)
 
         toolbar_layout.addStretch()
+        
+        self.python_console_button = DataPlotStudioButton(
+            "",
+            parent=self,
+        )
+        self.python_console_button.setIcon(QIcon(get_resource_path("icons/menu_bar/python-5.svg")))
+        self.python_console_button.setToolTip("Open the Python Console to use commands to directly work with the DataFrame")
+        self.python_console_button.clicked.connect(self.request_python_console.emit)
+        toolbar_layout.addWidget(self.python_console_button)
 
         # edit current dataset toggle
         self.edit_dataset_toggle_button = DataPlotStudioButton(
