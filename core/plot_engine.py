@@ -155,19 +155,49 @@ class PlotEngine:
         if self.current_figure is not None:
             self.current_figure.tight_layout()
 
-    def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False):
+    def setup_layout(self, rows: int = 1, cols: int = 1, sharex: bool = False, sharey: bool = False, custom_grid: Optional[List[Tuple[int, int, int, int]]] = None) -> None:
         """Subplot layout grid"""
         if self.current_figure is None:
             return
         
         self.current_figure.clear()
-        axes = self.current_figure.subplots(rows, cols, sharex=sharex, sharey=sharey)
-        if isinstance(axes, np.ndarray):
-            self.axes_flat = axes.flatten().tolist()
-        else:
-            self.axes_flat = [axes]
         
-        self.current_ax = self.axes_flat[0]
+        self._sharex = sharex
+        self._sharey = sharey
+        
+        if custom_grid:
+            self.axes_flat = []
+            grid_spec = self.current_figure.add_gridspec(rows, cols)
+            base_ax_x = None
+            base_ax_y = None
+            
+            for index, (r_start, r_end, c_start, c_end) in enumerate(custom_grid):
+                subplot_kwargs: Dict[str, Any] = {}
+                if sharex and base_ax_x is not None:
+                    subplot_kwargs["sharex"] = base_ax_x
+                if sharey and base_ax_y is not None:
+                    subplot_kwargs["sharey"] = base_ax_y
+                    
+                ax = self.current_figure.add_subplot(grid_spec[r_start:r_end, c_start:c_end], **subplot_kwargs)
+                self.axes_flat.append(ax)
+                
+                if index == 0:
+                    base_ax_x = ax
+                    base_ax_y = ax
+        else:
+            axes = self.current_figure.subplots(rows, cols, sharex=sharex, sharey=sharey)
+            if isinstance(axes, np.ndarray):
+                self.axes_flat = axes.flatten().tolist()
+            else:
+                self.axes_flat = [axes]
+        
+        if self.axes_flat:
+            self.current_ax = self.axes_flat[0]
+            
+            if sharex or sharey:
+                for ax in self.axes_flat:
+                    ax.label_outer()
+            
         self.current_figure.tight_layout()
 
     def set_active_subplot(self, index: int):
@@ -252,6 +282,10 @@ class PlotEngine:
             self.secondary_ax = None
         
         self.current_ax.clear()
+        
+        if getattr(self, '_sharex', False) or getattr(self, '_sharey', False):
+            for ax in self.axes_flat:
+                ax.label_outer()
     
     def _handle_secondary_axis(self, df: pd.DataFrame, x: str, secondary_y: str, secondary_plot_type: str, **kwargs) -> Any:
         """

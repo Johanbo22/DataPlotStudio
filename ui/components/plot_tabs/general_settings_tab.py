@@ -64,26 +64,16 @@ class GeneralSettingsTab(QWidget):
         layout = QVBoxLayout()
 
         info = QLabel(
-            "This tool allows you to control how many subplots you wish to add to the current canvas.\n"
-            "The rows adjust horizontal plots and columns control vertical plots."
+            "Design your subplot layout here. For a simple grid, just change the rows/columns.\n"
+            "To create complex dashboard layouts, select multiple cells and click 'Merge Cells'."
         )
         info.setProperty("styleClass", "info_text")
         info.setWordWrap(True)
         layout.addWidget(info)
 
-        grid_layout = QHBoxLayout()
-        grid_layout.addWidget(QLabel("Rows:"))
-        self.subplot_rows_spin = DataPlotStudioSpinBox()
-        self.subplot_rows_spin.setRange(1, 5)
-        self.subplot_rows_spin.setValue(1)
-        grid_layout.addWidget(self.subplot_rows_spin)
-
-        grid_layout.addWidget(QLabel("Columns:"))
-        self.subplot_cols_spin = DataPlotStudioSpinBox()
-        self.subplot_cols_spin.setRange(1, 5)
-        self.subplot_cols_spin.setValue(1)
-        grid_layout.addWidget(self.subplot_cols_spin)
-        layout.addLayout(grid_layout)
+        from ui.widgets.GridSpecDesigner import GridSpecDesignerWidget
+        self.grid_designer = GridSpecDesignerWidget(self)
+        layout.addWidget(self.grid_designer)
 
         share_layout = QHBoxLayout()
         self.subplot_sharex_check = DataPlotStudioToggleSwitch("Share X-axis")
@@ -92,14 +82,9 @@ class GeneralSettingsTab(QWidget):
         self.subplot_sharey_check = DataPlotStudioToggleSwitch("Share Y-axis")
         share_layout.addWidget(self.subplot_sharey_check)
         layout.addLayout(share_layout)
-
-        btn_layout = QHBoxLayout()
-        self.apply_subplot_layout_button = DataPlotStudioButton("Update Subplot Layout", parent=self)
-        self.apply_subplot_help = HelpIcon("subplots")
-        self.apply_subplot_help.clicked.connect(lambda: self.help_requested.emit("subplots"))
-        btn_layout.addWidget(self.apply_subplot_layout_button)
-        btn_layout.addWidget(self.apply_subplot_help)
-        layout.addLayout(btn_layout)
+        
+        self.subplot_sharex_check.toggled.connect(self._sync_grid_axes)
+        self.subplot_sharey_check.toggled.connect(self._sync_grid_axes)
 
         active_layout = QHBoxLayout()
         active_layout.addWidget(QLabel("Active Subplot:"))
@@ -113,6 +98,13 @@ class GeneralSettingsTab(QWidget):
 
         self.subplot_group.setLayout(layout)
         parent_layout.addWidget(self.subplot_group)
+    
+    def _sync_grid_axes(self, *args) -> None:
+        """Passes the active toggle states down to the visual designer widget."""
+        if hasattr(self, 'grid_designer'):
+            sharex = self.subplot_sharex_check.isChecked()
+            sharey = self.subplot_sharey_check.isChecked()
+            self.grid_designer.set_shared_axes(sharex, sharey)
 
     def _setup_data_configuration_group(self, parent_layout: QVBoxLayout) -> None:
         group = DataPlotStudioGroupBox("Data Configuration")

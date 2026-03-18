@@ -256,7 +256,7 @@ class PlotTab(PlotTabUI):
         self.view.subset_combo.currentIndexChanged.connect(self.on_data_changed)
         self.view.quick_filter_input.textChanged.connect(self.on_data_changed)
         
-        self.view.apply_subplot_layout_button.clicked.connect(self.apply_subplot_layout)
+        self.view.grid_designer.layout_applied.connect(self._apply_custom_grid_layout)
         self.view.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
         self.view.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         self.view.use_subset_check.stateChanged.connect(self.use_subset)
@@ -595,13 +595,11 @@ class PlotTab(PlotTabUI):
     def use_subset(self):
         """Active subset on change"""
         subset_enabled = self.view.use_subset_check.isChecked()
-
-    def apply_subplot_layout(self):
-        """Apply new grid layout to subplot context"""
-        rows = self.view.subplot_rows_spin.value()
-        cols = self.view.subplot_cols_spin.value()
-        sharex = self.view.subplot_sharex_check.isChecked()
-        sharey = self.view.subplot_sharey_check.isChecked()
+    
+    def _apply_custom_grid_layout(self, rows: int, cols: int, custom_grid: list) -> None:
+        """Apply custom GridSpec layout spanning complex structures to the current subplot context"""
+        sharex = self.settings_panel.subplot_sharex_check.isChecked()
+        sharey = self.settings_panel.subplot_sharey_check.isChecked()
 
         confirmation = QMessageBox.question(
             self, "Update Layout",
@@ -610,23 +608,26 @@ class PlotTab(PlotTabUI):
         )
         
         if confirmation == QMessageBox.StandardButton.Yes:
-            self.plot_engine.setup_layout(rows, cols, sharex=sharex, sharey=sharey)
+            try:
+                self.plot_engine.setup_layout(rows=rows, cols=cols, sharex=sharex, sharey=sharey, custom_grid=custom_grid)
 
-            max_plots = rows * cols
-            self.view.active_subplot_combo.blockSignals(True)
-            self.view.active_subplot_combo.clear()
+                max_plots = len(custom_grid)
+                self.view.active_subplot_combo.blockSignals(True)
+                self.view.active_subplot_combo.clear()
 
-            for i in range(max_plots):
-                self.view.active_subplot_combo.addItem(f"Plot {i + 1}")
-            self.view.active_subplot_combo.blockSignals(False)
+                for i in range(max_plots):
+                    self.view.active_subplot_combo.addItem(f"Plot {i + 1}")
+                self.view.active_subplot_combo.blockSignals(False)
 
-            self.subplot_data_configs.clear()
-            self.canvas.draw()
+                self.subplot_data_configs.clear()
+                self.canvas.draw()
 
-            #trigger overlay
-            self.on_active_subplot_changed(0)
+                # trigger overlay
+                self.on_active_subplot_changed(0)
 
-            self.status_bar.log(f"Layout updated to {rows}x{cols}", "INFO")
+                self.status_bar.log(f"Subplot layout updated to {rows}x{cols} with {max_plots} plots", "INFO")
+            except Exception as layout_err:
+                self.status_bar.log(f"Failed to apply custom grid layout: {str(layout_err)}", "ERROR")
     
     def on_active_subplot_changed(self, index):
         """Change index for active subplot"""

@@ -30,6 +30,7 @@ from .SplitColumnDialog import SplitColumnDialog
 from .RegexReplaceDialog import RegexReplaceDialog
 from .AppendDialog import AppendDialog
 from .MacroPreviewDialog import MacroPreviewDialog
+from .ConsoleDialog import ConsoleDialog
 
 __all__ = [
     "MacroPreviewDialog",

@@ -88,12 +88,10 @@ class PlotSettingsPanel(QWidget):
         self.use_subset_check = self.basic_tab.use_subset_check
         
         self.subplot_group = self.basic_tab.subplot_group
-        self.subplot_rows_spin = self.basic_tab.subplot_rows_spin
-        self.subplot_cols_spin = self.basic_tab.subplot_cols_spin
+        self.grid_designer = self.basic_tab.grid_designer
         self.subplot_sharex_check = self.basic_tab.subplot_sharex_check
         self.subplot_sharey_check = self.basic_tab.subplot_sharey_check
-        self.apply_subplot_layout_button = self.basic_tab.apply_subplot_layout_button
-        self.apply_subplot_help = self.basic_tab.apply_subplot_help
+        
         self.active_subplot_combo = self.basic_tab.active_subplot_combo
         self.freeze_data_check = self.basic_tab.freeze_data_check
         
