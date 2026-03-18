@@ -1,8 +1,8 @@
 # ui/plot_tab.py
 
-from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog
+from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog, QToolTip
 from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal, QThreadPool
-from PyQt6.QtGui import QIcon, QColor
+from PyQt6.QtGui import QIcon, QColor, QCursor
 import json
 from pathlib import Path
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -70,6 +70,10 @@ class PlotTab(PlotTabUI):
         self.current_plot_type_name = "Line"
         self.dragged_annotation = None
         self.ignore_next_click = False
+        self._pan_axes = None
+        self._pan_start = None
+        self._pan_start_xlim = None
+        self._pan_start_ylim = None
         self.config_manager = PlotConfigManager(self)
         self.thread_pool = QThreadPool.globalInstance()
         
@@ -239,6 +243,7 @@ class PlotTab(PlotTabUI):
         self.canvas.mpl_connect("button_press_event", self.on_mouse_press)
         self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
         self.canvas.mpl_connect("button_release_event", self.on_mouse_release)
+        self.canvas.mpl_connect("scroll_event", self.on_scroll)
 
         #editor sync
         self.view.x_column.currentTextChanged.connect(self._sync_script_if_open)
@@ -786,13 +791,59 @@ class PlotTab(PlotTabUI):
             self.custom_tabs.setCurrentIndex(4)
             self.status_bar.log("Selected scatter points", "INFO")
     
-    def on_mouse_press(self, event):
-        """Handle mouse pressing events on canvas"""
-        if event.button != 1 or not event.inaxes:
+    def on_scroll(self, event) -> None:
+        if not event.inaxes:
             return
         
-        if self.ignore_next_click:
-            self.ignore_next_click = False
+        ax = event.inaxes
+        base_scale = 1.15
+        
+        cur_xlim = ax.get_xlim()
+        cur_ylim = ax.get_ylim()
+        
+        xdata = event.xdata
+        ydata = event.ydata
+        
+        if event.button == "up":
+            scale_factor = 1 / base_scale
+        elif event.button == "down":
+            scale_factor = base_scale
+        else:
+            scale_factor = 1
+            
+        new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
+        new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+        
+        relx = (cur_xlim[1] - xdata) / (cur_xlim[1] - cur_xlim[0])
+        rely = (cur_ylim[1] - ydata) / (cur_ylim[1] - cur_ylim[0])
+        
+        ax.set_xlim([xdata - new_width * (1 - relx), xdata + new_width * relx])
+        ax.set_ylim([ydata - new_height * (1 - rely), ydata + new_height * rely])
+        
+        self.canvas.draw_idle()
+    
+    def on_mouse_press(self, event):
+        """Handle mouse pressing events on canvas"""
+        if not event.inaxes:
+            return
+        
+        right_mouse_click = 3
+        if event.button == right_mouse_click:
+            if event.inaxes in self.plot_engine.axes_flat:
+                idx = self.plot_engine.axes_flat.index(event.inaxes)
+                self.view.active_subplot_combo.setCurrentIndex(idx)
+                self.status_bar.log(f"Active subplot changed to Plot {idx + 1}.", "INFO")
+            return
+
+        middle_click = 2
+        if event.button == middle_click:
+            self._pan_axes = event.inaxes
+            self._pan_start = (event.x, event.y)
+            self._pan_start_xlim = self._pan_axes.get_xlim()
+            self._pan_start_ylim = self._pan_axes.get_ylim()
+        
+        left_click = 1
+        if event.button != left_click:
             return
         
         if self.custom_tabs.currentIndex() == 5:
@@ -809,24 +860,76 @@ class PlotTab(PlotTabUI):
     
     def on_mouse_move(self, event):
         """Handle mouse movement for dragging an annotation"""
-        if self.dragged_annotation and event.inaxes:
+        if not event.inaxes:
+            QToolTip.hideText()
+            return
+        
+        if getattr(self, "_pan_axes", None) and getattr(self, "_pan_start", None) and event.inaxes == self._pan_axes:
+            inv = self._pan_axes.transData.inverted()
+            start_data = inv.transform(self._pan_start)
+            current_data = inv.transform((event.x, event.y))
+            
+            dx_data = current_data[0] - start_data[0]
+            dy_data = current_data[1] - start_data[1]
+            
+            self._pan_axes.set_xlim(self._pan_start_xlim[0] - dx_data, self._pan_start_xlim[1] - dx_data)
+            self._pan_axes.set_ylim(self._pan_start_ylim[0] - dy_data, self._pan_start_ylim[1] - dy_data)
+            self.canvas.draw_idle()
+            return
+        
+        if getattr(self, "dragged_annotation", None):
             ax = self.plot_engine.current_ax
             inv = ax.transAxes.inverted()
-            x, y = inv.transform((event.x, event.y))
-
-            # Update position
+            x, y = inv.transform(event.x, event.y)
+            
             self.dragged_annotation.set_position((x, y))
             self.canvas.draw_idle()
-
+            
             self.view.annotation_x_spin.blockSignals(True)
             self.view.annotation_y_spin.blockSignals(True)
             self.view.annotation_x_spin.setValue(x)
             self.view.annotation_y_spin.setValue(y)
             self.view.annotation_x_spin.blockSignals(False)
             self.view.annotation_y_spin.blockSignals(False)
+            return
+
+        # Tooltips
+        found_point = False
+        for line in event.inaxes.get_lines():
+            cont, ind = line.contains(event)
+            if cont and len(ind.get("ind", [])) > 0:
+                idx = ind["ind"][0]
+                x_val = line.get_xdata()[idx]
+                y_val = line.get_ydata()[idx]
+                text = f"X: {x_val:.4g}\nY: {y_val:.4g}" if isinstance(x_val, (int, float)) else f"X: {x_val}\nY: {y_val:.4g}"
+                QToolTip.showText(QCursor.pos(), text, self.canvas)
+                found_point = True
+                break
+        
+        if not found_point:
+            for collection in event.inaxes.collections:
+                cont, ind = collection.contains(event)
+                if cont and len(ind.get('ind', [])) > 0:
+                    idx = ind['ind'][0]
+                    offsets = collection.get_offsets()[idx]
+                    x_val, y_val = offsets[0], offsets[1]
+                    text = f"X: {x_val:.4g}\nY: {y_val:.4g}"
+                    QToolTip.showText(QCursor.pos(), text, self.canvas)
+                    found_point = True
+                    break
+        
+        if not found_point:
+            QToolTip.hideText()
+        
     
     def on_mouse_release(self, event):
         """Handle mouse release to stop draggng event"""
+        if event.button == 2:
+            self._pan_axes = None
+            self._pan_start = None
+            self._pan_start_xlim = None
+            self._pan_start_ylim = None
+            return
         if self.dragged_annotation:
             gid = self.dragged_annotation.get_gid()
             if gid and gid.startswith("annotation_"):

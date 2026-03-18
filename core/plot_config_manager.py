@@ -85,8 +85,8 @@ class PlotConfigManager:
             "quick_filter": self.pt.quick_filter_input.text(),
             "subplots": {
                 "enabled": self.pt.add_subplots_check.isChecked(),
-                "rows": self.pt.subplot_rows_spin.value(),
-                "cols": self.pt.subplot_cols_spin.value(),
+                "rows": self.pt.view.grid_designer.rows_spin.value(),
+                "cols": self.pt.view.grid_designer.cols_spin.value(),
                 "sharex": self.pt.subplot_sharex_check.isChecked(),
                 "sharey": self.pt.subplot_sharey_check.isChecked(),
                 "freeze_data": self.pt.freeze_data_check.isChecked()
