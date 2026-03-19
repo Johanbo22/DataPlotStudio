@@ -103,6 +103,7 @@ class MergeDialog(QDialog):
         layout.addWidget(self.config_group)
         
         self.venn_widget = VennDiagramWidget()
+        self.venn_widget.setObjectName("VennDiagramWidget")
         layout.addWidget(self.venn_widget)
         
         layout.addStretch()

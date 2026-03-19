@@ -336,3 +336,10 @@ DataPlotStudioToggleSwitch:disabled {
 #layoutGridTable::item:selected:hover {
     background-color: rgba(128, 128, 128, 0.3);
 }
+
+VennDiagramWidget {
+    qproperty-activeColor: #3498DB;
+    qproperty-inactiveColor: #ECF0F1;
+    qproperty-outlineColor: #7F8C8D;
+    qproperty-textColor: #2C3E50;
+}
