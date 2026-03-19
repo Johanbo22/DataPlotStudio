@@ -22,8 +22,14 @@ from .DataTypeChangeAnimation import DataTypeChangeAnimation
 from .AggregationAnimation import AggregationAnimation
 from .MeltDataAnimation import MeltDataAnimation
 from .DataFilterAnimation import DataFilterAnimation
+from .SubsetDataAnimation import SubsetDataAnimation
+from .CalculationAnimation import CalculationAnimation
+from .SavePlotAnimation import SavePlotAnimation
 
 __all__ = [
+    "SavePlotAnimation",
+    "CalculationAnimation",
+    "SubsetDataAnimation",
     "OverlayAnimationEngine",
     "ResetToOriginalStateAnimation",
     "SavedProjectAnimation",

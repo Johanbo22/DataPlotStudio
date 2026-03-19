@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QDialog,
     QStackedWidget,
+    QApplication
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import (
@@ -208,6 +209,9 @@ class DataTab(QWidget):
         # Search functionality to data table
         self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.search_shortcut.activated.connect(self.open_search_dialog)
+        
+        self.copy_shortcut = QShortcut(QKeySequence.StandardKey.Copy, self.data_table)
+        self.copy_shortcut.activated.connect(self.copy_selection)
 
         data_table_icon = IconBuilder.build(IconType.DataExplorerIcon)
         self.data_tabs.addTab(self.data_table, data_table_icon, "Data Table")
@@ -774,6 +778,7 @@ class DataTab(QWidget):
         menu.addAction(alt_rows_action)
 
         menu.addSeparator()
+        copy_action = menu.addAction("Copy Selection")
         settings_action = menu.addAction("Table Settings...")
         stats_test_action = menu.addAction("Run Statistical Test...")
 
@@ -783,10 +788,49 @@ class DataTab(QWidget):
             self.data_table.resizeColumnsToContents()
         elif action == resize_rows_action:
             self.data_table.resizeRowsToContents()
+        elif action == copy_action:
+            self.copy_selection()
         elif action == settings_action:
             self.open_table_customization()
         elif action == stats_test_action:
             self.controller.run_statistical_test_from_selection()
+        
+    def copy_selection(self) -> None:
+        """
+        Copies the currently selected cells in the table to the system clipboard
+        Formats the copied data as TSV 
+        """
+        if self.data_table is None:
+            return
+        
+        selection_model = self.data_table.selectionModel()
+        if selection_model is None or not selection_model.hasSelection():
+            self.status_bar.log("No cells selected to copy", "WARNING")
+            return
+        
+        selected_indexes = selection_model.selectedIndexes()
+        if not selected_indexes:
+            return
+        
+        sorted_indexes = sorted(selected_indexes, key=lambda idx: (idx.row(), idx.column()))
+        
+        copied_text = ""
+        previous_row = sorted_indexes[0].row()
+        
+        for index in sorted_indexes:
+            current_row = index.row()
+            
+            if current_row != previous_row:
+                copied_text += "\n"
+                previous_row = current_row
+            elif index != sorted_indexes[0]:
+                copied_text += "\t"
+            
+            cell_data = index.data(Qt.ItemDataRole.DisplayRole)
+            copied_text += str(cell_data) if cell_data is not None else ""
+            
+        QApplication.clipboard().setText(copied_text)
+        self.status_bar.log(f"Copied {len(selected_indexes)} cell(s) to clipboard", "SUCCESS")
 
     def open_table_customization(self):
         """Opens the settings dialog for the table customzation"""

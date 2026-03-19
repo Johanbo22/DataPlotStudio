@@ -8,6 +8,8 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     pyqtProperty,
     QPoint,
+    QPointF,
+    QEvent
     )
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QPaintEvent
 from PyQt6.QtWidgets import QCheckBox, QWidget
@@ -36,7 +38,19 @@ class DataPlotStudioToggleSwitch(HoverFocusAnimationMixin, QCheckBox):
         
         self.toggled.connect(self._on_toggled)
         
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._update_cursor_state()
+        
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.EnabledChange:
+            self._update_cursor_state()
+            self.update()
+    
+    def _update_cursor_state(self) -> None:
+        if self.isEnabled():
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        else:
+            self.unsetCursor()
     
     @pyqtProperty(float)
     def handle_position(self) -> float:
@@ -123,11 +137,43 @@ class DataPlotStudioToggleSwitch(HoverFocusAnimationMixin, QCheckBox):
         handle_x = x_offset + self._margin + current_offset
         handle_y = y_offset + self._margin
         
-        handle_rect = QRectF(handle_x, handle_y, handle_diameter, handle_diameter)
+        squish_amount = 4.0 if self.isDown() else 0.0
+        squish_offset_x = -squish_amount if self.isChecked() else 0.0
+        
+        handle_rect = QRectF(handle_x + squish_offset_x, handle_y, handle_diameter + squish_amount, handle_diameter)
+        
+        if self.isEnabled() and not self.isDown():
+            painter.setBrush(QBrush(QColor(0, 0, 0, 20)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(handle_rect.translated(0, 1.0).adjusted(-0.5, -0.5, 0.5, 0.5))
+            
+            painter.setBrush(QBrush(QColor(0, 0, 0, 10)))
+            painter.drawEllipse(handle_rect.translated(0, 2.0).adjusted(-1.0, -1.0, 1.0, 1.0))
         
         painter.setBrush(QBrush(handle_color))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(handle_rect)
+        
+        if self._handle_position > 0.0:
+            painter.setOpacity(opacity * self._handle_position)
+            
+            checkmark_pen = QPen(track_color, 2.0)
+            checkmark_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            checkmark_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(checkmark_pen)
+            
+            center_x = handle_rect.center().x()
+            center_y = handle_rect.center().y()
+            handle_radius = handle_diameter / 2.0
+            
+            p1 = QPointF(center_x - handle_radius * 0.4, center_y)
+            p2 = QPointF(center_x - handle_radius * 0.1, center_y + handle_radius * 0.3)
+            p3 = QPointF(center_x + handle_radius * 0.4, center_y - handle_radius * 0.4)
+            
+            painter.drawLine(p1, p2)
+            painter.drawLine(p2, p3)
+            
+            painter.setOpacity(opacity)
         
         if self.text():
             text_rect = QRectF(content_rect)

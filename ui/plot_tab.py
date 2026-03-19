@@ -12,6 +12,7 @@ from core.plot_engine import PlotEngine
 from core.data_handler import DataHandler
 from core.resource_loader import get_resource_path
 from ui.SubplotOverlay import SubplotOverlay
+from ui.animations import SavePlotAnimation
 from ui.components.plot_settings_panel import PlotSettingsPanel
 from ui.status_bar import StatusBar
 from core.code_exporter import CodeExporter
@@ -698,7 +699,7 @@ class PlotTab(PlotTabUI):
                     finally:
                         self.plot_engine.current_figure.set_size_inches(*original_size)
                         self.canvas.draw_idle()
-                    
+                SavePlotAnimation(self).start(self)
                 self.status_bar.log_action(f"Plot saved to {filepath}", level="SUCCESS")
                 QMessageBox.information(self, "Success", f"Plot saved successfully to:\n{filepath}")
         except PermissionError:

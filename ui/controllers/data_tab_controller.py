@@ -10,7 +10,7 @@ from core.aggregation_manager import AggregationManager
 from core.help_manager import HelpManager
 from core.subset_manager import SubsetManager
 
-from ui.animations import AggregationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation
+from ui.animations import AggregationAnimation, CalculationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation, SubsetDataAnimation
 
 from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog
 
@@ -637,6 +637,7 @@ class DataTabController:
             try:
                 self.data_handler.create_computed_column(new_column, expression)
                 self.view.refresh_data_view()
+                CalculationAnimation(self.view, "Calculate Column").start(self.view)
 
                 self.status_bar.log_action(
                     f"Created column '{new_column}' = {expression}",
@@ -887,6 +888,7 @@ class DataTabController:
         try:
             self.data_handler.clean_data("calculate_date_difference", start_column=start_col, end_column=end_col, unit=unit)
             self.view.refresh_data_view()
+            CalculationAnimation(self.view, "Calculate Time Difference").start(self.view)
             
             self.status_bar.log_action(
                 f"Calculated duration between '{start_col}' and '{end_col}' in {unit}",
@@ -1357,6 +1359,7 @@ class DataTabController:
             self.progress_dialog.close()
         
         self.refresh_active_subsets()
+        SubsetDataAnimation(self.view).start(target_widget=self.view)
         
         self.status_bar.log_action(f"Created {len(created)} subsets from column '{column}'",
             details={
@@ -1439,6 +1442,7 @@ class DataTabController:
 
             dialog.exec()
 
+            SubsetDataAnimation(self.view).start(target_widget=self.view)
             # Refresh the subset list after dialog closes
             self.refresh_active_subsets()
 
