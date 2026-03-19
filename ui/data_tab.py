@@ -314,29 +314,21 @@ class DataTab(QWidget):
 
     def perform_search(self, search_text: str):
         """Executes a search on the dataframe"""
+        if self.data_handler.df is None or self.data_handler.df.empty:
+            return
+        
         df = self.data_handler.df
-        matches = []
+        matches: list[tuple[int, int, str, str]] = []
+        search_text_lower: str = str(search_text).lower()
 
-        search_text_lower = str(search_text).lower()
-
-        if not df.empty:
-            # Convert all data to strings
-            # 
-            df_str = df.astype(str)
-            mask = df_str.apply(lambda col: col.str.contains(search_text_lower, case=False, regex=False)).to_numpy()
+        for col_index, col_name in enumerate(df.columns):
+            col_series_str = df[col_name].astype(str)
+            mask = col_series_str.str.contains(search_text_lower, case=False, regex=False)
             
-            row_indices, col_indices = np.where(mask)
+            matched_row_indices = np.where(mask)[0]
             
-            if len(row_indices) > 0:
-                matched_cols = df.columns[col_indices]
-                matched_values = df_str.to_numpy()[row_indices, col_indices]
-                
-                matches = list(zip(
-                    row_indices.tolist(),
-                    col_indices.tolist(),
-                    matched_cols.tolist(),
-                    matched_values.tolist()
-                ))
+            for row_idx in matched_row_indices:
+                matches.append((int(row_idx), col_index, str(col_name), col_series_str.iloc[row_idx]))
 
         if not matches:
             QMessageBox.information(
@@ -345,9 +337,10 @@ class DataTab(QWidget):
             return
 
         if len(matches) == 1:
-            self.highlight_cell(matches[0][0], matches[0][1])
+            row, col_idx, _, _ = matches[0]
+            self.highlight_cell(row, col_index)
             self.status_bar.log(
-                f"Found 1 match at Row {matches[0][0]}, Column '{matches[0][1]}'",
+                f"Found 1 match at Row {row}, Column index'{col_index}'",
                 "SUCCESS",
             )
         else:
