@@ -1,7 +1,8 @@
 # main.py
 import sys
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QTranslator, QLocale
+from PyQt6.QtCore import QTranslator, QLocale, Qt
+from PyQt6.QtGui import QGuiApplication
 
 from ui.DataPlotStudioApp import DataPlotStudio
 from core.tempfilehandling.cleanup_temp_files import cleanup_forgotten_temp_files
@@ -9,6 +10,7 @@ from core.tempfilehandling.cleanup_temp_files import cleanup_forgotten_temp_file
 
 def main():
     cleanup_forgotten_temp_files()
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     translator = QTranslator()
 

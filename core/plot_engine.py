@@ -245,8 +245,8 @@ class PlotEngine:
             w = (x1 - x0) / dpr
             h = (y1 - y0) / dpr
             
-            canvas.height = self.current_figure.bbox_height / dpr
-            y = canvas.height - (y1 / dpr)
+            canvas_height = self.current_figure.bbox_height / dpr
+            y = canvas_height - (y1 / dpr)
 
             return (int(x), int(y), int(w), int(h))
         
@@ -270,7 +270,7 @@ class PlotEngine:
         try:
             cmap = matplotlib.colormaps[cmap_name]
             return [cmap(i) for i in np.linspace(0, 1, n_colors)]
-        except:
+        except KeyError:
             return None
     
     def _clear_axes(self):

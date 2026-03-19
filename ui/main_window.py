@@ -100,7 +100,7 @@ class MainWindow(QWidget):
             self.data_tab.data_table.model().set_highlighted_rows(indices)
             
             data_tab_index = self.tabs.indexOf(self.data_tab)
-            if data_tab_index != 1:
+            if self.tabs.currentIndex() != data_tab_index:
                 self.tabs.setCurrentIndex(data_tab_index)
             
             if indices:

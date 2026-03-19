@@ -103,9 +103,6 @@ class DataHandler:
     def last_db_query(self): 
         return self._io.last_db_query
     
-    def _save_state(self) -> None:
-        self._history.save_state(self.df)
-    
     def _reset_history(self) -> None:
         self._history.clear()
     
