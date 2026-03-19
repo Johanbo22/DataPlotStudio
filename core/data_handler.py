@@ -1,704 +1,212 @@
-# core/data_handler.py
-
-from duckdb import connect
-import pandas as pd
-import keyword
-import numpy as np
-from pathlib import Path
-from typing import Optional, Dict, Any, List, Union, Callable
-import requests
 import atexit
-from sqlalchemy import create_engine
-from sqlalchemy.sql import text
-from enum import Enum
-from core.tempfilehandling.cleanup_temp_files import cleanup_temp_csv_files
-from core.tempfilehandling.create_temp_file import create_temp_csv_file
+import pandas as pd
+from pathlib import Path
+from typing import Any, Dict, Optional, Union, Callable, List
 
-try:
-    import geopandas as gpd
-except ImportError:
-    gpd = None
-try:
-    from scipy import stats
-    from sklearn.ensemble import IsolationForest
-except ImportError:
-    stats = None
-    IsolationForest = None
+from sqlalchemy.util import b
 
-class StatisticalTest(str, Enum):
-    T_TEST = "t-test"
-    ANOVA = "anova"
-    PEARSON = "pearson"
-
-class DataOperation(str, Enum):
-    DROP_DUPLICATES = "drop_duplicates"
-    DROP_MISSING = "drop_missing"
-    FILL_MISSING = "fill_missing"
-    DROP_COLUMN = "drop_column"
-    RENAME_COLUMN = "rename_column"
-    CHANGE_DATA_TYPE = "change_data_type"
-    TEXT_MANIPULATION = "text_manipulation"
-    SPLIT_COLUMN = "split_column"
-    REGEX_REPLACE = "regex_replace"
-    REMOVE_ROWS = "remove_rows"
-    CLIP_OUTLIERS = "clip_outliers"
-    DUPLICATE_COLUMN = "duplicate_column"
-    NORMALIZE = "normalize"
-    EXTRACT_DATE_COMPONENT = "extract_date_component"
-    CALCULATE_DATE_DIFFERENCE = "calculate_date_difference"
-    FLAG_OUTLIERS = "flag_outliers"
-
-class FillMethod(str, Enum):
-    MEAN = "mean"
-    MEDIAN = "median"
-    MODE = "mode"
-    FFILL = "ffill"
-    BFILL = "bfill"
-    STATIC_VALUE = "static_value"
-    LINEAR = "linear"
-    TIME = "time"
+from core.data_io_manager import DataIOManager
+from core.data_mutator import DataMutator, DataOperation, FillMethod, StatisticalTest
+from core.history_manager import HistoryManager
 
 class DataHandler:
-    """Handles all data import, export, and manipulation"""
+    """
+    Data handling bridge to connect submanagers API with rest of application
+    """
+    FrequencyMap = DataMutator.FrequencyMap
     
-    FrequencyMap = {
-        "Year": "Y",
-        "Quarter": "Q",
-        "Month": "M",
-        "Week": "W",
-        "Day": "D",
-    }
-    def __init__(self):
+    def __init__(self) -> None:
+        self._io = DataIOManager()
+        self._mutator = DataMutator()
+        self._history = HistoryManager()
+        
         self.df: Optional[pd.DataFrame] = None
-        self.original_df: Optional[pd.DataFrame] = None  # For undo operations
-        self.file_path: Optional[Path] = None
-        self.undo_stack: List[tuple[pd.DataFrame, list]] = []
-        self.redo_stack: List[tuple[pd.DataFrame, list]] = []
-        self.max_history_memory_bytes: int = 1024 * 1024 * 1024
-        self.memory_update_callback: Optional[Callable[[int, int], None]] = None
-        # operation log
-        self.operation_log: List[Dict[str, Any]] = []
-
-        # Track th sorting state
-        self.sort_state: Optional[tuple[str, bool]] = None
-
-        # temporary file tracking
-        self.temp_csv_path: Optional[Path] = None
-        self.is_temp_file: bool = False
-
-        # google sheets creds tracking
-        self.last_gsheet_id: Optional[str] = None
-        self.last_gsheet_name: Optional[str] = None
-        self.last_gsheet_delimiter: Optional[str] = None
-        self.last_gsheet_decimal: Optional[str] = None
-        self.last_gsheet_thousands: Optional[str] = None
-        self.last_gsheet_gid: Optional[str] = None
-
-        # Track database creds
-        self.last_db_connection_string: Optional[str] = None
-        self.last_db_query: Optional[str] = None
+        self.original_df: Optional[pd.DataFrame] = None
         
-        self._setup_operation_registry()
-        
-        # Register clean up upon exit
         atexit.register(self.cleanup_temp_files)
     
-    def _setup_operation_registry(self) -> None:
-        self._operation_registry: Dict[DataOperation, Callable[..., None]] = {
-            DataOperation.DROP_DUPLICATES: self._drop_duplicates,
-            DataOperation.DROP_MISSING: self._drop_missing,
-            DataOperation.FILL_MISSING: self._fill_missing,
-            DataOperation.DROP_COLUMN: self._drop_column,
-            DataOperation.RENAME_COLUMN: self._rename_column,
-            DataOperation.CHANGE_DATA_TYPE: self._change_data_type,
-            DataOperation.TEXT_MANIPULATION: self._text_manipulation,
-            DataOperation.SPLIT_COLUMN: self._split_column,
-            DataOperation.REGEX_REPLACE: self._regex_replace,
-            DataOperation.REMOVE_ROWS: self._remove_rows,
-            DataOperation.CLIP_OUTLIERS: self._clip_outliers,
-            DataOperation.DUPLICATE_COLUMN: self._duplicate_column,
-            DataOperation.NORMALIZE: self._normalize_data,
-            DataOperation.EXTRACT_DATE_COMPONENT: self._extract_date_component,
-            DataOperation.CALCULATE_DATE_DIFFERENCE: self._calculate_date_difference,
-            DataOperation.FLAG_OUTLIERS: self._flag_outliers,
-        }
-
-    def cleanup_temp_files(self):
-        """Delete temp csv file"""
-        cleanup_temp_csv_files(self.temp_csv_path)
-        self.temp_csv_path = None
-        self.is_temp_file = False
+    @property
+    def file_path(self) -> Optional[Path]:
+        return self._io.file_path
     
-    def _get_dataframe_memory_bytes(self, dataframe: pd.DataFrame) -> int:
-        """Calculates the usage of a Datafreme inn bytes"""
-        if dataframe is None or dataframe.empty:
-            return 0
-        return dataframe.memory_usage(deep=False).sum()
-
-    def _notify_memory_usage(self) -> None:
-        """
-        Calculates the total memory used
-        and notifies the callback
-        """
-        if self.memory_update_callback:
-            undo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack)
-            redo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack)
-            total_bytes = undo_bytes + redo_bytes
-            self.memory_update_callback(total_bytes, self.max_history_memory_bytes)
-
-    def _enforce_history_memory_limits(self) -> None:
-        """
-        Enforce the memory limit on the undo and redo stacks to prevent MemoryError.
-        Removes the oldest history states from undo_stack (then redo_stack if necessary) 
-        until total memory is under the threshold."""
-        while True:
-            undo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack)
-            redo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack)
-            total_bytes = undo_bytes + redo_bytes
-            
-            if total_bytes <= self.max_history_memory_bytes:
-                break
-            
-            if self.undo_stack:
-                dropped_state = self.undo_stack.pop(0)
-                dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
-                print(f"DEBUG: Memory limit reached. Dropped oldest undo state freeing {dropped_bytes / (1024 * 1024):.2f} MB.")
-            elif self.redo_stack:
-                dropped_state = self.redo_stack.pop(0)
-                dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
-                print(f"DEBUG: Memory limit reached. Dropped oldest redo state freeing {dropped_bytes / (1024 * 1024):.2f} MB.")
-            else:
-                break
-        self._notify_memory_usage()
-
+    @property
+    def temp_csv_path(self) -> Optional[Path]:
+        return self._io.temp_csv_path
+    
+    @property
+    def is_temp_file(self) -> bool:
+        return self._io.is_temp_file
+    
+    @property
+    def sort_state(self) -> Optional[tuple]:
+        return self._history.sort_state
+    
+    @sort_state.setter
+    def sort_state(self, value: Optional[tuple]) -> None:
+        self._history.sort_state = value
+        
+    @property
+    def operation_log(self) -> List[Dict[str, Any]]:
+        return self._history.operation_log
+    
+    @operation_log.setter
+    def operation_log(self, value: List[Dict[str, Any]]) -> None:
+        self._history.operation_log = value
+    
+    @property
+    def undo_stack(self):
+        return self._history.undo_stack
+    
+    @property
+    def redo_stack(self):
+        return self._history.redo_stack
+    
+    @property
+    def max_history_memory_bytes(self) -> int:
+        return self._history.max_history_memory_bytes
+    
+    @max_history_memory_bytes.setter
+    def max_history_memory_bytes(self, value: int) -> None:
+        self._history.max_history_memory_bytes = value
+        
+    @property
+    def memory_update_callback(self) -> Optional[Callable]:
+        return self._history.memory_update_callback
+    
+    @memory_update_callback.setter
+    def memory_update_callback(self, value: Optional[Callable]) -> None:
+        self._history.memory_update_callback = value
+        
+    @property
+    def last_gsheet_id(self): 
+        return self._io.last_gsheet_id
+    @property
+    def last_gsheet_name(self): 
+        return self._io.last_gsheet_name
+    @property
+    def last_gsheet_delimiter(self): 
+        return self._io.last_gsheet_delimiter
+    @property
+    def last_gsheet_decimal(self): 
+        return self._io.last_gsheet_decimal
+    @property
+    def last_gsheet_thousands(self): 
+        return self._io.last_gsheet_thousands
+    @property
+    def last_gsheet_gid(self): 
+        return self._io.last_gsheet_gid
+    
+    @property
+    def last_db_connection_string(self): 
+        return self._io.last_db_connection_string
+    @property
+    def last_db_query(self): 
+        return self._io.last_db_query
+    
     def _save_state(self) -> None:
-        """Save current state to undo stack"""
-        if self.df is not None:
-            # make deep copy
-            self.undo_stack.append((self.df.copy(), self.operation_log.copy(), self.sort_state))
-            # clear redo stack when new action is perfoermed
-            self.redo_stack.clear()
-            self._enforce_history_memory_limits()
-            print(f"DEBUG: State saved: Undo stack size: {len(self.undo_stack)}")
-
-    def undo(self) -> bool:
-        """Undo last action"""
-        print(f"DEBUG: Undo called. Stack Size: {len(self.undo_stack)}")
-        if len(self.undo_stack) == 0:
-            return False
-
-        # Save current state to redo stack
-        if self.df is not None:
-            self.redo_stack.append((self.df.copy(), self.operation_log.copy()))
-
-        state = self.undo_stack.pop()
-        if len(state) == 3:
-            restored_df, restored_log, restored_sort = state
-            self.sort_state = restored_sort
-        else:
-            restored_df, restored_log = state
-            self.sort_state = None
-
-        self.df = restored_df.copy()
-        self.operation_log = restored_log.copy()
-        
-        self._enforce_history_memory_limits()
-        print(f"DEBUG: Undo complete. Remaining stack: {len(self.undo_stack)}")
-        return True
-
-    def redo(self) -> bool:
-        """Redo last undone action"""
-        print(f"DEBUG: Redo called. Stack size: {len(self.redo_stack)}")
-        if len(self.redo_stack) == 0:
-            return False
-
-        # Save current state to undo stack
-        if self.df is not None:
-            self.undo_stack.append(
-                (self.df.copy(), self.operation_log.copy(), self.sort_state)
-            )
-
-        # Restore from redo stack
-        state = self.redo_stack.pop()
-        if len(state) == 3:
-            restored_df, restored_log, restored_sort = state
-            self.sort_state = restored_sort
-        else:
-            restored_df, restored_log = state
-            self.sort_state = None
-
-        self.df = restored_df.copy()
-        self.operation_log = restored_log.copy()
-        
-        self._enforce_history_memory_limits()
-        print(f"DEBUG: Redo complete. Remaining stack: {len(self.redo_stack)}")
-        return True
-
-    def can_undo(self) -> bool:
-        """Check if undo is available"""
-        return len(self.undo_stack) > 0
-
-    def can_redo(self) -> bool:
-        """Check if redo is available"""
-        return len(self.redo_stack) > 0
+        self._history.save_state(self.df)
     
-    def _attempt_datetime_conversion(self, dataframe: pd.DataFrame) -> pd.DataFrame:
-        """
-        Attempts to automatically convert object and string columns to datetime objects.
-        Uses a sampling approach to handle any date format Pandas supports while 
-        maintaining high performance and avoiding false positives.
-        
-        Args:
-            dataframe (pd.DataFrame): The DataFrame to process.
-            
-        Returns:
-            pd.DataFrame: The DataFrame with converted datetime columns where applicable.
-        """
-        if dataframe is None or dataframe.empty:
-            return dataframe
-        
-        object_columns = dataframe.select_dtypes(include=["object", "string"]).columns
-        for col in object_columns:
-            non_null_series = dataframe[col].dropna()
-            if non_null_series.empty:
-                continue
-            sample = non_null_series.head(100)
-            try:
-                pd.to_numeric(sample, errors="raise")
-                continue
-            except (TypeError, ValueError):
-                pass
-            
-            try:
-                sampled_converted = pd.to_datetime(sample, errors="coerce")
-                if sampled_converted.isna().any():
-                    continue
-                
-                converted_series = pd.to_datetime(dataframe[col], errors="coerce")
-                                
-                original_missing_count = dataframe[col].isna().sum()
-                new_missing_count = converted_series.isna().sum()
-                
-                if original_missing_count == new_missing_count:
-                    dataframe[col] = converted_series
-            except (ValueError, TypeError, Exception):
-                pass
-        return dataframe
+    def _reset_history(self) -> None:
+        self._history.clear()
+    
+    def cleanup_temp_files(self) -> None:
+        self._io.cleanup_temp_files()
     
     def read_file(self, filepath: str) -> pd.DataFrame:
-        """
-        Reads a file from path and returns a DataFrame without modifying the current instance
-        Args:
-            filepath (str): Path to the file
-        
-        Returns:
-            pd.DatatFrame: The loaded data
-        """
-        path = Path(filepath)
-        extension = path.suffix.lower()
-        
-        try:
-            if extension in [".xlsx", ".xls"]:
-                return pd.read_excel(filepath)
-            elif extension == ".csv":
-                con = connect()
-                try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, ignore_errors=true)", [path.as_posix()]).arrow()
-                    return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
-                except Exception as DuckDBError:
-                    print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
-                    try:
-                        return pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
-                    except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
-                        return pd.read_csv(filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
-                finally:
-                    con.close()
-            elif extension == ".txt":
-                con = connect()
-                try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\\t', ignore_errors=true)", [path.as_posix()]).arrow()
-                    return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
-                except Exception as DuckDBError:
-                    print(f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas pyarrow engine")
-                    try:
-                        return pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
-                    except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
-                        return pd.read_csv(filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
-                finally:
-                    con.close()
-            elif extension == ".json":
-                return pd.read_json(filepath)
-            elif extension in [".geojson", ".shp", ".gpkg"]:
-                if gpd is None:
-                    raise ImportError("GeoPandas is not installed. Please install GeoPandas to load spatial data")
-                return gpd.read_file(filepath)
-            elif extension == ".shx":
-                raise ValueError("This is a shapefile inex (.shx) file.\nPlease open the shapefile (.shp) instead")
-            else:
-                raise ValueError(f"Unsupported file format: {extension}")
-        except Exception as ReadFileError:
-            raise Exception(f"Error reading file: {str(ReadFileError)}")
-
+        return self._io.read_file(filepath)
+    
     def import_file(self, filepath: str) -> pd.DataFrame:
-        """Import data from various file formats
-
-        Args:
-            filepath (str): The path to file file that is imported
-
-        Returns:
-            data (pd.DataFrame):
-        """
-
-        # check if any tempfiles exist
-        if self.is_temp_file:
-            self.cleanup_temp_files()
-
-        path = Path(filepath)
-        extension = path.suffix.lower()
-
-        try:
-            if extension in [".xlsx", ".xls"]:  # xls format is sometimes janky
-                self.df = pd.read_excel(filepath)
-            elif extension == ".csv":
-                con = connect(database=":memory:", read_only=False)
-                try:
-                    # Leverage DuckDB's native Arrow output for zero-copy transfer to PyArrow-backed Pandas
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, ignore_errors=true)", [path.as_posix()]).arrow()
-                    self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
-                except Exception as ImportFileError:
-                    print(f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas pyarrow engine")
-                    try:
-                        self.df = pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
-                    except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
-                        self.df = pd.read_csv(filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
-                finally:
-                    con.close()
-            elif extension == ".txt":
-                con = connect(database=":memory:", read_only=False)
-                try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\t', ignore_errors=true)", [path.as_posix()]).arrow()
-                    self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
-                except Exception as ImportFileError:
-                    print(f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas pyarrow engine")
-                    try:
-                        self.df = pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
-                    except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
-                        self.df = pd.read_csv(filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
-                finally:
-                    con.close()
-            elif extension == ".json":
-                self.df = pd.read_json(filepath)
-            elif extension in [".geojson", ".shp", ".gpkg"]:
-                if gpd is None:
-                    raise ImportError(
-                        "GeoPandas is not installed. Please install GeoPandas to load spatial data"
-                    )
-                self.df = gpd.read_file(filepath)
-            elif extension == ".shx":
-                raise ValueError(
-                    "This is an shapefile index (.shx) file.\nPlease open the shapefile (.shp) file instead."
-                )
-            else:
-                raise ValueError(f"Unsupported file format: {extension}")
-
-            self.df = self._attempt_datetime_conversion(self.df)
-            self.original_df = self.df.copy()
-            self.file_path = path
-            self.is_temp_file = False
-            self.last_gsheet_id = None
-            self.last_gsheet_name = None
-            self.last_gsheet_delimiter = None
-            self.last_gsheet_decimal = None
-            self.last_gsheet_thousands = None
-            self.last_gsheet_gid = None
-            self.undo_stack.clear()
-            self.redo_stack.clear()
-            self.operation_log.clear()
-            self._notify_memory_usage()
-            return self.df
-
-        except Exception as ImportFileError:
-            raise Exception(f"Error importing file: {str(ImportFileError)}")
-
-    def import_google_sheets(
-        self,
-        sheet_id: str,
-        sheet_name: str,
-        delimiter: str = ",",
-        decimal: str = ".",
-        thousands: str = None,
-        gid: str = None,
-    ) -> pd.DataFrame:
-        """Import data from Google Sheets using sheet_id and sheet_name"""
-        try:
-            # delete existing tempfiles
-            if self.is_temp_file:
-                self.cleanup_temp_files()
-
-            if not sheet_id:
-                raise ValueError("Sheet ID cannot be empty")
-
-            if not sheet_name and not gid:
-                sheet_name = "Sheet1"
-
-            sheet_id = sheet_id.strip()
-            if sheet_name:
-                sheet_name = sheet_name.strip()
-            if gid:
-                gid = str(gid).strip()
-
-            # store params so user can refresh without adding writing it again
-            self.last_gsheet_id = sheet_id
-            self.last_gsheet_name = sheet_name
-            self.last_gsheet_delimiter = delimiter
-            self.last_gsheet_decimal = decimal
-            self.last_gsheet_thousands = thousands
-            self.last_gsheet_gid = gid
-
-            print("DEBUG data_handler.py->import_google_sheets: Storing parameters:")
-            print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
-            print(f"  - Decimal: '{self.last_gsheet_decimal}'")
-            print(f"  - Thousands: {repr(self.last_gsheet_thousands)}")
-            print(f"  - GID: {self.last_gsheet_gid}")
-
-            # Try multiple URL formats for better compatibility
-            base_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
-            params = {"tqx": "out:csv"}
-
-            if gid:
-                params["gid"] = gid
-            else:
-                params["sheet"] = sheet_name
-
-            df = None
-            last_error = None
-
-            try:
-                response: requests.Response = requests.get(
-                    base_url, params=params, timeout=10
-                )
-                response.raise_for_status()
-
-                if response.text and len(response.text) > 10:
-                    from io import StringIO
-
-                    df = pd.read_csv(
-                        StringIO(response.text),
-                        sep=delimiter,
-                        decimal=decimal,
-                        thousands=thousands,
-                        encoding="utf-8",
-                        on_bad_lines="error",
-                        engine="python",
-                    )
-
-            except Exception as GoogleSheetsImportError:
-                last_error = GoogleSheetsImportError
-
-            if df is None or len(df) == 0:
-                if last_error:
-                    raise ValueError(f"Google Sheet Import Failed: {str(last_error)}")
-                
-                message = "The sheet appears to be empty or inaccessible"
-                if sheet_name and not gid:
-                    message += f"\n\nNote: Please verify the sheet name '{sheet_name}' matches exactly"
-                raise ValueError(message)
-
-            self.df = self._attempt_datetime_conversion(df)
-            self.original_df = self.df.copy()
-
-            # create temp csv
-            name_slug = gid if gid else sheet_name
-            safe_sheet_name = "".join(
-                c if c.isalnum() or c in ("-", "_") else "_" for c in str(name_slug)
-            )
-            self.temp_csv_path = create_temp_csv_file(
-                self.df, f"gsheet_{safe_sheet_name}"
-            )
-            self.file_path = self.temp_csv_path
-            self.is_temp_file = True
-
-            self.undo_stack.clear()
-            self.redo_stack.clear()
-            self.operation_log.clear()
-            self._notify_memory_usage()
-            return self.df
-
-        except requests.exceptions.Timeout:
-            raise Exception(
-                "Connection timeout: Google Sheets took too long to respond.\n\nTry again in a moment or check your internet connection."
-            )
-        except requests.exceptions.ConnectionError:
-            raise Exception(
-                "Connection error: Unable to connect to Google Sheets.\n\nCheck your internet connection."
-            )
-        except requests.exceptions.HTTPError as GoogleSheetsHTTPError:
-            if GoogleSheetsHTTPError.response.status_code == 404:
-                raise Exception(
-                    "Sheet not found (404)\n\nPossible causes:\n• Sheet ID is incorrect\n• Sheet has been deleted\n• Sheet is not publicly accessible\n\nDouble-check the Sheet ID and verify sharing settings."
-                )
-            elif GoogleSheetsHTTPError.response.status_code == 403:
-                raise Exception(
-                    "Permission denied (403)\n\nThe sheet is not publicly accessible.\n\nTo fix:\n1. Open the Google Sheet\n2. Click 'Share' (top right)\n3. Select 'Anyone with the link'\n4. Choose 'Viewer' or higher\n5. Try importing again"
-                )
-            else:
-                raise Exception(
-                    f"HTTP Error {GoogleSheetsHTTPError.response.status_code}: {str(GoogleSheetsHTTPError)}"
-                )
-        except ValueError as InvalidInputError:
-            raise Exception(f"Invalid input or empty sheet:\n{str(InvalidInputError)}")
-        except Exception as ImportGoogleSheetsError:
-            error_msg = str(ImportGoogleSheetsError)
-            raise Exception(
-                f"Error importing Google Sheet:\n{error_msg}\n\nVerification checklist:\n✓ Sheet ID is correct\n✓ Sheet name matches exactly (case-sensitive)\n✓ Sheet is shared publicly\n✓ Internet connection is active\n✓ Try with Sheet1 first"
-            )
-
-    def has_google_sheet_import(self) -> bool:
-        """Check if the last import was a google sheet"""
-        return self.last_gsheet_id is not None and self.last_gsheet_name is not None
-
+        df = self._io.import_file(filepath)
+        self.df = df
+        self.original_df = df.copy()
+        self._reset_history()
+        return self.df
+    
+    def import_google_sheets(self, sheet_id: str, sheet_name: str, delimiter: str = ",", decimal: str = ".", thousands: str = None, gid: str = None) -> pd.DataFrame:
+        df, _ = self._io.import_google_sheets(
+            sheet_id=sheet_id,
+            sheet_name=sheet_name,
+            delimiter=delimiter,
+            decimal=decimal,
+            thousands=thousands,
+            gid=gid
+        )
+        self.df = df
+        self.original_df = df.copy()
+        self._reset_history()
+        return self.df
+    
     def import_from_database(self, connection_string: str, query: str) -> pd.DataFrame:
-        """Import data from a database witha connection and a query request"""
-        try:
-            # first delete temp files
-            if self.is_temp_file:
-                self.cleanup_temp_files()
-
-            # raise error if there is no connection string or no query
-            if not connection_string or not query:
-                raise ValueError(
-                    "A connection string and a query are needed to import from a database."
-                )
-
-            # store parameters so we can refresh the data again
-            self.last_db_connection_string = connection_string
-            self.last_db_query = query
-
-            # remove any other import source information to not make conflicts
-            self.last_gsheet_id = None
-            self.last_gsheet_name = None
-            self.file_path = None
-            self.is_temp_file = False
-
-            # create and connect
-            engine = create_engine(connection_string)
-            with engine.connect() as connection:
-                df = pd.read_sql_query(text(query), connection)
-
-            # raise error if connection is empty or returns none
-            if df is None or len(df) == 0:
-                raise ValueError("Query returned no data.")
-
-            self.df = self._attempt_datetime_conversion(df)
-            self.original_df = self.df.copy()
-
-            # from the database data we create a temp_csv file for the storing and saving logic to better work.
-            self.temp_csv_path = create_temp_csv_file(self.df, "db_import")
-            self.file_path = self.temp_csv_path
-            self.is_temp_file = True
-
-            self.undo_stack.clear()
-            self.redo_stack.clear()
-            self.operation_log.clear()
-            self._notify_memory_usage()
-            return self.df
-
-        except ImportError:
-            raise Exception(
-                "SQLAlchemy or database driver is not installed.\nPlease install 'sqlalchemy' and appropriate drivers (e.g., 'psycopg2-binary')."
-            )
-        except Exception as ImportDatabaseError:
-            self.last_db_connection_string = None
-            self.last_db_query = None
-            raise Exception(f"Database import failed:\n{str(ImportDatabaseError)}")
-
-    def update_cell(self, row_index: int, column_index: int, value: Any) -> None:
-        """Update a cell in the data table"""
-        if self.df is None:
-            return
-
+        df, _ = self._io.import_from_database(connection_string, query)
+        self.df = df
+        self.original_df = df.copy()
+        self._reset_history()
+        return self.df
+    
+    def refresh_google_sheets(self) -> pd.DataFrame:
+        if not self._io.is_google_sheet_import():
+            raise ValueError("No history of a Google Sheets import")
+        
+        params = self._io.get_google_sheets_refresh_params()
+        print("DEBUG refresh_google_sheets: Using stored parameters:")
+        print(f"  - Sheet ID: {params['sheet_id']}")
+        print(f"  - Sheet Name: {params['sheet_name']}")
+        print(f"  - Delimiter: '{params['delimiter']}'")
+        print(f"  - Decimal: '{params['decimal']}'")
+        print(f"  - Thousands: {repr(params['thousands'])}")
+        
+        thousands_param = (None if params["thousands"] in [None, "None", ""] else params["thousands"])
+        
+        return self.import_google_sheets(sheet_id=params["sheet_id"], sheet_name=params["sheet_name"], delimiter=params["delimiter"], decimal=params["decimal"], thousands=thousands_param, gid=params["gid"])
+    
+    def create_empty_dataframe(self, rows: int, columns: int, column_names: List[str] = None) -> pd.DataFrame:
         try:
             self._save_state()
-
-            column_name = self.df.columns[column_index]
-            column_datatype = self.df[column_name].dtype
-
-            if value is not None:
-                if pd.api.types.is_integer_dtype(column_datatype):
-                    try:
-                        value = int(value)
-                    except ValueError:
-                        try:
-                            value = int(float(value))
-                        except ValueError:
-                            raise ValueError(f"Value: '{value}' is not a valid integer for column '{column_name}'")
-                elif pd.api.types.is_float_dtype(column_datatype):
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        raise ValueError(f"Value '{value}' is not a valid float for column '{column_name}'")
-                elif pd.api.types.is_bool_dtype(column_datatype):
-                    if isinstance(value, str):
-                        value = value.lower() in ("true", "1", "t", "yes", "y")
-
-            self.df.iat[row_index, column_index] = value
-
-            self.operation_log.append(
-                {
-                    "type": "update_cell",
-                    "row": row_index,
-                    "col": column_index,
-                    "value": value,
-                }
-            )
-
-        except Exception as UpdateCellError:
-            raise Exception(f"Error updating cell: {str(UpdateCellError)}")
-
-    def create_empty_dataframe(
-        self, rows: int, columns: int, column_names: List[str] = None
-    ) -> pd.DataFrame:
-        """Creates a new empty dataframe"""
-        try:
-            self._save_state()
-
+            
             if not column_names:
                 column_names = [f"Column_{i + 1}" for i in range(columns)]
-
+            
             self.df = pd.DataFrame(index=range(rows), columns=column_names)
-
             self.original_df = self.df.copy()
-
-            # have to clear sources
-            self.file_path = None
-            self.is_temp_file = False
-            self.last_gsheet_id = None
-            self.last_gsheet_name = None
-            self.last_db_connection_string = None
-            self.last_db_query = None
-            self.sort_state = None
-
-            self.undo_stack.clear()
-            self.redo_stack.clear()
-            self.operation_log.clear()
-            self._notify_memory_usage()
-
+            
+            self._io.file_path = None
+            self._io.is_temp_file = False
+            self._io.last_gsheet_id = None
+            self._io.last_gsheet_name = None
+            self._io.last_db_connection_string = None
+            self._io.last_db_query = None
+            self._reset_history()
             return self.df
         except Exception as CreateEmptyDataframeError:
-            raise Exception(
-                f"Error creating DataFrame: {str(CreateEmptyDataframeError)}"
-            )
-
+            raise Exception(f"Error creating DataFrame: {str(CreateEmptyDataframeError)}")
+    
+    def export_data(self, filepath: str, format: str = "csv", include_index: bool = False) -> None:
+        self._io.export_data(self.df, filepath, format=format, include_index=include_index)
+    
+    def export_google_sheets(self, credentials_path: str, sheet_id: str, sheet_name: str = "Sheet1") -> bool:
+        result = self._io.export_google_sheets(self.df, credentials_path, sheet_id, sheet_name)
+        self._history.operation_log.append({
+            "type": "export_google_sheets",
+            "sheet_id": sheet_id,
+            "sheet_name": sheet_name,
+        })
+        return result
+    
+    def has_google_sheet_import(self) -> bool:
+        return self._io.has_google_sheet_import()
+    
+    def has_google_sheets_import(self) -> bool:
+        return self._io.is_google_sheet_import()
+    
+    def get_data_source(self) -> Dict[str, Any]:
+        info = self._io.get_data_source_info()
+        info["has_data"] = self.df is not None
+        return info
+    
     def get_data_info(self) -> Dict[str, Any]:
-        """Get comprehensive statistics about the data"""
         if self.df is None:
             return {}
-
-        info = {
+        return {
             "shape": self.df.shape,
             "columns": list(self.df.columns),
             "dtypes": self.df.dtypes.to_dict(),
@@ -706,1175 +214,112 @@ class DataHandler:
             "statistics": self.df.describe().to_dict(),
             "memory_usage": self.df.memory_usage(deep=True).to_dict(),
         }
-        return info
     
-    def run_statistical_test(self, test_type: Union[StatisticalTest, str], col1: str, col2: str) -> Dict[str, Any]:
-        """
-        Run statistical test on two numeric columns
-        Supporting: T-Test, ANOVA, Pearson Correlation Test
-        """
-        if self.df is None:
-            raise ValueError("No data loaded to perform any statistical tests")
+    def _save_state(self) -> None:
+        self._history.save_state(self.df)
         
-        if not stats:
-            raise ImportError("The 'scipy' library is not installed. Scipy is required to perform any statistical tests")
-        
-        if col1 not in self.df.columns or col2 not in self.df.columns:
-            raise ValueError(f"Columns: '{col1}' or '{col2}' not found in the dataset")
-
-        if isinstance(test_type, str):
-            try:
-                test_type = StatisticalTest(test_type.lower())
-            except ValueError:
-                raise ValueError(f"Unrecognized test type: {test_type}")
-        
-        # We drop nan values to ensure valid tests
-        data = self.df[[col1, col2]].dropna()
-        
-        if data.empty:
-            raise ValueError("Insufficient data to perform test after dropping missing values")
-        
-        if test_type == StatisticalTest.T_TEST:
-            stat, p_val = stats.ttest_ind(data[col1], data[col2])
-            test_name = "Independent T-Test"
-            sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
-            interpretation = (
-                f"The T-Test compares the means of the two columns. "
-                f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}' "
-                f"at the typical 5% significance level (alpha = 0.05)."
-            )
-        elif test_type == StatisticalTest.ANOVA:
-            stat, p_val = stats.f_oneway(data[col1], data[col2])
-            test_name = "One-Way ANOVA"
-            sig = "is a statistically significant difference" if p_val < 0.05 else "is no statistically significant difference"
-            interpretation = (
-                f"ANOVA tests if the means of the groups are equal. "
-                f"With a p-value of {p_val:.4e}, there <b>{sig}</b> between the means of '{col1}' and '{col2}'. "
-                f"(Note: for two groups, this is mathematically equivalent to the Independent T-Test)."
-            )
-        elif test_type == StatisticalTest.PEARSON:
-            stat, p_val = stats.pearsonr(data[col1], data[col2])
-            test_name = "Pearson Correlation"
-            sig = "significant" if p_val < 0.05 else "not significant"
-            strength = "strong" if abs(stat) >= 0.7 else "moderate" if abs(stat) >= 0.3 else "weak"
-            direction = "positive" if stat > 0 else "negative"
-            interpretation = (
-                f"Pearson measures the linear relationship between the two variables. "
-                f"The correlation coefficient (r = {stat:.4f}) indicates a <b>{strength} {direction}</b> relationship. "
-                f"The p-value ({p_val:.4e}) shows this correlation is <b>{sig}</b>."
-            )
-        else:
-            raise ValueError(f"Unrecognized test type: {test_type}")
-        
-        return {
-            "test": test_name,
-            "statistic": float(stat),
-            "p_value": float(p_val),
-            "interpretation": interpretation
-        }
-
-    def filter_data(self, column: str = None, condition: str = None, value: Any = None, advanced_filters: List[Dict] = None) -> pd.DataFrame:
-        """Filter data based on conditions. Both single column filter and multi-conditional filters
-        
-        Args:
-            column (str, optional): The column to filter
-            condition (str, optional): the condition operator
-            value (Any, optional): the value to compare against
-            advanced_filters (List[Dict], optional): List of filter dicts for multi-conditional queries
-        """
-        if self.df is None:
-            raise ValueError("No data loaded")
-        
-        if not isinstance(self.df, pd.DataFrame):
-            raise TypeError(f"self.df is {type(self.df)}, expected pandas DataFrame")
-        
-        try:
-            self._save_state()
-            
-            if advanced_filters:
-                query_parts: List[str] = []
-                query_params: Dict[str, Any] = {}
-                for i, item in enumerate(advanced_filters):
-                    logic = item.get("operator", "")
-                    col = item["column"]
-                    cond = item["condition"]
-                    val = item["value"]
-                    
-                    if col not in self.df.columns:
-                        raise KeyError(f"Column '{col}' not found in DataFrame")
-                    
-                    if cond == "Is Null":
-                        clause = f"`{col}`.isna()"
-                    elif cond == "Is Not Null":
-                        clause = f"`{col}`.notna()"
-                    else:
-                        param_key = f"val_{i}"
-                        query_params[param_key] = val
-                        
-                        if cond == "contains":
-                            clause = f"`{col}`.astype(str).str.contains(@query_params['{param_key}'], na=False)"
-                        else:
-                            clause = f"`{col}` {cond} @query_params['{param_key}']"
-                    
-                    if logic:
-                        query_parts.append(f" {logic.lower()} ")
-                    
-                    query_parts.append(clause)
-                
-                full_query = "".join(query_parts)
-                
-                if full_query:
-                    self.df = self.df.query(full_query, engine="python")
-                
-                self.operation_log.append({
-                    "type": "filter_multiple",
-                    "filters": advanced_filters,
-                    "query": full_query
-                })
-                return self.df
-            
-            if not column and not condition:
-                return self.df
-            
-            if column not in self.df.columns:
-                raise KeyError(f"Column '{column}' not found in DataFrame")
-            
-            col_dtype = self.df[column].dtype
-            try:
-                if pd.api.types.is_integer_dtype(col_dtype):
-                    value = int(value)
-                elif pd.api.types.is_float_dtype(col_dtype):
-                    value = float(value)
-                elif pd.api.types.is_object_dtype(col_dtype):
-                    value = str(value)
-            except (ValueError, TypeError):
-                pass
-            
-            # Apply filtering
-            if condition == ">":
-                self.df = self.df[self.df[column] > value]
-            elif condition == "<":
-                self.df = self.df[self.df[column] < value]
-            elif condition == "==":
-                self.df = self.df[self.df[column] == value]
-            elif condition == "!=":
-                self.df = self.df[self.df[column] != value]
-            elif condition == ">=":
-                self.df = self.df[self.df[column] >= value]
-            elif condition == "<=":
-                self.df = self.df[self.df[column] <= value]
-            elif condition == "contains":
-                self.df = self.df[
-                    self.df[column].astype(str).str.contains(str(value), na=False)
-                ]
-            elif condition == "in":
-                if not isinstance(value, (list, tuple, set)):
-                    value = [value]
-                self.df = self.df[self.df[column].isin(value)]
-            else:
-                raise ValueError(f"Unknown filter condition: {condition}")
-            
-            self.operation_log.append({
-                    "type": "filter",
-                    "column": column,
-                    "condition": condition,
-                    "value": value,
-                })
-            
-            return self.df
-        
-        except Exception as FilterDataError:
-            raise Exception(f"Error filtering data: {str(FilterDataError)}")
+    def undo(self) -> bool:
+        restored_df, success = self._history.undo(self.df)
+        if success:
+            self.df = restored_df
+        return success
     
-    def apply_filter(self, filter_config: Dict[str, Any]) -> pd.DataFrame:
-        if not isinstance(filter_config, dict):
-            raise ValueError("Filter configueration must be a dictionary")
-        if filter_config.get("logic") == "COMPLEX":
-            filters = filter_config.get("filters", [])
-            return self.filter_data(advanced_filters=filters)
-        
-        return self.df
-
-    def create_computed_column(
-        self, new_column_name: str, expression: str
-    ) -> pd.DataFrame:
-        """Creates a new column based on an evaluated expression"""
-        if self.df is None:
-            raise ValueError("No data loaded")
-
-        try:
-            if not new_column_name or not str(new_column_name).strip():
-                raise ValueError("New column name cannot be empty")
-            
-            clean_name = str(new_column_name).strip()
-            if clean_name in self.df.columns:
-                raise ValueError(f"Column '{clean_name}' already exists")
-            
-            if keyword.iskeyword(clean_name):
-                raise ValueError(f"'{clean_name}' is a reserved Python keyword and cannot be used a column name")
-            
-            if "`" in clean_name:
-                raise ValueError("Column names cannot contain backticks (`)")
-            
-            self._save_state()
-
-            # Using padnas eval for arithmetic expressions
-            self.df[new_column_name] = self.df.eval(expression)
-
-            self.operation_log.append(
-                {
-                    "type": "computed_column",
-                    "new_column": new_column_name,
-                    "expression": expression,
-                }
-            )
-
-            return self.df
-        except Exception as ComputedColumnError:
-            raise Exception(
-                f"Error computing and creating new column: {str(ComputedColumnError)}"
-            )
+    def redo(self) -> bool:
+        restored_df, success = self._history.redo(self.df)
+        if success:
+            self.df = restored_df
+        return success
     
-    def bin_column(self, column: str, new_column_name: str, method: str, bins: Any, labels: List[str] = None, right_inclusive: bool = True, drop_original: bool = False) -> pd.DataFrame:
-        """
-        Bin a continuous variable into categorical buckets.
+    def can_undo(self) -> bool:
+        return self._history.can_undo()
 
-        Args:
-            column: Name of the column to bin.
-            new_column_name: Name of the resulting categorical column.
-            method: 'cut' for value-based (uniform/custom), 'qcut' for quantile-based.
-            bins: Number of bins (int) or list of bin edges.
-            labels: Optional labels for the bins.
-            right_inclusive: Whether intervals are closed on the right (for cut method).
-            drop_original: Whether to drop the source column after binning.
-        """
-        if self.df is None:
-            raise ValueError("No data loaded")
-        
-        if column not in self.df.columns:
-            raise ValueError(f"Column '{column}' not found")
-        
-        if not pd.api.types.is_numeric_dtype(self.df[column]):
-            raise TypeError(f"Column '{column}' must be numeric for binning")
-        
-        try:
-            self._save_state()
-            
-            if method == "qcut":
-                #Method: quantilebased discrentization algorithm
-                self.df[new_column_name] = pd.qcut(
-                    self.df[column], q=bins, labels=labels, duplicates="drop"
-                )
-            else:
-                #use value based binning
-                self.df[new_column_name] = pd.cut(
-                    self.df[column], bins=bins, labels=labels, include_lowest=True, right=right_inclusive
-                )
-            
-            if not isinstance(self.df[new_column_name].dtype, pd.CategoricalDtype):
-                self.df[new_column_name] = self.df[new_column_name].astype("category")
-            
-            if drop_original and column != new_column_name:
-                self.df = self.df.drop(columns=[column])
-            
-            self.operation_log.append({
-                "type": "bin_column",
-                "column": column,
-                "new_column": new_column_name,
-                "method": method,
-                "bins": bins,
-                "labels": labels,
-            })
-            return self.df
-        except Exception as BinningError:
-            raise Exception(f"Error binning column: {str(BinningError)}")
-
-    def sort_data(self, column: str, ascending: bool = True) -> pd.DataFrame:
-        """Sort data by a specified column permanently"""
-        if self.df is None:
-            raise ValueError("No data loaded")
-
-        if self.sort_state == (column, ascending):
-            return self.df
-
-        try:
-            self._save_state()
-
-            if column not in self.df.columns:
-                raise ValueError(f"Column '{column}' not found")
-
-            self.df = self.df.sort_values(by=column, ascending=ascending)
-            self.sort_state = (column, ascending)
-
-            self.operation_log.append(
-                {"type": "sort", "column": column, "ascending": ascending}
-            )
-
-            return self.df
-        except Exception as SortDataError:
-            raise Exception(f"Error sorting data: {str(SortDataError)}")
-
-    def aggregate_data(
-        self,
-        group_by: List[str],
-        agg_config: Dict[str, str],
-        date_grouping: Dict[str, str],
-    ) -> pd.DataFrame:
-        """
-        Aggregate data with specific functions per column and datetime if possible
-        """
-
-        if self.df is None:
-            raise ValueError("No data loaded")
-
-        try:
-            self._save_state()
-
-            groupers = []
-            for col in group_by:
-                if date_grouping and col in date_grouping:
-                    freq_name = date_grouping[col]
-                    pandas_freq = self.FrequencyMap.get(freq_name, None)
-                    if pandas_freq:
-                        groupers.append(pd.Grouper(key=col, freq=pandas_freq))
-                    else:
-                        groupers.append(col)
-                else:
-                    groupers.append(col)
-
-            if not groupers:
-                raise ValueError("No valid grouping columns provided")
-
-            self.df = self.df.groupby(groupers).agg(agg_config).reset_index()
-
-            self.sort_state = None
-
-            self.operation_log.append(
-                {
-                    "type": "aggregate",
-                    "group_by": group_by,
-                    "agg_config": agg_config,
-                    "date_grouping": date_grouping,
-                }
-            )
-
-            return self.df
-        except Exception as AggregateDataError:
-            raise Exception(f"Error aggregating data: {str(AggregateDataError)}")
-
-    def preview_aggregation(
-        self,
-        group_by: List[str],
-        agg_config: Dict[str, str],
-        date_grouping: Dict[str, str] = None,
-        limit: int = 5,
-    ) -> pd.DataFrame:
-        """Preview the result of an aggregation without modifying the current dataframe"""
-        if self.df is None:
-            return pd.DataFrame()
-
-        try:
-            groupers = []
-            for col in group_by:
-                if date_grouping and col in date_grouping:
-                    pandas_freq = self.FrequencyMap.get(date_grouping[col])
-                    if pandas_freq:
-                        groupers.append(pd.Grouper(key=col, freq=pandas_freq))
-                    else:
-                        groupers.append(col)
-                else:
-                    groupers.append(col)
-
-            if not groupers or not agg_config:
-                return pd.DataFrame()
-
-            preview_df = self.df.groupby(groupers).agg(agg_config).reset_index()
-
-            return preview_df.head(limit)
-
-        except Exception as PreviewAggregationError:
-            raise Exception(
-                f"Preview Calculation failed: {str(PreviewAggregationError)}"
-            )
-
-    def melt_data(
-        self, id_vars: List[str], value_vars: List[str], var_name: str, value_name: str
-    ) -> pd.DataFrame:
-        """Use melt to unpivot a dataframe"""
-        if self.df is None:
-            raise ValueError("No data loaded")
-
-        try:
-            self._save_state()
-
-            v_vars = value_vars if value_vars else None
-
-            self.df = pd.melt(
-                self.df,
-                id_vars=id_vars,
-                value_vars=v_vars,
-                var_name=var_name,
-                value_name=value_name,
-            )
-
-            self.sort_state = None
-
-            self.operation_log.append(
-                {
-                    "type": "melt",
-                    "id_vars": id_vars,
-                    "value_vars": value_vars,
-                    "var_name": var_name,
-                    "value_name": value_name,
-                }
-            )
-
-            return self.df
-        except Exception as MeltDataError:
-            raise Exception(f"Error melting data: {str(MeltDataError)}")
+    def can_redo(self) -> bool:
+        return self._history.can_redo()
     
-    def pivot_data(self, index: List[str], columns: str, values: List[str], aggfunc: str) -> pd.DataFrame:
-        """Create a pivot table from the dataframe"""
-        if self.df is None:
-            raise ValueError("No data loaded")
-        
-        try:
-            self._save_state()
-            
-            #Create the pivot table
-            ### first reset index to make a flat datafframe.
-            self.df = pd.pivot_table(
-                self.df,
-                index=index,
-                columns=columns,
-                values=values,
-                aggfunc=aggfunc
-            ).reset_index()
-            
-            # if we pivot multiple columns or values
-            # then we need to flatten columns using multiindex
-            if isinstance(self.df.columns, pd.MultiIndex):
-                self.df.columns = [f"{str(column[0])}_{str(column[1])}" if len(column) > 1 and column[1] else str(column[0]) for column in self.df.columns]
-            
-            self.df.columns.name = None
-            
-            self.sort_state = None
-            
-            self.operation_log.append({
-                "type": "pivot",
-                "index": index,
-                "columns": columns,
-                "values": values,
-                "aggfunc": aggfunc
-            })
-            return self.df
-        except Exception as PivotError:
-            raise Exception(f"Error pivoting data: {str(PivotError)}")
-    
-    def merge_data(self, right_df: pd.DataFrame, how: str, left_on: List[str], right_on: List[str], suffixes: tuple[str, str] = ("_left", "_right")) -> pd.DataFrame:
-        """Merge the current dataframe with another dataframe
-        Args:
-            right_df (pd.DataFrame): The DataFrame to merge with.
-            how (str): Type of merge ('inner', 'outer', 'left', 'right').
-            left_on (List[str]): Columns to join on in the current DataFrame.
-            right_on (List[str]): Columns to join on in the right DataFrame.
-            suffixes (tuple[str, str]): Suffixes to apply to overlapping column names.
-
-        Returns:
-            pd.DataFrame: The merged DataFrame.
-        """
-        if self.df is None:
-            raise ValueError("No active data to merge with.")
-        
-        try:
-            self._save_state()
-            
-            self.df = pd.merge(self.df, right_df, how=how, left_on=left_on, right_on=right_on, suffixes=suffixes)
-            self.operation_log.append({
-                "type": "merge",
-                "how": how,
-                "left_on": left_on,
-                "right_on": right_on,
-                "suffixes": suffixes
-            })
-            
-            self.sort_state = None
-            return self.df
-        except Exception as MergeDataError:
-            raise Exception(f"Merge operation failed: {str(MergeDataError)}")
-    
-    def concatenate_data(self, other_df: pd.DataFrame, ignore_index: bool = True) -> pd.DataFrame:
-        """
-        Append rows from another DataFrame to the active DataFrame.
-        
-        Args:
-            other_df (pd.DataFrame): The DataFrame containing rows to append.
-            ignore_index (bool): Whether to reset the index incrementally.
-
-        Returns:
-            pd.DataFrame: The vertically stacked DataFrame.
-        """
-        if self.df is None:
-            raise ValueError("No active data to append to")
-        try:
-            self._save_state()
-            self.df = pd.concat([self.df, other_df], ignore_index=ignore_index)
-            self.operation_log.append({
-                "type": "concatenate",
-                "ignore_index": ignore_index
-            })
-            self.sort_state = None
-            return self.df
-        except Exception as ConcatenateDataError:
-            raise Exception(f"Concatenate operation failed: {str(ConcatenateDataError)}")
-    
-    def _drop_duplicates(self, **kwargs: Any) -> None:
-        """Method to remove duplicate rows from the dataframe"""
-        self.df = self.df.drop_duplicates()
-    
-    def _drop_missing(self, **kwargs: Any) -> None:
-        """Method to drop rows with missing values"""
-        self.df = self.df.dropna()
-    
-    def _fill_missing(self, **kwargs) -> None:
-        """Method to to fill missing values in the datafr4ame"""
-        raw_method = kwargs.get("method", FillMethod.FFILL)
-        try:
-            method = FillMethod(raw_method) if isinstance(raw_method, str) else raw_method
-        except ValueError:
-            method = raw_method
-        column = kwargs.get("column", "All Columns")
-        fill_value = kwargs.get("value", None)
-        group_by = kwargs.get("group_by", None) 
-        
-        if column == "All Columns" or column is None:
-            target_cols = self.df.columns
-        else:
-            target_cols = [column]
-        
-        if group_by and group_by in self.df.columns:
-            for col in target_cols:
-                if col == group_by:
-                    continue
-                if method in [FillMethod.MEAN, FillMethod.MEDIAN] and not pd.api.types.is_numeric_dtype(self.df[col]):
-                    continue
-                
-                if method == FillMethod.MEAN:
-                    self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("mean"))
-                elif method == FillMethod.MEDIAN:
-                    self.df[col] = self.df[col].fillna(self.df.groupby(group_by)[col].transform("median"))
-                elif method == FillMethod.MODE:
-                    self.df[col] = self.df.groupby(group_by)[col].transform(
-                        lambda x: x.fillna(x.mode().iloc[0] if not x.mode().empty else x)
-                    )
-                elif method == FillMethod.FFILL:
-                    self.df[col] = self.df.groupby(group_by)[col].ffill()
-                elif method == FillMethod.BFILL:
-                    self.df[col] = self.df.groupby(group_by)[col].bfill()
-        else:
-            if method == FillMethod.STATIC_VALUE:
-                for col in target_cols:
-                    val_to_use = fill_value
-                    if pd.api.types.is_numeric_dtype(self.df[col]) and isinstance(fill_value, str):
-                        try:
-                            if "." in fill_value:
-                                val_to_use = float(fill_value)
-                            else:
-                                val_to_use = int(fill_value)
-                        except ValueError:
-                            pass
-                    self.df[col] = self.df[col].fillna(val_to_use)
-            elif method in [FillMethod.MEAN, FillMethod.MEDIAN, FillMethod.MODE]:
-                for col in target_cols:
-                    if method in [FillMethod.MEAN, FillMethod.MEDIAN] and not pd.api.types.is_numeric_dtype(self.df[col]):
-                        continue
-                    if method == FillMethod.MEAN:
-                        fill_val = self.df[col].mean()
-                    elif method == FillMethod.MEDIAN:
-                        fill_val = self.df[col].median()
-                    elif method == FillMethod.MODE:
-                        modes = self.df[col].mode()
-                        fill_val = modes[0] if not modes.empty else None
-                    
-                    if fill_val is not None:
-                        self.df[col] = self.df[col].fillna(fill_val)
-            elif method in [FillMethod.FFILL, FillMethod.BFILL]:
-                for col in target_cols:
-                    self.df[col] = self.df[col].fillna(method=method.value)
-            elif method in [FillMethod.LINEAR, FillMethod.TIME]:
-                if method == FillMethod.TIME and not isinstance(self.df.index, pd.DatetimeIndex):
-                    raise ValueError("Time interpolation requires the dataframe to be a DatetimeINdex")
-                for col in target_cols:
-                    if pd.api.types.is_numeric_dtype(self.df[col]):
-                        self.df[col] = self.df[col].interpolate(method=method.value)
-    
-    def _drop_column(self, **kwargs) -> None:
-        """Method to remove specific columns from the dataframe"""
-        cols_to_drop = []
-        if "columns" in kwargs:
-            val = kwargs["columns"]
-            if isinstance(val, list):
-                cols_to_drop.extend(val)
-            else:
-                cols_to_drop.append(val)
-        if "column" in kwargs:
-            cols_to_drop.append(kwargs["column"])
-        cols_to_drop = list(set(cols_to_drop))
-        
-        if cols_to_drop:
-            self.df = self.df.drop(columns=cols_to_drop)
-            if self.sort_state and self.sort_state[0] in cols_to_drop:
-                self.sort_state = None
-        
-    def _rename_column(self, **kwargs) -> None:
-        """Method to rename a column"""
-        old_name = kwargs.get("old_name")
-        new_name = kwargs.get("new_name")
-        
-        if old_name not in self.df.columns:
-            raise ValueError(f"Column '{old_name}' does not exist in the dataset")
-        if not new_name or not str(new_name).strip():
-            raise ValueError("New column name cannot be empty or whitespace only.")
-        
-        clean_new_name = str(new_name).strip()
-        
-        if clean_new_name != old_name and clean_new_name in self.df.columns:
-            raise ValueError(f"Column: '{clean_new_name}' already exists in the dataset")
-        if keyword.iskeyword(clean_new_name):
-            raise ValueError(f"'{clean_new_name}' is a reserved Python keyword and cannot be used as a column name")
-        if "`" in clean_new_name:
-            raise ValueError(f"Column names cannot contain backticks (`)")
-        
-        self.df = self.df.rename(columns={old_name: new_name})
-    
-    def _change_data_type(self, **kwargs) -> None:
-        """Method to change the data type of a target columns"""
-        column = kwargs.get("column")
-        new_type = kwargs.get("new_type")
-        
-        if not column or not new_type:
-            raise ValueError("Column and new data type are needed to change data type")
-        
-        if new_type == "string":
-            self.df[column] = self.df[column].astype(pd.StringDtype())
-        elif new_type == "int":
-            self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
-            self.df[column] = self.df[column].astype(pd.Int64Dtype())
-        elif new_type == "float":
-            self.df[column] = pd.to_numeric(self.df[column], errors="coerce")
-            self.df[column] = self.df[column].astype(pd.Float64Dtype())
-        elif new_type == "category":
-            self.df[column] = self.df[column].astype("category")
-        elif new_type == "datetime":
-            self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
-        else:
-            raise ValueError(f"Unsupported data type conversion: {new_type}")
-    
-    def _text_manipulation(self, **kwargs) -> None:
-        """Method to apply string manipulation operations to text columns"""
-        column = kwargs.get("column")
-        operation = kwargs.get("operation")
-        
-        if not column and not operation:
-            raise ValueError("Column and operation are required for text manipulation")
-        
-        if column not in self.df.columns:
-            raise ValueError(f"Column '{column}' not found")
-        
-        try:
-            if not (pd.api.types.is_string_dtype(self.df[column]) or pd.api.types.is_object_dtype(self.df[column])):
-                raise TypeError("Column does not support string operations")
-            
-            if operation == "lower":
-                self.df[column] = self.df[column].str.lower()
-            elif operation == "upper":
-                self.df[column] = self.df[column].str.upper()
-            elif operation == "title":
-                self.df[column] = self.df[column].str.title()
-            elif operation == "capitalize":
-                self.df[column] = self.df[column].str.capitalize()
-            elif operation == "strip":
-                self.df[column] = self.df[column].str.strip()
-            elif operation == "lstrip":
-                self.df[column] = self.df[column].str.lstrip()
-            elif operation == "rstrip":
-                self.df[column] = self.df[column].str.rstrip()
-            else:
-                raise ValueError(f"Unsupported text operation: {operation}")
-        except (AttributeError, TypeError):
-            raise ValueError(f"Column '{column}' is not a text column. Please convert it to 'string' first using 'Change Data Type'")
-    
-    def _split_column(self, **kwargs) -> None:
-        """Method to split a text column into multiple columns based on a delimiter"""
-        column: str = kwargs.get("column")
-        delimiter: str = kwargs.get("delimiter", " ")
-        new_columns: list[str] = kwargs.get("new_columns")
-        
-        if not column or not new_columns:
-            raise ValueError("Column and new columns are required for splitting")
-        if column not in self.df.columns:
-            raise ValueError(f"Column '{column}' not found in the dataset")
-        
-        try:
-            split_df = self.df[column].astype(str).str.split(delimiter, expand=True)
-            
-            for index, new_col_name in enumerate(new_columns):
-                if index < split_df.shape[1]:
-                    self.df[new_col_name] = split_df[index]
-                else:
-                    self.df[new_col_name] = None
-        except Exception as SplitError:
-            raise ValueError(f"Error splitting column '{column}': {str(SplitError)}")
-    
-    def _regex_replace(self, **kwargs) -> None:
-        """Method to replace text in a column using regex"""
-        column: str = kwargs.get("column")
-        pattern: str = kwargs.get("pattern")
-        replacement: str = kwargs.get("replacement", "")
-        
-        if not column or not pattern:
-            raise ValueError("Column and regex pattern are required for replacement")
-            
-        if column not in self.df.columns:
-            raise ValueError(f"Column '{column}' not found in the dataset")
-        
-        try:
-            self.df[column] = self.df[column].astype(str).str.replace(pattern, replacement, regex=True)
-        except Exception as RegexError:
-            raise ValueError(f"Error applying regex replacement to '{column}': {str(RegexError)}")
-    
-    def _remove_rows(self, **kwargs) -> None:
-        """Method to drop row indicies"""
-        rows_to_remove = kwargs.get("rows")
-        if rows_to_remove:
-            self.df = self.df.drop(index=rows_to_remove).reset_index(drop=True)
-    
-    def _clip_outliers(self, **kwargs) -> None:
-        """Method to clip outliers in numeric columns"""
-        method = kwargs.get("method")
-        columns = kwargs.get("columns")
-        
-        if not method or not columns:
-            raise ValueError("Method and columns are required for clipping outliers")
-        
-        if method == "z_score":
-            threshold = kwargs.get("threshold", 3.0)
-            if not stats:
-                raise ImportError("Scipy is not installed. Scipy is required for Z-Score")
-            for col in columns:
-                if col in self.df.columns and pd.api.types.is_numeric_dtype(self.df[col]):
-                    col_data = self.df[col].dropna()
-                    if col_data.empty:
-                        continue
-                    mean = col_data.mean()
-                    std = col_data.std()
-                    upper_bound = mean + threshold * std
-                    lower_bound = mean - threshold * std
-                    
-                    self.df[col] = self.df[col].clip(lower=lower_bound, upper=upper_bound)
-        elif method == "iqr":
-            multiplier = kwargs.get("multiplier", 1.5)
-            for col in columns:
-                if col in self.df.columns and pd.api.types.is_numeric_dtype(self.df[col]):
-                    Q1 = self.df[col].quantile(0.25)
-                    Q3 = self.df[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    lower_bound = Q1 - multiplier * IQR
-                    upper_bound = Q3 + multiplier * IQR
-                    
-                    self.df[col] = self.df[col].clip(lower=lower_bound, upper=upper_bound)
-        else:
-            raise ValueError(f"Clipping is not supported for method: {method}")
-    
-    def _duplicate_column(self, **kwargs) -> None:
-        """Method to duplicate a column"""
-        col = kwargs.get("column")
-        new_col = kwargs.get("new_column")
-        if col not in self.df.columns:
-            raise ValueError(f"Column '{col}' not found")
-        self.df[new_col] = self.df[col].copy()
-    
-    def _normalize_data(self, **kwargs) -> None:
-        """Method to normalize or scale numeric columns in the dataset"""
-        columns: list[str] = kwargs.get("columns", [])
-        method: str = kwargs.get("method", "min_max")
-        
-        if not columns:
-            raise ValueError("No columns specified for normalization")
-        
-        for col in columns:
-            if col not in self.df.columns:
-                raise ValueError(f"Column '{col}' not found.")
-            if not pd.api.types.is_numeric_dtype(self.df[col]):
-                raise TypeError(f"Column '{col}' must be numeric to perform normalization")
-            
-            col_data = self.df[col]
-            
-            if method == "min_max":
-                min_val = col_data.min()
-                max_val = col_data.max()
-                if max_val != min_val:
-                    self.df[col] = (col_data - min_val) / (max_val - min_val)
-            elif method == "standard":
-                mean_val = col_data.mean()
-                std_val = col_data.std()
-                if std_val != 0:
-                    self.df[col] = (col_data - mean_val) / std_val
-            elif method == "quantile":
-                median_val = col_data.median()
-                q75 = col_data.quantile(0.75)
-                q25 = col_data.quantile(0.25)
-                iqr = q75 - q25
-                if iqr != 0:
-                    self.df[col] = (col_data - median_val) / iqr
-            else:
-                raise ValueError(f"Unsupported normalization method: {method}")
-    
-    def _extract_date_component(self, **kwargs) -> None:
-        """Method to extract components from a datetime column"""
-        column: str = kwargs.get("column")
-        component = kwargs.get("component")
-        
-        if not column or not component:
-            raise ValueError("Column and datetime component are required.")
-        if column not in self.df.columns:
-            raise ValueError(f"Column '{column}' not found")
-        
-        if not pd.api.types.is_datetime64_any_dtype(self.df[column]):
-            try:
-                self.df[column] = pd.to_datetime(self.df[column], errors="coerce")
-                if self.df[column].isna().all():
-                    raise ValueError(f"Column '{column}' could not be converted to datetime")
-            except Exception as error:
-                raise ValueError(f"Column '{column}' cannot be converted to datetime: {str(error)}")
-            
-        safe_component = component.replace(" ", "_")
-        new_col_name = f"{column}_{safe_component}"
-        if component == "Year":
-            self.df[new_col_name] = self.df[column].dt.year.astype("Int64")
-        elif component == "Month":
-            self.df[new_col_name] = self.df[column].dt.month.astype("Int64")
-        elif component == "Month Name":
-            self.df[new_col_name] = self.df[column].dt.month_name()
-        elif component == "Day":
-            self.df[new_col_name] = self.df[column].dt.day.astype("Int64")
-        elif component == "Day of Week":
-            self.df[new_col_name] = self.df[column].dt.day_name()
-        elif component == "Quarter":
-            self.df[new_col_name] = self.df[column].dt.quarter.astype("Int64")
-        elif component == "Hour":
-            self.df[new_col_name] = self.df[column].dt.hour.astype("Int64")
-        else:
-            raise ValueError(f"Unsupported date component: {component}")
-    
-    def _calculate_date_difference(self, **kwargs) -> None:
-        """Calculate the difference between two datetime columns"""
-        col_start = kwargs.get("start_column")
-        col_end = kwargs.get("end_column")
-        unit = kwargs.get("unit", "Days")
-        
-        if not col_start or not col_end:
-            raise ValueError("Start and End columns are required")
-        
-        for col in [col_start, col_end]:
-            if col not in self.df.columns:
-                raise ValueError(f"Column '{col}' not found")
-            if not pd.api.types.is_datetime64_any_dtype(self.df[col]):
-                try:
-                    self.df[col] = pd.to_datetime(self.df[col], errors="coerce")
-                except:
-                    raise ValueError(f"Column '{col}' must be a datetime column")
-        
-        diff_series = self.df[col_end] - self.df[col_start]
-        new_col = f"Diff_{unit}_{col_end}_vs_{col_start}"
-        new_col = "".join(c if c.isalnum() or c == "_" else "" for c in new_col)
-        
-        if unit == "Days":
-            self.df[new_col] = diff_series.dt.days
-        elif unit == "Hours":
-            self.df[new_col] = diff_series.dt.total_seconds() / 3600
-        elif unit == "Minutes":
-            self.df[new_col] = diff_series.dt.total_seconds() / 60
-        elif unit == "Seconds":
-            self.df[new_col] = diff_series.dt.total_seconds()
-        elif unit == "Weeks":
-            self.df[new_col] = diff_series.dt.days / 7
-    
-    def _flag_outliers(self, **kwargs) -> None:
-        """Method to flag rows as outliers in a new column expressed as a bool"""
-        rows = kwargs.get("rows")
-        new_column_name = kwargs.get("new_column_name", "is_outlier")
-        
-        if not new_column_name:
-            raise ValueError("A new column name is required before flagging outliers")
-        if new_column_name in self.df.columns:
-            raise ValueError(f"Column name '{new_column_name}' already exists")
-        
-        self.df[new_column_name] = False
-        if rows:
-            mask = self.df.index.isin(rows)
-            self.df.loc[mask, new_column_name] = True
-
-    def clean_data(self, action: DataOperation | str, **kwargs) -> pd.DataFrame:
-        """Clean data: remove duplicates, handle missing values, etc."""
-        if self.df is None:
-            raise ValueError("No data loaded")
-        
-        if isinstance(action, str):
-            try:
-                action = DataOperation(action)
-            except ValueError:
-                raise ValueError(f"Unsupported operation: {action}")
-        
-        if action not in self._operation_registry:
-            raise ValueError(f"No handler registered for action: {action}")
-
-        try:
-            self._save_state()
-            
-            handler_method = self._operation_registry[action]
-            handler_method(**kwargs)
-            
-            log_entry = {"type": action.value, **kwargs}
-            self.operation_log.append(log_entry)
-            
-            return self.df
-        except Exception as CleanDataError:
-            raise Exception(f"Error cleaning data: {str(CleanDataError)}")
-
     def reset_data(self) -> None:
-        """Reset data to original state"""
         if self.original_df is not None:
-            # Dont save state when resset
-            # clear stacks
-            self.undo_stack.clear()
-            self.redo_stack.clear()
-            self.operation_log.clear()
-            self.sort_state = None
+            self._reset_history()
             self.df = self.original_df.copy()
-            self._notify_memory_usage()
             print("DEBUG: Data reset. Stacks cleared")
+    
+    def jump_to_history_index(self, target_index: int) -> None:
+        current_index = len(self._history.undo_stack)
+        if target_index == current_index:
+            return
 
-    def export_data(
-        self, filepath: str, format: str = "csv", include_index: bool = False
-    ) -> None:
-        """Export data to file"""
-        if self.df is None:
-            raise ValueError("No data loaded")
+        print(f"DEBUG: Going from index: {current_index} to {target_index}")
 
-        try:
-            if format == "csv":
-                self.df.to_csv(filepath, index=include_index)
-            elif format == "xlsx":
-                self.df.to_excel(filepath, index=include_index)
-            elif format == "json":
-                if include_index:
-                    self.df.to_json(filepath, orient="columns", indent=4)
-                else:
-                    self.df.to_json(filepath, orient="records", indent=4)
-        except Exception as ExportDataError:
-            raise Exception(f"Error exporting data: {str(ExportDataError)}")
-        
-    def export_google_sheets(self, credentials_path: str, sheet_id: str, sheet_name: str = "Sheet1") -> bool:
-        """Exports the current DataFrame to a specified Google Sheet """
-        if self.df is None:
-            raise ValueError("No data loaded to export.")
-        
-        try:
-            import gspread
-            from google.oauth2.service_account import Credentials
-            from gspread.auth import service_account
-            
-            api_scopes: List[str] = [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive"
-            ]
-            
-            client = service_account(filename=credentials_path, scopes=api_scopes)
-            spreadsheet = client.open_by_key(sheet_id)
-            
-            try:
-                worksheet = spreadsheet.worksheet(sheet_name)
-            except gspread.exceptions.WorksheetNotFound:
-                required_rows: int = len(self.df) + 100
-                required_cols: int = len(self.df.columns) + 10
-                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=required_rows, cols=required_cols)
-            
-            sanitized_df: pd.DataFrame = self.df.fillna("")
-            
-            export_payload: List[List[Any]] = [sanitized_df.columns.values.tolist()] + sanitized_df.values.tolist()
-            
-            worksheet.clear()
-            worksheet.update(values=export_payload, range_name="A1")
-            
-            self.operation_log.append({
-                "type": "export_google_sheets",
-                "sheet_id": sheet_id,
-                "sheet_name": sheet_name
-            })
-            return True
-        
-        except ImportError:
-            raise ImportError(f"The gspread library is required to export to Google Sheets.\nPlease install it first.")
-        except Exception as ExportError:
-            error_message: str = str(ExportError).replace(str(credentials_path), "[REDACTED_CREDENTIALS_PATH]")
-            raise Exception(f"Failed to export data to Google Sheets:\n{error_message}")
-
-    def get_data_source_info(self) -> Dict[str, Any]:
-        """Get info about the data source"""
-        return {
-            "file_path": str(self.file_path) if self.file_path else None,
-            "is_temp_file": self.is_temp_file,
-            "temp_csv_path": str(self.temp_csv_path) if self.temp_csv_path else None,
-            "has_data": self.df is not None,
-            "last_db_connection_string": self.last_db_connection_string,
-            "last_db_query": self.last_db_query,
-        }
-
-    def refresh_google_sheets(self) -> pd.DataFrame:
-        """Refresh the CSV data from the last imported Google Sheets document
-        without the user having to re-enter SheetID"""
-        if not self.last_gsheet_id or (
-            not self.last_gsheet_name and not self.last_gsheet_gid
-        ):
-            raise ValueError("No history a Google Sheet Import")
-
-        print("DEBUG refresh_google_sheets: Using stored parameters:")
-        print(f"  - Sheet ID: {self.last_gsheet_id}")
-        print(f"  - Sheet Name: {self.last_gsheet_name}")
-        print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
-        print(f"  - Decimal: '{self.last_gsheet_decimal}'")
-        print(f"  - Thousands: {repr(self.last_gsheet_thousands)}")
-
-        thousands_param = (
-            None
-            if self.last_gsheet_thousands in [None, "None", ""]
-            else self.last_gsheet_thousands
-        )
-
-        return self.import_google_sheets(
-            self.last_gsheet_id,
-            self.last_gsheet_name,
-            delimiter=self.last_gsheet_delimiter,
-            decimal=self.last_gsheet_decimal,
-            thousands=thousands_param,
-            gid=self.last_gsheet_gid,
-        )
-
-    def has_google_sheets_import(self) -> bool:
-        """Check if a Google Sheet can be refreshed"""
-        return bool(
-            self.last_gsheet_id and (self.last_gsheet_name or self.last_gsheet_gid)
-        )
-
+        if target_index < current_index:
+            for _ in range(current_index - target_index):
+                if not self.undo():
+                    break
+        else:
+            for _ in range(target_index - current_index):
+                if not self.redo():
+                    break
+    
     def get_history_info(self) -> Dict[str, Any]:
-        """Get full history of changes for better undo/redo
-        Returns:
-            dict: {'history': List[Dict], 'current_index': int}
-        """
-        full_log = self.operation_log.copy()
-        current_index = len(full_log)
-
-        temporary_log = full_log
-        redo_operations = []
-
-        for i in range(len(self.redo_stack) - 1, -1, -1):
-            _, state_log = self.redo_stack[i]
-            if len(state_log) > len(temporary_log):
-                new_operations = state_log[len(temporary_log) :]
-                redo_operations.extend(new_operations)
-                temporary_log = state_log
-
-        return {"history": full_log + redo_operations, "current_index": current_index}
+        return self._history.get_history_info()
 
     def export_pipeline_macro(self, filepath: str) -> None:
-        """
-        Exports the current sequence of data operations (history) as a reusable macro in JSON format.
-        
-        Args:
-            filepath (str): Target destination for the JSON file.
-        """
-        import json
-        if not self.operation_log:
-            raise ValueError("No data operations to save")
-        
-        with open(filepath, "w") as macro_file:
-            json.dump(self.operation_log, macro_file, indent=4)
+        self._history.export_pipeline_macro(filepath)
     
-    def apply_pipeline_macro(self, macro_source: str | list) -> None:
-        """
-        Loads a macro from a JSON file and applies its operations sequentially to the dataset.
-        
-        Args:
-            macro_source (str | list): Source JSON file path or a direct list of operation dictionaries.
-        """
-        import json
+    def apply_pipeline_macro(self, macro_source: "str | list") -> None:
         if self.df is None:
             raise ValueError("No data loaded to apply")
-        
-        if isinstance(macro_source, str):
-            with open(macro_source, "r") as file:
-                operations = json.load(file)
-        elif isinstance(macro_source, list):
-            operations = macro_source
-        else:
-            raise ValueError("macro_source must be a filepath string or a list of operations")
-        
-        if not isinstance(operations, list):
-            raise ValueError("Invalid file format. Expected a list of operations i a JSON format")
-        
+
+        operations = self._history.load_pipeline_macro(macro_source)
+
         df_backup = self.df.copy()
-        log_backup = self.operation_log.copy()
-        redo_backup = self.redo_stack.copy()
-        
+        log_backup = self._history.operation_log.copy()
+        redo_backup = self._history.redo_stack.copy()
         current_op_type = "Unknown"
-        
+
         try:
             for op in operations:
                 current_op_type = op.get("type", "unknown")
                 if current_op_type == "unknown":
                     continue
-                
-                kwargs = op.copy()
-                kwargs.pop("type", None)
-                
+
+                kwargs = {k: v for k, v in op.items() if k != "type"}
+
                 if current_op_type == "filter":
                     self.filter_data(
                         column=kwargs.get("column"),
                         condition=kwargs.get("condition"),
-                        value=kwargs.get("value")
+                        value=kwargs.get("value"),
                     )
                 elif current_op_type == "filter_multiple":
                     self.filter_data(advanced_filters=kwargs.get("filters"))
                 elif current_op_type == "sort":
                     self.sort_data(
                         column=kwargs.get("column"),
-                        ascending=kwargs.get("ascending", True)
+                        ascending=kwargs.get("ascending", True),
                     )
                 elif current_op_type == "computed_column":
                     self.create_computed_column(
                         new_column_name=kwargs.get("new_column"),
-                        expression=kwargs.get("expression")
+                        expression=kwargs.get("expression"),
                     )
                 elif current_op_type == "aggregate":
                     self.aggregate_data(
                         group_by=kwargs.get("group_by", []),
                         agg_config=kwargs.get("agg_config", {}),
-                        date_grouping=kwargs.get("date_grouping", {})
+                        date_grouping=kwargs.get("date_grouping", {}),
                     )
                 elif current_op_type == "melt":
                     self.melt_data(
                         id_vars=kwargs.get("id_vars", []),
                         value_vars=kwargs.get("value_vars", []),
                         var_name=kwargs.get("var_name", "variable"),
-                        value_name=kwargs.get("value_name", "value")
+                        value_name=kwargs.get("value_name", "value"),
                     )
                 elif current_op_type == "pivot":
                     self.pivot_data(
                         index=kwargs.get("index", []),
                         columns=kwargs.get("columns", ""),
                         values=kwargs.get("values", []),
-                        aggfunc=kwargs.get("aggfunc", "mean")
+                        aggfunc=kwargs.get("aggfunc", "mean"),
                     )
                 elif current_op_type == "bin_column":
                     self.bin_column(
@@ -1882,119 +327,213 @@ class DataHandler:
                         new_column_name=kwargs.get("new_column"),
                         method=kwargs.get("method"),
                         bins=kwargs.get("bins"),
-                        labels=kwargs.get("labels")
+                        labels=kwargs.get("labels"),
                     )
                 elif current_op_type == "update_cell":
                     self.update_cell(
                         row_index=kwargs.get("row"),
                         column_index=kwargs.get("col"),
-                        value=kwargs.get("value")
+                        value=kwargs.get("value"),
                     )
                 elif current_op_type in ["merge", "concatenate", "export_google_sheets"]:
-                    print(f"Skipping '{current_op_type}' macro step (requires external state/datasets).")
+                    print(
+                        f"Skipping '{current_op_type}' macro step "
+                        f"(requires external state/datasets)."
+                    )
                     continue
                 else:
                     self.clean_data(action=current_op_type, **kwargs)
+
         except Exception as e:
             self.df = df_backup
-            self.operation_log = log_backup
-            self.redo_stack = redo_backup
-            raise Exception(f"Macro execution aborted. Data rolled back to original state.\nReason: Failed on operation '{current_op_type}' -> {str(e)}")
-
-    def jump_to_history_index(self, target_index: int) -> None:
-        """Go to a specific point in the history based on an index"""
-        current_index = len(self.undo_stack)
-
-        if target_index == current_index:
-            return
-
-        print(f"DEBUG: Going from index: {current_index} to {target_index}")
-
-        if target_index < current_index:
-            steps = current_index - target_index
-            for _ in range(steps):
-                if not self.undo():
-                    break
-
-        else:
-            steps = target_index - current_index
-            for _ in range(steps):
-                if not self.redo():
-                    break
-
+            self._history.operation_log = log_backup
+            self._history.redo_stack = redo_backup
+            raise Exception(
+                f"Macro execution aborted. Data rolled back to original state.\n"
+                f"Reason: Failed on operation '{current_op_type}' -> {str(e)}"
+            )
+    
+    def run_statistical_test(self, test_type: "Union[StatisticalTest, str]", col1: str, col2: str) -> Dict[str, Any]:
+        return self._mutator.run_statistical_test(self.df, test_type, col1, col2)
+    
     def detect_outliers(self, method: str, columns: List[str], **kwargs) -> List[int]:
-        """Detect outliers in the current dataset
+        return self._mutator.detect_outliers(self.df, method, columns, **kwargs)
 
-        Args:
-            method (str): The specified method to detect outliers
-            columns (List[str]): The columns names that are being analysed
-
-        Returns:
-            List[int]: Row indices that are outliers
-        """
-
+    def _apply_changes(self, changed_df: pd.DataFrame, log_entry: Dict[str, Any], new_sort_state: Optional[tuple] = None) -> pd.DataFrame:
+        self.df = changed_df
+        self._history.operation_log.append(log_entry)
+        if new_sort_state is not None:
+            self._history.sort_state = new_sort_state
+        return self.df
+    
+    def update_cell(self, row_index: int, column_index: int, value: Any) -> None:
         if self.df is None:
-            return []
+            return
+        self._save_state()
+        changed_df = self._mutator.update_cell(self.df, row_index, column_index, value)
+        self._apply_changes(changed_df, {"type": "update_cell", "row": row_index, "col": column_index, "value": value})
+        
+    def filter_data(self, column: str = None, condition: str = None, value: Any = None, advanced_filters: List[Dict] = None) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.filter_data(
+            self.df,
+            column=column,
+            condition=condition,
+            value=value,
+            advanced_filters=advanced_filters,
+        )
+        if advanced_filters:
+            log_entry = {"type": "filter_multiple", "filters": advanced_filters}
+        else:
+            log_entry = {"type": "filter", "column": column, "condition": condition, "value": value}
+        return self._apply_changes(changed_df, log_entry)
 
-        numeric_df = self.df.select_dtypes(include=[np.number])
-        if numeric_df.empty:
-            raise ValueError("No numeric data is available to do outlier detection.")
+    def apply_filter(self, filter_config: Dict[str, Any]) -> pd.DataFrame:
+        if not isinstance(filter_config, dict):
+            raise ValueError("Filter configuration must be a dictionary")
+        if filter_config.get("logic") == "COMPLEX":
+            return self.filter_data(advanced_filters=filter_config.get("filters", []))
+        return self.df
+    
+    def sort_data(self, column: str, ascending: bool = True) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        if self._history.sort_state == (column, ascending):
+            return self.df
+        try:
+            self._save_state()
+            changed_df, new_sort_state = self._mutator.sort_data(
+                self.df, column, ascending, self._history.sort_state
+            )
+            return self._apply_changes(
+                changed_df,
+                {"type": "sort", "column": column, "ascending": ascending},
+                new_sort_state=new_sort_state,
+            )
+        except Exception as SortDataError:
+            raise Exception(f"Error sorting data: {str(SortDataError)}")
+    
+    def aggregate_data(self, group_by: List[str], agg_config: Dict[str, str], date_grouping: Dict[str, str]) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.aggregate_data(self.df, group_by, agg_config, date_grouping)
+        self._history.sort_state = None
+        return self._apply_changes(
+            changed_df,
+            {
+                "type": "aggregate",
+                "group_by": group_by,
+                "agg_config": agg_config,
+                "date_grouping": date_grouping,
+            },
+            new_sort_state=None,
+        )
 
-        outlier_indicies = set()
+    def preview_aggregation(self, group_by: List[str], agg_config: Dict[str, str], date_grouping: Dict[str, str] = None, limit: int = 5,) -> pd.DataFrame:
+        return self._mutator.preview_aggregation(
+            self.df, group_by, agg_config, date_grouping, limit
+        )
+    
+    def melt_data(self, id_vars: List[str], value_vars: List[str], var_name: str, value_name: str,) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.melt_data(self.df, id_vars, value_vars, var_name, value_name)
+        self._history.sort_state = None
+        return self._apply_changes(
+            changed_df,
+            {
+                "type": "melt",
+                "id_vars": id_vars,
+                "value_vars": value_vars,
+                "var_name": var_name,
+                "value_name": value_name,
+            },
+            new_sort_state=None,
+        )
+    
+    def pivot_data(self, index: List[str], columns: str, values: List[str], aggfunc: str) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.pivot_data(self.df, index, columns, values, aggfunc)
+        return self._apply_changes(
+            changed_df,
+            {"type": "pivot", "index": index, "columns": columns, "values": values, "aggfunc": aggfunc},
+            new_sort_state=None,
+        )
 
-        if method == "z_score":
-            threshold = kwargs.get("threshold", 3.0)
-            if not stats:
-                raise ImportError(
-                    "Scipy is not installed. Scipy is required to perform Z-score analysis"
-                )
+    def merge_data(self, right_df: pd.DataFrame, how: str, left_on: List[str], right_on: List[str], suffixes: tuple = ("_left", "_right"),) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No active data to merge with.")
+        self._save_state()
+        changed_df = self._mutator.merge_data(self.df, right_df, how, left_on, right_on, suffixes)
+        return self._apply_changes(
+            changed_df,
+            {"type": "merge", "how": how, "left_on": left_on, "right_on": right_on, "suffixes": suffixes},
+            new_sort_state=None,
+        )
 
-            for column in columns:
-                if column in numeric_df.columns:
-                    col_data = self.df[column]
-                    if isinstance(col_data, pd.DataFrame):
-                        col_data = col_data.iloc[:, 0]
-                    
-                    col_data = col_data.dropna()
-                    if col_data.empty:
-                        continue
-                    z_scores = np.abs(stats.zscore(col_data.to_numpy()))
-                    outliers = col_data.index[z_scores > threshold]
-                    outlier_indicies.update(outliers)
+    def concatenate_data(self, other_df: pd.DataFrame, ignore_index: bool = True) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No active data to append to")
+        self._save_state()
+        changed_df = self._mutator.concatenate_data(self.df, other_df, ignore_index)
+        return self._apply_changes(
+            changed_df,
+            {"type": "concatenate", "ignore_index": ignore_index},
+            new_sort_state=None,
+        )
 
-        elif method == "iqr":
-            multiplier = kwargs.get("multiplier", 1.5)
-            for column in columns:
-                if column in numeric_df.columns:
-                    col_data = self.df[column]
-                    if isinstance(col_data, pd.DataFrame):
-                        col_data = col_data.iloc[:, 0]
-                        
-                    Q1 = col_data.quantile(0.25)
-                    Q3 = col_data.quantile(0.75)
-                    IQR = Q3 - Q1
-                    lower_bound = Q1 - multiplier * IQR
-                    upper_bound = Q3 + multiplier * IQR
+    def create_computed_column(self, new_column_name: str, expression: str) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.create_computed_column(self.df, new_column_name, expression)
+        return self._apply_changes(
+            changed_df,
+            {"type": "computed_column", "new_column": new_column_name, "expression": expression},
+        )
 
-                    outliers = col_data[
-                        (col_data < lower_bound) | (col_data > upper_bound)
-                    ].index.tolist()
-                    outlier_indicies.update(outliers)
+    def bin_column(self, column: str, new_column_name: str, method: str, bins: Any, labels: List[str] = None, right_inclusive: bool = True, drop_original: bool = False) -> pd.DataFrame:
+        if self.df is None:
+            raise ValueError("No data loaded")
+        self._save_state()
+        changed_df = self._mutator.bin_column(
+            self.df, column, new_column_name, method, bins, labels, right_inclusive, drop_original
+        )
+        return self._apply_changes(
+            changed_df,
+            {
+                "type": "bin_column",
+                "column": column,
+                "new_column": new_column_name,
+                "method": method,
+                "bins": bins,
+                "labels": labels,
+            },
+        )
 
-        elif method == "isolation_forest":
-            contamination = kwargs.get("contamination", 0.1)
-            if not IsolationForest:
-                raise ImportError(
-                    "SciKit-learn not installed. SciKit-learn is required to perform an Isolation Forest Analysis"
-                )
-
-            data_to_fit = self.df[columns].select_dtypes(include=[np.number]).fillna(0)
-
-            if not data_to_fit.empty:
-                clf = IsolationForest(contamination=contamination, random_state=42)
-                preds = clf.fit_predict(data_to_fit)
-
-                outliers = data_to_fit.index[preds == -1].tolist()
-                outlier_indicies.update(outliers)
-
-        return sorted(list(outlier_indicies))
+    def clean_data(self, action: "DataOperation | str", **kwargs) -> pd.DataFrame:
+        """Dispatch a cleaning/mutation action via the DataMutator registry."""
+        if self.df is None:
+            raise ValueError("No data loaded")
+        try:
+            self._save_state()
+            changed_df, new_sort_state = self._mutator.clean_data(
+                self.df, action, self._history.sort_state, **kwargs
+            )
+            if isinstance(action, str):
+                action_value = action
+            else:
+                action_value = action.value
+            return self._apply_changes(
+                changed_df,
+                {"type": action_value, **kwargs},
+                new_sort_state=new_sort_state,
+            )
+        except Exception as CleanDataError:
+            raise Exception(f"Error cleaning data: {str(CleanDataError)}")
