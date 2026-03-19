@@ -74,6 +74,15 @@ class StatusBar(QStatusBar):
         # Adding a label of data stat
         self.stats_label = QLabel("No Data")
         self.stats_label.setObjectName("stats_label")
+        
+        self.memory_bar = QProgressBar()
+        self.memory_bar.setObjectName("status_memory_bar")
+        self.memory_bar.setFixedWidth(100)
+        self.memory_bar.setTextVisible(True)
+        self.memory_bar.setFormat("Mem: %p%")
+        self.memory_bar.setProperty("usageLevel", "normal")
+        self.memory_bar.setToolTip("History Buffer Memory Usage")
+        self.memory_bar.hide()
 
         # Adding some progress
         self.progress_bar = QProgressBar()
@@ -143,6 +152,8 @@ class StatusBar(QStatusBar):
         self.addPermanentWidget(self.source_label)
         self.addPermanentWidget(self._create_separator())
         self.addPermanentWidget(self.view_context_label)
+        self.addPermanentWidget(self._create_separator())
+        self.addPermanentWidget(self.memory_bar)
         self.addPermanentWidget(self._create_separator())
         self.addPermanentWidget(self.stats_label)
     
@@ -334,8 +345,43 @@ class StatusBar(QStatusBar):
             rows: int = df.shape[0]
             cols: int = df.shape[1]
             self.stats_label.setText(f"Rows: {rows:,} | Columns: {cols}")
+            self.memory_bar.show()
         else:
             self.stats_label.setText("No data")
+            self.memory_bar.hide()
+    
+    def update_memory_usage(self, current_bytes: int, max_bytes: int) -> None:
+        """
+        Updates the memory progress bar 
+        """
+        if max_bytes <= 0:
+            return
+        
+        percentage: float = (current_bytes / max_bytes) * 100
+        self.memory_bar.setValue(int(percentage))
+        
+        current_mb: float = current_bytes / (1024 * 1024)
+        max_mb: float = max_bytes / (1024 * 1024)
+        
+        tooltip_text: str = f"Memory Usage: {current_mb:.1f} MB / {max_mb:.1f} MB ({percentage:.1f}%)"
+        
+        usage_level: str = "normal"
+        if percentage >= 90:
+            usage_level = "critical"
+            tooltip_text += "\nWarning: Buffer almost full. Oldest data states will be dropped."
+        elif percentage >= 75:
+            usage_level = "warning"
+        
+        self.memory_bar.setToolTip(tooltip_text)
+        
+        if self.memory_bar.property("usageLevel") != usage_level:
+            self.memory_bar.setProperty("usageLevel", usage_level)
+            self.memory_bar.style().unpolish(self.memory_bar)
+            self.memory_bar.style().polish(self.memory_bar)
+            
+            if usage_level == "critical":
+                self.log("Memory usage is almost full. Older actions may be lost...", LogLevel.WARNING)
+
     
     def _update_issue_counters(self) -> None:
         """updates the issue trackers"""

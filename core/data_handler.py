@@ -1,5 +1,4 @@
 # core/data_handler.py
-from os import error
 
 from duckdb import connect
 import pandas as pd
@@ -76,6 +75,7 @@ class DataHandler:
         self.undo_stack: List[tuple[pd.DataFrame, list]] = []
         self.redo_stack: List[tuple[pd.DataFrame, list]] = []
         self.max_history_memory_bytes: int = 1024 * 1024 * 1024
+        self.memory_update_callback: Optional[Callable[[int, int], None]] = None
         # operation log
         self.operation_log: List[Dict[str, Any]] = []
 
@@ -135,6 +135,17 @@ class DataHandler:
             return 0
         return dataframe.memory_usage(deep=False).sum()
 
+    def _notify_memory_usage(self) -> None:
+        """
+        Calculates the total memory used
+        and notifies the callback
+        """
+        if self.memory_update_callback:
+            undo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack)
+            redo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack)
+            total_bytes = undo_bytes + redo_bytes
+            self.memory_update_callback(total_bytes, self.max_history_memory_bytes)
+
     def _enforce_history_memory_limits(self) -> None:
         """
         Enforce the memory limit on the undo and redo stacks to prevent MemoryError.
@@ -158,6 +169,7 @@ class DataHandler:
                 print(f"DEBUG: Memory limit reached. Dropped oldest redo state freeing {dropped_bytes / (1024 * 1024):.2f} MB.")
             else:
                 break
+        self._notify_memory_usage()
 
     def _save_state(self) -> None:
         """Save current state to undo stack"""
@@ -291,23 +303,29 @@ class DataHandler:
             elif extension == ".csv":
                 con = connect()
                 try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).arrow()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, ignore_errors=true)", [path.as_posix()]).arrow()
                     return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
                     print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
-                    return pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
+                    try:
+                        return pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
+                    except Exception as PyArrowError:
+                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
+                        return pd.read_csv(filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
                 finally:
                     con.close()
             elif extension == ".txt":
                 con = connect()
                 try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\\t')", [path.as_posix()]).arrow()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\\t', ignore_errors=true)", [path.as_posix()]).arrow()
                     return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
-                    print(
-                        f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas"
-                    )
-                    return pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
+                    print(f"DEBUG: DuckDB failed: ({str(DuckDBError)}), falling back to pandas pyarrow engine")
+                    try:
+                        return pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
+                    except Exception as PyArrowError:
+                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
+                        return pd.read_csv(filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
                 finally:
                     con.close()
             elif extension == ".json":
@@ -347,23 +365,29 @@ class DataHandler:
                 con = connect(database=":memory:", read_only=False)
                 try:
                     # Leverage DuckDB's native Arrow output for zero-copy transfer to PyArrow-backed Pandas
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?)", [path.as_posix()]).arrow()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, ignore_errors=true)", [path.as_posix()]).arrow()
                     self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
-                    print(f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas")
-                    self.df = pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
+                    print(f"DEBUG: DuckDB failed ({str(ImportFileError)}), falling back to pandas pyarrow engine")
+                    try:
+                        self.df = pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
+                    except Exception as PyArrowError:
+                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
+                        self.df = pd.read_csv(filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
                 finally:
                     con.close()
             elif extension == ".txt":
                 con = connect(database=":memory:", read_only=False)
                 try:
-                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\t')", [path.as_posix()]).arrow()
+                    arrow_table = con.execute("SELECT * FROM read_csv_auto(?, delim='\t', ignore_errors=true)", [path.as_posix()]).arrow()
                     self.df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
-                    print(
-                        f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas"
-                    )
-                    self.df = pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
+                    print(f"DEBUG: DuckDB failed: ({str(ImportFileError)}), falling back to pandas pyarrow engine")
+                    try:
+                        self.df = pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
+                    except Exception as PyArrowError:
+                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
+                        self.df = pd.read_csv(filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip")
                 finally:
                     con.close()
             elif extension == ".json":
@@ -394,6 +418,7 @@ class DataHandler:
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
+            self._notify_memory_usage()
             return self.df
 
         except Exception as ImportFileError:
@@ -500,6 +525,7 @@ class DataHandler:
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
+            self._notify_memory_usage()
             return self.df
 
         except requests.exceptions.Timeout:
@@ -578,6 +604,7 @@ class DataHandler:
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
+            self._notify_memory_usage()
             return self.df
 
         except ImportError:
@@ -658,6 +685,7 @@ class DataHandler:
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.operation_log.clear()
+            self._notify_memory_usage()
 
             return self.df
         except Exception as CreateEmptyDataframeError:
@@ -1624,6 +1652,7 @@ class DataHandler:
             self.operation_log.clear()
             self.sort_state = None
             self.df = self.original_df.copy()
+            self._notify_memory_usage()
             print("DEBUG: Data reset. Stacks cleared")
 
     def export_data(

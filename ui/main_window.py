@@ -38,6 +38,7 @@ class MainWindow(QWidget):
         self.subset_manager = SubsetManager()
 
         self.threadpool = QThreadPool()
+        self.data_handler.memory_update_callback = self.status_bar.update_memory_usage
 
         self.progress_dialog: ProgressDialog | None = None
         self._temp_import_filepath: str | None = None

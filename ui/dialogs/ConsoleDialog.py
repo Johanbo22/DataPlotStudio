@@ -260,7 +260,8 @@ class ConsoleDialog(QDialog):
         cursor.insertText("... ")
         
         self.console_output.setTextCursor(cursor)
-        self.console_output.setCurrentCharF
+        self.console_output.setCurrentCharFormat(fmt)
+        self.console_output.blockSignals(False)
         
     def _run_command(self, command: str) -> None:
         if self.data_handler.df is not self.console_namespace.get("df"):
