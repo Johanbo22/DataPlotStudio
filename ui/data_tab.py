@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import (
     QMenu,
     QDialog,
     QStackedWidget,
-    QApplication
+    QApplication,
+    QTabWidget
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import (
@@ -39,8 +40,7 @@ from pathlib import Path
 from ui.data_table_model import DataTableModel
 from ui.theme import ThemeColors
 from ui.widgets import (
-    DataPlotStudioButton,
-    DataPlotStudioTabWidget
+    DataPlotStudioButton
 )
 from ui.icons import IconBuilder, IconType
 from ui.components.data_operations_panel import DataOperationsPanel
@@ -189,7 +189,7 @@ class DataTab(QWidget):
         data_view_layout.addLayout(toolbar_layout)
 
         # Create tabs for data and statistics
-        self.data_tabs = DataPlotStudioTabWidget()
+        self.data_tabs = QTabWidget()
 
         # Data Table Tab
         self.data_table = QTableView()
@@ -639,7 +639,7 @@ class DataTab(QWidget):
         current_widget = self.parentWidget()
         found_tab_widget = False
         while current_widget:
-            if isinstance(current_widget, DataPlotStudioTabWidget):
+            if isinstance(current_widget, QTabWidget):
                 current_widget.setCurrentWidget(self.plot_tab)
                 found_tab_widget = True
                 break

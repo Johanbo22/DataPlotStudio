@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame, QTabWidget
 from PyQt6.QtCore import pyqtSignal
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioComboBox, DataPlotStudioLineEdit
 
 class AxesSettingsTab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -36,7 +36,7 @@ class AxesSettingsTab(QWidget):
         group = DataPlotStudioGroupBox("Axis Options")
         layout = QVBoxLayout()
         
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
 
         # X-Axi
         x_tab = QWidget()
@@ -260,7 +260,7 @@ class AxesSettingsTab(QWidget):
         self.custom_datetime_check.setChecked(False)
         layout.addWidget(self.custom_datetime_check)
 
-        self.datetime_tab_widget = DataPlotStudioTabWidget()
+        self.datetime_tab_widget = QTabWidget()
         self.datetime_tab_widget.setVisible(False)
         self.datetime_tab_widget.setMinimumHeight(160)
         

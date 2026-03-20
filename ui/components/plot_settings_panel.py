@@ -1,9 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 from PyQt6.QtGui import QIcon
 
 from core.help_manager import HelpManager
 from ui.dialogs import HelpDialog
-from ui.widgets import DataPlotStudioTabWidget
 from ui.icons import IconBuilder, IconType
 
 class PlotSettingsPanel(QWidget):
@@ -20,7 +19,7 @@ class PlotSettingsPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.custom_tabs = DataPlotStudioTabWidget()
+        self.custom_tabs = QTabWidget()
 
         # TAB 1: BASIC
         from ui.components.plot_tabs.general_settings_tab import GeneralSettingsTab

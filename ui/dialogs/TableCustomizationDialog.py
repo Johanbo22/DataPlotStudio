@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QWidget, QFontComboBox, QAbstractItemView, QColorDialog, QListWidget, QListWidgetItem
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QWidget, QFontComboBox, QAbstractItemView, QColorDialog, QListWidget, QListWidgetItem, QTabWidget
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioSpinBox, DataPlotStudioTabWidget, DataPlotStudioToggleSwitch
+from ui.widgets import DataPlotStudioButton, DataPlotStudioCheckBox, DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioGroupBox, DataPlotStudioListWidget, DataPlotStudioSpinBox, DataPlotStudioToggleSwitch
 
 DIALOG_WIDTH: int = 600
 DIALOG_HEIGHT: int = 500
@@ -37,7 +37,7 @@ class TableCustomizationDialog(QDialog):
     def init_ui(self):
         main_layout = QVBoxLayout(self)
         
-        self.tabs = DataPlotStudioTabWidget()
+        self.tabs = QTabWidget()
         self.tabs.addTab(self.create_appearance_tab(), "Appearance")
         self.tabs.addTab(self.create_font_tab(), "Font and Text")
         self.tabs.addTab(self.create_formatting_tab(), "Formatting")

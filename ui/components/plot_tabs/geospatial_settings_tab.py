@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit
 
 class GeospatialSettingsTab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -27,7 +27,7 @@ class GeospatialSettingsTab(QWidget):
         group = DataPlotStudioGroupBox("Geospatial Configuration")
         layout = QVBoxLayout()
         
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
         tab_widget.setMinimumHeight(350)
         
         # Map projectsion tab

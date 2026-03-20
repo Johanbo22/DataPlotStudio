@@ -1,9 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFontComboBox, QFrame
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFontComboBox, QFrame, QTabWidget
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 import shutil
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, HelpIcon, ColormapButton, DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, HelpIcon, ColormapButton
 
 class AppearanceSettingsTab(QWidget):
     help_requested = pyqtSignal(str)
@@ -144,7 +144,7 @@ class AppearanceSettingsTab(QWidget):
         group = DataPlotStudioGroupBox("Axis Label Options")
         layout = QVBoxLayout()
         
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
         
         # X axis tab
         x_tab = QWidget()
@@ -263,7 +263,7 @@ class AppearanceSettingsTab(QWidget):
         indiv_layout = QVBoxLayout(self.individual_spines_container)
         indiv_layout.setContentsMargins(0, 0, 0, 0)
 
-        spine_tabs = DataPlotStudioTabWidget()
+        spine_tabs = QTabWidget()
         
         # Top Spine
         top_tab = QWidget()

@@ -1,7 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QTabWidget
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 
 class AnnotationsSettingsTab(QWidget):
@@ -34,7 +34,7 @@ class AnnotationsSettingsTab(QWidget):
         group = DataPlotStudioGroupBox("Annotation Tools")
         layout = QVBoxLayout()
         
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
         tab_widget.setMinimumHeight(350)
         
         # Auto Annotations Tab

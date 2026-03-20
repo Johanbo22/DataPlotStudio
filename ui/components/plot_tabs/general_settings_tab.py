@@ -1,9 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolBox, QFrame
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolBox, QFrame, QTabWidget
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioListWidget, QuickFilterEdit, HelpIcon, DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioListWidget, QuickFilterEdit, HelpIcon
 
 class GeneralSettingsTab(QWidget):
     help_requested = pyqtSignal(str)
@@ -110,7 +110,7 @@ class GeneralSettingsTab(QWidget):
         group = DataPlotStudioGroupBox("Data Configuration")
         layout = QVBoxLayout()
 
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
         tab_widget.setMinimumHeight(320)
 
         var_tab = QWidget()

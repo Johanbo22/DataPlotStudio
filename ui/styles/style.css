@@ -427,3 +427,34 @@ QTableCornerButton::section {
 #MainDataTable QScrollBar::sub-page:horizontal {
     background: none;
 }
+
+QTabWidget::pane {
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background-color: #ffffff;
+    top: -1px;
+}
+
+QTabBar::tab {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-bottom-color: #e2e8f0;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    padding: 8px 16px;
+    margin-right: 2px;
+    color: #64748b;
+    font-weight: bold;
+}
+
+QTabBar::tab:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+}
+
+QTabBar::tab:selected {
+    background: #ffffff;
+    border-bottom-color: #ffffff;
+    color: #1e40af;
+    border-top: 3px solid #3b82f6;
+}

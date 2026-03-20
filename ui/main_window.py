@@ -1,5 +1,5 @@
 #ui/main_window.py
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFileDialog, QMessageBox, QApplication)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFileDialog, QMessageBox, QApplication, QTabWidget)
 from PyQt6.QtCore import QThreadPool, pyqtSlot, QTimer, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from pathlib import Path
@@ -16,7 +16,6 @@ from core.project_manager import ProjectManager
 from core.code_exporter import CodeExporter
 from core.logger import Logger
 from ui.status_bar import StatusBar
-from ui.widgets.AnimatedTabWidget import DataPlotStudioTabWidget
 from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog, ConsoleDialog)
 from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 from ui.icons import IconBuilder, IconType
@@ -64,7 +63,7 @@ class MainWindow(QWidget):
         layout = QVBoxLayout()
 
         # Creation of the main Tab widget
-        self.tabs = DataPlotStudioTabWidget()
+        self.tabs = QTabWidget()
 
         # Data tab
         data_icon = IconBuilder.build(IconType.DataExplorerIcon)

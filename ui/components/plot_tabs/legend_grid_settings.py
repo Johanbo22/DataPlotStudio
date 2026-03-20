@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame, QTabWidget
 from PyQt6.QtCore import Qt
 
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioSlider, DataPlotStudioTabWidget
+from ui.widgets import DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioSlider
 
 class LegendGridSettingstab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -37,7 +37,7 @@ class LegendGridSettingstab(QWidget):
         self.legend_check.setChecked(False)
         layout.addWidget(self.legend_check)
         
-        self.legend_tab_widget = DataPlotStudioTabWidget()
+        self.legend_tab_widget = QTabWidget()
         self.legend_tab_widget.setVisible(False)
         self.legend_tab_widget.setMinimumHeight(240)
         
@@ -185,7 +185,7 @@ class LegendGridSettingstab(QWidget):
         self.independent_grid_check.setChecked(False)
         layout.addWidget(self.independent_grid_check)
 
-        self.grid_axis_tab = DataPlotStudioTabWidget()
+        self.grid_axis_tab = QTabWidget()
         self.grid_axis_tab.setMinimumHeight(260)
         self.grid_axis_tab.setVisible(False)
         

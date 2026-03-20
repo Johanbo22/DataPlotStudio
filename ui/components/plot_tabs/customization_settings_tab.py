@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QLayout, QTabWidget
 from PyQt6.QtCore import Qt
 
 from ui.theme import ThemeColors
-from ui.widgets import AutoResizingStackedWidget, DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioSlider, DataPlotStudioTabWidget
+from ui.widgets import AutoResizingStackedWidget, DataPlotStudioGroupBox, DataPlotStudioToggleSwitch, DataPlotStudioSpinBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioComboBox, DataPlotStudioSlider
 
 class CustomizationSettingsTab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -105,7 +105,7 @@ class CustomizationSettingsTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
 
-        tab_widget = DataPlotStudioTabWidget()
+        tab_widget = QTabWidget()
         tab_widget.setMinimumHeight(240)
 
         bar_tab = QWidget()

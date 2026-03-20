@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView, QListWidgetItem, QScrollArea, QFrame
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QAbstractItemView, QListWidgetItem, QScrollArea, QFrame, QTabWidget
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from core.resource_loader import get_resource_path
 from ui.widgets import (
-    DataPlotStudioButton, DataPlotStudioTabWidget, DataPlotStudioGroupBox,
+    DataPlotStudioButton, DataPlotStudioGroupBox,
     DataPlotStudioComboBox, DataPlotStudioLineEdit, DataPlotStudioListWidget,
     HelpIcon
 )
@@ -43,7 +43,9 @@ class DataOperationsPanel(QWidget):
             reset_button.clicked.connect(self.controller.reset_data)
         layout.addWidget(reset_button)
         
-        self.ops_tabs = DataPlotStudioTabWidget()
+        self.ops_tabs = QTabWidget()
+        self.ops_tabs.setObjectName("ops_tabs")
+        
         
         self.create_cleaning_tab()
         self.create_filtering_tab()
