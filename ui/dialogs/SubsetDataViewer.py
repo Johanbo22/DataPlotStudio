@@ -22,6 +22,9 @@ class SubsetDataViewer(QDialog):
 
         # Table
         table = QTableWidget()
+        table.horizontalHeader().setObjectName("MainDataHeader")
+        table.verticalHeader().setObjectName("MainDataHeader")
+        table.setAlternatingRowColors(True)
         table.setRowCount(len(df))
         table.setColumnCount(len(df.columns))
         table.setHorizontalHeaderLabels(df.columns.tolist())

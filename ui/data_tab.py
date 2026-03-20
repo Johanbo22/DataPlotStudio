@@ -45,6 +45,7 @@ from ui.widgets import (
 from ui.icons import IconBuilder, IconType
 from ui.components.data_operations_panel import DataOperationsPanel
 from ui.components.statistics_generator import StatisticsGenerator
+from ui.components.data_table_delegate import DataTableDelegate
 from ui.LandingPage import LandingPage
 from ui.icons import IconBuilder, IconType
 
@@ -192,8 +193,16 @@ class DataTab(QWidget):
 
         # Data Table Tab
         self.data_table = QTableView()
+        self.data_table.setObjectName("MainDataTable")
+        self.data_table.horizontalHeader().setObjectName("MainDataHeader")
+        self.data_table.verticalHeader().setObjectName("MainDataHeader")
         self.data_table.setAlternatingRowColors(True)
         self.data_table.setSortingEnabled(True)
+        
+        self.table_delegate = DataTableDelegate(self.data_table)
+        self.data_table.setItemDelegate(self.table_delegate)
+        self.data_table.verticalHeader().setDefaultSectionSize(32)
+        
         self.data_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Interactive
         )

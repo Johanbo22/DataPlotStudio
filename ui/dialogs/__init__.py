@@ -31,8 +31,11 @@ from .RegexReplaceDialog import RegexReplaceDialog
 from .AppendDialog import AppendDialog
 from .MacroPreviewDialog import MacroPreviewDialog
 from .ConsoleDialog import ConsoleDialog
+from .ColumnReorderDialog import ColumnReorderDialog
 
 __all__ = [
+    "ColumnReorderDialog",
+    "ConsoleDialog",
     "MacroPreviewDialog",
     "AggregationDialog",
     "AppendDialog",

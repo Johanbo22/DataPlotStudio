@@ -106,6 +106,7 @@ class MeltDialog(QDialog):
         header = self.preview_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setStretchLastSection(True)
+        header.setObjectName("MainDataHeader")
         self.preview_table.verticalHeader().setVisible(False)
         self.preview_table.setMinimumHeight(200)
         preview_layout.addWidget(self.preview_table)

@@ -240,6 +240,7 @@ class AggregationDialog(QDialog):
         bottom_layout.addWidget(preview_label)
 
         self.preview_table = QTableWidget()
+        self.preview_table.horizontalHeader().setObjectName("MainDataHeader")
         self.preview_table.setAlternatingRowColors(True)
         self.preview_table.verticalHeader().setVisible(False)
         self.preview_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)

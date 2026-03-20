@@ -96,6 +96,8 @@ class PivotDialog(QDialog):
         preview_layout.addWidget(self.preview_label)
         
         self.preview_table = QTableWidget()
+        self.preview_table.horizontalHeader().setObjectName("MainDataHeader")
+        self.preview_table.verticalHeader().setObjectName("MainDataHeader")
         self.preview_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.preview_table.setAlternatingRowColors(True)
         self.preview_table.setMinimumHeight(200)
