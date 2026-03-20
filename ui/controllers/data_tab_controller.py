@@ -12,7 +12,7 @@ from core.subset_manager import SubsetManager
 
 from ui.animations import AggregationAnimation, CalculationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation, SubsetDataAnimation
 
-from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog
+from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog, ColumnReorderDialog
 
 from ui.workers import GoogleSheetsImportWorker, AutoCreateSubsetsWorker
 
@@ -1279,6 +1279,29 @@ class DataTabController:
             except Exception as AppendError:
                 QMessageBox.critical(self.view, "Append Error", str(AppendError))
                 self.status_bar.log(f"Append failed: {str(AppendError)}", "ERROR")
+    
+    def open_column_reorder_dialog(self) -> None:
+        """Opens the dialog for reordering columns"""
+        if self.data_handler.df is None or self.data_handler.df.empty:
+            self.status_bar.log("No data available to reorder", "WARNING")
+            return
+        
+        dialog = ColumnReorderDialog(df=self.data_handler.df, parent=self.view)
+        
+        if dialog.exec():
+            new_order = dialog.get_new_order()
+            
+            # Preventing updates to history states if the order was not changed at all
+            if new_order != list(self.data_handler.df.columns):
+                try:
+                    self.data_handler.clean_data(
+                        action="reorder_columns",
+                        new_order=new_order
+                    )
+                    self.status_bar.log("Columns have been reordered", "SUCCESS")
+                    self.view.refresh_data_view()
+                except Exception as error:
+                    self.status_bar.log(f"Failed to reorder columns: {str(error)}", "ERROR")
 
     def apply_sort(self):
         """Apply a permanent sorting to data"""

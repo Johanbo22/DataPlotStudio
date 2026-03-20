@@ -6,7 +6,11 @@ from ui.theme import ThemeColors
 
 
 class DataPlotStudioButton(QPushButton):
-    """Custom QPush Button that animates on hover."""
+    """
+    Custom QPushButton, default button for DataPlotStudio\n
+    If unique buttons with unique styling is required, use regular QPushButton.setObjectName() and style it in css file\n
+    Regular main action buttons use the theme.ThemeColors.MainColor property
+    """
     
     _HOVER_DARKEN_FACTOR: int = 110
     _HOVER_LIGHTEN_FACTOR: int = 130

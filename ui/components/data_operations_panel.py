@@ -276,6 +276,22 @@ class DataOperationsPanel(QWidget):
         self.column_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.column_list.setMaximumHeight(200)
         column_layout.addWidget(self.column_list)
+        
+        # Reorder cols
+        reorder_layout = QHBoxLayout()
+        reorder_button = DataPlotStudioButton("Column Reorder Tool", parent=self)
+        reorder_button.setToolTip("Open an interactive preview of your data to visually drag and drop column headers into a new order")
+        reorder_button.setIcon(IconBuilder.build(IconType.DataTransform))
+        if self.controller:
+            reorder_button.clicked.connect(self.controller.open_column_reorder_dialog)
+        
+        self.reorder_columns_help = HelpIcon("reorder_columns")
+        if self.controller:
+            self.reorder_columns_help.clicked.connect(self.controller.show_help_dialog)
+        
+        reorder_layout.addWidget(reorder_button)
+        reorder_layout.addWidget(self.reorder_columns_help)
+        column_layout.addLayout(reorder_layout)
 
         # Drop Column
         drop_column_layout = QHBoxLayout()

@@ -33,6 +33,7 @@ class DataOperation(str, Enum):
     EXTRACT_DATE_COMPONENT = "extract_date_component"
     CALCULATE_DATE_DIFFERENCE = "calculate_date_difference"
     FLAG_OUTLIERS = "flag_outliers"
+    REORDER_COLUMNS = "reorder_columns"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -77,6 +78,7 @@ class DataMutator:
             DataOperation.EXTRACT_DATE_COMPONENT: self._extract_date_component,
             DataOperation.CALCULATE_DATE_DIFFERENCE: self._calculate_date_difference,
             DataOperation.FLAG_OUTLIERS: self._flag_outliers,
+            DataOperation.REORDER_COLUMNS: self._reorder_columns
         }
     
     def clean_data(self, df: pd.DataFrame, action: "DataOperation | str", sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
@@ -965,4 +967,26 @@ class DataMutator:
             mask = df.index.isin(rows)
             df.loc[mask, new_column_name] = True
 
+        return df, sort_state
+
+    def _reorder_columns(self, df: pd.DataFrame, sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
+        """
+        Reorders the columns of the DataFrame
+        Validates that no columns are dropped during the reordreing
+        """
+        new_order: list[str] = kwargs.get("new_order", [])
+        
+        if not new_order:
+            raise ValueError("A new column order must be provided")
+        
+        # Verify that the new col order has the same cols as before
+        missing_cols = set(df.columns) - set(new_order)
+        extra_cols = set(new_order) - set(df.columns)
+        
+        if missing_cols or extra_cols:
+            raise ValueError(f"Column mismatch. Missing: {missing_cols}, Extra: {extra_cols}")
+        
+        # Reindex the df with the new ordered list
+        df = df[new_order]
+        
         return df, sort_state
