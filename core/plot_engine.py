@@ -223,15 +223,14 @@ class PlotEngine:
     
     def get_active_axis_geometry(self) -> Optional[Tuple[int, int, int, int]]:
         """Function to calculate Qt geometry for the active axis relative to the current canvas"""
-
         if not self.current_ax or not self.current_figure:
             return None
         
-        # We get the device pixe ratio for scaling on higher DPI screns
+        # We get the device pixel ratio for scaling on higher DPI screens
         dpr = 1.0
-        if hasattr(self.current_figure, "canvas") and self.current_figure.canvas:
-            if hasattr(self.current_figure.canvas, "devicePixelRatio"):
-                dpr = self.current_figure.canvas.devicePixelRatio()
+        canvas = self.current_figure.canvas
+        if canvas and hasattr(canvas, "devicePixelRatio"):
+            dpr = canvas.devicePixelRatio()
         
         try:
             trans = self.current_ax.transAxes
@@ -241,26 +240,42 @@ class PlotEngine:
             x0, y0 = p0
             x1, y1 = p1
 
-            x = x0 / dpr
-            w = (x1 - x0) / dpr
-            h = (y1 - y0) / dpr
-            
-            canvas_height = self.current_figure.bbox_height / dpr
-            y = canvas_height - (y1 / dpr)
+            fig_height_px = self.current_figure.bbox.height
 
-            return (int(x), int(y), int(w), int(h))
-        
+            px_x = x0
+            px_y = fig_height_px - y1
+            px_w = x1 - x0
+            px_h = y1 - y0
+
+            x = px_x / dpr
+            y = px_y / dpr
+            w = px_w / dpr
+            h = px_h / dpr
+
         except Exception:
             bbox = self.current_ax.get_position()
-            width, height = self.current_figure.get_size_inches() * self.current_figure.get_dpi()
+            width_in, height_in = self.current_figure.get_size_inches()
+            dpi = self.current_figure.get_dpi()
 
-            x = int((bbox.x0 * width) / dpr)
-            w = int((bbox.width * width) / dpr)
-            h = int((bbox.height * height) / dpr)
+            fig_width_px = width_in * dpi
+            fig_height_px = height_in * dpi
 
-            y = int((height / dpr) - ((bbox.y0 * height) / dpr) - h)
+            px_x = bbox.x0 * fig_width_px
+            px_w = bbox.width * fig_width_px
+            px_h = bbox.height * fig_height_px
+            px_y = fig_height_px - (bbox.y1 * fig_height_px)
 
-            return (x, y, w, h)
+            x = px_x / dpr
+            y = px_y / dpr
+            w = px_w / dpr
+            h = px_h / dpr
+
+        if canvas:
+            from PyQt6.QtCore import QPointF
+            global_pos = canvas.mapToGlobal(QPointF(x, y).toPoint())
+            x, y = global_pos.x(), global_pos.y()
+
+        return (int(x), int(y), int(w), int(h))
     
     def _get_colors_from_cmap(self, cmap_name, n_colors):
         """Generate a list of colors from a cmap"""

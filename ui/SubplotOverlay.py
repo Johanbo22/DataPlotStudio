@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, pyqtProperty, QSequentialAnimationGroup, QPauseAnimation, QRectF
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, pyqtProperty, QSequentialAnimationGroup, QPauseAnimation, QRectF, QPoint
 from PyQt6.QtGui import QColor, QPainter, QPen, QPaintEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QVBoxLayout, QWidget
 
@@ -8,6 +8,7 @@ class SubplotOverlay(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._border_color: QColor = QColor("#2196F3")
+        self._current_opacity: float = 1.0
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.hide()
@@ -23,12 +24,10 @@ class SubplotOverlay(QWidget):
         
         self.label_widget = QLabel()
         self.label_widget.setObjectName("subplot_overlay_label")
+        self.label_widget.setStyleSheet(self._get_label_style(1.0))
         self.v_layout.addWidget(self.label_widget)
 
-        self.opacity_effect = QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self.opacity_effect)
-        
-        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.fade_animation = QPropertyAnimation(self, b"overlay_opacity")
         self.fade_animation.setDuration(1000)
         self.fade_animation.setStartValue(1.0)
         self.fade_animation.setEndValue(0.1)
@@ -41,6 +40,21 @@ class SubplotOverlay(QWidget):
         self.animation_sequence.addAnimation(self.fade_animation)
         
         self.fade_animation.finished.connect(self._on_animation_finished)
+    
+    def _get_label_style(self, opacity: float) -> str:
+        alpha = int(opacity * 255)
+        bg_alpha = int(opacity * 180)
+        return f"color: rgba(33, 150, 243, {alpha}); font-weight: bold; font-size: 14px; background-color: rgba(255, 255, 255, {bg_alpha}); padding: 6px; border-radius: 4px;"
+
+    @pyqtProperty(float)
+    def overlay_opacity(self) -> float:
+        return self._current_opacity
+    
+    @overlay_opacity.setter
+    def overlay_opacity(self, value: float) -> None:
+        self._current_opacity = value
+        self.label_widget.setStyleSheet(self._get_label_style(value))
+        self.update()
         
     @pyqtProperty(QColor)
     def border_color(self) -> QColor:
@@ -55,9 +69,9 @@ class SubplotOverlay(QWidget):
         self.update_notice_label.setVisible(visible)
         if visible:
             self.animation_sequence.stop()
-            self.opacity_effect.setOpacity(1.0)
+            self.overlay_opacity = 1.0
             self.show()
-        elif not self.label_widget.text() and self.opacity_effect.opacity() == 1.0:
+        elif not self.label_widget.text() and self.overlay_opacity == 1.0:
             self.hide()
 
     def _on_animation_finished(self):
@@ -72,13 +86,21 @@ class SubplotOverlay(QWidget):
             geometry (tuple[int, int, int, int]): The geometry (x, y, w, h) for the overlay
             is_resize (bool): Flag indicating if the update is triggered by a resize event
         """
-        self.setGeometry(*geometry)
+        gx, gy, w, h = geometry
+        if self.parentWidget():
+            local_pos = self.parentWidget().mapFromGlobal(QPoint(gx, gy))
+            self.setGeometry(local_pos.x(), local_pos.y(), w, h)
+        else:
+            self.setGeometry(gx, gy, w, h)
+        
+        self.raise_()
+        
         if not is_resize:
             self.label_widget.setText(text)
             self.label_widget.show()
             self.show()
-
-            self.opacity_effect.setOpacity(1.0)
+            
+            self.overlay_opacity = 1.0
             self.animation_sequence.stop()
             self.animation_sequence.start()
 
@@ -87,6 +109,7 @@ class SubplotOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
+        painter.setOpacity(self._current_opacity)
         #the draw duude
         pen = QPen(self._border_color)
         pen.setWidth(4)
