@@ -34,6 +34,7 @@ class DataOperation(str, Enum):
     CALCULATE_DATE_DIFFERENCE = "calculate_date_difference"
     FLAG_OUTLIERS = "flag_outliers"
     REORDER_COLUMNS = "reorder_columns"
+    DROP_EMPTY_COLUMNS = "drop_empty_columns"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -78,7 +79,8 @@ class DataMutator:
             DataOperation.EXTRACT_DATE_COMPONENT: self._extract_date_component,
             DataOperation.CALCULATE_DATE_DIFFERENCE: self._calculate_date_difference,
             DataOperation.FLAG_OUTLIERS: self._flag_outliers,
-            DataOperation.REORDER_COLUMNS: self._reorder_columns
+            DataOperation.REORDER_COLUMNS: self._reorder_columns,
+            DataOperation.DROP_EMPTY_COLUMNS: self._drop_empty_columns
         }
     
     def clean_data(self, df: pd.DataFrame, action: "DataOperation | str", sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
@@ -990,3 +992,13 @@ class DataMutator:
         df = df[new_order]
         
         return df, sort_state
+    
+    def _drop_empty_columns(self, df: pd.DataFrame, sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
+        """Removes columns where all values are missing"""
+        cols_to_drop: list[str] = df.columns[df.isna().all()].tolist()
+        if cols_to_drop:
+            df = df.drop(columns=cols_to_drop)
+            if sort_state and sort_state[0] in cols_to_drop:
+                sort_state = None
+        return df, sort_state
+        

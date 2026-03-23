@@ -303,6 +303,37 @@ class DataTabController:
                 f"Failed to drop missing values: {str(DropMissingError)}", "ERROR"
             )
             self.failed_animation = FailedAnimation("Failed to Drop Missing values").start(target_widget=self.view)
+    
+    def drop_empty_columns(self) -> None:
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+        
+        cols_before = len(self.data_handler.df.columns)
+        try:
+            self.data_handler.clean_data("drop_empty_columns")
+            cols_after = len(self.data_handler.df.columns)
+            removed = cols_before - cols_after
+            
+            if removed == 0:
+                QMessageBox.information(self.view, "No Empty Columns", "No completely empty columns were found in the dataset.")
+                return
+            
+            self.view.refresh_data_view()
+            self.status_bar.log_action(
+                f"Dropped {removed} empty column(s)",
+                details={
+                    "columns_before": cols_before,
+                    "columns_after": cols_after,
+                    "columns_removed": removed,
+                    "operation": "drop_empty_columns",
+                },
+                level="SUCCESS"
+            )
+            DropColumnAnimation(message="Dropped {removed} empty columns").start(target_widget=self.view)
+        except Exception as DropEmptyColumnsError:
+            self.status_bar.log(f"Failed to drop empty columns: {str(DropEmptyColumnsError)}", "ERROR")
+            QMessageBox.critical(self.view, "Error", f"Failed to drop empty columns:\n{str(DropEmptyColumnsError)}")
             
     def fill_missing(self):
         """Fill missing values"""

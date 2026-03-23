@@ -113,6 +113,22 @@ class DataOperationsPanel(QWidget):
         fill_missing_layout.addWidget(fill_missing_button)
         fill_missing_layout.addWidget(self.fill_missing_help)
         cleaning_layout.addLayout(fill_missing_layout)
+        
+        # Drop empty columns
+        drop_empty_layout = QHBoxLayout()
+        drop_empty_button = DataPlotStudioButton("Drop Empty Columns", parent=self)
+        drop_empty_button.setToolTip("Removes columns where all rows have missing values")
+        drop_empty_button.setIcon(IconBuilder.build(IconType.DropColumn))
+        if self.controller:
+            drop_empty_button.clicked.connect(self.controller.drop_empty_columns)
+            
+        self.drop_empty_help = HelpIcon("drop_empty_columns")
+        if self.controller:
+            self.drop_empty_help.clicked.connect(self.controller.show_help_dialog)
+            
+        drop_empty_layout.addWidget(drop_empty_button)
+        drop_empty_layout.addWidget(self.drop_empty_help)
+        cleaning_layout.addLayout(drop_empty_layout)
 
         # Outlier Detection
         cleaning_layout.addSpacing(10)
