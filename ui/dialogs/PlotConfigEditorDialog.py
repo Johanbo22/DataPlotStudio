@@ -9,9 +9,9 @@ from ui.widgets.AnimatedCheckBox import DataPlotStudioCheckBox
 from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
 from ui.widgets.AnimatedSlider import DataPlotStudioSlider
 
-class ThemeEditorDialog(QDialog):
+class PlotConfigEditorDialog(QDialog):
     """Editor for plot config editing
-    Used to create new themes from JSON configs or edit existing ones.
+    Used to create new plot configs from JSON configs or edit existing ones.
     """
     def __init__(self, theme_name: str, theme_content: Dict[str, Any], is_protected: bool = False, parent: Optional[QWidget] = None):
         super().__init__(parent)

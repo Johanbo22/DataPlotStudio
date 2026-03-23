@@ -1,10 +1,13 @@
-from PyQt6.QtCore import Qt, QStringListModel
+from PyQt6.QtCore import Qt, QStringListModel, pyqtSignal
 from PyQt6.QtGui import QTextCursor, QIcon, QKeyEvent
 from PyQt6.QtWidgets import QPlainTextEdit, QCompleter, QToolButton, QStyle
 from ui.FilterSyntaxHighlighter import FilterSyntaxHighlighter
 
 class QuickFilterEdit(QPlainTextEdit):
     """A qplaintext edit that is a one line that supports the filter syntax highlighting found in FilterSyntaxhighliter. Used to highligh syntax witin the quickfilter option in the plotting canvas"""
+    
+    returnPressed = pyqtSignal()
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.highlighter = FilterSyntaxHighlighter(self.document())
@@ -111,6 +114,7 @@ class QuickFilterEdit(QPlainTextEdit):
                 return
 
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.returnPressed.emit()
             event.ignore()
             return
         
@@ -147,3 +151,4 @@ class QuickFilterEdit(QPlainTextEdit):
     
     def clear(self):
         self.setPlainText("")
+        self.returnPressed.emit()

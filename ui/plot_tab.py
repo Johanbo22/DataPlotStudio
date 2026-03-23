@@ -42,7 +42,7 @@ from typing import Optional
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.ColorBlindnessEffect import ColorBlindnessEffect
 from ui.dialogs.PlotExportDialog import PlotExportDialog
-from ui.dialogs.ThemeEditorDialog import ThemeEditorDialog
+from ui.dialogs.PlotConfigEditorDialog import PlotConfigEditorDialog
 from core.plot_config_manager import PlotConfigManager
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -262,7 +262,7 @@ class PlotTab(PlotTabUI):
         self.view.y_columns_list.itemSelectionChanged.connect(self.on_data_changed)
         self.view.hue_column.currentTextChanged.connect(self.on_data_changed)
         self.view.subset_combo.currentIndexChanged.connect(self.on_data_changed)
-        self.view.quick_filter_input.textChanged.connect(self.on_data_changed)
+        self.view.quick_filter_input.returnPressed.connect(self.on_data_changed)
         
         self.view.grid_designer.layout_applied.connect(self._apply_custom_grid_layout)
         self.view.active_subplot_combo.currentIndexChanged.connect(self.on_active_subplot_changed)
@@ -3694,7 +3694,7 @@ class PlotTab(PlotTabUI):
             clean_name = theme_file.replace(".json", "")
             is_protected = clean_name in self.default_theme_names
 
-            dialog = ThemeEditorDialog(theme_name, content, is_protected, self)
+            dialog = PlotConfigEditorDialog(theme_name, content, is_protected, self)
             if dialog.exec():
                 new_content = dialog.final_content
 

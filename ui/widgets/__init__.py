@@ -9,7 +9,6 @@ from .AnimatedMenu import DataPlotStudioMenu
 from .AnimatedRadioButton import DataPlotStudioRadioButton
 from .AnimatedSlider import DataPlotStudioSlider
 from .AnimatedSpinBox import DataPlotStudioSpinBox
-from .AnimatedTabWidget import DataPlotStudioTabWidget
 from .ColormapButton import ColormapButton
 from .HelpIcon import HelpIcon
 from .ToggleSwitch import DataPlotStudioToggleSwitch
@@ -28,7 +27,6 @@ __all__ = [
     "DataPlotStudioRadioButton",
     "DataPlotStudioSlider",
     "DataPlotStudioSpinBox",
-    "DataPlotStudioTabWidget",
     "ColormapButton",
     "HelpIcon",
     "DataPlotStudioToggleSwitch",
