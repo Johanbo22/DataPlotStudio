@@ -1,5 +1,7 @@
 # ui/plot_tab.py
 
+from re import split
+
 from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog, QToolTip
 from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QIcon, QColor, QCursor
@@ -363,6 +365,8 @@ class PlotTab(PlotTabUI):
         
         self.view.legend_loc_combo.currentTextChanged.connect(self.on_style_changed)
         self.view.legend_title_input.textChanged.connect(self.on_style_changed)
+        self.view.legend_title_size_spin.valueChanged.connect(self.on_style_changed)
+        self.view.legend_labels_input.textChanged.connect(self.on_style_changed)
         self.view.legend_size_spin.valueChanged.connect(self.on_style_changed)
         self.view.legend_columns_spin.valueChanged.connect(self.on_style_changed)
         self.view.legend_colspace_spin.valueChanged.connect(self.on_style_changed)
@@ -2878,12 +2882,25 @@ class PlotTab(PlotTabUI):
             
         # Check if there's anything to make a legend for
         handles, labels = self.plot_engine.current_ax.get_legend_handles_labels()
+        if self.plot_engine.secondary_ax:
+            handles2, labels2 = self.plot_engine.secondary_ax.get_legend_handles_labels()
+            handles.extend(handles2)
+            labels.extend(labels2)
+        
         if not handles:
             return
+        
+        custom_labels_str = self.view.legend_labels_input.text().strip()
+        if custom_labels_str:
+            custom_labels = [l.strip() for l in custom_labels_str.split(",")]
+            for i in range(min(len(labels), len(custom_labels))):
+                if custom_labels[i]:
+                    labels[i] = custom_labels[i]
 
         legend_kwargs = {
             "loc": self.view.legend_loc_combo.currentText(),
             "fontsize": self.view.legend_size_spin.value(),
+            "title_fontsize": self.view.legend_title_size_spin.value(),
             "ncol": self.view.legend_columns_spin.value(),
             "columnspacing": self.view.legend_colspace_spin.value(),
             "frameon": self.view.legend_frame_check.isChecked(),
@@ -2895,7 +2912,7 @@ class PlotTab(PlotTabUI):
         }
 
         try:
-            legend = self.plot_engine.current_ax.legend(**legend_kwargs)
+            legend = self.plot_engine.current_ax.legend(handles, labels, **legend_kwargs)
 
             # set edge width
             if legend and legend.get_frame():
@@ -3303,19 +3320,13 @@ class PlotTab(PlotTabUI):
         self._cached_active_df = None
         self._is_data_dirty = False
 
-        self.view.subplot_rows_spin.blockSignals(True)
-        self.view.subplot_cols_spin.blockSignals(True)
         self.view.active_subplot_combo.blockSignals(True)
         self.view.quick_filter_input.clear()
 
-        self.view.subplot_rows_spin.setValue(1)
-        self.view.subplot_cols_spin.setValue(1)
         self.view.active_subplot_combo.clear()
         self.view.active_subplot_combo.addItem("Plot 1")
         self.view.quick_filter_input.clear()
 
-        self.view.subplot_rows_spin.blockSignals(False)
-        self.view.subplot_cols_spin.blockSignals(False)
         self.view.active_subplot_combo.blockSignals(False)
         self.view.quick_filter_input.blockSignals(False)
 

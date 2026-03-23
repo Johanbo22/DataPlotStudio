@@ -876,18 +876,69 @@ class CodeExporter:
         """Generate legend configuration."""
         lines = []
         if self._get_cfg(config, "legend.enabled", False):
+            # Legend basic configuration
+            custom_labels_str = self._get_cfg(config, "legend.custom_labels", "").strip()
             loc = self._clean_value(self._get_cfg(config, "legend.location", "best"))
+            title = self._clean_value(self._get_cfg(config, "legend.title", ""))
+            
+            # Styling configuration
+            fontsize = self._get_cfg(config, "legend.font_size", 10)
+            title_fontsize = self._get_cfg(config, "legend.title_font_size", 12)
+            ncol = self._get_cfg(config, "legend.columns", 1)
+            columnspacing = self._get_cfg(config, "legend.column_spacing", 1.0)
+            frameon = self._get_cfg(config, "legend.frame", True)
+            fancybox = self._get_cfg(config, "legend.fancybox", True)
+            shadow = self._get_cfg(config, "legend.shadow", False)
+            framealpha = self._get_cfg(config, "legend.frame_alpha", 0.8)
+            facecolor = self._clean_value(self._get_cfg(config, "legend.facecolor", "white"))
+            edgecolor = self._clean_value(self._get_cfg(config, "legend.edgecolor", "black"))
+            edgewidth = self._get_cfg(config, "legend.edge_width", 1.0)
+            
+            lines.extend([
+                "    # Extract legend handles and labels",
+                "    handles, labels = ax.get_legend_handles_labels()"
+            ])
             
             if self._get_cfg(config, "basic.secondary_y_enabled"):
                 lines.extend([
-                    "    # Combine legends from both axes",
-                    "    h1, l1 = ax.get_legend_handles_labels()",
-                    "    try: h2, l2 = ax2.get_legend_handles_labels()",
-                    "    except NameError: h2, l2 = [], []",
-                    f"    ax.legend(h1+h2, l1+l2, loc={loc})"
+                    "    try:",
+                    "        h2, l2 = ax2.get_legend_handles_labels()",
+                    "        handles.extend(h2)",
+                    "        labels.extend(l2)",
+                    "    except NameError:",
+                    "        pass"
                 ])
-            else:
-                lines.append(f"    ax.legend(loc={loc})")
+                
+            if custom_labels_str:
+                custom_labels_list = [l.strip() for l in custom_labels_str.split(',')]
+                lines.extend([
+                    f"    custom_labels = {self._clean_value(custom_labels_list)}",
+                    "    for i in range(min(len(labels), len(custom_labels))):",
+                    "        if custom_labels[i]:",
+                    "            labels[i] = custom_labels[i]"
+                ])
+
+            lines.extend([
+                "    if handles:",
+                "        leg_kwargs = {",
+                f"            'loc': {loc},",
+                f"            'title': {title},",
+                f"            'fontsize': {fontsize},",
+                f"            'title_fontsize': {title_fontsize},",
+                f"            'ncol': {ncol},",
+                f"            'columnspacing': {columnspacing},",
+                f"            'frameon': {frameon},",
+                f"            'fancybox': {fancybox},",
+                f"            'shadow': {shadow},",
+                f"            'framealpha': {framealpha},",
+                f"            'facecolor': {facecolor},",
+                f"            'edgecolor': {edgecolor}",
+                "        }",
+                "        leg = ax.legend(handles, labels, **leg_kwargs)",
+                "        if leg and leg.get_frame():",
+                f"            leg.get_frame().set_linewidth({edgewidth})"
+            ])
+            
         return lines
 
     def _generate_secondary_plot(self, config: Dict[str, Any], x_col: str) -> List[str]:

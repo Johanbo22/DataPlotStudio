@@ -267,7 +267,9 @@ class PlotSettingsPanel(QWidget):
         self.legend_check = lg_tab.legend_check
         self.legend_loc_combo = lg_tab.legend_loc_combo
         self.legend_title_input = lg_tab.legend_title_input
+        self.legend_labels_input = lg_tab.legend_labels_input
         self.legend_size_spin = lg_tab.legend_size_spin
+        self.legend_title_size_spin = lg_tab.legend_title_size_spin
         self.legend_columns_spin = lg_tab.legend_columns_spin
         self.legend_colspace_spin = lg_tab.legend_colspace_spin
 

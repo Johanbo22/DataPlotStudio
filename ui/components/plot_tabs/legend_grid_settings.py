@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame, QTabWidget
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame, QTabWidget, QSizePolicy
 from PyQt6.QtCore import Qt
 
 from ui.theme import ThemeColors
@@ -38,8 +38,8 @@ class LegendGridSettingstab(QWidget):
         layout.addWidget(self.legend_check)
         
         self.legend_tab_widget = QTabWidget()
+        self.legend_tab_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.legend_tab_widget.setVisible(False)
-        self.legend_tab_widget.setMinimumHeight(240)
         
         self.legend_check.toggled.connect(self.legend_tab_widget.setVisible)
         
@@ -52,16 +52,45 @@ class LegendGridSettingstab(QWidget):
             'right', 'center left', 'center right', 'lower center', 'upper center', 'center'])
         layout_tab_layout.addWidget(self.legend_loc_combo)
         
-        layout_tab_layout.addWidget(QLabel("Legend Title:"))
+        legend_title_row_layout = QHBoxLayout()
+        
+        title_col_layout = QVBoxLayout()
+        title_col_layout.addWidget(QLabel("Legend Title:"))
         self.legend_title_input = DataPlotStudioLineEdit()
         self.legend_title_input.setPlaceholderText("Enter legend title")
-        layout_tab_layout.addWidget(self.legend_title_input)
+        title_col_layout.addWidget(self.legend_title_input)
         
-        layout_tab_layout.addWidget(QLabel("Legend Font Size:"))
+        size_col_layout = QVBoxLayout()
+        size_col_layout.addWidget(QLabel("Title Font Size:"))
+        self.legend_title_size_spin = DataPlotStudioSpinBox()
+        self.legend_title_size_spin.setRange(5, 50)
+        self.legend_title_size_spin.setValue(12)
+        size_col_layout.addWidget(self.legend_title_size_spin)
+        
+        legend_title_row_layout.addLayout(title_col_layout)
+        legend_title_row_layout.addLayout(size_col_layout)
+        
+        layout_tab_layout.addLayout(legend_title_row_layout)
+        
+        custom_label_row_layout = QHBoxLayout()
+        
+        labels_input_layout = QVBoxLayout()
+        labels_input_layout.addWidget(QLabel("Custom Labels:"))
+        self.legend_labels_input = DataPlotStudioLineEdit()
+        self.legend_labels_input.setPlaceholderText("E.g. Group A, Group B, Group C")
+        labels_input_layout.addWidget(self.legend_labels_input)
+        
+        label_size_layout = QVBoxLayout()
+        label_size_layout.addWidget(QLabel("Labels Font Size:"))
         self.legend_size_spin = DataPlotStudioSpinBox()
-        self.legend_size_spin.setRange(5, 20)
+        self.legend_size_spin.setRange(5, 50)
         self.legend_size_spin.setValue(10)
-        layout_tab_layout.addWidget(self.legend_size_spin)
+        label_size_layout.addWidget(self.legend_size_spin)
+        
+        custom_label_row_layout.addLayout(labels_input_layout)
+        custom_label_row_layout.addLayout(label_size_layout)
+        
+        layout_tab_layout.addLayout(custom_label_row_layout)
         
         layout_tab_layout.addWidget(QLabel("Number of Columns:"))
         self.legend_columns_spin = DataPlotStudioSpinBox()
@@ -186,7 +215,7 @@ class LegendGridSettingstab(QWidget):
         layout.addWidget(self.independent_grid_check)
 
         self.grid_axis_tab = QTabWidget()
-        self.grid_axis_tab.setMinimumHeight(260)
+        self.grid_axis_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.grid_axis_tab.setVisible(False)
         
         self.independent_grid_check.toggled.connect(self.grid_axis_tab.setVisible)

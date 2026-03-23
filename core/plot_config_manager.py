@@ -207,7 +207,9 @@ class PlotConfigManager:
             "enabled": self.pt.legend_check.isChecked(),
             "location": self.pt.legend_loc_combo.currentText(),
             "title": self.pt.legend_title_input.text(),
+            "custom_labels": self.pt.legend_labels_input.text(),
             "font_size": self.pt.legend_size_spin.value(),
+            "title_font_size": self.pt.legend_title_size_spin.value(),
             "columns": self.pt.legend_columns_spin.value(),
             "column_spacing": self.pt.legend_colspace_spin.value(),
             "frame": self.pt.legend_frame_check.isChecked(),
@@ -415,8 +417,6 @@ class PlotConfigManager:
                 
         sub_conf = config.get("subplots", {})
         self.pt.add_subplots_check.setChecked(sub_conf.get("enabled", False))
-        self.pt.subplot_rows_spin.setValue(sub_conf.get("rows", 1))
-        self.pt.subplot_cols_spin.setValue(sub_conf.get("cols", 1))
         self.pt.subplot_sharex_check.setChecked(sub_conf.get("sharex", False))
         self.pt.subplot_sharey_check.setChecked(sub_conf.get("sharey", False))
         self.pt.freeze_data_check.setChecked(sub_conf.get("freeze_data", False))
@@ -549,7 +549,9 @@ class PlotConfigManager:
         self.pt.legend_check.setChecked(config.get("enabled", True))
         self.pt.legend_loc_combo.setCurrentText(config.get("location", "best"))
         self.pt.legend_title_input.setText(config.get("title", ""))
+        self.pt.legend_labels_input.setText(config.get("custom_labels", ""))
         self.pt.legend_size_spin.setValue(config.get("font_size", 10))
+        self.pt.legend_title_size_spin.setValue(config.get("title_font_size", 12))
         self.pt.legend_columns_spin.setValue(config.get("columns", 1))
         self.pt.legend_colspace_spin.setValue(config.get("column_spacing", 0.5))
         self.pt.legend_frame_check.setChecked(config.get("frame", True))
