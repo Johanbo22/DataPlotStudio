@@ -1,10 +1,10 @@
 # ui/plot_tab_ui.py
 
 from PyQt6.QtWidgets import (
-    QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFontComboBox, QStackedWidget, QToolBox 
+    QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFontComboBox, QStackedWidget, QToolBox, QFrame, QGraphicsDropShadowEffect, QStackedLayout 
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QKeySequence
+from PyQt6.QtCore import Qt, QEvent, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QIcon, QKeySequence, QColor
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from core.resource_loader import get_resource_path
@@ -24,10 +24,35 @@ class PlotTabUI(QWidget):
         main_layout = QHBoxLayout(self)
         
         left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(12, 12, 12, 12)
+        left_layout.setSpacing(10)
+        
         self.canvas = canvas
+        canvas_index = 1
         self.toolbar = toolbar
+        self.toolbar.setObjectName("MatplotlibToolbar")
+        tools_to_remove = ["Subplots", "Save"]
+        for action in self.toolbar.actions():
+            if hasattr(action, "text") and callable(action.text):
+                if action.text() in tools_to_remove:
+                    self.toolbar.removeAction(action)
+        
+        self.canvas_container = QFrame()
+        self.canvas_container.setObjectName("CanvasContainer")
+        
+        canvas_layout = QVBoxLayout(self.canvas_container)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_layout.addWidget(self.canvas)
+        
+        shadow_effect = QGraphicsDropShadowEffect(self)
+        shadow_effect.setBlurRadius(20)
+        shadow_effect.setColor(QColor(0, 0, 0, 30))
+        shadow_effect.setOffset(0, 4)
+        self.canvas_container.setGraphicsEffect(shadow_effect)
+        self.canvas.figure.patch.set_alpha(0.0)
+        
         left_layout.addWidget(self.toolbar)
-        left_layout.addWidget(self.canvas, 1)
+        left_layout.addWidget(self.canvas_container, 1)
         
         right_layout = QVBoxLayout()
         
