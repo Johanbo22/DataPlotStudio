@@ -85,7 +85,7 @@ class HelpDialog(QDialog):
         self.description_label = QLabel(display_desc)
         self.description_label.setWordWrap(True)
         
-        self.description_label.setTextFormat(Qt.TextFormat.RichText)
+        self.description_label.setTextFormat(Qt.TextFormat.MarkdownText)
         self.description_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.description_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.description_label.setProperty("styleClass", "help_description")
