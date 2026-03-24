@@ -122,9 +122,9 @@ class PlotTab(PlotTabUI):
         
         # Categories
         self.plot_categories = {
-            "Basic & Relational": ["Line", "Scatter", "Bar", "Area", "Pie", "Stem", "Stairs"],
+            "Basic and Relational": ["Line", "Scatter", "Bar", "Area", "Pie", "Stem", "Stairs"],
             "Distribution": ["Histogram", "Box", "Violin", "KDE", "ECDF", "Count Plot", "Eventplot"],
-            "2D, Gridded & 3D": ["Heatmap", "Hexbin", "2D Density", "2D Histogram", "Image Show (imshow)", "pcolormesh", "Contour", "Contourf", "Stackplot"],
+            "2D, Gridded and 3D": ["Heatmap", "Hexbin", "2D Density", "2D Histogram", "Image Show (imshow)", "pcolormesh", "Contour", "Contourf", "Stackplot"],
             "Vector Fields": ["Barbs", "Quiver", "Streamplot"],
             "Triangulation": ["Tricontour", "Tricontourf", "Tripcolor", "Triplot"],
             "Geospatial": ["GeoSpatial"]
@@ -269,6 +269,7 @@ class PlotTab(PlotTabUI):
         self.view.add_subplots_check.stateChanged.connect(self.on_subplot_active)
         self.view.use_subset_check.stateChanged.connect(self.use_subset)
         self.view.secondary_y_check.stateChanged.connect(lambda state: self._toggle_secondary_input(bool(state)))
+        self.view.secondary_plot_type_combo.currentTextChanged.connect(lambda _: self._update_customization_visibility(self.current_plot_type_name))
     
     def _connect_appearance_tab_signals(self) -> None:
         """Connect signals for the Appearance tab"""
@@ -1811,36 +1812,7 @@ class PlotTab(PlotTabUI):
         
         self.view.custom_tabs.setTabVisible(6, plot_type == "GeoSpatial")
 
-        line_plots = ["Line", "Area", "Step", "Stairs"]
-        bar_plots = ["Bar", "Count Plot", "Stem"]
-        hist_plots = ["Histogram"]
-        scatter_plots = ["Scatter"]
-        pie_plots = ["Pie"]
-
-        show_markers = False
-        show_error_bars = False
-        
-        if plot_type in line_plots:
-            self.view.advanced_stack.setCurrentIndex(0)
-            show_markers = True
-            show_error_bars = True
-        elif plot_type in hist_plots:
-            self.view.advanced_stack.setCurrentIndex(1)
-            show_error_bars = False
-        elif plot_type in bar_plots or plot_type in ["Box", "Violin"]:
-            self.view.advanced_stack.setCurrentIndex(1)
-            show_error_bars = True
-        elif plot_type in scatter_plots:
-            self.view.advanced_stack.setCurrentIndex(2)
-            show_markers = True
-            show_error_bars = True
-        elif plot_type in pie_plots:
-            self.view.advanced_stack.setCurrentIndex(3)
-        else:
-            self.view.advanced_stack.setCurrentIndex(4)
-        
-        self.view.marker_group.setVisible(show_markers)
-        self.view.error_bars_group.setVisible(show_error_bars)
+        self._update_customization_visibility(plot_type)
 
 
         #plots with multiple ycols
@@ -1884,6 +1856,57 @@ class PlotTab(PlotTabUI):
         self.view.flip_axes_check.setEnabled(plot_type not in incompatible_plots)
         if plot_type in incompatible_plots:
             self.view.flip_axes_check.setChecked(False)
+    
+    def _update_customization_visibility(self, primary_plot_type: str) -> None:
+        """
+        Updates visibility of customization options based on active plot types
+        """
+        line_plots = ["Line", "Area", "Step", "Stairs"]
+        bar_plots = ["Bar", "Count Plot", "Stem"]
+        hist_plots = ["Histogram", "Box", "Violin"]
+        scatter_plots = ["Scatter"]
+        pie_plots = ["Pie"]
+        
+        active_plot_types = [primary_plot_type]
+        
+        if self.view.secondary_y_check.isChecked() and self.view.secondary_y_check.isEnabled():
+            active_plot_types.append(self.view.secondary_plot_type_combo.currentText())
+            
+        show_line = False
+        show_bar_hist = False
+        show_scatter = False
+        show_pie = False
+        
+        show_markers = False
+        show_error_bars = False
+        
+        for p_type in active_plot_types:
+            if p_type in line_plots:
+                show_line = True
+                show_markers = True
+                show_error_bars = True
+            elif p_type in hist_plots:
+                show_bar_hist = True
+                if p_type in ["Box", "Violin"]:
+                    show_error_bars = True
+            elif p_type in bar_plots:
+                show_bar_hist = True
+                show_error_bars = True
+            elif p_type in scatter_plots:
+                show_scatter = True
+                show_markers = True
+                show_error_bars = True
+            elif p_type in pie_plots:
+                show_pie = True
+        
+        self.view.page_line.setVisible(show_line)
+        self.view.page_bar_hist.setVisible(show_bar_hist)
+        self.view.page_scatter.setVisible(show_scatter)
+        self.view.page_pie.setVisible(show_pie)
+        self.view.page_empty.setVisible(not any([show_line, show_bar_hist, show_scatter, show_pie]))
+        
+        self.view.marker_group.setVisible(show_markers)
+        self.view.error_bars_group.setVisible(show_error_bars)
 
     def on_data_changed(self):
         """Handle data column selection change"""
@@ -2416,6 +2439,8 @@ class PlotTab(PlotTabUI):
         if self.view.secondary_y_check.isChecked() and self.view.secondary_y_check.isEnabled():
             general_kwargs["secondary_y"] = self.view.secondary_y_column.currentText()
             general_kwargs["secondary_plot_type"] = self.view.secondary_plot_type_combo.currentText()
+        
+        general_kwargs["primary_on_top"] = self.view.secondary_zorder_check.isChecked()
         
         cmap = self.view.palette_combo.currentText()
         if cmap and cmap != "None":
@@ -3371,6 +3396,9 @@ class PlotTab(PlotTabUI):
         self.view.secondary_y_column.setEnabled(is_enabled)
         if hasattr(self.view, "secondary_plot_type_combo"):
             self.view.secondary_plot_type_combo.setEnabled(is_enabled)
+        if hasattr(self.view, "secondary_zorder_check"):
+            self.view.secondary_zorder_check.setEnabled(is_enabled)
+        self._update_customization_visibility(self.current_plot_type_name)
     
     def load_config(self, config: dict) -> None:
         """Load plot configuration"""

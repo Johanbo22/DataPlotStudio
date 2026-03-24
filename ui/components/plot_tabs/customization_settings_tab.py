@@ -37,8 +37,10 @@ class CustomizationSettingsTab(QWidget):
 
     def _setup_dynamic_stack(self, parent_layout: QVBoxLayout) -> None:
         """Sets up the stacked widget that swaps UI parameters based on plot type."""
-        self.advanced_stack = AutoResizingStackedWidget()
-        self.advanced_stack.currentChanged.connect(lambda: self.advanced_stack.updateGeometry())
+        self.advanced_stack = QWidget()
+        self.advanced_stack_layout = QVBoxLayout(self.advanced_stack)
+        self.advanced_stack_layout.setContentsMargins(0, 0, 0, 0)
+        self.advanced_stack_layout.setSpacing(15)
 
         self._setup_line_page()
         self._setup_bar_hist_page()
@@ -97,7 +99,7 @@ class CustomizationSettingsTab(QWidget):
         layout.addWidget(group)
         layout.addStretch()
         
-        self.advanced_stack.addWidget(self.page_line)
+        self.advanced_stack_layout.addWidget(self.page_line)
 
     def _setup_bar_hist_page(self) -> None:
         self.page_bar_hist = QWidget()
@@ -106,7 +108,6 @@ class CustomizationSettingsTab(QWidget):
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
 
         tab_widget = QTabWidget()
-        tab_widget.setMinimumHeight(240)
 
         bar_tab = QWidget()
         bar_layout = QVBoxLayout(bar_tab)
@@ -179,7 +180,7 @@ class CustomizationSettingsTab(QWidget):
         layout.addWidget(tab_widget)
         layout.addStretch()
 
-        self.advanced_stack.addWidget(self.page_bar_hist)
+        self.advanced_stack_layout.addWidget(self.page_bar_hist)
 
     def _setup_scatter_page(self) -> None:
         self.page_scatter = QWidget()
@@ -237,7 +238,7 @@ class CustomizationSettingsTab(QWidget):
         layout.addWidget(self.scatter_group)
         layout.addStretch()
 
-        self.advanced_stack.addWidget(self.page_scatter)
+        self.advanced_stack_layout.addWidget(self.page_scatter)
 
     def _setup_pie_page(self) -> None:
         self.page_pie = QWidget()
@@ -298,7 +299,7 @@ class CustomizationSettingsTab(QWidget):
         layout.addWidget(self.pie_group)
         layout.addStretch()
 
-        self.advanced_stack.addWidget(self.page_pie)
+        self.advanced_stack_layout.addWidget(self.page_pie)
 
     def _setup_empty_page(self) -> None:
         """A fallback empty page for unhandled plot types to prevent artifacting."""
@@ -306,7 +307,7 @@ class CustomizationSettingsTab(QWidget):
         layout = QVBoxLayout(self.page_empty)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
-        self.advanced_stack.addWidget(self.page_empty)
+        self.advanced_stack_layout.addWidget(self.page_empty)
 
     def _setup_marker_group(self, parent_layout: QVBoxLayout) -> None:
         self.marker_group = DataPlotStudioGroupBox("Marker Properties")
