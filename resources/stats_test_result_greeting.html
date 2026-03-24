@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 40px;
+            background-color: #f1f5f9;
+            margin: 0;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #64748b;
+        }
+
+        .guide-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            max-width: 600px;
+            margin: 0 auto;
+            border-top: 4px solid #3b82f6;
+        }
+
+        h4 {
+            color: #1e40af;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        ol {
+            padding-left: 24px;
+            margin: 0;
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        li {
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        li::marker {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        b {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hero">
+        <h2>Statistical Test Suite</h2>
+        <div class="subtitle">Welcome to the DataPlotStudio analytics engine</div>
+    </div>
+    <div class="guide-card">
+        <h4>How to run an analysis</h4>
+        <ol>
+            <li>Navigate to the <b>Data Table</b> tab.</li>
+            <li><b>Right-click</b> anywhere on the table to open the context menu.</li>
+            <li>Select <b>Table Settings...</b></li>
+            <li>Under the <b>Behavior</b> option, set <b>Selection Behavior</b> to <b>Select columns</b>.</li>
+            <li>Return to the table and select exactly <b>two numeric columns</b>.</li>
+            <li><b>Right-click</b> your selection.</li>
+            <li>Select <b>Run Statistical Test...</b> and choose your desired test.</li>
+        </ol>
+    </div>
+    <div class="footer">Your test results, p-values, and statistical interpretations will appear here.</div>
+</body>
+
+</html>

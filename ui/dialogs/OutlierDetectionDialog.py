@@ -1,23 +1,13 @@
 # ui/dialogs/OutlierDetectionDialog.py
-from PyQt6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QTableView,
-    QMessageBox,
-    QInputDialog
-)
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableView, QMessageBox, QInputDialog, QWidget, QSplitter, QHeaderView, QApplication
+from PyQt6.QtCore import Qt, QTimer
+
 from core.data_handler import DataHandler
 from ui.theme import ThemeColors
-from ui.widgets import DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox
-from ui.widgets.AnimatedButton import DataPlotStudioButton
-from ui.widgets.AnimatedGroupBox import DataPlotStudioGroupBox
+from ui.widgets import DataPlotStudioComboBox, DataPlotStudioDoubleSpinBox, DataPlotStudioButton, DataPlotStudioGroupBox, DataPlotStudioSpinBox
 from ui.data_table_model import DataTableModel
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
-from ui.widgets.AnimatedSpinBox import DataPlotStudioSpinBox
 
 try:
     from scipy import stats
@@ -26,16 +16,29 @@ except ImportError:
 
 
 class OutlierDetectionDialog(QDialog):
-    def __init__(self, data_handler, method="z_score", parent=None):
+    def __init__(self, data_handler: DataHandler, method="z_score", parent=None):
         super().__init__(parent)
         self.data_handler: DataHandler = data_handler
         self.method = method
         self.outlier_indices = []
+        
+        self.debounce_timer = QTimer()
+        self.debounce_timer.setSingleShot(True)
+        self.debounce_timer.setInterval(400)
+        self.debounce_timer.timeout.connect(self.apply_detection)
 
         self.setWindowTitle(
             f"Outlier Detection Tool - {method.replace('_', ' ').title()}"
         )
         self.resize(900, 750)
+        
+        self.numeric_columns = self.data_handler.df.select_dtypes(include=["number"]).columns.tolist()
+        
+        if not self.numeric_columns:
+            QMessageBox.warning(self, "No numeric data", "The current dataset contains no numeric columns")
+            QTimer.singleShot(0, self.reject)
+            return
+        
         self.init_ui()
         self.apply_detection()
 
@@ -68,7 +71,9 @@ class OutlierDetectionDialog(QDialog):
             self.parameter_spin.setRange(1.0, 10.0)
             self.parameter_spin.setValue(3.0)
             self.parameter_spin.setSingleStep(0.1)
-            self.parameter_spin.valueChanged.connect(self.apply_detection)
+            self.parameter_spin.setSuffix(" σ")
+            self.parameter_spin.setToolTip("Number of standard deviations from the mean to define an outlier")
+            self.parameter_spin.valueChanged.connect(self.debounce_timer.start)
             settings_layout.addWidget(self.parameter_spin)
 
         elif self.method == "iqr":
@@ -77,7 +82,9 @@ class OutlierDetectionDialog(QDialog):
             self.parameter_spin.setRange(0.5, 5.0)
             self.parameter_spin.setValue(1.5)
             self.parameter_spin.setSingleStep(0.1)
-            self.parameter_spin.valueChanged.connect(self.apply_detection)
+            self.parameter_spin.setSuffix(" x")
+            self.parameter_spin.setToolTip("Multiplier for the Interquartile Range to create upper and lower bounds")
+            self.parameter_spin.valueChanged.connect(self.debounce_timer.start)
             settings_layout.addWidget(self.parameter_spin)
 
         elif self.method == "isolation_forest":
@@ -86,10 +93,11 @@ class OutlierDetectionDialog(QDialog):
             self.parameter_spin.setRange(0.01, 0.5)
             self.parameter_spin.setValue(0.05)
             self.parameter_spin.setSingleStep(0.01)
-            self.parameter_spin.valueChanged.connect(self.apply_detection)
+            self.parameter_spin.setToolTip("Expected proportion of outliers in the dataset")
+            self.parameter_spin.valueChanged.connect(self.debounce_timer.start)
             settings_layout.addWidget(self.parameter_spin)
 
-        refresh_button = DataPlotStudioButton("Recalculate", base_color_hex=ThemeColors.MainColor)
+        refresh_button = DataPlotStudioButton("Recalculate", base_color_hex=ThemeColors.MainColor, text_color_hex="white")
         refresh_button.clicked.connect(self.apply_detection)
         settings_layout.addWidget(refresh_button)
 
@@ -99,13 +107,20 @@ class OutlierDetectionDialog(QDialog):
         # INfo
         self.info_label = QLabel("Ready")
         self.info_label.setObjectName("outlier_info_label")
+        self.info_label.setProperty("state", "normal")
         layout.addWidget(self.info_label)
+        
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         # Plot area for visualization
+        plot_widget = QWidget()
+        plot_layout = QVBoxLayout(plot_widget)
+        plot_layout.setContentsMargins(0, 0, 0, 0)
+        
         plot_group = DataPlotStudioGroupBox("Distribution")
-        plot_layout = QVBoxLayout()
-
-        # Plot controls
+        group_plot_layout = QVBoxLayout()
+        
+        # Plot Controls
         plot_controls_layout = QHBoxLayout()
         plot_controls_layout.addWidget(QLabel("Bins"))
         self.bins_spin = DataPlotStudioSpinBox()
@@ -115,20 +130,31 @@ class OutlierDetectionDialog(QDialog):
         self.bins_spin.valueChanged.connect(self.on_bins_changed)
         plot_controls_layout.addWidget(self.bins_spin)
         plot_controls_layout.addStretch()
-        plot_layout.addLayout(plot_controls_layout)
-
+        group_plot_layout.addLayout(plot_controls_layout)
+        
         self.figure = Figure(figsize=(5, 3), dpi=100)
         self.figure.patch.set_facecolor("#2b2b2b")
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setObjectName("outlier_canvas_container")
-
-        plot_layout.addWidget(self.canvas)
-        plot_group.setLayout(plot_layout)
-        layout.addWidget(plot_group, stretch=1)
-
-        # The Preview table
+        
+        group_plot_layout.addWidget(self.canvas)
+        plot_group.setLayout(group_plot_layout)
+        plot_layout.addWidget(plot_group)
+        
+        main_splitter.addWidget(plot_widget)
+        
+        # The Preview tabelks
         self.table_view = QTableView()
-        layout.addWidget(self.table_view)
+        self.table_view.setAlternatingRowColors(True)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.horizontalHeader().setObjectName("MainDataHeader")
+        self.table_view.verticalHeader().setObjectName("MainDataHeader")
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        main_splitter.addWidget(self.table_view)
+        
+        main_splitter.setSizes([400, 350])
+        layout.addWidget(main_splitter, stretch=1)
 
         # Action buttons
         button_layout = QHBoxLayout()
@@ -163,6 +189,7 @@ class OutlierDetectionDialog(QDialog):
         layout.addLayout(button_layout)
 
     def apply_detection(self) -> None:
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             selected_col_text = self.column_combo.currentText()
             columns = (
@@ -189,7 +216,18 @@ class OutlierDetectionDialog(QDialog):
                 self.data_handler, highlighted_rows=self.outlier_indices
             )
             self.table_view.setModel(self.model)
-            self.info_label.setText(f"Found {len(self.outlier_indices)} outliers.")
+            outlier_count = len(self.outlier_indices)
+            self.info_label.setText(f"Found {outlier_count} outliers.")
+            
+            self.info_label.setProperty("state", "warning" if outlier_count > 0 else "success")
+            self.info_label.style().unpolish(self.info_label)
+            self.info_label.style().polish(self.info_label)
+            
+            has_outliers = outlier_count > 0
+            self.flag_button.setEnabled(has_outliers)
+            self.remove_button.setEnabled(has_outliers)
+            if self.method != "isolation_forest":
+                self.clip_button.setEnabled(has_outliers)
 
             self.update_plot(columns, param)
 
@@ -197,9 +235,18 @@ class OutlierDetectionDialog(QDialog):
             self.info_label.setText(
                 f"ApplyOutlierDetectionError: {str(ApplyOutlierDetectionError)}"
             )
+            self.info_label.setProperty("state", "error")
+            self.info_label.style().unpolish(self.info_label)
+            self.info_label.style().polish(self.info_label)
+            
             self.outlier_indices = []
+            self.flag_button.setEnabled(False)
+            self.remove_button.setEnabled(False)
+            self.clip_button.setEnabled(False)
+        finally:
+            QApplication.restoreOverrideCursor()
 
-    def on_bins_changed(self):
+    def on_bins_changed(self) -> None:
         """Refreshes the plot when bin count is change"""
         selected_col_text = self.column_combo.currentText()
         columns = (
@@ -210,7 +257,7 @@ class OutlierDetectionDialog(QDialog):
         param = self.parameter_spin.value()
         self.update_plot(columns, param)
 
-    def update_plot(self, columns, param):
+    def update_plot(self, columns: list[str], param: float) -> None:
         """Updates the distribution plot"""
         self.figure.clear()
 
@@ -252,6 +299,7 @@ class OutlierDetectionDialog(QDialog):
         n, bins, patches = ax.hist(
             data, bins=bins_count, color="#3498db", alpha=0.7, edgecolor="#2b2b2b"
         )
+        ax.grid(True, linestyle=":", alpha=0.3, color="white", zorder=0)
 
         lower_bound, upper_bound = None, None
         if self.method == "z_score" and stats:
@@ -271,6 +319,7 @@ class OutlierDetectionDialog(QDialog):
         else:
             title = f"Distribution: {col_name}"
 
+        xlims = ax.get_xlim()
         # Draw threshold lines
         if lower_bound is not None:
             ax.axvline(
@@ -279,7 +328,10 @@ class OutlierDetectionDialog(QDialog):
                 linestyle="--",
                 linewidth=2,
                 label="Lower Bound",
+                zorder=4
             )
+            ax.axvspan(xlims[0], lower_bound, color="#e74c3c", alpha=0.15, zorder=1)
+            
         if upper_bound is not None:
             ax.axvline(
                 upper_bound,
@@ -287,7 +339,11 @@ class OutlierDetectionDialog(QDialog):
                 linestyle="--",
                 linewidth=2,
                 label="Upper Bound",
+                zorder=4
             )
+            ax.axvspan(upper_bound, xlims[1], color="#e74c3c", alpha=0.15, zorder=1)
+        
+        ax.set_xlim(xlims)
 
         ax.set_title(title, color="white", pad=10)
 
@@ -299,7 +355,7 @@ class OutlierDetectionDialog(QDialog):
         self.figure.tight_layout()
         self.canvas.draw()
 
-    def clip_outliers(self):
+    def clip_outliers(self) -> None:
         """Clip outliers to a calculated threshold instead of removing rows"""
         if not self.outlier_indices and self.method != "isolation_forest":
             return
@@ -328,14 +384,14 @@ class OutlierDetectionDialog(QDialog):
             )
             self.accept()
 
-    def remove_outliers(self):
+    def remove_outliers(self) -> None:
         if not self.outlier_indices:
             return
 
         reply = QMessageBox.question(
             self,
             "Confirm Removal",
-            f"Are you sure you wan to remove: {len(self.outlier_indices)} rows from the current dataset?",
+            f"Are you sure you want to remove: {len(self.outlier_indices)} rows from the current dataset?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
@@ -343,7 +399,7 @@ class OutlierDetectionDialog(QDialog):
             self.data_handler.clean_data("remove_rows", rows=self.outlier_indices)
             self.accept()
     
-    def flag_outliers(self):
+    def flag_outliers(self) -> None:
         """Flags detected outliers in a new column as True"""
         if not self.outlier_indices:
             return

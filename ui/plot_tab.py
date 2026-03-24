@@ -153,6 +153,8 @@ class PlotTab(PlotTabUI):
         self.update_column_combo()
         
         self._select_plot_in_toolbox("Line")
+        
+        self.set_empty_state_greeting()
 
         # Initialize the themes
         self.theme_dir = Path.cwd() / "resources" / "themes"
@@ -2440,8 +2442,6 @@ class PlotTab(PlotTabUI):
             general_kwargs["secondary_y"] = self.view.secondary_y_column.currentText()
             general_kwargs["secondary_plot_type"] = self.view.secondary_plot_type_combo.currentText()
         
-        general_kwargs["primary_on_top"] = self.view.secondary_zorder_check.isChecked()
-        
         cmap = self.view.palette_combo.currentText()
         if cmap and cmap != "None":
             if plot_type in ["Bar", "Box", "Violin", "Count Plot"]:
@@ -2661,6 +2661,9 @@ class PlotTab(PlotTabUI):
             self.status_bar.log(f"Tight layout not applied due to error: {str(TightLayoutError)}", "ERROR")
         
         self.canvas.draw()
+        
+        if hasattr(self, "canvas_stack") and hasattr(self, "canvas"):
+            self.canvas_stack.setCurrentWidget(self.canvas)
 
         if not is_fast_render:
             self._update_overlay()  
@@ -3356,6 +3359,9 @@ class PlotTab(PlotTabUI):
         self.view.quick_filter_input.blockSignals(False)
 
         self.canvas.draw()
+        if hasattr(self, "canvas_stack") and hasattr(self, "empty_state_view"):
+            self.canvas_stack.setCurrentWidget(self.empty_state_view)
+        
         self.selection_overlay.hide()
 
         if self.line_customizations is not None:
@@ -3746,3 +3752,19 @@ class PlotTab(PlotTabUI):
         except Exception as EditThemeJSONError:
             self.status_bar.log(f"Failed to edit theme: {EditThemeJSONError}", "ERROR")
             QMessageBox.critical(self, "Error", f"Could not edit theme: {str(EditThemeJSONError)}")
+
+    def set_empty_state_greeting(self) -> None:
+        try:
+            greeting_path = Path.cwd() / "resources" / "plot_studio_greeting.html"
+            if greeting_path.exists():
+                with open(greeting_path, "r", encoding="utf-8") as file:
+                    greeting_html = file.read()
+            else:
+                self.status_bar.log("Plotting Studio Greeting HTML File not found", "ERROR")
+                greeting_html = "<div style='text-align: center; font-family: sans-serif; padding: 40px; color: #64748b;'><h2>Plot Studio</h2><p>Design and customize your visualizations.</p></div>"
+        except Exception as ReadGreetingError:
+            self.status_bar.log(f"Failed to load greeting HTML: {str(ReadGreetingError)}", "ERROR")
+            greeting_html = "<div style='text-align: center; font-family: sans-serif; padding: 40px; color: #64748b;'><h2>Plot Studio</h2></div>"
+            
+        if hasattr(self, "empty_state_view") and self.empty_state_view is not None:
+            self.empty_state_view.setHtml(greeting_html)

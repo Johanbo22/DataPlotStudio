@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 40px;
+            background-color: #f1f5f9;
+            margin: 0;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 90vh;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #64748b;
+        }
+
+        .guide-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            max-width: 600px;
+            margin: 0 auto;
+            border-top: 4px solid #3b82f6;
+        }
+
+        h4 {
+            color: #1e40af;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        ol {
+            padding-left: 24px;
+            margin: 0;
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        li {
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        li::marker {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        b {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hero">
+        <h2>Plot Studio</h2>
+        <div class="subtitle">Design and customize your visualizations</div>
+    </div>
+    <div class="guide-card">
+        <h4>Getting Started</h4>
+        <ol>
+            <li>Navigate to the <b>Data Table</b> tab and ensure your dataset is loaded.</li>
+            <li>Select a <b>Plot Type</b> from the top-right toolbar.</li>
+            <li>Map your columns to the <b>X and Y axes</b> in the General settings.</li>
+            <li>Customize appearance, styling, and annotations using the property tabs.</li>
+        </ol>
+    </div>
+    <div class="footer">Your final visualization and interactive canvas will appear here.</div>
+</body>
+
+</html>

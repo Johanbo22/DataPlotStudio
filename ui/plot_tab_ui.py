@@ -3,6 +3,7 @@
 from PyQt6.QtWidgets import (
     QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFontComboBox, QStackedWidget, QToolBox, QFrame, QGraphicsDropShadowEffect, QStackedLayout 
 )
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import Qt, QEvent, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QIcon, QKeySequence, QColor
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -40,9 +41,16 @@ class PlotTabUI(QWidget):
         self.canvas_container = QFrame()
         self.canvas_container.setObjectName("CanvasContainer")
         
-        canvas_layout = QVBoxLayout(self.canvas_container)
-        canvas_layout.setContentsMargins(0, 0, 0, 0)
-        canvas_layout.addWidget(self.canvas)
+        self.canvas_stack = QStackedLayout(self.canvas_container)
+        self.canvas_stack.setContentsMargins(0, 0, 0, 0)
+        self.canvas_stack.addWidget(self.canvas)
+        
+        self.empty_state_view = QWebEngineView()
+        self.empty_state_view.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        self.web_view = self.empty_state_view
+        self.canvas_stack.addWidget(self.empty_state_view)
+        
+        self.canvas_stack.setCurrentWidget(self.empty_state_view)
         
         shadow_effect = QGraphicsDropShadowEffect(self)
         shadow_effect.setBlurRadius(20)
