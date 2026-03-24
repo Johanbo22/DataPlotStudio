@@ -555,7 +555,7 @@ class MainWindow(QWidget):
             )
             return
         
-        source_info = self.data_handler.get_data_source_info()
+        source_info = self.data_handler.get_data_source()
         data_filepath = source_info.get("file_path")
         is_temp = source_info.get("is_temp_file", False)
 

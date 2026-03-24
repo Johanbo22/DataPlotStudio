@@ -1616,7 +1616,7 @@ class PlotEngine:
             try:
                 provider = ctx.providers.OpenStreetMap.Mapnik
                 source_map = {
-                    "OpenStretMap": ctx.providers.OpenStreetMap.Mapnik,
+                    "OpenStreetMap": ctx.providers.OpenStreetMap.Mapnik,
                     "CartoDB Positron": ctx.providers.CartoDB.Positron,
                     "CartoDB DarkMatter": ctx.providers.CartoDB.DarkMatter,
                     "Esri Satellite": ctx.providers.Esri.WorldImagery,
