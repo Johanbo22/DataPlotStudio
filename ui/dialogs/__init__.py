@@ -32,8 +32,10 @@ from .AppendDialog import AppendDialog
 from .MacroPreviewDialog import MacroPreviewDialog
 from .ConsoleDialog import ConsoleDialog
 from .ColumnReorderDialog import ColumnReorderDialog
+from .HelpExplorerDialog import HelpExplorerDialog
 
 __all__ = [
+    "HelpExplorerDialog",
     "ColumnReorderDialog",
     "ConsoleDialog",
     "MacroPreviewDialog",

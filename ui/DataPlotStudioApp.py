@@ -185,6 +185,7 @@ class DataPlotStudio(QMainWindow):
         # App level
         self.menu_bar.settings_action.triggered.connect(self.open_settings)
         self.menu_bar.about_action.triggered.connect(self.show_about)
+        self.menu_bar.explore_help_action.triggered.connect(self.main_widget._show_help_explorer)
     
     def _reset_window_layout(self) -> None:
         """Panic button for lost docks: returns the UI to a tabbed starting state."""

@@ -2,7 +2,16 @@ import logging
 import sqlite3
 import textwrap
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class HelpTopicDetail:
+    topic_id: str
+    title: str
+    description: str
+    detailed_description: Optional[str]
+    link: Optional[str]
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +79,66 @@ class HelpManager:
         finally:
             conn.close()
     
-    def close(self) -> None:
-        """Deprecated: Connection is now managed per-request. Kept for API backward compatibility."""
-        pass
+    def get_all_help_topics(self) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Retrieves all available help topics from database
+        """
+        conn = self._get_connection()
+        if not conn:
+            return {}
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT topic_id, title, COALESCE(type, 'Uncategorized') as category FROM help_topics ORDER BY category ASC, title ASC")
+            rows = cursor.fetchall()
+            grouped_topics: Dict[str, List[Dict[str, str]]] = {}
+            for row in rows:
+                category = row["category"]
+                if category not in grouped_topics:
+                    grouped_topics[category] = []
+                    
+                grouped_topics[category].append({
+                    "topic_id": row["topic_id"], 
+                    "title": row["title"]
+                })
+                
+            return grouped_topics
+        except sqlite3.Error as error:
+            logger.error(f"Error fetching all help topics: {str(error)}")
+            return {}
+        finally:
+            conn.close()
+    
+    def get_detailed_help_topic(self, topic_id: str) -> Optional[HelpTopicDetail]:
+        """
+        Fetches the detailed description of a topic id from the database
+        """
+        conn = self._get_connection()
+        if not conn:
+            return None
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT title, description, detailed_description, link FROM help_topics WHERE topic_id = ?",
+                (topic_id,)
+            )
+            row = cursor.fetchone()
+            
+            if row:
+                raw_desc: Optional[str] = row["description"]
+                raw_detailed_desc: Optional[str] = row["detailed_description"]
+                
+                return HelpTopicDetail(
+                    topic_id=topic_id,
+                    title=row["title"],
+                    description=textwrap.dedent(raw_desc).strip() if raw_desc else "",
+                    detailed_description=textwrap.dedent(raw_detailed_desc).strip() if raw_detailed_desc else None,
+                    link=row["link"].strip() if isinstance(row["link"], str) else None
+                )
+            return None
+        except sqlite3.Error as error:
+            logger.error(f"Error fetching detailed data for topic_id {topic_id}: {str(error)}")
+            return None
+        finally:
+            conn.close()

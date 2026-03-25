@@ -126,6 +126,10 @@ class MenuBar(QMenuBar):
         self.addMenu(help_menu)
         
         self.about_action = QAction(IconBuilder.build(IconType.Information), self.tr("&About"), parent)
-        self.about_action.setShortcut("F1")
         self.about_action.setToolTip(self.tr("View application information and version"))
         help_menu.addAction(self.about_action)
+        
+        self.explore_help_action = QAction(IconBuilder.build(IconType.Help), self.tr("Help Explorer"), parent)
+        self.explore_help_action.setShortcut("F1")
+        self.explore_help_action.setStatusTip("Open the Help Explorer menu")
+        help_menu.addAction(self.explore_help_action)

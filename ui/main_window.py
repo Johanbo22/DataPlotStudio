@@ -16,7 +16,7 @@ from core.project_manager import ProjectManager
 from core.code_exporter import CodeExporter
 from core.logger import Logger
 from ui.status_bar import StatusBar
-from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog, ConsoleDialog)
+from ui.dialogs import (ProgressDialog, GoogleSheetsDialog, DatabaseConnectionDialog, ExportDialog, GoogleSheetsExportDialog, ConsoleDialog, HelpExplorerDialog)
 from ui.animations import (FileImportAnimation, FailedAnimation, SavedProjectAnimation, GoogleSheetsImportAnimation, DatabaseImportAnimation, ProjectOpenAnimation, ScriptLogExportAnimation, ExportFileAnimation)
 from ui.icons import IconBuilder, IconType
 
@@ -696,6 +696,10 @@ class MainWindow(QWidget):
                 if self.progress_dialog:
                     self.progress_dialog.accept()
                     self.progress_dialog = None
+    
+    def _show_help_explorer(self) -> None:
+        self.help_explorer = HelpExplorerDialog(self)
+        self.help_explorer.show()
     
     def undo(self) -> None:
         if self.data_handler.undo():
