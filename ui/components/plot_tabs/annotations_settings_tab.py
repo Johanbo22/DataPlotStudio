@@ -53,6 +53,70 @@ class AnnotationsSettingsTab(QWidget):
         self.auto_annotate_col_combo.setEnabled(False)
         auto_layout.addWidget(self.auto_annotate_col_combo)
         
+        # Font styling settigs
+        font_layout = QHBoxLayout()
+        
+        size_layout = QVBoxLayout()
+        size_layout.addWidget(QLabel("Font-size:"))
+        self.auto_annotate_fontsize_spin = DataPlotStudioSpinBox()
+        self.auto_annotate_fontsize_spin.setRange(6, 36)
+        self.auto_annotate_fontsize_spin.setValue(10)
+        self.auto_annotate_fontsize_spin.setEnabled(False)
+        size_layout.addWidget(self.auto_annotate_fontsize_spin)
+        
+        weight_layout = QVBoxLayout()
+        weight_layout.addWidget(QLabel("Font Weight:"))
+        self.auto_annotate_weight_combo = DataPlotStudioComboBox()
+        self.auto_annotate_weight_combo.addItems(["normal", "bold", "heavy", "light"])
+        self.auto_annotate_weight_combo.setEnabled(False)
+        weight_layout.addWidget(self.auto_annotate_weight_combo)
+        
+        font_layout.addLayout(size_layout)
+        font_layout.addLayout(weight_layout)
+        auto_layout.addLayout(font_layout)
+        
+        # Color options
+        auto_layout.addWidget(QLabel("Font Color:"))
+        color_layout = QHBoxLayout()
+        self.auto_annotate_color_button = DataPlotStudioButton("Choose", parent=self)
+        self.auto_annotate_color_button.setEnabled(False)
+        self.auto_annotate_color_label = QLabel("Black")
+        color_layout.addWidget(self.auto_annotate_color_button)
+        color_layout.addWidget(self.auto_annotate_color_label)
+        auto_layout.addLayout(color_layout)
+        
+        # Position
+        offset_layout = QHBoxLayout()
+        
+        x_offset_layout = QVBoxLayout()
+        x_offset_layout.addWidget(QLabel("X Offset"))
+        self.auto_annotate_x_offset_spin = DataPlotStudioDoubleSpinBox()
+        self.auto_annotate_x_offset_spin.setRange(-200.0, 200.0)
+        self.auto_annotate_x_offset_spin.setValue(0.0)
+        self.auto_annotate_x_offset_spin.setEnabled(False)
+        x_offset_layout.addWidget(self.auto_annotate_x_offset_spin)
+        
+        y_offset_layout = QVBoxLayout()
+        y_offset_layout.addWidget(QLabel("Y Offset:"))
+        self.auto_annotate_y_offset_spin = DataPlotStudioDoubleSpinBox()
+        self.auto_annotate_y_offset_spin.setRange(-200.0, 200.0)
+        self.auto_annotate_y_offset_spin.setValue(5.0)
+        self.auto_annotate_y_offset_spin.setEnabled(False)
+        y_offset_layout.addWidget(self.auto_annotate_y_offset_spin)
+
+        rotation_layout = QVBoxLayout()
+        rotation_layout.addWidget(QLabel("Rotation (°):"))
+        self.auto_annotate_rotation_spin = DataPlotStudioSpinBox()
+        self.auto_annotate_rotation_spin.setRange(-360, 360)
+        self.auto_annotate_rotation_spin.setValue(0)
+        self.auto_annotate_rotation_spin.setEnabled(False)
+        rotation_layout.addWidget(self.auto_annotate_rotation_spin)
+        
+        offset_layout.addLayout(x_offset_layout)
+        offset_layout.addLayout(y_offset_layout)
+        offset_layout.addLayout(rotation_layout)
+        auto_layout.addLayout(offset_layout)
+        
         auto_layout.addStretch()
         tab_widget.addTab(auto_tab, "Data Points")
 
@@ -139,8 +203,16 @@ class AnnotationsSettingsTab(QWidget):
         color_layout.addWidget(self.annotation_color_button)
         color_layout.addWidget(self.annotation_color_label)
         manual_layout.addLayout(color_layout)
+        
+        manual_layout.addWidget(QLabel("Background Color:"))
+        background_color_layout = QHBoxLayout()
+        self.annotation_bg_color_button = DataPlotStudioButton("Choose", parent=self)
+        self.annotation_bg_color_label = QLabel("wheat")
+        background_color_layout.addWidget(self.annotation_bg_color_button)
+        background_color_layout.addWidget(self.annotation_bg_color_label)
+        manual_layout.addLayout(background_color_layout)
 
-        self.add_annotation_button = DataPlotStudioButton("Add Annotation", parent=self)
+        self.add_annotation_button = DataPlotStudioButton("Add Annotation", parent=self, base_color_hex=ThemeColors.MainColor, text_color_hex="white")
         self.add_annotation_button.setMinimumHeight(20)
         manual_layout.addWidget(self.add_annotation_button)
 
@@ -209,7 +281,7 @@ class AnnotationsSettingsTab(QWidget):
         self.annotations_list = DataPlotStudioListWidget()
         layout.addWidget(self.annotations_list)
 
-        self.clear_annotations_button = DataPlotStudioButton("Clear All Annotations", parent=self)
+        self.clear_annotations_button = DataPlotStudioButton("Clear All Annotations", parent=self, base_color_hex=ThemeColors.DestructiveColor, text_color_hex="white")
         layout.addWidget(self.clear_annotations_button)
 
         group.setLayout(layout)

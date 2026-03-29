@@ -1,7 +1,4 @@
 # ui/plot_tab.py
-
-from re import split
-
 from PyQt6.QtWidgets import QColorDialog, QApplication, QMessageBox, QListWidgetItem, QInputDialog, QToolTip
 from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QIcon, QColor, QCursor
@@ -41,6 +38,7 @@ from typing import Optional
 
 from ui.widgets.AnimatedListWidget import DataPlotStudioListWidget
 from ui.widgets.ColorBlindnessEffect import ColorBlindnessEffect
+from ui.widgets.ContextualAnnotationToolbar import ContextualAnnotationToolbar
 from ui.dialogs.PlotExportDialog import PlotExportDialog
 from ui.dialogs.PlotConfigEditorDialog import PlotConfigEditorDialog
 from core.plot_config_manager import PlotConfigManager
@@ -103,6 +101,8 @@ class PlotTab(PlotTabUI):
         self.bar_color = None
         self.bar_edge_color = None
         self.annotation_color = "black"
+        self.annotation_bg_color = "wheat"
+        self.auto_annotation_color = "black"
         self.textbox_bg_color = "white"
         self.legend_bg_color = "white"
         self.legend_edge_color = "black"
@@ -118,6 +118,10 @@ class PlotTab(PlotTabUI):
         self.line_customizations = {}
         self.bar_customizations = {}
         self.annotations = []
+        self.context_toolbar = ContextualAnnotationToolbar(self)
+        self.context_toolbar.styleChanged.connect(self._update_annotations_from_toolbar)
+        self.context_toolbar.deleteRequested.connect(self._delete_annotation_from_toolbar)
+        
         self.subplot_data_configs = {}
         
         # Categories
@@ -452,7 +456,14 @@ class PlotTab(PlotTabUI):
     def _connect_annotation_tab_signals(self) -> None:
         """Connect signals for the Annotations tab"""
         self.view.annotation_color_button.clicked.connect(self.choose_annotation_color)
+        self.view.annotation_bg_color_button.clicked.connect(self.choose_annotation_bg_color)
         self.view.auto_annotate_check.clicked.connect(self.toggle_auto_annotate)
+        self.view.auto_annotate_fontsize_spin.valueChanged.connect(self.on_style_changed)
+        self.view.auto_annotate_weight_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.auto_annotate_color_button.clicked.connect(self.choose_auto_annotate_color)
+        self.view.auto_annotate_x_offset_spin.valueChanged.connect(self.on_style_changed)
+        self.view.auto_annotate_y_offset_spin.valueChanged.connect(self.on_style_changed)
+        self.view.auto_annotate_rotation_spin.valueChanged.connect(self.on_style_changed)
         self.view.add_annotation_button.clicked.connect(self.add_annotation)
         self.view.textbox_bg_button.clicked.connect(self.choose_textbox_bg_color)
         self.view.annotations_list.itemClicked.connect(self.on_annotation_selected)
@@ -730,6 +741,17 @@ class PlotTab(PlotTabUI):
             if gid and str(gid).startswith("annotation_"):
                 self.dragged_annotation = artist
                 self.ignore_next_click = True
+                
+                if self.style_update_timer.isActive():
+                    self.style_update_timer.stop()
+                
+                self.dragged_annotation.set_animated(True)
+                self.canvas.draw()
+                if self.plot_engine.current_ax:
+                    self._bg_cache = self.canvas.copy_from_bbox(self.plot_engine.current_ax.bbox)
+                    self.plot_engine.current_ax.draw_artist(self.dragged_annotation)
+                    self.canvas.blit(self.plot_engine.current_ax.bbox)
+                
                 self.custom_tabs.setCurrentIndex(5)
                 try:
                     idx = int(gid.split("_")[1])
@@ -737,6 +759,11 @@ class PlotTab(PlotTabUI):
                         self.view.annotations_list.setCurrentRow(idx)
                         self.on_annotation_selected(self.view.annotations_list.item(idx))
                         self.status_bar.log(f"Selected annotation: {artist.get_text()}", "INFO")
+                        
+                        if hasattr(event, "guiEvent") and event.guiEvent is not None:
+                            global_pos = event.guiEvent.globalPosition().toPoint()
+                            global_pos.setY(global_pos.y() - 50)
+                            self.show_annotation_toolbar(idx, global_pos)
                 except ValueError:
                     pass
                 return
@@ -888,10 +915,18 @@ class PlotTab(PlotTabUI):
         if getattr(self, "dragged_annotation", None):
             ax = self.plot_engine.current_ax
             inv = ax.transAxes.inverted()
-            x, y = inv.transform(event.x, event.y)
+            x, y = inv.transform((event.x, event.y))
             
             self.dragged_annotation.set_position((x, y))
-            self.canvas.draw_idle()
+            
+            if getattr(self, "_bg_cache", None) and ax:
+                if self.dragged_annotation.figure is None:
+                    self.dragged_annotation.set_figure(self.plot_engine.current_figure)
+                self.canvas.restore_region(self._bg_cache)
+                ax.draw_artist(self.dragged_annotation)
+                self.canvas.blit(ax.bbox)
+            else:
+                self.canvas.draw_idle()
             
             self.view.annotation_x_spin.blockSignals(True)
             self.view.annotation_y_spin.blockSignals(True)
@@ -957,7 +992,11 @@ class PlotTab(PlotTabUI):
                 except ValueError:
                     pass
             
+            self.dragged_annotation.set_animated(False)
+            self._bg_cache = None
             self.dragged_annotation = None
+            self.canvas.draw_idle()
+            self.on_style_changed()
 
     def choose_geo_missing_color(self):
         color = QColorDialog.getColor()
@@ -979,6 +1018,12 @@ class PlotTab(PlotTabUI):
         """Enable auto annotation controls"""
         is_enabled = self.view.auto_annotate_check.isChecked()
         self.view.auto_annotate_col_combo.setEnabled(is_enabled)
+        self.view.auto_annotate_fontsize_spin.setEnabled(is_enabled)
+        self.view.auto_annotate_weight_combo.setEnabled(is_enabled)
+        self.view.auto_annotate_color_button.setEnabled(is_enabled)
+        self.view.auto_annotate_x_offset_spin.setEnabled(is_enabled)
+        self.view.auto_annotate_y_offset_spin.setEnabled(is_enabled)
+        self.view.auto_annotate_rotation_spin.setEnabled(is_enabled)
         self.on_style_changed()
 
     def activate_subset(self, subset_name: str):
@@ -1579,6 +1624,22 @@ class PlotTab(PlotTabUI):
             self.view.annotation_color_button.updateColors(base_color_hex=self.annotation_color)
             self.on_style_changed()
     
+    def choose_annotation_bg_color(self) -> None:
+        color = QColorDialog.getColor(QColor(self.annotation_bg_color), self)
+        if color.isValid():
+            self.annotation_bg_color = color.name()
+            self.view.annotation_bg_color_label.setText(self.annotation_bg_color)
+            self.view.annotation_bg_color_button.updateColors(base_color_hex=self.annotation_bg_color)
+            self.on_style_changed()
+    
+    def choose_auto_annotate_color(self):
+        color = QColorDialog.getColor(QColor(self.auto_annotation_color), self)
+        if color.isValid():
+            self.auto_annotation_color = color.name()
+            self.view.auto_annotate_color_label.setText(self.auto_annotation_color)
+            self.view.auto_annotate_color_button.updateColors(base_color_hex=self.auto_annotation_color)
+            self.on_style_changed()
+    
     def choose_error_bar_color(self):
         """Open color picker for error bar color"""
         color = QColorDialog.getColor(QColor(self.error_bar_color), self)
@@ -1627,7 +1688,8 @@ class PlotTab(PlotTabUI):
             'x': self.view.annotation_x_spin.value(),
             'y': self.view.annotation_y_spin.value(),
             'fontsize': self.view.annotation_fontsize_spin.value(),
-            'color': self.annotation_color
+            'color': self.annotation_color,
+            'bg_color': self.annotation_bg_color
         }
         
         self.annotations.append(annotation)
@@ -1647,6 +1709,9 @@ class PlotTab(PlotTabUI):
             self.view.annotation_fontsize_spin.setValue(ann['fontsize'])
             self.annotation_color = ann['color']
             self.view.annotation_color_label.setText(self.annotation_color)
+            self.annotation_bg_color = ann["bg_color"]
+            self.view.annotation_bg_color_label.setText(self.annotation_bg_color)
+            self.view.annotation_bg_color_button.updateColors(base_color_hex=self.annotation_bg_color)
             self.on_style_changed()
     
     def clear_annotations(self):
@@ -1656,6 +1721,36 @@ class PlotTab(PlotTabUI):
         self.view.annotation_text.clear()
         self.status_bar.log("Cleared all annotations")
         self.on_style_changed()
+        
+    def show_annotation_toolbar(self, index: int, global_pos) -> None:
+        if 0 <= index < len(self.annotations):
+            ann_data = self.annotations[index]
+            self.context_toolbar.load_annotations(index, ann_data)
+            self.context_toolbar.move(global_pos)
+            self.context_toolbar.show()
+            self.context_toolbar.raise_()
+            self.context_toolbar.activateWindow()
+    
+    def _update_annotations_from_toolbar(self, index: int, new_data: dict) -> None:
+        if 0 <= index < len(self.annotations):
+            self.annotations[index].update(new_data)
+            
+            if index < self.view.annotations_list.count():
+                item = self.view.annotations_list.item(index)
+                x, y = self.annotations[index]["x"], self.annotations[index]["y"]
+                item.setText(f"{new_data["text"]} @ ({x:.2f}, {y:.2f})")
+            
+            self.on_style_changed()
+    
+    def _delete_annotation_from_toolbar(self, index: int) -> None:
+        if 0 <= index < len(self.annotations):
+            del self.annotations[index]
+            
+            item = self.view.annotations_list.takeItem(index)
+            del item
+            
+            self.view.annotation_text.clear()
+            self.on_style_changed()
     
     def update_column_combo(self):
         """Update column ComboBoxes with available columns"""
@@ -1928,6 +2023,8 @@ class PlotTab(PlotTabUI):
         if self._is_clearing:
             return
         if self._is_data_dirty:
+            return
+        if self.dragged_annotation is not None:
             return
         if not self.isVisible():
             self._is_data_dirty = True
@@ -2983,7 +3080,7 @@ class PlotTab(PlotTabUI):
                 fontsize=ann["fontsize"],
                 color=ann["color"],
                 ha="center", va="center",
-                bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+                bbox=dict(boxstyle="round", facecolor=ann.get("bg_color", "wheat"), alpha=0.5),
                 picker=True,
                 gid=f"annotation_{i}"
             )
@@ -3002,8 +3099,12 @@ class PlotTab(PlotTabUI):
                     df_to_annotate = df
 
                 y_col_target = y_cols[0]
-                font_size = self.view.annotation_fontsize_spin.value()
-                font_color = self.annotation_color
+                font_size = self.view.auto_annotate_fontsize_spin.value()
+                font_weight = self.view.auto_annotate_weight_combo.currentText()
+                font_color = getattr(self, "auto_annotation_color", "black")
+                x_offset = self.view.auto_annotate_x_offset_spin.value()
+                y_offset = self.view.auto_annotate_y_offset_spin.value()
+                rotation = self.view.auto_annotate_rotation_spin.value()
 
                 for idx, row in df_to_annotate.iterrows():
                     x_val = row[x_col]
@@ -3019,20 +3120,24 @@ class PlotTab(PlotTabUI):
                         self.plot_engine.current_ax.annotate(
                             text,
                             (y_val, x_val),
-                            xytext=(5,5),
+                            xytext=(x_offset, y_offset),
                             textcoords="offset points",
                             fontsize=font_size,
-                            color=font_color if font_color else "black",
+                            fontweight=font_weight,
+                            color=font_color,
+                            rotation=rotation,
                             gid="auto_annotation"
                         )
                     else:
                         self.plot_engine.current_ax.annotate(
                             text,
                             (x_val, y_val),
-                            xytext=(5,5),
+                            xytext=(x_offset, y_offset),
                             textcoords="offset points",
                             fontsize=font_size,
-                            color=font_color if font_color else "black",
+                            fontweight=font_weight,
+                            color=font_color,
+                            rotation=rotation,
                             gid="auto_annotation"
                         )
             except Exception as ApplyAnnotationsError:
@@ -3209,6 +3314,20 @@ class PlotTab(PlotTabUI):
 
     def _apply_textbox(self):
         """Apply textbox"""
+        if not self.plot_engine.current_ax:
+            return
+        
+        texts_to_remove = []
+        for text_artist in self.plot_engine.current_ax.texts:
+            if text_artist.get_gid() == "custom_textbox":
+                texts_to_remove.append(text_artist)
+        
+        for text_artist in texts_to_remove:
+            try:
+                text_artist.remove()
+            except:
+                pass
+        
         if self.view.textbox_enable_check.isChecked():
             textbox_text = self.view.textbox_content.text().strip()
             if textbox_text:
@@ -3256,7 +3375,8 @@ class PlotTab(PlotTabUI):
                     fontsize=11,
                     verticalalignment=va,
                     horizontalalignment=ha,
-                    bbox=dict(boxstyle=style, facecolor=self.textbox_bg_color, alpha=0.8, pad=1)
+                    bbox=dict(boxstyle=style, facecolor=self.textbox_bg_color, alpha=0.8, pad=1),
+                    gid="custom_textbox"
                 )
     
     def _create_axis_formatter(self, unit_str: str) -> FuncFormatter:

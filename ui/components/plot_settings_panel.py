@@ -432,11 +432,20 @@ class PlotSettingsPanel(QWidget):
         self.annotation_fontsize_spin = ann_tab.annotation_fontsize_spin
         self.annotation_color_button = ann_tab.annotation_color_button
         self.annotation_color_label = ann_tab.annotation_color_label
+        self.annotation_bg_color_button = ann_tab.annotation_bg_color_button
+        self.annotation_bg_color_label = ann_tab.annotation_bg_color_label
         self.add_annotation_button = ann_tab.add_annotation_button
 
         # Auto Annotations
         self.auto_annotate_check = ann_tab.auto_annotate_check
         self.auto_annotate_col_combo = ann_tab.auto_annotate_col_combo
+        self.auto_annotate_fontsize_spin = ann_tab.auto_annotate_fontsize_spin
+        self.auto_annotate_weight_combo = ann_tab.auto_annotate_weight_combo
+        self.auto_annotate_color_button = ann_tab.auto_annotate_color_button
+        self.auto_annotate_color_label = ann_tab.auto_annotate_color_label
+        self.auto_annotate_x_offset_spin = ann_tab.auto_annotate_x_offset_spin
+        self.auto_annotate_y_offset_spin = ann_tab.auto_annotate_y_offset_spin
+        self.auto_annotate_rotation_spin = ann_tab.auto_annotate_rotation_spin
 
         # Text Box
         self.textbox_content = ann_tab.textbox_content
