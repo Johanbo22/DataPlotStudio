@@ -35,6 +35,7 @@ class DataOperation(str, Enum):
     FLAG_OUTLIERS = "flag_outliers"
     REORDER_COLUMNS = "reorder_columns"
     DROP_EMPTY_COLUMNS = "drop_empty_columns"
+    ROLLING_WINDOW = "rolling_window"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -80,7 +81,8 @@ class DataMutator:
             DataOperation.CALCULATE_DATE_DIFFERENCE: self._calculate_date_difference,
             DataOperation.FLAG_OUTLIERS: self._flag_outliers,
             DataOperation.REORDER_COLUMNS: self._reorder_columns,
-            DataOperation.DROP_EMPTY_COLUMNS: self._drop_empty_columns
+            DataOperation.DROP_EMPTY_COLUMNS: self._drop_empty_columns,
+            DataOperation.ROLLING_WINDOW: self._apply_rolling_window
         }
     
     def clean_data(self, df: pd.DataFrame, action: "DataOperation | str", sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
@@ -1001,4 +1003,50 @@ class DataMutator:
             if sort_state and sort_state[0] in cols_to_drop:
                 sort_state = None
         return df, sort_state
+    
+    def _apply_rolling_window(self, df: pd.DataFrame, sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
+        """Applies a rolling window operations to a numeric column
+
+        Args:
+            df (pd.DataFrame): Input dataframe
+            sort_state (Optional[tuple]): Current sort state
+
+        Returns:
+            tuple[pd.DataFrame, Optional[tuple]]: New dataframe, Sort state if changed
+        """
+        column: str = kwargs.get("column")
+        window: int = kwargs.get("window", 3)
+        operation: str = kwargs.get("operation", "mean")
+        new_column: str = kwargs.get("new_column")
+        center: bool = kwargs.get("center", False)
+        min_periods: Optional[int] = kwargs.get("min_periods", None)
         
+        if not column or column not in df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        if not pd.api.types.is_numeric_dtype(df[column]):
+            raise TypeError(f"Column '{column}' must be a numeric column to perform rolling window operation")
+        
+        if not new_column:
+            new_column = f"{column}_rolling_{window}_{operation}"
+        
+        if new_column in df.columns and new_column != column:
+            raise ValueError(f"Column '{column}' already exists")
+        
+        rolling_obj = df[column].rolling(window=window, center=center, min_periods=min_periods)
+        
+        if operation == "mean":
+            df[new_column] = rolling_obj.mean()
+        elif operation == "sum":
+            df[new_column] = rolling_obj.sum()
+        elif operation == "min":
+            df[new_column] = rolling_obj.min()
+        elif operation == "max":
+            df[new_column] = rolling_obj.max()
+        elif operation == "std":
+            df[new_column] = rolling_obj.std()
+        elif operation == "median":
+            df[new_column] = rolling_obj.median()
+        else:
+            raise ValueError(f"Unsupported rolling operation: {operation}")
+        
+        return df, sort_state

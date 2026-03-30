@@ -616,6 +616,20 @@ class DataOperationsPanel(QWidget):
         append_layout.addWidget(append_button)
         append_layout.addWidget(self.append_help)
         transform_layout.addLayout(append_layout)
+        
+        #R Rolling window
+        rolling_layout = QHBoxLayout()
+        rolling_button = DataPlotStudioButton("Rolling Window", parent=self)
+        rolling_button.setIcon(IconBuilder.build(IconType.DataTransform))
+        rolling_button.setToolTip("Calculate rolling statistics (example: moving averages)")
+        if self.controller:
+            rolling_button.clicked.connect(self.controller.open_rolling_window_dialog)
+        self.rolling_help = HelpIcon("rolling_window")
+        if self.controller:
+            self.rolling_help.clicked.connect(self.controller.show_help_dialog)
+        rolling_layout.addWidget(rolling_button)
+        rolling_layout.addWidget(self.rolling_help)
+        transform_layout.addLayout(rolling_layout)
 
         # Sorting
         sorting_group = DataPlotStudioGroupBox("Sort Data")
