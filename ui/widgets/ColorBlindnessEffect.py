@@ -1,7 +1,14 @@
 import numpy as np
+from enum import Enum
 from PyQt6.QtWidgets import QGraphicsEffect
-from PyQt6.QtGui import QImage, QPainter
+from PyQt6.QtGui import QImage, QPainter, QPixmap
 from PyQt6.QtCore import Qt
+
+class ColorBlindnessType(str, Enum):
+    Protanopia = "Protanopia (No Red)"
+    Deuteranopia = "Deuteranopia (No Green)"
+    Tritanopia = "Tritanopia (No Blue)"
+    Achromatopsia = "Achromatopsia (Monochromacy)"
 
 class ColorBlindnessEffect(QGraphicsEffect):
     """
@@ -10,41 +17,54 @@ class ColorBlindnessEffect(QGraphicsEffect):
     
     # Standard SVG color matricies for CBS
     MATRICES = {
-        "Protanopia (No Red)": np.array([
+        ColorBlindnessType.Protanopia: np.array([
             [0.567, 0.433, 0.000],
             [0.558, 0.442, 0.000],
             [0.000, 0.242, 0.758]
         ]),
-        "Deuteranopia (No Green)": np.array([
+        ColorBlindnessType.Deuteranopia: np.array([
             [0.625, 0.375, 0.000],
             [0.700, 0.300, 0.000],
             [0.000, 0.300, 0.700]
         ]),
-        "Tritanopia (No Blue)": np.array([
+        ColorBlindnessType.Tritanopia: np.array([
             [0.950, 0.050, 0.000],
             [0.000, 0.433, 0.567],
             [0.000, 0.475, 0.525]
         ]),
-        "Achromatopsia (Monochromacy)": np.array([
+        ColorBlindnessType.Achromatopsia: np.array([
             [0.299, 0.587, 0.114],
             [0.299, 0.587, 0.114],
             [0.299, 0.587, 0.114]
         ])
     }
     
-    def __init__(self, simulation_type: str = "Protanopia (No Red)", parent=None):
+    def __init__(self, simulation_type: ColorBlindnessType | str = ColorBlindnessType.Protanopia, parent=None):
         super().__init__(parent)
-        self.simulation_type = simulation_type
+        self.simulation_type = ColorBlindnessType(simulation_type) if isinstance(simulation_type, str) else simulation_type
+        
+        # Caching to avoid CPU overusage
+        self._cached_pixmap: QPixmap | None = None
+        self._last_source_cache_key: int | None = None
+        self._last_sim_type: ColorBlindnessType | None = None
     
-    def set_simulation_type(self, sim_type: str) -> None:
+    def set_simulation_type(self, sim_type: ColorBlindnessType | str) -> None:
         """Update the simulaton type to trigger redrawEvent"""
-        self.simulation_type = sim_type
-        self.update()
+        new_type = ColorBlindnessType(sim_type) if isinstance(sim_type, str) else sim_type
+        if self.simulation_type != new_type:
+            self.simulation_type = new_type
+            self.update()
     
     def draw(self, painter: QPainter) -> None:
         """Applies the color matrix to a pixmap"""
         pixmap, offset = self.sourcePixmap(Qt.CoordinateSystem.LogicalCoordinates)
         if pixmap.isNull():
+            return
+        
+        current_cache_key = pixmap.cacheKey()
+        
+        if (self._cached_pixmap is not None and self._last_source_cache_key == current_cache_key and self._last_sim_type == self.simulation_type):
+            painter.drawPixmap(offset, self._cached_pixmap)
             return
         
         image = pixmap.toImage()
@@ -77,4 +97,9 @@ class ColorBlindnessEffect(QGraphicsEffect):
         
         new_image = QImage(arr.data, image.width(), image.height(), image.bytesPerLine(), QImage.Format.Format_RGB32)
         new_image.setDevicePixelRatio(device_pixel_ratio)
-        painter.drawImage(offset, new_image)
+        
+        self._cached_pixmap = QPixmap.fromImage(new_image)
+        self._last_source_cache_key = current_cache_key
+        self._last_sim_type = self.simulation_type
+        
+        painter.drawPixmap(offset, self._cached_pixmap)

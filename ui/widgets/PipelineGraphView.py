@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QG
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, pyqtProperty, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QPainter, QFontMetrics, QKeyEvent, QWheelEvent, QMouseEvent
 
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any, Callable, Optional
 
 class FocusHighlightItem(QGraphicsObject):
     def __init__(self, width: float, height: float, parent=None):
@@ -197,6 +197,10 @@ class PipelineGraphView(QGraphicsView):
         self.max_index = 0
         self._scroll_animation = None
         self._pill_animation = None
+        
+        self._is_middle_dragging: bool = False
+        self._last_mouse_pos: Optional[QPointF] = None
+        self._middle_click_pos: Optional[QPointF] = None
     
     def _set_view_center(self, center: QPointF):
         self.centerOn(center)
@@ -256,12 +260,46 @@ class PipelineGraphView(QGraphicsView):
     
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
-            self.resetTransform()
-            if self.nodes and 0 <= self.current_index < len(self.nodes):
-                self.center_on_animated(self.nodes[self.current_index])
+            self._is_middle_dragging = True
+            self._last_mouse_pos = event.position()
+            self._middle_click_pos = event.position()
+            self.viewport().setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
         else:
             super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._is_middle_dragging and self._last_mouse_pos is not None:
+            delta = event.position() - self._last_mouse_pos
+            
+            h_bar = self.horizontalScrollBar()
+            v_bar = self.verticalScrollBar()
+            
+            h_bar.setValue(int(h_bar.value() - delta.x()))
+            v_bar.setValue(int(v_bar.value() - delta.y()))
+            
+            self._last_mouse_pos = event.position()
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.MiddleButton and self._is_middle_dragging:
+            self._is_middle_dragging = False
+            self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
+            
+            if self._middle_click_pos is not None:
+                distance = (event.position() - self._middle_click_pos).manhattanLength()
+                if distance < 5.0:
+                    self.resetTransform()
+                    if self.nodes and 0 <= self.current_index < len(self.nodes):
+                        self.center_on_animated(self.nodes[self.current_index])
+            
+            self._last_mouse_pos = None
+            self._middle_click_pos = None
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
     
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_Up:
