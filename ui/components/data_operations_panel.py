@@ -630,6 +630,34 @@ class DataOperationsPanel(QWidget):
         rolling_layout.addWidget(rolling_button)
         rolling_layout.addWidget(self.rolling_help)
         transform_layout.addLayout(rolling_layout)
+        
+        # Shift / Lag
+        shift_layout = QHBoxLayout()
+        shift_button = DataPlotStudioButton("Shift / Lag Data", parent=self)
+        shift_button.setIcon(IconBuilder.build(IconType.DataTransform))
+        shift_button.setToolTip("Shift index by desired number of periods")
+        if self.controller:
+            shift_button.clicked.connect(self.controller.open_shift_dialog)
+        self.shift_help = HelpIcon("shift_data")
+        if self.controller:
+            self.shift_help.clicked.connect(self.controller.show_help_dialog)
+        shift_layout.addWidget(shift_button)
+        shift_layout.addWidget(self.shift_help)
+        transform_layout.addLayout(shift_layout)
+
+        # Percentage Change
+        pct_layout = QHBoxLayout()
+        pct_button = DataPlotStudioButton("Percentage Change", parent=self)
+        pct_button.setIcon(IconBuilder.build(IconType.DataTransform))
+        pct_button.setToolTip("Calculate fractional change between current and prior element")
+        if self.controller:
+            pct_button.clicked.connect(self.controller.open_pct_change_dialog)
+        self.pct_help = HelpIcon("percentage_change")
+        if self.controller:
+            self.pct_help.clicked.connect(self.controller.show_help_dialog)
+        pct_layout.addWidget(pct_button)
+        pct_layout.addWidget(self.pct_help)
+        transform_layout.addLayout(pct_layout)
 
         # Sorting
         sorting_group = DataPlotStudioGroupBox("Sort Data")

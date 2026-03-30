@@ -12,7 +12,7 @@ from core.subset_manager import SubsetManager
 
 from ui.animations import AggregationAnimation, CalculationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation, SubsetDataAnimation
 
-from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog, ColumnReorderDialog, RollingWindowDialog
+from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog, ColumnReorderDialog, RollingWindowDialog, ShiftDataDialog, PercentageChangeDialog
 
 from ui.workers import GoogleSheetsImportWorker, AutoCreateSubsetsWorker
 
@@ -1349,6 +1349,79 @@ class DataTabController:
             except Exception as error:
                 self.status_bar.log(f"Failed to apply rolling window: {str(error)}", "ERROR")
                 QMessageBox.critical(self.view, "Error", f"Failed to apply rolling window:\n{str(error)}")
+                
+    def open_shift_dialog(self) -> None:
+        """Opens the dialog to configure and apply a shift (lag/lead) operation"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+
+        dialog = ShiftDataDialog(self.data_handler.df, self.view)
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                self.data_handler.clean_data(
+                    action="shift_data",
+                    column=config["column"],
+                    periods=config["periods"],
+                    fill_value=config["fill_value"],
+                    new_column=config["new_column"]
+                )
+                self.view.refresh_data_view()
+                
+                self.status_bar.log_action(
+                    f"Applied {config['periods']}-period shift on '{config['column']}'",
+                    details={
+                        "column": config["column"],
+                        "periods": config["periods"],
+                        "fill_value": config["fill_value"],
+                        "new_column": config["new_column"],
+                        "operation": "shift_data"
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as error:
+                self.status_bar.log(f"Failed to apply shift: {str(error)}", "ERROR")
+                QMessageBox.critical(self.view, "Error", f"Failed to apply shift:\n{str(error)}")
+
+    def open_pct_change_dialog(self) -> None:
+        """Opens the dialog to configure and apply a percentage change calculation"""
+        if self.data_handler.df is None:
+            QMessageBox.warning(self.view, "No Data", "Please load data first.")
+            return
+
+        numeric_cols = self.data_handler.df.select_dtypes(include=["number"]).columns.tolist()
+        if not numeric_cols:
+            QMessageBox.warning(self.view, "No Numeric Data", "This dataset contains no numeric columns suitable for percentage change.")
+            return
+        
+        dialog = PercentageChangeDialog(self.data_handler.df, self.view)
+        if dialog.exec():
+            config = dialog.get_config()
+            try:
+                self.data_handler.clean_data(
+                    action="percentage_change",
+                    column=config["column"],
+                    periods=config["periods"],
+                    fill_method=config["fill_method"],
+                    new_column=config["new_column"]
+                )
+                self.view.refresh_data_view()
+                
+                self.status_bar.log_action(
+                    f"Applied {config['periods']}-period percentage change on '{config['column']}'",
+                    details={
+                        "column": config["column"],
+                        "periods": config["periods"],
+                        "fill_method": config["fill_method"],
+                        "new_column": config["new_column"],
+                        "operation": "percentage_change"
+                    },
+                    level="SUCCESS"
+                )
+            except Exception as error:
+                self.status_bar.log(f"Failed to calculate percentage change: {str(error)}", "ERROR")
+                QMessageBox.critical(self.view, "Error", f"Failed to calculate percentage change:\n{str(error)}")
     
     def open_column_reorder_dialog(self) -> None:
         """Opens the dialog for reordering columns"""

@@ -34,8 +34,12 @@ from .ConsoleDialog import ConsoleDialog
 from .ColumnReorderDialog import ColumnReorderDialog
 from .HelpExplorerDialog import HelpExplorerDialog
 from .RollingWindowDialog import RollingWindowDialog
+from .ShiftDataDialog import ShiftDataDialog
+from .PercentageChangeDialog import PercentageChangeDialog
 
 __all__ = [
+    "ShiftDataDialog",
+    "PercentageChangeDialog",
     "RollingWindowDialog",
     "HelpExplorerDialog",
     "ColumnReorderDialog",

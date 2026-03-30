@@ -36,6 +36,8 @@ class DataOperation(str, Enum):
     REORDER_COLUMNS = "reorder_columns"
     DROP_EMPTY_COLUMNS = "drop_empty_columns"
     ROLLING_WINDOW = "rolling_window"
+    SHIFT_DATA = "shift_data"
+    PERCENTAGE_CHANGE = "percentage_change"
 
 class FillMethod(str, Enum):
     MEAN = "mean"
@@ -82,7 +84,9 @@ class DataMutator:
             DataOperation.FLAG_OUTLIERS: self._flag_outliers,
             DataOperation.REORDER_COLUMNS: self._reorder_columns,
             DataOperation.DROP_EMPTY_COLUMNS: self._drop_empty_columns,
-            DataOperation.ROLLING_WINDOW: self._apply_rolling_window
+            DataOperation.ROLLING_WINDOW: self._apply_rolling_window,
+            DataOperation.SHIFT_DATA: self._apply_shift,
+            DataOperation.PERCENTAGE_CHANGE: self._apply_pct_change
         }
     
     def clean_data(self, df: pd.DataFrame, action: "DataOperation | str", sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
@@ -1049,4 +1053,66 @@ class DataMutator:
         else:
             raise ValueError(f"Unsupported rolling operation: {operation}")
         
+        return df, sort_state
+
+    def _apply_shift(self, df: pd.DataFrame, sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
+        """Applies a shift operation on a column
+
+        Args:
+            df (pd.DataFrame): Input dataframe
+            sort_state (Optional[tuple]): Current sort state
+
+        Returns:
+            tuple[pd.DataFrame, Optional[tuple]]: New dataframe, Sort state if changed
+        """
+        column: str = kwargs.get("column")
+        periods: int = kwargs.get("periods", 1)
+        fill_value: Any = kwargs.get("fill_value", None)
+        new_column: Optional[str] = kwargs.get("new_column")
+        
+        if not column or column not in df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        
+        if not new_column:
+            new_column = f"{column}_shifted_{periods}"
+            
+        if new_column in df.columns and new_column != column:
+            raise ValueError(f"Column '{new_column}' already exists")
+
+        df[new_column] = df[column].shift(periods=periods, fill_value=fill_value)
+
+        return df, sort_state
+    
+    def _apply_pct_change(self, df: pd.DataFrame, sort_state: Optional[tuple], **kwargs) -> tuple[pd.DataFrame, Optional[tuple]]:
+        """Calculates the percentage change between the current and a prior element.
+
+        Args:
+            df (pd.DataFrame): Input dataframe
+            sort_state (Optional[tuple]): Current sort state
+
+        Returns:
+            tuple[pd.DataFrame, Optional[tuple]]: New dataframe, Sort state if changed
+        """
+        column: str = kwargs.get("column")
+        periods: int = kwargs.get("periods", 1)
+        fill_method: str = kwargs.get("fill_method", "pad")
+        new_column: Optional[str] = kwargs.get("new_column")
+
+        if not column or column not in df.columns:
+            raise ValueError(f"Column '{column}' not found")
+        if not pd.api.types.is_numeric_dtype(df[column]):
+            raise TypeError(f"Column '{column}' must be a numeric column to calculate percentage change")
+            
+        if not new_column:
+            new_column = f"{column}_pct_change_{periods}"
+            
+        if new_column in df.columns and new_column != column:
+            raise ValueError(f"Column '{new_column}' already exists")
+
+        try:
+            df[new_column] = df[column].pct_change(periods=periods, fill_method=fill_method)
+        except TypeError:
+            temp_col = df[column].ffill() if fill_method in ['pad', 'ffill'] else df[column].bfill() if fill_method in ['backfill', 'bfill'] else df[column]
+            df[new_column] = temp_col.pct_change(periods=periods)
+
         return df, sort_state
