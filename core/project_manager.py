@@ -8,6 +8,7 @@ import zipfile
 import json
 import sqlite3
 import tempfile
+import io
 
 class ProjectManager:
     
@@ -66,46 +67,47 @@ class ProjectManager:
         save_data: Dict[str, Any] = project_data.copy()
         dataframe: Optional[pd.DataFrame] = save_data.pop("data", None) if isinstance(save_data.get("data"), pd.DataFrame) else None
         
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_dir_path = Path(temp_dir)
+        with zipfile.ZipFile(filepath_obj, "w", zipfile.ZIP_DEFLATED) as zip_package:
             
-            # First we archive the raw data using parquet serialization
+            # Extract raw data using parquet
             if dataframe is not None:
-                dataframe.to_parquet(temp_dir_path / "data.parquet", engine="pyarrow", index=True)
+                parquet_buffer = io.BytesIO()
+                dataframe.to_parquet(parquet_buffer, engine="pyarrow", index=True)
+                zip_package.writestr("data.parquet",parquet_buffer.getvalue())
             
-            # Then archive plot configuretion which are .json files
-            plot_config_path = temp_dir_path / "plot_config.json"
-            with open(plot_config_path, "w", encoding="utf-8") as config_file:
-                json.dump(save_data.get("plot_config", {}), config_file, indent=4)
+            # archive plotting configs which are .json files
+            plot_config_data: str = json.dumps(save_data.get("plot_config", {}))
+            zip_package.writestr("plot_config.json", plot_config_data)
             
-            # Then archive the total operation log which is also a. json file
-            operations_path = temp_dir_path / "operations_log.json"
-            with open(operations_path, "w", encoding="utf-8") as operations_file:
-                json.dump(save_data.get("operations", []), operations_file, indent=4)
+            # archive operation logs as json files
+            operations_log_data: str = json.dumps(save_data.get("operations", []))
+            zip_package.writestr("operations_log.json", operations_log_data)
             
-            # Create metadata file for the session states a SSQLITE database
-            db_path = temp_dir_path / "session.db"
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE session_metadata (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                )
-            """)
-            metadata = save_data.get("metadata", {})
-            for key, value in metadata.items():
-                key_str: str = str(key)
-                if "credential" in key_str.lower() or "token" in key_str.lower():
-                    value = "[REDACTED]"
-                cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (key_str, str(value)))
-            conn.commit()
-            conn.close()
+            # create the metadata file as a SQLITE database
+            with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_db:
+                db_path: Path = Path(temp_db.name)
+            
+            try:
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE session_metadata (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                """)
+                metadata: Dict[str, Any] = save_data.get("metadata", {})
+                for key, value in metadata.items():
+                    key_str: str = str(key)
+                    if "credential" in key_str.lower() or "token" in key_str.lower():
+                        value = "[REDACTED]"
+                    cursor.execute("INSERT INTO session_metadata (key, value) VALUES (?, ?)", (key_str, str(value)))
+                conn.commit()
+                conn.close()
 
-            # Compress all files into a package
-            with zipfile.ZipFile(filepath_obj, "w", zipfile.ZIP_DEFLATED) as zip_package:
-                for file_to_zip in temp_dir_path.iterdir():
-                    zip_package.write(file_to_zip, arcname=file_to_zip.name)
+                zip_package.write(db_path, arcname="session.db")
+            finally:
+                db_path.unlink(missing_ok=True)
     
     def auto_save(self, project_data: Dict[str, Any]) -> None:
         """
@@ -114,7 +116,7 @@ class ProjectManager:
         """
         try:
             self._create_dps_package(project_data, self.autosave_path)
-        except Exception:
+        except OSError:
             pass
     
     def has_autosave(self) -> bool:
@@ -131,7 +133,7 @@ class ProjectManager:
         try:
             if self.has_autosave():
                 self.autosave_path.unlink()
-        except Exception:
+        except OSError:
             pass
         
     
@@ -148,39 +150,37 @@ class ProjectManager:
                 "plot_config": {},
                 "operations": []
             }
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_dir_path = Path(temp_dir)
+            with zipfile.ZipFile(filepath_obj, "r") as zip_package:
+                file_list: list[str] = zip_package.namelist()
                 
-                with zipfile.ZipFile(filepath_obj, "r") as zip_package:
-                    zip_package.extractall(temp_dir_path)
+                if "data.parquet" in file_list:
+                    with zip_package.open("data.parquet") as data_file:
+                        parquet_buffer = io.BytesIO(data_file.read())
+                        project_data["data"] = pd.read_parquet(parquet_buffer, engine="pyarrow")
                 
-                # First restore the raw data
-                data_path = temp_dir_path / "data.parquet"
-                if data_path.exists():
-                    project_data["data"] = pd.read_parquet(data_path, engine="pyarrow")
+                if "plot_config.json" in file_list:
+                    with zip_package.open("plot_config.json") as config_file:
+                        project_data["plot_config"] = json.loads(config_file.read().decode("utf-8"))
                 
-                # Second restore plot configs
-                plot_config_path = temp_dir_path / "plot_config.json"
-                if plot_config_path.exists():
-                    with open(plot_config_path, "r", encoding="utf-8") as config_file:
-                        project_data["plot_config"] = json.load(config_file)
+                if "operations_log.json" in file_list:
+                    with zip_package.open("operations_log.json") as operations_file:
+                        project_data["operations"] = json.loads(operations_file.read().decode("utf-8"))
                 
-                # Then restore the operations log
-                operations_path = temp_dir_path / "operations_log.json"
-                if operations_path.exists():
-                    with open(operations_path, "r", encoding="utf-8") as operations_file:
-                        project_data["operations"] = json.load(operations_file)
-                
-                # Restore session from database
-                db_path = temp_dir_path / "session.db"
-                if db_path.exists():
-                    conn = sqlite3.connect(db_path)
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT key, value FROM session_metadata")
-                    rows = cursor.fetchall()
-                    for row in rows:
-                        project_data["metadata"][row[0]] = row[1]
-                    conn.close()
+                # Restore session from database.
+                if "session.db" in file_list:
+                    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_db:
+                        temp_db.write(zip_package.read("session.db"))
+                        db_path: Path = Path(temp_db.name)
+                        
+                    try:
+                        conn = sqlite3.connect(db_path)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT key, value FROM session_metadata")
+                        for row in cursor.fetchall():
+                            project_data["metadata"][row[0]] = row[1]
+                        conn.close()
+                    finally:
+                        db_path.unlink(missing_ok=True)
             
             self.current_project_path = filepath_obj
             self.project_data = project_data
