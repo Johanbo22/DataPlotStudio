@@ -384,5 +384,7 @@ class CodeEditor(QPlainTextEdit):
         if self.completer:
             if text and (text.isalnum() or text == "_"):
                 self.handleCompleterUpdate()
+            elif text == ".":
+                self.startCompleter()
             elif not text:
                 pass

@@ -108,14 +108,14 @@ class FilterAdvancedDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex=ThemeColors.MainColor)
+        self.apply_button = DataPlotStudioButton("Apply Filters", parent=self, base_color_hex=ThemeColors.MainColor, text_color_hex="white")
         self.apply_button.clicked.connect(self.validate_and_accept)
         self.apply_button.setDefault(True)
         self.apply_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.apply_button.setToolTip("Apply the constructed filter query to the dataset (Enter)")
         button_layout.addWidget(self.apply_button)
 
-        clear_button = DataPlotStudioButton("Clear Filters", parent=self, base_color_hex=ThemeColors.DestructiveColor)
+        clear_button = DataPlotStudioButton("Clear Filters", parent=self, base_color_hex=ThemeColors.DestructiveColor, text_color_hex="white")
         clear_button.setCursor(Qt.CursorShape.PointingHandCursor)
         clear_button.clicked.connect(self.clear_fields)
         button_layout.addWidget(clear_button)
@@ -225,6 +225,7 @@ class FilterAdvancedDialog(QDialog):
             'column': column_combo,
             'condition': condition_combo,
             'stack': input_stack,
+            'val_label': val_label,
             'inputs': {
                 'text': text_input,
                 'number': number_input,
@@ -302,11 +303,17 @@ class FilterAdvancedDialog(QDialog):
         cond_display = cond_combo.currentText()
         condition = self.ConditionMap.get(cond_display, cond_display)
         stack = row["stack"]
+        val_label = row["val_label"]
         
         if condition in ["Is Null", "Is Not Null"]:
             stack.setCurrentIndex(4)
+            stack.setVisible(False)
+            val_label.setVisible(False)
             self.update_preview()
             return
+
+        stack.setVisible(True)
+        val_label.setVisible(True)
         
         if pd.api.types.is_numeric_dtype(col_dtype):
             stack.setCurrentIndex(1)

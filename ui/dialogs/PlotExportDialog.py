@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout, QFormLayout
+from PyQt6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout, QFormLayout, QGridLayout
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QPixmap
 
@@ -65,7 +65,8 @@ class PlotExportDialog(QDialog):
         self.format_combo.addItems(["PNG", "JPEG", "PDF", "SVG", "TIFF", "EPS", "PS", "RAW", "RGBA"])
         form_layout.addRow("Format:", self.format_combo)
         
-        dim_layout = QHBoxLayout()
+        dim_layout = QGridLayout()
+        dim_layout.setContentsMargins(0, 0, 0, 0)
         
         self.width_spin = DataPlotStudioDoubleSpinBox()
         self.width_spin.setRange(1.0, 50.0)
@@ -86,11 +87,16 @@ class PlotExportDialog(QDialog):
         self.lock_aspect_ratio_check.setFixedWidth(40)
         self.lock_aspect_ratio_check.setToolTip("Aspect Ratio is locked")
         
-        dim_layout.addWidget(self.width_spin)
-        dim_layout.addWidget(QLabel("x"))
-        dim_layout.addWidget(self.height_spin)
-        dim_layout.addWidget(QLabel("in"))
-        dim_layout.addWidget(self.lock_aspect_ratio_check)
+        
+        dim_layout.addWidget(QLabel("Width:"), 0, 0)
+        dim_layout.addWidget(self.width_spin, 0, 1)
+        dim_layout.addWidget(QLabel("in"), 0, 2)
+        
+        dim_layout.addWidget(QLabel("Height:"), 1, 0)
+        dim_layout.addWidget(self.height_spin, 1, 1)
+        dim_layout.addWidget(QLabel("in"), 1, 2)
+        
+        dim_layout.addWidget(self.lock_aspect_ratio_check, 0, 3, 2, 1, Qt.AlignmentFlag.AlignVCenter)
         
         form_layout.addRow("Size:", dim_layout)
 
