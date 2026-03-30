@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLineEdit, QPushButton, QGroupBox, QLabel
 from PyQt6.QtGui import QIcon
 
 from core.help_manager import HelpManager
@@ -13,11 +13,26 @@ class PlotSettingsPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.help_manager = HelpManager()
+        self._is_searching = False
+        self._tab_visibility_snapshot = {}
+        self._groupbox_visibility_snapshot = {}
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(5, 5, 5, 5)
+        
+        self.settings_search_input = QLineEdit()
+        self.settings_search_input.setObjectName("settingsSearchInput")
+        self.settings_search_input.setPlaceholderText("Search settings (e.g., 'Spines')")
+        self.settings_search_input.setClearButtonEnabled(True)
+        self.settings_search_input.textChanged.connect(self._filter_settings)
+        header_layout.addWidget(self.settings_search_input)
+        
+        layout.addLayout(header_layout)
 
         self.custom_tabs = QTabWidget()
 
@@ -515,3 +530,87 @@ class PlotSettingsPanel(QWidget):
                 pass
         except Exception:
             pass
+    
+    def _filter_settings(self, search_text: str) -> None:
+        """
+        Filters the visibility of setings group boxes across all tabs
+        """
+        search_lower = search_text.lower()
+        
+        if not search_lower:
+            if self._is_searching:
+                self._restore_visibility()
+                self._is_searching = False
+            return
+        
+        if not self._is_searching:
+            self._snapshot_visibility()
+            self._is_searching = True
+        
+        first_match_index = -1
+        current_tab_has_match = False
+        
+        for i in range(self.custom_tabs.count()):
+            tab_widget = self.custom_tabs.widget(i)
+            
+            if not self._tab_visibility_snapshot.get(i, True):
+                self.custom_tabs.setTabVisible(i, False)
+                continue
+            
+            tab_has_match = self._apply_filter_to_widget(tab_widget, search_lower)
+            
+            self.custom_tabs.setTabVisible(i, tab_has_match)
+            
+            if tab_has_match:
+                if first_match_index == -1:
+                    first_match_index = i
+                if i == self.custom_tabs.currentIndex():
+                    current_tab_has_match = True
+        if not current_tab_has_match and first_match_index != -1:
+            self.custom_tabs.setCurrentIndex(first_match_index)
+    
+    def _apply_filter_to_widget(self, parent_widget: QWidget, search_text: str) -> bool:
+        """Recursively checks QGroupBox elements within a widget to hide or show them
+        based on their titles or the text of their enclosed children."""
+        any_match_in_tab = False
+        
+        for group_box in parent_widget.findChildren(QGroupBox):
+            if not self._groupbox_visibility_snapshot.get(id(group_box), True):
+                group_box.setVisible(False)
+                continue
+            has_match = search_text in group_box.title().lower()
+            
+            if not has_match:
+                for child in group_box.findChildren(QWidget):
+                    if isinstance(child, QLabel) and search_text in child.text().lower():
+                        has_match = True
+                        break
+                    
+                    if hasattr(self, "text") and callable(child.text):
+                        child_text = child.text()
+                        if isinstance(child_text, str) and search_text in child_text.lower():
+                            has_match = True
+                            break
+            
+            group_box.setVisible(has_match)
+            if has_match:
+                any_match_in_tab = True
+        return any_match_in_tab
+
+    def _snapshot_visibility(self) -> None:
+        self._tab_visibility_snapshot.clear()
+        for i in range(self.custom_tabs.count()):
+            self._tab_visibility_snapshot[i] = self.custom_tabs.isTabVisible(i)
+        
+        self._groupbox_visibility_snapshot.clear()
+        for group_box in self.findChildren(QGroupBox):
+            self._groupbox_visibility_snapshot[id(group_box)] = not group_box.isHidden()
+    
+    def _restore_visibility(self) -> None:
+        for i in range(self.custom_tabs.count()):
+            is_visible = self._tab_visibility_snapshot.get(i, True)
+            self.custom_tabs.setTabVisible(i, is_visible)
+        
+        for group_box in self.findChildren(QGroupBox):
+            is_visible = self._groupbox_visibility_snapshot.get(id(group_box), True)
+            group_box.setVisible(is_visible)
