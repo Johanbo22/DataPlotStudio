@@ -4,7 +4,178 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
-## v0.1.0
+## v0.1.1 [Prerelease]
+### Added
+- Caching logic (_compile_rules) to pre-process conditional formatting dictionary constraints into native Python execution tuples.
+- Caching for column text alignments via _update_column_alignments() to calculate alignment enums strictly during state changes rather than per-draw request.
+- Pre-instantiation of the background highlight QColor object to avoid C++ wrapper object allocation overhead in the render loop.
+- Render booleans as checkboxes or as standard text.
+- Toggle to choose how to represent booleans in the TableCustomizationDialog
+- Backend integration of global color selection for gridlines
+- Slight shadow effect to the information panel on the LandingPage
+- Categorization of actions buttons on the LandingPage
+- Logo to LandingPage
+- Auto-clear messages in StatusBar after 8 seconds
+- Copy to clipboard for the LogHistory
+- Clear button to remvoe all Logs in the history
+- Filter search for logs to find info/warnings or errors
+- Right-click context menu for the StatusBar to access functions for LogHistory
+- Submenus for Import and export in the File menu.
+- Search bar for Group By column selection in AggregationDialog
+- A context menu to select all available columns in the AggregationDialog
+- A up-down arrow to change order of columns in the resulting df in the AggregationDialog.
+- SearchResultsDialog now shows number of matches and has an inbuilt filtering system, incase of many results.
+- **FilterAdvancedDialog**:
+    - The Condition dropdown now dynamically updates based on the selected column type. Text options like "Contains Text" and "In List" are automatically hidden for Numerical and Date columns.
+    - The Value spinbox for numerical columns now automatically bounds its acceptable range to the actual minimum and maximum values present in that specific dataset column (plus a 10% padding margin to allow further querying).
+    - A confirmation prompt when closing the dialog (via Cancel or the `Esc` key) if there are unsaved filter configurations.
+    - A targeted "Reset" button for each filter row, allowing users to flush a single filter's state independently.
+- **ComputedColumnDialog**
+    - Column filtering functionality to find specific columns
+    - Function filtering to search the function library
+    - A Clear button to reset the expression editor
+    - A Ctrl+Return short to trigger the "Create Column" button
+    - Tooltips for the functions library
+    - A Status label to signify a valid expression as well as syntax error hinting
+- Support for secondary y-axis for plots created with Plotly
+- Customization controls for error bar customization. Including: linecolor, capsize, zorder and transparency.
+- Script editor and code export supports Donut charts.
+- Updated PlotExportDialog with image preview, aspect ratio, height and width settings. 
+- WindowTitle updating to reflect unsaved changes and the current project loaded.
+- Better variable parsing in the ScriptEditorDialog, variables in the current namespace will be loaded
+- Added Data pipeline macro functionality to reuse data transformations as macros in the HistoryTab of the DataTab
+- `MacroPreviewDialog` allows one to inspect the operations and parameters of a macro before executing it
+- A rollback measure incase an operations in a macro fails the dataset is reset to its original state to avoid corrupting it.
+- Dockwidget for the plot-tab to allow for side-by-side viewing of data and plot
+- Nodegraph view for history of data operations instead of a static list. 
+- A Python console to the DataTab to handle data operations using the console
+- Added event listeners for scrolling, middle click panning, hovering for ToolTips on canvas
+- Added event listener for right clicking on a subplot to make that subplot the current active subplot.
+- Memory tracking in the status bar
+- Added animations for SubsetData, CalculatingColumn/Datetime and SavingPlotasImages
+- Added a small checkmark to Toggle switches when they are toggled.
+- Added copying cell values from to table to table context menu.
+- A dialog for reordering columns in the dataframe.
+- Method in DataMutator to handle reordering of the columns as well as the UI buttons in the Columns Tab
+- UI fields for assigning custom names to legend elements in Legend&Grid Tab
+- UI fields for changing font-size of legend title and legend labels independently
+- Updated CodeExporter to handle all legend elements from PlotConfig.
+- Styling for the NavigationToolbar in at the top of the plot canvas.
+- PlotConfigEditorDialog added a JSON syntax highlighting, error tracking of invalid json and a color insert button to easier get color codes in the JSON.
+- Tool for dropping Empty columns where all row values are NaN
+- Updated AboutDialog to a dialog instead of a Messagebox
+- Added a Greeting to the plot tab before a plot is generated. This message also appears when clearing a plot.
+- Filters to column list in ExportDialog
+- Added support for choosing colors, fontweight, fontsize, rotation and coordinate placement of data point annotations
+- Added background color changing for manually typed annotations
+- Added a custom context-toolbar widget that allows for customization of annotations 
+- Added port verification in DatabaseConnectionDialog
+- Global settings search bar within `PlotSettingsPanel` to filter `QGroupBox` visibility across all tabs.
+- Added dialogs for ShiftingData, CalculatingPercentageChange, RollingWindows. Methods for these are updated in DataMutator
+
+### Changed
+- Refactored `SavedAggregation` dataclass to use `agg_config` removing redundant fields
+- Optimized `_get_foreground_data()` to utilize compiled functional operators (operator.lt, operator.gt, etc.) rather than performing inline dictionary lookups on every rendered cell.
+- Bypassed legacy chunk-caching logic inside DataTableModel, routing direct O(1) Pandas .iat lookups.
+- Optimized ToolTipRole delivery to immediately skip non-string scalars rather than forcibly casting everything to verify length.
+- Optimized DisplayRole rendering by handling floats explicitly prior to executing slower Pandas type-checks (pd.isna).
+- Refactored most of PlotSettingsTabs into more managable tabs. Cuts down on visual information spam.
+- Changed HTML font metrics for links for changelog links
+- Changed LandingPage to a 4:6 ratio
+- Performance issues with larger datasets when using the Auto-Create Subset tool. Work has been offloaded to background thread.
+- Clicking the terminal bar will open the LogHistoryPopup window
+- Changed the general UI layout of FilterAdvancedDialog to not have more than 1 filter active on startup. More filters can be added by clicking "+ Add filter" button
+- For FilterAdvancedDialog: The `QDateEdit` widget now defaults to the most recent date found within the currently selected datetime column, rather than statically defaulting to the current system date.
+- Updated `CreateSubsetDialog` to be similar to FilterAdvancedDialog
+- BinningDialogs validation process
+- Refactored Plotly plot generation to use a similar strategy approach as regular plotting.
+- Statistics Panel and Test results panel now renderings using a QWebEngineView. 
+- Implemented a general support for error bars for scatter, line and bar plots.
+- Changes for styling parameters, updated to more centralised css files and avoiding stylesheeting in python.
+- Console in ScriptEditorDialog is now writeable 
+- Updated plotting to run on a background thread to avoid freezing on large datasets.
+- Refactored `clean_data` method to use a command-registry approach, making the method more maintainable
+- Reworked the subplot creation to use a grid system and be more visual before committing to an subplot config. 
+- Updated the VennDiagramWidget to have better colors and some animations
+- Refactor of DataHandler into sub-classes of tasks: 
+    - HistoryManager handles all data states and operation history
+    - DataIOManager handles all I/O of files
+    - DataMutator handles all the transformation algorithms for the data
+    - DataHandler acts a bridge for app to access the same API
+- Styling of Tabs
+- Changes to the FigureCanvas Frame area to not overflow.
+- Changed the visibility of plot customization controls for secondary plot types on a TwinAx
+- Updated visual styling, ux of the OutlierDetectionDialog
+- Updated IconRegistry with a 'Copy' icon
+- General updates to interface of HelpDialog
+- Optimized the annotation dragging system to help resolve lag
+- Changed layout of DatabaseConnectionDialog
+- Optimized the FPS of drawing ColorBlindness filters
+- Improved the Advanced Filter dialog layout by dynamically hiding the value input field and its label when the selected condition does not require an input (e.g., "Is Null", "Is Not Null").
+- CodeEditor: Modified keyPressEvent to force trigger the QCompleter popup when the . character is typed, enhancing object-oriented scripting support.
+- Refactored `PlotExportDialog` dimension input fields to use a `QGridLayout`.
+- Refactored _create_dps_package to write JSON and Parquet representations directly to the ZIP archive using in-memory streams, bypassing temporary directory creation and improving save speed for large dataframes.
+
+### Fixed
+- Fixed a bug in `AggregationManager.reapply_aggregation` where missing properties caused exceptions during data updates
+- Prevented a potential crash in `get_aggregation_df` when retrieving results
+- Fallbacks in `SavedAggregation.from_dict` to ensure backwards compatibility with older project files
+- Fixed a bug where exporting code with a list-based filter created invalid syntax by recursing lists
+- Fixed a crash in exported Python scripts when creating pie charts with empty datasets
+- Fixed a crash in exported Python scripts when generating scatter plot analysis without assigning a y-column
+- Fixed a crash in Google Sheets export when attempting to add a new worksheet
+- Fixed a crash where SQLite exceptions across threads would intervene with workers
+- Fixed an issue where exporting session logs resulted in heavily indented and difficult to read log file.
+- Fixed a bug where index out of bounds or incorrect string slicing occurred when processing markdown headers with irregular whitespace
+- Fixed a bug where LaTeX rendering settings failed to load
+- Fixed a bug where legend edge colors failed to load/save properly 
+- Fixed issue in Columns tab where ui was squeezed
+- Fixed an issue where Data Operations panel remained visible while start screen was active.
+- Fixed a bug where the app failed to prompt about unsaved script changes before closing python editor.
+- Fixed high CPU usage during scrolling in DataTable
+- Fixed an issue where correct text data type was rejected by the text manipulation tools for wrong datatype.
+- Fixed an issue where a redundant log message would be written after every operation.
+- Fixed a bug that caused tick labels to be overwritten with index numbers on plotting.
+- Fixed an issue causing visual pop-in effect when widgets were initialized.
+- Fixed a visual issue where frames around text in the "Whats New" information panel were drawn
+- Fixed an issue on the LandingPage where the drop shadow of the "What's New" panel would visually clip at the edges of the application window.
+- Fixed a bug where context label from Subsets and aggregations were not updated when a subset or aggregation was not in view.
+- Fixed an issue where selecting "Is Null" or "Is Not Null" in FilterAdvancedDialog would not immediately update the query preview label.
+- Fixed horizontal misalignment between the first filter row and subsequent rows in the FilterAdvancedDialog. The input fields now snap to a vertical grid regardless of whether the AND/OR logical operator is visible.
+- Prevented the ability to submit a query in the FilterAdvancedDialog with an empty string value, which would previously bypass the text validation.
+- Fixed a sizing issue of the splitter in the DataTab on small displays.
+- Fixed an issue where Z-score outlier detection failed to calculate due to a mismatch between indexes from DataFrame
+- Fixed a bug where duplicate column names could crash the distribution preview in the Outlier Detection Tool
+- Fixed a bug where upon launch app did not start in maximised window
+- Fixed an OOM error when storing undo states of large datasets
+- Fixed an error where sorting state was not tracked by undo states.
+- Fixed issues where a crash would lead to the temp directory not being deleted after use.
+- Resolved a bug in the Python Console where an incomplete statement would cause a crash
+- Fixed a bug where csv with malformed unicode would fail to load
+- Fixed a typo in PlotEngine where canvas height was not accessed correctly
+- Fixed an indexing error when trying to select values in canvas to find in DataTableModel
+- Fixed rendering artifacts and blurriness on higher DPI displays
+- Resolved an OOM crash when performing a search on a large dataset
+- Enhanced rendering of the borders of the SubplotOverlay
+- Fixed a bug where text from the SubplotOverlay did not disappear after animation was finished.
+- Fixed lack of parameter in CodeExporter._generate_legend where parameters would reset upon using the ScriptEditor
+- Fixed a bug where toggling independent minor/major gridlines would cause the settings to be unreadable
+- Fixed a rendering issue with the `SubplotOverlay` where geometry was not shifted in both x and y axis.
+- Fixed an issue where typing in QuickFilter caused the plot to immediately redraw and fail due to incomplete query.
+- Fixed a style bug on MenuBar where the hover property was missing.
+- Fixed a typo in PlotEngine that caused "OpenStreetMaps" to not be rendered
+- Fixed bug where trying to export code would result in a crash
+- Resolved an issue where changing the custom textbox duplicated the object on the canvas instead of just updating the existing one.
+
+### Removed
+- Removed self._data_buffer dictionary cache system and its associated clearance commands in sort, setData, and update_data for `DataTableModel`.
+- Removed dynamic _is_numeric checking and inline bitwise enum combinations from DataTableModel.data().
+- Top level export menu from MenuBar
+- Plotly backend
+- Widget_styles file
+- Redundant custom style of QTabWidget
+
+## v0.1.0 [Prerelease]
 ### Added
 - Support for column duplication from the Columns tab in Data Tab
 - Methods in `DataHandler` to handle data cleaning operations
@@ -93,7 +264,7 @@ and this project adheres to Semantic Versioning.
 - Buttons for saving customizations to lines and bars in PlotTab
 - IconEngine and manual drawing of icons
 
-## v0.0.9
+## v0.0.9 [Prerelease]
 ### Added
 - A visual join diagram as a Venn Diagram in the Merge tool to preview the merge of datasets
 - Data Cleaning Preview: The operations, "Remove Duplicates" and "Drop Missing Values", now highlight affected rows and requires a confirm to be removed.
@@ -155,7 +326,7 @@ and this project adheres to Semantic Versioning.
 ### Removed
 - Deprecated XML DOM tree proccessing for project save files and project configs
 
-## v0.0.8
+## v0.0.8 [Prerelease]
 ### Added:
 - HoverFocusAnimationMixin class to handle border animations
 - ThemeColors for a centralised widget color system
@@ -168,7 +339,7 @@ and this project adheres to Semantic Versioning.
 - Individual widget styling and animations.
 
 
-## v0.0.7
+## v0.0.7 [Prerelease]
 ### Added
 - **Aggregate Data**
     - Aggregate multiple columns per grouping with a function
@@ -220,7 +391,7 @@ and this project adheres to Semantic Versioning.
 - Issue where RadioButton did not change styling when checked/unchecked.
 - Popup bug when an item in a combobox was clicked the focus changed causing a crash.
 
-## v0.0.6
+## v0.0.6 [Prerelease]
 ### Added
 - Added EPS, TIFF, PS, RAW bitmap and RGBA as options for file formats when saving figure. 
 - Drag manually added annotations around the plot canvas.
@@ -236,7 +407,7 @@ and this project adheres to Semantic Versioning.
 - DPI settings from plotting interface.
 
 
-## v0.0.5
+## v0.0.5 [Prerelease]
 ### Added
 - Coordinate Reference System Transformation for geospatial plots
 - Adding basemap tiles from Esri, OpenStreetMap, CartoDB as background maps.
@@ -256,7 +427,7 @@ and this project adheres to Semantic Versioning.
 - Bug where coloraxis and color legends for geospatial plots was not parsed correctly and would either not show up or create duplicates.
 - Bug where the data table on a plot was duplicated each time the placement parameter was changed. Caused multiple of the same table to be plotted.
 
-## v0.0.4
+## v0.0.4 [Prerelease]
 ### Added
 - Text Manipulation to string data. Trim text data, and standardize casing etc
 - Calculate column. Create new columns and use arithmetic, comparative and logical operations to calculate values in the new column.
