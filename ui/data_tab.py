@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
     QDialog,
     QStackedWidget,
     QApplication,
-    QTabWidget
+    QTabWidget,
+    QLabel
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import (
@@ -22,7 +23,8 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QEasingCurve,
     pyqtSignal,
-    QSize
+    QSize,
+    QTimer
 )
 from PyQt6.QtGui import QIcon, QFont, QAction, QPalette, QColor, QShortcut, QKeySequence
 import numpy as np
@@ -30,17 +32,14 @@ import numpy as np
 from core.data_handler import DataHandler
 from core.resource_loader import get_resource_path
 from ui.status_bar import StatusBar
-from ui.dialogs import (
-    TableCustomizationDialog,
-    SearchResultsDialog
-)
+from ui.dialogs import TableCustomizationDialog
 from core.subset_manager import SubsetManager
 from pathlib import Path
 
 from ui.data_table_model import DataTableModel
 from ui.theme import ThemeColors
 from ui.widgets import (
-    DataPlotStudioButton
+    DataPlotStudioButton, DataPlotStudioLineEdit
 )
 from ui.icons import IconBuilder, IconType
 from ui.components.data_operations_panel import DataOperationsPanel
@@ -53,6 +52,7 @@ from ui.animations import (
     EditModeToggleAnimation
 )
 from ui.controllers.data_tab_controller import DataTabController
+from ui.workers import SearchWorker
 
 
 class DataTab(QWidget):
@@ -90,6 +90,17 @@ class DataTab(QWidget):
         self.current_precision = 2
         self.current_formatting_rules = []
         self.current_render_bools = True
+        
+        self.current_search_matches: list = []
+        self.current_search_index: int = -1
+        self.search_worker = None
+        self.pending_search_text = ""
+        self.search_token = 0
+        
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(300)
+        self.search_timer.timeout.connect(self._execute_search_worker)
 
         self.init_ui()
 
@@ -187,6 +198,54 @@ class DataTab(QWidget):
         toolbar_layout.addWidget(self.edit_dataset_toggle_button)
 
         data_view_layout.addLayout(toolbar_layout)
+        
+        self.search_widget = QWidget()
+        self.search_widget.setObjectName("InlineSearchBar")
+        search_layout = QHBoxLayout(self.search_widget)
+        search_layout.setContentsMargins(5, 5, 5, 5)
+        
+        search_icon = QLabel()
+        search_icon.setPixmap(IconBuilder.build(IconType.Search).pixmap(16, 16))
+        search_layout.addWidget(search_icon)
+        
+        self.search_input = DataPlotStudioLineEdit(parent=self.search_widget)
+        self.search_input.setPlaceholderText("Find in table (Enter for next)...")
+        self.search_input.textChanged.connect(self._on_search_text_changed)
+        self.search_input.returnPressed.connect(self._search_next)
+        search_layout.addWidget(self.search_input)
+        
+        self.search_count_label = QLabel("0/0 matches")
+        self.search_count_label.setFixedWidth(100)
+        self.search_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.search_count_label.setProperty("styleClass", "muted_text")
+        search_layout.addWidget(self.search_count_label)
+        
+        self.search_prev_btn = DataPlotStudioButton("", parent=self.search_widget, padding="4px")
+        self.search_prev_btn.setIcon(IconBuilder.build(IconType.UpArrow))
+        self.search_prev_btn.setToolTip("Previous Match")
+        self.search_prev_btn.clicked.connect(self._search_prev)
+        search_layout.addWidget(self.search_prev_btn)
+        
+        self.search_next_btn = DataPlotStudioButton("", parent=self.search_widget, padding="4px")
+        self.search_next_btn.setIcon(IconBuilder.build(IconType.DownArrow))
+        self.search_next_btn.setToolTip("Next Match (Enter)")
+        self.search_next_btn.clicked.connect(self._search_next)
+        search_layout.addWidget(self.search_next_btn)
+        
+        self.search_close_btn = DataPlotStudioButton("", parent=self.search_widget, padding="4px")
+        self.search_close_btn.setIcon(IconBuilder.build(IconType.Close))
+        self.search_close_btn.setToolTip("Close Search (Esc)")
+        self.search_close_btn.clicked.connect(self.hide_search_bar)
+        search_layout.addWidget(self.search_close_btn)
+        
+        search_layout.addStretch()
+        self.search_widget.setVisible(False)
+        
+        self.esc_shortcut = QShortcut(QKeySequence("Esc"), self.search_widget)
+        self.esc_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.esc_shortcut.activated.connect(self.hide_search_bar)
+        
+        data_view_layout.addWidget(self.search_widget)
 
         # Create tabs for data and statistics
         self.data_tabs = QTabWidget()
@@ -210,6 +269,13 @@ class DataTab(QWidget):
             QHeaderView.ResizeMode.Interactive
         )
         self.data_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+        
+        palette = self.data_table.palette()
+        active_highlight = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight)
+        active_text = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.HighlightedText)
+        palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, active_highlight)
+        palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.HighlightedText, active_text)
+        self.data_table.setPalette(palette)
 
         # Data table context menu
         self.data_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -217,7 +283,7 @@ class DataTab(QWidget):
 
         # Search functionality to data table
         self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.search_shortcut.activated.connect(self.open_search_dialog)
+        self.search_shortcut.activated.connect(self.open_search_bar)
         
         self.copy_shortcut = QShortcut(QKeySequence.StandardKey.Copy, self.data_table)
         self.copy_shortcut.activated.connect(self.copy_selection)
@@ -312,54 +378,79 @@ class DataTab(QWidget):
         else:
             self.refresh_data_view()
 
-    def open_search_dialog(self):
-        """Opens a search dialog to find the values in the data table"""
+    def open_search_bar(self) -> None:
+        """Show the inline search bar and focus input"""
         if self.data_handler.df is None:
             return
-
-        text, ok = QInputDialog.getText(self, "Find in table", "Search for a value:")
-        if ok and text:
-            self.perform_search(text)
-
-    def perform_search(self, search_text: str):
-        """Executes a search on the dataframe"""
-        if self.data_handler.df is None or self.data_handler.df.empty:
+        self.search_widget.setVisible(True)
+        self.search_input.setFocus()
+        self.search_input.selectAll()
+    
+    def hide_search_bar(self) -> None:
+        """Hides the serach bar and clears current query"""
+        self.search_widget.setVisible(False)
+        self.search_input.clear()
+        if self.data_table:
+            self.data_table.clearSelection()
+    
+    def _on_search_text_changed(self, text: str) -> None:
+        self.pending_search_text = text
+        self.search_count_label.setText("...")
+        self.search_timer.start()
+        
+    def _execute_search_worker(self) -> None:
+        text = self.pending_search_text
+        
+        if hasattr(self, 'last_searched_text') and self.last_searched_text == text:
+            if self.search_worker is not None and self.search_worker.isRunning():
+                return
+        self.last_searched_text = text
+        
+        self.search_token += 1
+        current_token = self.search_token
+        
+        if not text or self.data_handler.df is None or self.data_handler.df.empty:
+            self._handle_search_results([], current_token)
             return
         
-        df = self.data_handler.df
-        matches: list[tuple[int, int, str, str]] = []
-        search_text_lower: str = str(search_text).lower()
-
-        for col_index, col_name in enumerate(df.columns):
-            col_series_str = df[col_name].astype(str)
-            mask = col_series_str.str.contains(search_text_lower, case=False, regex=False)
-            
-            matched_row_indices = np.where(mask)[0]
-            
-            for row_idx in matched_row_indices:
-                matches.append((int(row_idx), col_index, str(col_name), col_series_str.iloc[row_idx]))
-
-        if not matches:
-            QMessageBox.information(
-                self, "Search", f"No matches found for '{search_text}'"
-            )
+        self.search_worker = SearchWorker(self.data_handler.df, text, current_token, parent=self)
+        self.search_worker.finished_search.connect(self._handle_search_results)
+        self.search_worker.start()
+    
+    def _handle_search_results(self, matches: list, token: int) -> None:
+        if token != self.search_token:
             return
-
-        if len(matches) == 1:
-            row, col_idx, _, _ = matches[0]
-            self.highlight_cell(row, col_index)
-            self.status_bar.log(
-                f"Found 1 match at Row {row}, Column index'{col_index}'",
-                "SUCCESS",
-            )
+        
+        self.current_search_matches = matches
+        self.current_search_index = -1
+        
+        if self.current_search_matches:
+            self.current_search_index = 0
+            self._highlight_current_match()
         else:
-            dialog = SearchResultsDialog(matches, self)
-            if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_match:
-                row, col_index, col, value = dialog.selected_match
-                self.highlight_cell(row, col_index)
-                self.status_bar.log(
-                    f"Selected match at Row: {row}, Column: '{col}'", "SUCCESS"
-                )
+            self.search_count_label.setText("0/0 matches")
+            if self.data_table:
+                self.data_table.clearSelection()
+    
+    def _search_next(self) -> None:
+        if not self.current_search_matches:
+            return
+        self.current_search_index = (self.current_search_index + 1) % len(self.current_search_matches)
+        self._highlight_current_match()
+    
+    def _search_prev(self) -> None:
+        if not self.current_search_matches:
+            return
+        self.current_search_index = (self.current_search_index - 1) % len(self.current_search_matches)
+        self._highlight_current_match()
+    
+    def _highlight_current_match(self) -> None:
+        if 0 <= self.current_search_index < len(self.current_search_matches):
+            row, col = self.current_search_matches[self.current_search_index]
+            self.highlight_cell(row, col)
+            self.search_count_label.setText(f"{self.current_search_index + 1}/{len(self.current_search_matches)} matches")
+            
+            self.search_input.setFocus()
 
     def highlight_cell(self, row_index: int, column_index: int):
         """Scrolls to and highlights the specified index cell in the data table"""
@@ -368,8 +459,13 @@ class DataTab(QWidget):
 
         index = self.data_table.model().index(row_index, column_index)
         if index.isValid():
+            from PyQt6.QtCore import QItemSelectionModel
+            self.data_table.selectionModel().select(
+                index,
+                QItemSelectionModel.SelectionFlag.ClearAndSelect
+            )
             self.data_table.setCurrentIndex(index)
-            self.data_table.scrollTo(index, QTableView.ScrollHint.EnsureVisible)
+            self.data_table.scrollTo(index, QTableView.ScrollHint.PositionAtCenter)
             self.data_table.setFocus()
 
     def refresh_data_view(self, reload_model: bool = True):
@@ -458,30 +554,30 @@ class DataTab(QWidget):
         columns = list(df.columns)
         panel = self.operations_panel
         
-        panel.filter_column.clear()
-        panel.filter_column.addItems(columns)
-        panel.column_list.clear()
-        panel.column_list.addItems(columns)
-        panel.dt_source_combo.clear()
-        panel.dt_source_combo.addItems(columns)
-        panel.dt_start_combo.clear()
-        panel.dt_start_combo.addItems(columns)
-        panel.dt_end_combo.clear()
-        panel.dt_end_combo.addItems(columns)
+        panel.filtering_tab.filter_column.clear()
+        panel.filtering_tab.filter_column.addItems(columns)
+        panel.columns_tab.column_list.clear()
+        panel.columns_tab.column_list.addItems(columns)
+        panel.datetime_tab.dt_source_combo.clear()
+        panel.datetime_tab.dt_source_combo.addItems(columns)
+        panel.datetime_tab.dt_start_combo.clear()
+        panel.datetime_tab.dt_start_combo.addItems(columns)
+        panel.datetime_tab.dt_end_combo.clear()
+        panel.datetime_tab.dt_end_combo.addItems(columns)
         
         if hasattr(panel, "sort_column_combo"):
-            current_sort = panel.sort_column_combo.currentText()
-            panel.sort_column_combo.clear()
-            panel.sort_column_combo.addItems(columns)
+            current_sort = panel.transform_tab.sort_column_combo.currentText()
+            panel.transform_tab.sort_column_combo.clear()
+            panel.transform_tab.sort_column_combo.addItems(columns)
             if current_sort and current_sort in columns:
-                panel.sort_column_combo.setCurrentText(current_sort)
+                panel.transform_tab.sort_column_combo.setCurrentText(current_sort)
             elif (self.data_handler.sort_state and self.data_handler.sort_state[0] in columns):
-                panel.sort_column_combo.setCurrentText(self.data_handler.sort_state[0])
+                panel.transform_tab.sort_column_combo.setCurrentText(self.data_handler.sort_state[0])
         
         if hasattr(panel, "subset_column_combo"):
             try:
-                panel.subset_column_combo.clear()
-                panel.subset_column_combo.addItems(columns)
+                panel.subsets_tab.subset_column_combo.clear()
+                panel.subsets_tab.subset_column_combo.addItems(columns)
             except Exception as Error:
                 print(f"Warning: Could not update subset columns: {str(Error)}")
         
@@ -531,10 +627,10 @@ class DataTab(QWidget):
     def _update_history_list(self) -> None:
         """Updates the history list"""
         panel = self.operations_panel
-        if not hasattr(panel, "history_list"):
+        if not hasattr(panel, "history_list") or not hasattr(panel.history_tab, "history_list"):
             return
         
-        panel.history_list.clear()
+        panel.history_tab.history_list.clear()
         
         history_information = self.data_handler.get_history_info()
         history_operations = history_information["history"]
@@ -578,7 +674,7 @@ class DataTab(QWidget):
         initial_item.setIcon(IconBuilder.build(IconType.DataExplorerIcon))
         initial_item.setToolTip("The original data state upon import or creation")
         
-        panel.history_list.addItem(initial_item)
+        panel.history_tab.history_list.addItem(initial_item)
         
         for i, operation in enumerate(history_operations):
             history_index = i + 1
@@ -593,13 +689,13 @@ class DataTab(QWidget):
             item.setToolTip(f"<b>Operation Details:</b><br><ul style='margin-top: 4px; margin-bottom: 0px;'>{details}</ul>")
             
             style_item(item, history_index, f"{history_index}. {operation_text}")
-            panel.history_list.addItem(item)
+            panel.history_tab.history_list.addItem(item)
         
-        if panel.history_list.count() > 0:
-            panel.history_list.scrollToItem(panel.history_list.item(current_index))
+        if panel.history_tab.history_list.count() > 0:
+            panel.history_tab.history_list.scrollToItem(panel.history_tab.history_list.item(current_index))
         
         if hasattr(panel, "pipeline_graph"):
-            panel.pipeline_graph.build_graph(history_operations, current_index, self._format_operation_text)
+            panel.history_tab.pipeline_graph.build_graph(history_operations, current_index, self._format_operation_text)
     
     def _get_icon_for_operation(self, operation_type: str) -> QIcon:
         match operation_type:

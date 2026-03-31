@@ -1,5 +1,7 @@
-from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot, QThread
 import pandas as pd
+import numpy as np
+
 
 from core.data_handler import DataHandler
 from sqlalchemy import create_engine, text
@@ -241,3 +243,35 @@ class PlotDataPrepWorker(QRunnable):
             self.signals.finished.emit(processed_df)
         except Exception as e:
             self.signals.error.emit(e)
+
+class SearchWorker(QThread):
+    finished_search = pyqtSignal(object, int)
+    
+    def __init__(self, df, search_text, token, parent=None) -> None:
+        super().__init__(parent)
+        self.df = df
+        self.search_text = search_text
+        self.token = token
+    
+    def run(self) -> None:
+        matches = []
+        if self.df is None or self.df.empty or not self.search_text:
+            self.finished_search.emit(matches, self.token)
+            return
+        
+        search_text_lower = str(self.search_text).lower()
+        try:
+            for col_index, col_name in enumerate(self.df.columns):
+                col_series_str = self.df[col_name].astype(str)
+                mask = col_series_str.str.contains(search_text_lower, case=False, regex=False, na=False)
+                
+                matched_row_indices = np.where(mask)[0]
+
+                for row_idx in matched_row_indices:
+                    matches.append((int(row_idx), col_index))
+
+            matches.sort(key=lambda x: (x[0], x[1]))
+            self.finished_search.emit(matches, self.token)
+                
+        except Exception:
+            self.finished_search.emit([], self.token)
