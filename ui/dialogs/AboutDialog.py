@@ -7,6 +7,7 @@ from pathlib import Path
 from core.resource_loader import get_resource_path
 from ui.theme import ThemeColors
 from ui.widgets import DataPlotStudioButton
+from ui.icons import IconBuilder, IconType
 
 class AboutDialog(QDialog):
     def __init__(self, parent: QWidget, application_version: str) -> None:
@@ -29,12 +30,10 @@ class AboutDialog(QDialog):
         header_layout.setSpacing(12)
         
         logo_label = QLabel()
-        logo_label.setObjectName("aboutLogoLabel")
-        
-        logo_path = Path("icons") / "DPS_icon.ico"
-        if logo_path.exists():
-            pixmap = QPixmap(str(logo_path)).scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            logo_label.setPixmap(pixmap)
+        logo_pixmap = IconBuilder.build(IconType.AppIcon).pixmap(48, 48)
+        if not logo_pixmap.isNull():
+            logo_label.setPixmap(logo_pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_label.setPixmap(logo_pixmap)
         
         header_title = QLabel(f"DataPlotStudio")
         header_title.setObjectName("aboutHeaderLabel")

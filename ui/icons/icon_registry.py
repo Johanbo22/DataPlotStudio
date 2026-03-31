@@ -82,8 +82,12 @@ class IconType(Enum):
     UpArrow = auto()
     DownArrow = auto()
     Close = auto()
+    Menu = auto()
+    AppIcon = auto()
     
 _ICON_CONTENT = {
+    IconType.AppIcon: '<path d="M480-880 840-672v416L480-48 120-256v-416l360-208Zm0 106-276 160v320l276 160 276-160v-320L480-774ZM320-280v-160h80v160h-80Zm120 0v-260h80v260h-80Zm120 0v-360h80v360h-80Z"/>',
+    IconType.Menu: '<path d="M120-240v-60h720v60H120Zm0-210v-60h720v60H120Zm0-210v-60h720v60H120Z"/>',
     IconType.Close: '<path d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"/>',
     IconType.DownArrow: '<path d="M450-800v526L202-522l-42 42 320 320 320-320-42-42-248 248v-526h-60Z"/>',
     IconType.UpArrow: '<path d="M450-160v-526L202-438l-42-42 320-320 320 320-42 42-248-248v526h-60Z"/>',
@@ -178,6 +182,8 @@ class IconBuilder:
         Builds a QIcon from the given IconType.
         If color is None, falls back to the application's primary text color.
         """
+        if icon_type == IconType.AppIcon:
+            return cls._build_native_app_icon(resolution)
         if color is None:
             color = ThemeColors.TEXT_PRIMARY.name()
         
@@ -208,6 +214,103 @@ class IconBuilder:
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(disabled_pixmap, QIcon.Mode.Disabled, QIcon.State.Off)
         
+        return icon
+    
+    @classmethod
+    def _build_native_app_icon(cls, resolution: int = 512) -> QIcon:
+        from PyQt6.QtGui import QPainter, QRadialGradient, QColor, QPen, QBrush, QGuiApplication, QPolygonF
+        from PyQt6.QtCore import Qt, QPointF
+        import math
+        
+        pixmap = QPixmap(resolution, resolution)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # --- BRAND COLORS ---
+        # Lock to DataPlotStudio identity (Google Material Blue & Cyan)
+        core_color = QColor("#1A73E8")     # Google Blue
+        accent_color = QColor("#FFFFFF")   # Vibrant Cyan accent
+        background_tint = QColor(core_color.red(), core_color.green(), core_color.blue(), 30)
+        
+        center = QPointF(resolution / 2, resolution / 2)
+        base_radius = resolution * 0.42
+        
+        # --- 1. AMBIENT CORE GLOW ---
+        glow = QRadialGradient(center, base_radius)
+        glow.setColorAt(0.0, background_tint)
+        glow.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setBrush(QBrush(glow))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(center, base_radius, base_radius)
+        
+        # --- 2. DATA CONSTELLATION (Hexagonal Network) ---
+        layers = 3
+        points_per_layer = 6
+        nodes = []
+        
+        # Generate the geometry nodes
+        for layer in range(1, layers + 1):
+            layer_radius = (base_radius / layers) * layer
+            layer_nodes = []
+            # Rotate each layer slightly for a dynamic, twisting structure
+            angle_offset = (math.pi / 12) * layer 
+            
+            for i in range(points_per_layer):
+                angle = angle_offset + (i * (2 * math.pi / points_per_layer))
+                # Add "data jitter" to the outer layer so it feels organic, not perfectly rigid
+                jitter = (layer_radius * 0.12) if layer == layers and i % 2 == 0 else 0
+                
+                x = center.x() + (layer_radius + jitter) * math.cos(angle)
+                y = center.y() + (layer_radius + jitter) * math.sin(angle)
+                layer_nodes.append(QPointF(x, y))
+            nodes.append(layer_nodes)
+            
+        # Draw connecting network edges (Lines)
+        edge_pen = QPen(QColor(core_color.red(), core_color.green(), core_color.blue(), 120), resolution * 0.012)
+        edge_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(edge_pen)
+        
+        for layer_idx, layer_nodes in enumerate(nodes):
+            poly = QPolygonF(layer_nodes)
+            painter.drawPolygon(poly) # Connect points in the current ring
+            
+            # Cross-connect to the inner layers (Spider web effect)
+            if layer_idx > 0:
+                inner_nodes = nodes[layer_idx - 1]
+                for i, node in enumerate(layer_nodes):
+                    painter.drawLine(node, inner_nodes[i])
+                    painter.drawLine(node, inner_nodes[(i + 1) % points_per_layer])
+        
+        # Connect the innermost ring to the absolute center hub
+        for node in nodes[0]:
+            painter.drawLine(center, node)
+            
+        # --- 3. DATA NODES (Scatter Points) ---
+        painter.setPen(Qt.PenStyle.NoPen)
+        
+        # Draw the network intersections
+        for layer_idx, layer_nodes in enumerate(nodes):
+            for i, node in enumerate(layer_nodes):
+                node_size = resolution * (0.045 if layer_idx == layers - 1 else 0.025)
+                # Alternate colors between core and accent for visual depth
+                color = accent_color if (i + layer_idx) % 2 == 0 else core_color
+                painter.setBrush(QBrush(color))
+                painter.drawEllipse(node, node_size, node_size)
+                
+        # Draw the central Core Super-Node (Bright, glowing center)
+        core_grad = QRadialGradient(center, resolution * 0.09)
+        core_grad.setColorAt(0.0, Qt.GlobalColor.white)
+        core_grad.setColorAt(0.3, accent_color)
+        core_grad.setColorAt(1.0, core_color)
+        painter.setBrush(QBrush(core_grad))
+        painter.drawEllipse(center, resolution * 0.09, resolution * 0.09)
+        
+        painter.end()
+        
+        icon = QIcon()
+        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         return icon
     
     @classmethod

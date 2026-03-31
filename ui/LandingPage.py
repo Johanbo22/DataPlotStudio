@@ -64,7 +64,7 @@ class LandingPage(QWidget):
 
         # Logo and title
         logo_label = QLabel()
-        logo_pixmap = QPixmap(get_resource_path("icons/DPS_icon.ico"))
+        logo_pixmap = IconBuilder.build(IconType.AppIcon).pixmap(72, 72)
         if not logo_pixmap.isNull():
             logo_label.setPixmap(logo_pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

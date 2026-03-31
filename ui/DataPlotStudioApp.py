@@ -23,7 +23,7 @@ class DataPlotStudio(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"DataPlotStudio - v{APPLICATION_VERSION}")
-        self.setWindowIcon(QIcon(get_resource_path("icons/DPS_icon.ico")))
+        self.setWindowIcon(IconBuilder.build(IconType.AppIcon))
         self.setMinimumSize(800, 600)
         self.resize(1280, 720)
 
