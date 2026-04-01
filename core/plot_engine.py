@@ -1,4 +1,6 @@
 # core/plot_engine.py
+from cProfile import label
+
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import matplotlib
@@ -606,47 +608,79 @@ class PlotEngine:
         show_kde = kwargs.pop("show_kde", False)
         show_stats = kwargs.pop("show_stats", True)
         cmap_name = kwargs.pop("cmap", None)
+        hue = kwargs.pop("hue", None)
         
-        data = df[column].dropna()
+        if hue and hue in df.columns:
+            groups = df[hue].dropna().unique()
+            data_list = []
+            labels = []
+            for group in groups:
+                group_data = df[df[hue] == group][column].dropna()
+                if not group_data.empty:
+                    data_list.append(group_data)
+                    labels.append(str(group))
+            plot_data = data_list
+            colors = self._get_colors_from_cmap(cmap_name, len(data_list))
+            if colors:
+                kwargs["color"] = colors
+            kwargs["label"] = labels
+        else:
+            plot_data = df[column].dropna()
+        n, bins_edges, patches = self.current_ax.hist(
+            plot_data, bins=bins, density=show_normal or show_kde, picker=True, **kwargs
+        )
+        if hue and hue in df.columns:
+            for i, group_data in enumerate(data_list):
+                c = colors[i] if colors else None
+                if show_normal:
+                    from scipy.stats import norm
+                    mu, sigma = group_data.mean(), group_data.std()
+                    if sigma > 0:
+                        x = np.linspace(group_data.min(), group_data.max(), 100)
+                        normal_curve = norm.pdf(x, mu, sigma)
+                        self.current_ax.plot(x, normal_curve, color=c, linestyle="-", linewidth=2, label=f"Norm ({labels[i]})")
+                if show_kde:
+                    from scipy.stats import gaussian_kde
+                    try:
+                        kde = gaussian_kde(group_data)
+                        x = np.linspace(group_data.min(), group_data.max(), 100)
+                        kde_curve = kde(x)
+                        self.current_ax.plot(x, kde_curve, color=c, linestyle="--", linewidth=2, label=f"KDE ({labels[i]})")
+                    except Exception:
+                        pass
+            if legend or show_normal or show_kde:
+                self.current_ax.legend()
+        else:
+            data = plot_data
+            mu = data.mean()
+            sigma = data.std()
+            median = data.median()
 
-        #calculate mean and std
-        mu = data.mean()
-        sigma = data.std()
-        median = data.median()
-
-        n, bins_edges, patches = self.current_ax.hist(data, bins=bins, density=show_normal or show_kde, picker=True, **kwargs)
-
-        #add ndist
-        if show_normal:
-            from scipy.stats import norm
-            import numpy as np
+            if show_normal and sigma > 0:
+                from scipy.stats import norm
+                x = np.linspace(data.min(), data.max(), 100)
+                normal_curve = norm.pdf(x, mu, sigma)
+                self.current_ax.plot(x, normal_curve, "r-", linewidth=2.5, label=f"Normal (µ={mu:.2f}, σ={sigma:.2f})")
             
-            x = np.linspace(data.min(), data.max(), 100)
-            normal_curve = norm.pdf(x, mu, sigma)
-            self.current_ax.plot(x, normal_curve, "r-", linewidth=2.5, label=f"Normal (µ={mu:.2f}, σ={sigma:.2f})")
-        
-        if show_kde:
-            import numpy as np
-            from scipy.stats import gaussian_kde
+            if show_kde:
+                from scipy.stats import gaussian_kde
+                try:
+                    kde = gaussian_kde(data)
+                    x = np.linspace(data.min(), data.max(), 100)
+                    kde_curve = kde(x)
+                    self.current_ax.plot(x, kde_curve, "g-", linewidth=2.5, label="KDE")
+                except Exception:
+                    pass
+
+            if show_normal or show_kde:
+                self.current_ax.legend()
             
-            #gen kde
-            kde = gaussian_kde(data)
-            x = np.linspace(data.min(), data.max(), 100)
-            kde_curve = kde(x)
+            # Add some statistics for single plots
+            if show_stats and (show_normal or show_kde):
+                stats_text = f"µ = {mu:.3f}\nσ = {sigma:.3f}\nmedian = {median:.3f}\nn = {len(data)}"
+                props = dict(boxstyle="round", facecolor="wheat", alpha=0.85, edgecolor="black", linewidth=1)
+                self.current_ax.text(0.75, 0.95, stats_text, transform=self.current_ax.transAxes, fontsize=10, verticalalignment="top", bbox=props, fontfamily="monospace")
 
-            #plot kde
-            self.current_ax.plot(x, kde_curve, "g-", linewidth=2.5, label="KDE")
-
-        if show_normal or show_kde:
-            self.current_ax.legend()
-        
-        # add some statistics
-        if show_stats and (show_normal or show_kde):
-            stats_text = f"µ = {mu:.3f}\nσ = {sigma:.3f}\nmedian = {median:.3f}\nn = {len(data)}"
-            props = dict(boxstyle="round", facecolor="wheat", alpha=0.85, edgecolor="black", linewidth=1)
-            self.current_ax.text(0.75, 0.95, stats_text, transform=self.current_ax.transAxes, fontsize=10, verticalalignment="top", bbox=props, fontfamily="monospace")
-
-        
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
     def plot_box(self, df: pd.DataFrame, columns: List[str], **kwargs) -> None:

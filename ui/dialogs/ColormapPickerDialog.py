@@ -1,8 +1,10 @@
+from flask.config import T
 import matplotlib
 import matplotlib.pyplot as plt
-from PyQt6.QtCore import QSize, Qt, QSettings
+from functools import lru_cache
+from PyQt6.QtCore import QSize, Qt, QSettings, QEvent
 from PyQt6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPixmap
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QFrame, QSpinBox
 
 from ui.widgets import DataPlotStudioCheckBox, DataPlotStudioLineEdit, DataPlotStudioListWidget
 
@@ -21,6 +23,7 @@ class ColormapPickerDialog(QDialog):
     def __init__(self, current_colormap=None, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Select colormap")
+        self.setObjectName("colormapPickerDialog")
         self.setModal(True)
         self.resize(400, 600)
 
@@ -32,34 +35,129 @@ class ColormapPickerDialog(QDialog):
             self.selected_colormap = current_colormap
         
         self._final_selected_colormap = current_colormap
+        self.colormap_to_category = {}
+        for category, maps in self.COLORMAP_CATEGORIES.items():
+            for m in maps:
+                self.colormap_to_category[m] = category
 
         layout = QVBoxLayout(self)
 
         search_layout = QHBoxLayout()
         search_label = QLabel("Search:")
+        search_label.setObjectName("colormapSearchLabel")
+        
         self.search_input = DataPlotStudioLineEdit()
+        self.search_input.setObjectName("colormapSearchInput")
         self.search_input.setPlaceholderText("Type to filter...")
+        self.search_input.setClearButtonEnabled(True)
         self.search_input.textChanged.connect(self._filter_items)
+        
+        options_layout = QHBoxLayout()
 
         self.reverse_check = DataPlotStudioCheckBox("Reverse colormap")
+        self.reverse_check.setObjectName("colormapReverseCheckBox")
+        self.reverse_check.setToolTip("Flips the gradient direction")
         self.reverse_check.setChecked(is_reversed)
+        
+        self.grayscale_check = DataPlotStudioCheckBox("Grayscale test")
+        self.grayscale_check.setObjectName("colormapGrayscaleCheckBox")
+        self.grayscale_check.setToolTip("Preivew hos this colormap translates to black-and-white printing")
+        self.grayscale_check.toggled.connect(self._on_item_selection_changed)
+        
+        self.discrete_check = DataPlotStudioCheckBox("Discrete")
+        self.discrete_check.setObjectName("colormapDiscreteCheckBox")
+        self.discrete_check.setToolTip("Preview the colormap with quantile colorbands")
+        self.discrete_check.toggled.connect(self._on_item_selection_changed)
+        
+        self.discrete_spinbox = QSpinBox()
+        self.discrete_spinbox.setObjectName("colormapDiscreteSpinBox")
+        self.discrete_spinbox.setRange(2, 30)
+        self.discrete_spinbox.setValue(10)
+        self.discrete_spinbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.discrete_spinbox.setFixedWidth(60)
+        self.discrete_spinbox.setToolTip("Number of discrete color bins")
+        self.discrete_spinbox.setEnabled(False)
+        self.discrete_spinbox.valueChanged.connect(self._on_item_selection_changed)
+        self.discrete_check.toggled.connect(self.discrete_spinbox.setEnabled)
+        
+        options_layout.addWidget(self.reverse_check)
+        options_layout.addWidget(self.grayscale_check)
+        options_layout.addWidget(self.discrete_check)
+        options_layout.addWidget(self.discrete_spinbox)
+        options_layout.addStretch()
 
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_input)
         layout.addLayout(search_layout)
-        layout.addWidget(self.reverse_check)
+        layout.addLayout(options_layout)
+        
+        self.empty_search_label = QLabel("No colormaps found matching your search")
+        self.empty_search_label.setObjectName("colormapEmptySearchLabel")
+        self.empty_search_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_search_label.setHidden(True)
+        layout.addWidget(self.empty_search_label)
 
         self.list_widget = DataPlotStudioListWidget()
+        self.list_widget.setObjectName("colormapListWidget")
         self.list_widget.setIconSize(QSize(100, 20))
-        self.list_widget.setUniformItemSizes(False)
-        self.list_widget.setSpacing(0)
+        self.list_widget.setUniformItemSizes(True)
+        self.list_widget.setSpacing(2)
         self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self.list_widget.itemSelectionChanged.connect(self._on_item_selection_changed)
         layout.addWidget(self.list_widget)
+        
+        self.preview_container = QFrame()
+        self.preview_container.setObjectName("colormapPreviewContainer")
+        self.preview_container.setFrameShape(QFrame.Shape.StyledPanel)
+        self.preview_container.setHidden(True)
+        
+        preview_layout = QVBoxLayout(self.preview_container)
+        preview_layout.setContentsMargins(8, 8, 8, 8)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        preview_header_layout = QHBoxLayout()        
+        self.category_label = QLabel("")
+        self.category_label.setObjectName("colormapCategoryLabel")
+        self.category_label.setProperty("class", "metadata-label")
+        
+        self.name_label = QLabel("")
+        self.name_label.setObjectName("colormapNameLabel")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        font = self.name_label.font()
+        font.setBold(True)
+        self.name_label.setFont(font)
+        
+        preview_header_layout.addWidget(self.category_label)
+        preview_header_layout.addWidget(self.name_label)
+        preview_layout.addLayout(preview_header_layout)
+        
+        gradient_layout = QHBoxLayout()
+        self.low_label = QLabel("Low")
+        self.low_label.setObjectName("colormapLowLabel")
+        self.low_label.setProperty("styleClass", "muted_text")
+        
+        self.preview_label = QLabel()
+        self.preview_label.setObjectName("colormapPreviewLabel")
+        self.preview_label.setMinimumHeight(40)
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        self.high_label = QLabel("High")
+        self.high_label.setObjectName("colormapHighLabel")
+        self.high_label.setProperty("styleClass", "muted_text")
+        
+        gradient_layout.addWidget(self.low_label)
+        gradient_layout.addWidget(self.preview_label, stretch=1)
+        gradient_layout.addWidget(self.high_label)
+        
+        preview_layout.addLayout(gradient_layout)
+        layout.addWidget(self.preview_container)
+        
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.setObjectName("colormapButtonBox")
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        
+        self.button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+        layout.addWidget(self.button_box)
 
         self._populate_colormaps()
 
@@ -72,17 +170,70 @@ class ColormapPickerDialog(QDialog):
                 self.list_widget.scrollToItem(valid_items[0])
         
         self._filter_items("")
+        self.search_input.setFocus()
+        self.search_input.installEventFilter(self)
+    
+    def eventFilter(self, source, event) -> bool:
+        if source is self.search_input and event.type() == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Down:
+                self.list_widget.setFocus()
+                if not self.list_widget.selectedItems():
+                    for i in range(self.list_widget.count()):
+                        item = self.list_widget.item(i)
+                        if not item.isHidden() and item.data(Qt.ItemDataRole.UserRole) != "header":
+                            self.list_widget.setCurrentItem(item)
+                            item.setSelected(True)
+                            break
+                return True
+        return super().eventFilter(source, event)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return):
+            if self.button_box.button(QDialogButtonBox.StandardButton.Ok).isEnabled():
+                self.accept()
+                return
+        super().keyPressEvent(event)
+    
+    def _on_item_selection_changed(self) -> None:
+        selected_items = self.list_widget.selectedItems()
+        has_valid_selection = bool(selected_items and selected_items[0].data(Qt.ItemDataRole.UserRole) != "header")
+        self.button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(has_valid_selection)
+        
+        if has_valid_selection:
+            colormap_name = selected_items[0].text()
+            is_reversed = self.reverse_check.isChecked()
+            is_grayscale = self.grayscale_check.isChecked()
+            discrete_steps = self.discrete_spinbox.value() if self.discrete_check.isChecked() else 0
+                        
+            
+            category = self.colormap_to_category.get(colormap_name, "Custom / Other")
+            self.category_label.setText(f"Category: {category}")
+            self.name_label.setText(colormap_name)
+            
+            if is_reversed:
+                self.low_label.setText("High")
+                self.high_label.setText("Low")
+            else:
+                self.low_label.setText("Low")
+                self.high_label.setText("High")
+            
+            preview_pixmap = self.generate_preview_pixmap(colormap_name, is_reversed, is_grayscale, discrete_steps)
+            self.preview_label.setPixmap(preview_pixmap)
+            self.preview_container.setHidden(False)
+        else:
+            self.preview_container.setHidden(True)
+            
     
     def accept(self) -> None:
         """An override to accept() to save a selected colormap to Settings"""
         # First we get the basename of the colormap
         # Without _r 
         # Use the list as reference?
-        base_name = None
         selected_items = self.list_widget.selectedItems()
         
-        if selected_items and selected_items[0].data(Qt.ItemDataRole.UserRole) != "header":
-            base_name = selected_items[0].text()
+        if selected_items and selected_items[0].data(Qt.ItemDataRole.UserRole) == "header":
+            return
+        base_name = selected_items[0].text()
         
         ## Save the basename to the setings history.
         # the reverse checkbox is a separate colormap
@@ -170,6 +321,7 @@ class ColormapPickerDialog(QDialog):
         self.list_widget.addItem(item)
 
     @staticmethod
+    @lru_cache(maxsize=128)
     def generate_icon(colormap_name) -> QIcon:
         """Method to generate an icon that matches the color gradient of the matplotlib colormaps"""
         width = 100
@@ -178,6 +330,7 @@ class ColormapPickerDialog(QDialog):
         pixmap.fill(Qt.GlobalColor.transparent)
 
         painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         try:
             colormap = matplotlib.colormaps[colormap_name]
@@ -202,11 +355,81 @@ class ColormapPickerDialog(QDialog):
             painter.end()
         return QIcon(pixmap)
 
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def generate_preview_pixmap(
+        colormap_name: str, 
+        is_reversed: bool = False, 
+        is_grayscale: bool = False, 
+        discrete_steps: int = 0
+        ) -> QPixmap:
+        
+        width = 380
+        height = 40
+        pixmap = QPixmap(width, height)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        try:
+            colormap = matplotlib.colormaps[colormap_name]
+            
+            if discrete_steps > 0:
+                band_width = width / discrete_steps
+                painter.setPen(Qt.PenStyle.NoPen)
+                
+                for i in range(discrete_steps):
+                    position = (i + 0.5) / discrete_steps
+                    color_pos = 1.0 - position if is_reversed else position
+                    rgba = colormap(color_pos)
+                    
+                    if is_grayscale:
+                        luminance = (0.299 * rgba[0]) + (0.587 * rgba[1]) + (0.114 * rgba[2])
+                        color = QColor.fromRgbF(luminance, luminance, luminance, 1.0)
+                    else:
+                        color = QColor.fromRgbF(rgba[0], rgba[1], rgba[2], 1.0)
+                        
+                    painter.setBrush(QBrush(color))
+                    painter.drawRect(int(i * band_width), 0, int(band_width) + 1, height)
+            else:
+                gradient = QLinearGradient(0, 0, width, 0)
+                steps = 100
+                for i in range(steps + 1):
+                    position = i / steps
+                    color_pos = 1.0 - position if is_reversed else position
+                    rgba = colormap(color_pos)
+                    
+                    if is_grayscale:
+                        luminance = (0.299 * rgba[0]) + (0.587 * rgba[1]) + (0.114 * rgba[2])
+                        color = QColor.fromRgbF(luminance, luminance, luminance, 1.0)
+                    else:
+                        color = QColor.fromRgbF(rgba[0], rgba[1], rgba[2], 1.0)
+                        
+                    gradient.setColorAt(position, color)
+
+                painter.setBrush(QBrush(gradient))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawRect(0, 0, width, height)
+                
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(Qt.PenStyle.SolidLine)
+            painter.drawRect(0, 0, width - 1, height - 1)
+
+        except Exception as error:
+            painter.setBrush(QBrush(Qt.GlobalColor.gray))
+            painter.drawRect(0, 0, width, height)
+            print(f"Failed to generate preview for {colormap_name}: {error}")
+        finally:
+            painter.end()
+        return pixmap
+
     def _filter_items(self, text: str) -> None:
         """Filters the items list. Show header with one or more childs"""
         search_text = text.lower()
         current_header = None
         header_has_visible_child = False
+        visible_colormap_count = 0
 
         for i in range(self.list_widget.count()):
             item = self.list_widget.item(i)
@@ -225,9 +448,12 @@ class ColormapPickerDialog(QDialog):
 
                 if is_match:
                     header_has_visible_child = True
+                    visible_colormap_count += 1
         
         if current_header:
             current_header.setHidden(not header_has_visible_child)
+        
+        self.empty_search_label.setHidden(visible_colormap_count > 0)
 
     def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
         """Handles double click"""
