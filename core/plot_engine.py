@@ -208,6 +208,12 @@ class PlotEngine:
     def clear_current_axis(self):
         """Clear the active subplot"""
         if self.current_ax:
+            if hasattr(self.current_ax, "_cbar_obj") and self.current_ax._cbar_obj is not None:
+                try:
+                    self.current_ax._cbar_obj.remove()
+                except Exception:
+                    pass
+                self.current_ax._cbar_obj = None
             if hasattr(self.current_ax, "_cax") and self.current_ax._cax is not None:
                 try:
                     if self.current_figure:
@@ -295,6 +301,36 @@ class PlotEngine:
             except Exception:
                 pass
             self.secondary_ax = None
+        if hasattr(self.current_ax, "_cbar_obj") and self.current_ax._cbar_obj is not None:
+            try:
+                self.current_ax._cbar_obj.remove()
+            except Exception:
+                pass
+            self.current_ax._cbar_obj = None
+        
+        if hasattr(self.current_ax, "_cax") and self.current_ax._cax is not None:
+            try:
+                if self.current_figure:
+                    self.current_figure.delaxes(self.current_ax._cax)
+                else:
+                    self.current_ax._cax.remove()
+            except Exception:
+                pass
+            self.current_ax._cax = None
+        
+        for coll in self.current_ax.collections:
+            if hasattr(self, "colobar") and coll.colorbar is not None:
+                try:
+                    coll.colarbar.remove()
+                except Exception:
+                    pass
+        
+        for img in self.current_ax.images:
+            if hasattr(self, "colorbar") and img.colobar is not None:
+                try:
+                    img.colorbar.remove()
+                except Exception:
+                    pass
         
         self.current_ax.clear()
         
@@ -638,16 +674,38 @@ class PlotEngine:
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     
-    def plot_heatmap(self, df: pd.DataFrame, **kwargs) -> None:
+    def plot_heatmap(self, df: pd.DataFrame, x: Optional[str] = None, y: Optional[str] = None, z: Optional[str] = None, **kwargs) -> None:
         """Create a heatmap using seaborn"""
         title = kwargs.pop('title', None)
         xlabel = kwargs.pop('xlabel', None)
         ylabel = kwargs.pop('ylabel', None)
         legend = kwargs.pop('legend', True)
         
-        # Ensure numeric data
-        numeric_df = df.select_dtypes(include=[np.number])
-        sns.heatmap(numeric_df.corr(), annot=True, ax=self.current_ax, picker=True, **kwargs)
+        valid_x = x and x in df.columns
+        valid_y = y and y in df.columns
+        valid_z = z and z in df.columns
+        
+        cbar_kws = kwargs.pop("cbar_kws", {})
+        
+        if valid_x and valid_y:
+            if valid_z:
+                plot_data = df.pivot_table(index=y, columns=x, values=z, aggfunc="mean")
+            else:
+                plot_data = pd.crosstab(df[y], df[x])
+            sns.heatmap(plot_data, annot=True, ax=self.current_ax, cbar=False, picker=True, **kwargs)
+            if xlabel is None:
+                xlabel = x
+            if ylabel is None:
+                ylabel = y
+        else:
+            numeric_df = df.select_dtypes(include=[np.number])
+            if numeric_df.empty:
+                raise ValueError("No numeric columns available")
+            sns.heatmap(numeric_df.corr(), annot=True, ax=self.current_ax, cbar=False, picker=True, **kwargs)
+        
+        if self.current_ax.collections:
+            cb = self.current_figure.colorbar(self.current_ax.collections[0], ax=self.current_ax, **cbar_kws)
+            self.current_ax._cbar_obj = cb
         
         self._set_labels(title, xlabel, ylabel, False, **kwargs)
     

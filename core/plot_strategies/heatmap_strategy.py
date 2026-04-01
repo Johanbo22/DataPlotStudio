@@ -12,5 +12,10 @@ class HeatmapPlotStrategy(BasePlotStrategy):
         # Heatmap ignores x/y, uses all numerical columns
         general_kwargs.update(plot_kwargs)
         plot_method = getattr(engine, engine.AVAILABLE_PLOTS["Heatmap"])
-        plot_method(plot_tab.data_handler.df, **general_kwargs)
+        
+        x = x_col if x_col and x_col != "None" else None
+        y = y_cols[0] if len(y_cols) > 0 else None
+        z = y_cols[1] if len(y_cols) > 1 else None
+        
+        plot_method(plot_tab.data_handler.df, x=x, y=y, z=z, **general_kwargs)
         return None
