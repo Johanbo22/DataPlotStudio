@@ -54,9 +54,11 @@ class LandingPage(QWidget):
     def init_ui(self):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # A left panel where most actions would be stored
-        actions_panel = QWidget()
+        actions_panel = QFrame()
+        actions_panel.setObjectName("landing_sidebar")
         actions_layout = QVBoxLayout(actions_panel)
         actions_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         actions_layout.setContentsMargins(20, 60, 20, 20)
@@ -80,6 +82,12 @@ class LandingPage(QWidget):
         actions_layout.addWidget(logo_label)
         actions_layout.addWidget(title_label)
         actions_layout.addWidget(subtitle_label)
+        
+        separator = QFrame()
+        separator.setObjectName("sidebar_separator")
+        separator.setFixedHeight(8)
+        actions_layout.addWidget(separator)
+        actions_layout.addSpacing(15)
 
         # Buttons
         button_width = 280
@@ -144,12 +152,11 @@ class LandingPage(QWidget):
         info_panel = QFrame()
         info_panel.setObjectName("InfoPanel")
         info_panel.setFrameShape(QFrame.Shape.StyledPanel)
-        info_panel.setObjectName("InfoPanel")
         
         shadow_effect = QGraphicsDropShadowEffect(self)
-        shadow_effect.setBlurRadius(20)
-        shadow_effect.setColor(QColor(0, 0, 0, 80))
-        shadow_effect.setOffset(0, 4)
+        shadow_effect.setBlurRadius(30)
+        shadow_effect.setColor(QColor(0, 0, 0, 35))
+        shadow_effect.setOffset(0, 8)
         info_panel.setGraphicsEffect(shadow_effect)
         
         info_layout = QVBoxLayout(info_panel)
@@ -211,7 +218,7 @@ class LandingPage(QWidget):
         
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(20, 40, 40, 40)
+        right_layout.setContentsMargins(50, 60, 50, 60)
         right_layout.addWidget(whats_new_scroll_area)
 
         layout.addWidget(actions_panel, 4)

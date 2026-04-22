@@ -12,7 +12,7 @@ from core.subset_manager import SubsetManager
 
 from ui.animations import AggregationAnimation, CalculationAnimation, DataFilterAnimation, DataTypeChangeAnimation, DropColumnAnimation, MeltDataAnimation, OutlierDetectionAnimation, RenameColumnAnimation, DropMissingValueAnimation, FillMissingValuesAnimation, RemoveRowAnimation, ResetToOriginalStateAnimation, FailedAnimation, NewDataFrameAnimation, FileImportAnimation, SubsetDataAnimation
 
-from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog, ColumnReorderDialog, RollingWindowDialog, ShiftDataDialog, PercentageChangeDialog
+from ui.dialogs import RenameColumnDialog,FilterAdvancedDialog,AggregationDialog,FillMissingDialog,HelpDialog,MeltDialog,OutlierDetectionDialog,PivotDialog,MergeDialog,BinningDialog,ComputedColumnDialog,SubsetDataViewer,SubsetManagerDialog,ProgressDialog,SplitColumnDialog,RegexReplaceDialog,AppendDialog, MacroPreviewDialog, ColumnReorderDialog, RollingWindowDialog, ShiftDataDialog, PercentageChangeDialog, CreateDatasetDialog
 
 from ui.workers import GoogleSheetsImportWorker, AutoCreateSubsetsWorker
 
@@ -42,29 +42,33 @@ class DataTabController:
     def view(self) -> "DataTab":
         return self._view()
     
-    def create_new_dataset(self):
+    def create_new_dataset(self) -> None:
         """Creates a new empty dataset"""
         try:
-            rows, ok = QInputDialog.getInt(
-                self.view, "New Dataset", "Number of Rows:", 10, 1, 1000000
-            )
-            if not ok:
+            
+            dialog = CreateDatasetDialog(self.view)
+            if not dialog.exec():
                 return
             
-            columns, ok = QInputDialog.getInt(
-                self.view, "New Dataset", "Number of Columns:", 3, 1, 1000
-            )
-            if not ok:
-                return
+            params = dialog.get_dataset_parameters()
+            rows = params["rows"]
+            columns = params["columns"]
+            column_names = params["column_names"]
+            fill_value = params["fill_value"]
+            
+            fill_display = "Missing Values (NaN)" if fill_value == "NaN" else f"'{fill_value}'"
             
             confirm = QMessageBox.question(
                 self.view,
-                "Confirm Create",
-                "This will clear the current dataset and create a new empty dataset. Continue?",
+                "Confirm Dataset Generation",
+                f"Initialize a new dataset with the following schema?\n\n"
+                f"• Dimensions: {rows:,} rows x {columns:,} columns\n"
+                f"• Initial Data State: {fill_display}\n\n"
+                f"Warning: This will clear the current data view entirely.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if confirm == QMessageBox.StandardButton.Yes:
-                self.data_handler.create_empty_dataframe(rows, columns)
+                self.data_handler.create_empty_dataframe(rows, columns, column_names=column_names, fill_value=fill_value)
                 self.view.refresh_data_view()
                 self.status_bar.log(f"Created new dataset: ({rows}x{columns})", "SUCCESS")
                 

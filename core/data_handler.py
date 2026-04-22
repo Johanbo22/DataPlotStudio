@@ -2,8 +2,7 @@ import atexit
 import pandas as pd
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, Callable, List
-
-from sqlalchemy.util import b
+import numpy as np
 
 from core.data_io_manager import DataIOManager
 from core.data_mutator import DataMutator, DataOperation, FillMethod, StatisticalTest
@@ -156,14 +155,19 @@ class DataHandler:
         
         return self.import_google_sheets(sheet_id=params["sheet_id"], sheet_name=params["sheet_name"], delimiter=params["delimiter"], decimal=params["decimal"], thousands=thousands_param, gid=params["gid"])
     
-    def create_empty_dataframe(self, rows: int, columns: int, column_names: List[str] = None) -> pd.DataFrame:
+    def create_empty_dataframe(self, rows: int, columns: int, column_names: List[str] = None, fill_value: Any = None) -> pd.DataFrame:
         try:
             self._save_state()
             
             if not column_names:
                 column_names = [f"Column_{i + 1}" for i in range(columns)]
             
-            self.df = pd.DataFrame(index=range(rows), columns=column_names)
+            if fill_value is None or (isinstance(fill_value, str) and fill_value == "NaN"):
+                data = np.full((rows, len(column_names)), np.nan)
+            else:
+                data = np.full((rows, len(column_names)), fill_value)
+            
+            self.df = pd.DataFrame(data, index=range(rows), columns=column_names)
             self.original_df = self.df.copy()
             
             self._io.file_path = None
