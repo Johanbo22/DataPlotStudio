@@ -1,14 +1,18 @@
 import pandas as pd
-from typing import Optional, Dict, Any, List, Callable
+import json
+from typing import Optional, Dict, Any, List, Callable, Union
+from pathlib import Path
+
 
 class HistoryManager:
     """
     Manages data states such as undo/redo, memory enforcements, and operation logging
     """
     def __init__(self) -> None:
-        self.undo_stack: List[tuple[pd.DataFrame, list]] = []
-        self.redo_stack: List[tuple[pd.DataFrame, list]] = []
+        self.undo_stack: List[tuple[pd.DataFrame, list, Optional[tuple[str, bool]]]] = []
+        self.redo_stack: List[tuple[pd.DataFrame, list, Optional[tuple[str, bool]]]] = []
         self.max_history_memory_bytes: int = 1024 * 1024 * 1024
+        self.current_memory_bytes: int = 0
         self.memory_update_callback: Optional[Callable[[int, int], None]] = None
         self.operation_log: List[Dict[str, Any]] = []
         self.sort_state: Optional[tuple[str, bool]] = None
@@ -18,34 +22,22 @@ class HistoryManager:
         if dataframe is None or dataframe.empty:
             return 0
         return dataframe.memory_usage(deep=False).sum()
+    
     def _notify_memory_usage(self) -> None:
         """Compute total history memory and fire the registered callback."""
         if self.memory_update_callback:
-            undo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack)
-            redo_bytes = sum(self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack)
-            total_bytes = undo_bytes + redo_bytes
-            self.memory_update_callback(total_bytes, self.max_history_memory_bytes)
+            self.memory_update_callback(self.current_memory_bytes, self.max_history_memory_bytes)
     
     def _enforce_history_memory_limits(self) -> None:
         """
         Drop the oldest undo states (then redo states) until total history
         memory is within self.max_history_memory_bytes.
         """
-        while True:
-            undo_bytes = sum(
-                self._get_dataframe_memory_bytes(state[0]) for state in self.undo_stack
-            )
-            redo_bytes = sum(
-                self._get_dataframe_memory_bytes(state[0]) for state in self.redo_stack
-            )
-            total_bytes = undo_bytes + redo_bytes
-
-            if total_bytes <= self.max_history_memory_bytes:
-                break
-
+        while self.current_memory_bytes > self.max_history_memory_bytes:
             if self.undo_stack:
                 dropped_state = self.undo_stack.pop(0)
                 dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
+                self.current_memory_bytes -= dropped_bytes
                 print(
                     f"DEBUG: Memory limit reached. Dropped oldest undo state "
                     f"freeing {dropped_bytes / (1024 * 1024):.2f} MB."
@@ -53,6 +45,7 @@ class HistoryManager:
             elif self.redo_stack:
                 dropped_state = self.redo_stack.pop(0)
                 dropped_bytes = self._get_dataframe_memory_bytes(dropped_state[0])
+                self.current_memory_bytes -= dropped_bytes
                 print(
                     f"DEBUG: Memory limit reached. Dropped oldest redo state "
                     f"freeing {dropped_bytes / (1024 * 1024):.2f} MB."
@@ -62,17 +55,22 @@ class HistoryManager:
 
         self._notify_memory_usage()
     
-    def save_state(self, df: pd.DataFrame) -> None:
+    def save_state(self, dataframe: pd.DataFrame) -> None:
         """Push a deep copy of *df* onto the undo stack and clear the redo stack."""
-        if df is not None:
-            self.undo_stack.append(
-                (df.copy(), self.operation_log.copy(), self.sort_state)
-            )
+        if dataframe is not None:
+            state_memory = self._get_dataframe_memory_bytes(dataframe)
+            
+            self.undo_stack.append((dataframe.copy(), self.operation_log.copy(), self.sort_state))
+            self.current_memory_bytes += state_memory
+            
+            for state in self.redo_stack:
+                self.current_memory_bytes -= self._get_dataframe_memory_bytes(state[0])
             self.redo_stack.clear()
+            
             self._enforce_history_memory_limits()
             print(f"DEBUG: State saved. Undo stack size: {len(self.undo_stack)}")
     
-    def undo(self, current_df: pd.DataFrame) -> tuple[Optional[pd.DataFrame], bool]:
+    def undo(self, current_dataframe: pd.DataFrame) -> tuple[Optional[pd.DataFrame], bool]:
         """
         Pop the most-recent undo state.
 
@@ -83,25 +81,28 @@ class HistoryManager:
         if not self.undo_stack:
             return None, False
 
-        if current_df is not None:
-            self.redo_stack.append(
-                (current_df.copy(), self.operation_log.copy(), self.sort_state)
-            )
+        if current_dataframe is not None:
+            state_memory = self._get_dataframe_memory_bytes(current_dataframe)
+            self.redo_stack.append((current_dataframe.copy(), self.operation_log.copy(), self.sort_state))
+            self.current_memory_bytes += state_memory
 
         state = self.undo_stack.pop()
+        self.current_memory_bytes -= self._get_dataframe_memory_bytes(state[0])
+        
         if len(state) == 3:
             restored_df, restored_log, restored_sort = state
             self.sort_state = restored_sort
         else:
-            restored_df, restored_log = state
+            restored_df, restored_log = state[:2]
             self.sort_state = None
-
+        
         self.operation_log = restored_log.copy()
+        
         self._enforce_history_memory_limits()
         print(f"DEBUG: Undo complete. Remaining stack: {len(self.undo_stack)}")
         return restored_df.copy(), True
 
-    def redo(self, current_df: pd.DataFrame) -> tuple[Optional[pd.DataFrame], bool]:
+    def redo(self, current_dataframe: pd.DataFrame) -> tuple[Optional[pd.DataFrame], bool]:
         """
         Pop the most-recent redo state.
 
@@ -112,20 +113,23 @@ class HistoryManager:
         if not self.redo_stack:
             return None, False
 
-        if current_df is not None:
-            self.undo_stack.append(
-                (current_df.copy(), self.operation_log.copy(), self.sort_state)
-            )
+        if current_dataframe is not None:
+            state_memory = self._get_dataframe_memory_bytes(current_dataframe)
+            self.undo_stack.append((current_dataframe.copy(), self.operation_log.copy(), self.sort_state))
+            self.current_memory_bytes += state_memory
 
         state = self.redo_stack.pop()
+        self.current_memory_bytes -= self._get_dataframe_memory_bytes(state[0])
+        
         if len(state) == 3:
             restored_df, restored_log, restored_sort = state
             self.sort_state = restored_sort
         else:
-            restored_df, restored_log = state
+            restored_df, restored_log = state[:2]
             self.sort_state = None
-
+        
         self.operation_log = restored_log.copy()
+        
         self._enforce_history_memory_limits()
         print(f"DEBUG: Redo complete. Remaining stack: {len(self.redo_stack)}")
         return restored_df.copy(), True
@@ -142,6 +146,7 @@ class HistoryManager:
         self.redo_stack.clear()
         self.operation_log.clear()
         self.sort_state = None
+        self.current_memory_bytes = 0
         self._notify_memory_usage()
         
     def get_history_info(self) -> Dict[str, Any]:
@@ -164,28 +169,29 @@ class HistoryManager:
 
         return {"history": full_log + redo_operations, "current_index": current_index}
     
-    def export_pipeline_macro(self, filepath: str) -> None:
+    def export_pipeline_macro(self, filepath: Union[str, Path]) -> None:
         """
         Write the current operation_log to a filepath as a JSON macro
         """
-        import json
         if not self.operation_log:
             raise ValueError("No data operations to save")
-        with open(filepath, "w") as macro_file:
+        
+        target_path = Path(filepath)
+        with target_path.open("w", encoding="utf-8") as macro_file:
             json.dump(self.operation_log, macro_file, indent=4)
     
-    def load_pipeline_macro(self, macro_source: "str | list") -> list:
+    def load_pipeline_macro(self, macro_source: Union[str, Path, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
         """
         Load a macro from a JSON filepath or as pre parsed list
         """
-        import json
-        if isinstance(macro_source, str):
-            with open(macro_source, "r") as file:
+        if isinstance(macro_source, (str, Path)):
+            source_path = Path(macro_source)
+            with source_path.open("r", encoding="utf-8") as file:
                 operations = json.load(file)
         elif isinstance(macro_source, list):
             operations = macro_source
         else:
-            raise ValueError( "macro_source must be a filepath string or a list of operations" )
+            raise ValueError( "macro_source must be a filepath string, Path or a list of operations" )
         if not isinstance(operations, list):
             raise ValueError( "Invalid file format. Expected a list of operations in JSON format")
         return operations
