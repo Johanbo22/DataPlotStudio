@@ -19,7 +19,6 @@ from .AboutDialog import AboutDialog
 from .OutlierDetectionDialog import OutlierDetectionDialog
 from .LogHistoryPopup import LogHistoryPopup
 from .TableCustomizationDialog import TableCustomizationDialog
-from .SearchResultsDialog import SearchResultsDialog
 from .PivotDialog import PivotDialog
 from .MergeDialog import MergeDialog
 from .BinningDialog import BinningDialog
@@ -36,8 +35,10 @@ from .HelpExplorerDialog import HelpExplorerDialog
 from .RollingWindowDialog import RollingWindowDialog
 from .ShiftDataDialog import ShiftDataDialog
 from .PercentageChangeDialog import PercentageChangeDialog
+from .CreateDatasetDialog import CreateDatasetDialog
 
 __all__ = [
+    "CreateDatasetDialog",
     "ShiftDataDialog",
     "PercentageChangeDialog",
     "RollingWindowDialog",
@@ -69,7 +70,6 @@ __all__ = [
     "OutlierDetectionDialog",
     "LogHistoryPopup",
     "TableCustomizationDialog",
-    "SearchResultsDialog",
     "PivotDialog",
     "MergeDialog",
     "BinningDialog",
