@@ -627,7 +627,7 @@ class DataTab(QWidget):
     def _update_history_list(self) -> None:
         """Updates the history list"""
         panel = self.operations_panel
-        if not hasattr(panel, "history_list") or not hasattr(panel.history_tab, "history_list"):
+        if not hasattr(panel, "history_tab") or not hasattr(panel.history_tab, "history_list"):
             return
         
         panel.history_tab.history_list.clear()
@@ -694,7 +694,7 @@ class DataTab(QWidget):
         if panel.history_tab.history_list.count() > 0:
             panel.history_tab.history_list.scrollToItem(panel.history_tab.history_list.item(current_index))
         
-        if hasattr(panel, "pipeline_graph"):
+        if hasattr(panel.history_tab, "pipeline_graph"):
             panel.history_tab.pipeline_graph.build_graph(history_operations, current_index, self._format_operation_text)
     
     def _get_icon_for_operation(self, operation_type: str) -> QIcon:
