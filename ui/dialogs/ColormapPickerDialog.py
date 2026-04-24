@@ -57,6 +57,7 @@ class ColormapPickerDialog(QDialog):
         self.reverse_check = DataPlotStudioCheckBox("Reverse colormap")
         self.reverse_check.setObjectName("colormapReverseCheckBox")
         self.reverse_check.setToolTip("Flips the gradient direction")
+        self.reverse_check.toggled.connect(self._on_item_selection_changed)
         self.reverse_check.setChecked(is_reversed)
         
         self.grayscale_check = DataPlotStudioCheckBox("Grayscale test")

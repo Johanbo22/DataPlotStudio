@@ -52,7 +52,7 @@ class MainWindow(QWidget):
         self._connect_subset_managers()
         
         # Setup of autosave timers
-        self.autosave_interval_ms: int = 5 * 60 * 100
+        self.autosave_interval_ms: int = 5 * 60 * 1000
         self.autosave_timer = QTimer()
         self.autosave_timer.timeout.connect(self._perform_autosave)
         self.autosave_timer.start(self.autosave_interval_ms)
@@ -208,7 +208,12 @@ class MainWindow(QWidget):
     def open_project(self) -> None:
         """Open an existing project"""
         if self._confirm_discard_changes():
-            filepath = self.project_manager.open_project_dialog()
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Open Project",
+                "",
+                f"DataPlotStudio Portable Files (*{self.project_manager.PROJECT_EXTENSION});;All Files (*)"
+            )
             if filepath:
                 try:
                     project = self.project_manager.load_project(filepath)
@@ -256,7 +261,17 @@ class MainWindow(QWidget):
         try:
             project_data = self.get_project_data()
 
-            filepath = None if force_dialog else self.project_manager.get_current_project_path()
+            filepath = self.project_manager.get_current_project_path()
+            if force_dialog or not filepath:
+                filepath, _ = QFileDialog.getSaveFileName(
+                    self,
+                    "Save Project Package",
+                    "",
+                    f"DataPlotStudio Portable Files (*{self.project_manager.PROJECT_EXTENSION});;All Files (*)"
+                )
+                if not filepath:
+                    return False
+                
             saved_path = self.project_manager.save_project(project_data, filepath)
 
             self.saved_animation = SavedProjectAnimation("Project Saved", parent=None)
@@ -654,11 +669,6 @@ class MainWindow(QWidget):
             config = dialog.get_export_config()
             if config["filepath"]:
                 try:
-                    # self.data_handler.export_data(config["filepath"], format=config["format"], include_index=config.get("include_index", False))
-                    # self.status_bar.log(f"Exported data to {config['filepath']}")
-                    # self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
-                    # self.export_animation.start(target_widget=self)
-                    # QMessageBox.information(self, "Success", f"Data exported to {config["filepath"]}")
                     self.status_bar.log(f"Export complete to {config['filepath']}")
                     if not config.get("to_clipboard", False):
                         self.export_animation = ExportFileAnimation(parent=self, message="Export complete", extension=config["format"])
@@ -727,6 +737,7 @@ class MainWindow(QWidget):
     def zoom_in(self) -> None:
         if self.tabs.currentWidget() != self.plot_tab:
             QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
+            return
         
         fig = self.plot_tab.plot_engine.current_figure
         w, h = fig.get_size_inches()
@@ -737,6 +748,7 @@ class MainWindow(QWidget):
     def zoom_out(self) -> None:
         if self.tabs.currentWidget() != self.plot_tab:
             QMessageBox.information(self, "Info", "Zoom only works in Plot Studio")
+            return
         
         fig = self.plot_tab.plot_engine.current_figure
         w, h = fig.get_size_inches()

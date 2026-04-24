@@ -144,13 +144,6 @@ class DataHandler:
             raise ValueError("No history of a Google Sheets import")
         
         params = self._io.get_google_sheets_refresh_params()
-        print("DEBUG refresh_google_sheets: Using stored parameters:")
-        print(f"  - Sheet ID: {params['sheet_id']}")
-        print(f"  - Sheet Name: {params['sheet_name']}")
-        print(f"  - Delimiter: '{params['delimiter']}'")
-        print(f"  - Decimal: '{params['decimal']}'")
-        print(f"  - Thousands: {repr(params['thousands'])}")
-        
         thousands_param = (None if params["thousands"] in [None, "None", ""] else params["thousands"])
         
         return self.import_google_sheets(sheet_id=params["sheet_id"], sheet_name=params["sheet_name"], delimiter=params["delimiter"], decimal=params["decimal"], thousands=thousands_param, gid=params["gid"])
@@ -241,14 +234,11 @@ class DataHandler:
         if self.original_df is not None:
             self._reset_history()
             self.df = self.original_df.copy()
-            print("DEBUG: Data reset. Stacks cleared")
     
     def jump_to_history_index(self, target_index: int) -> None:
         current_index = len(self._history.undo_stack)
         if target_index == current_index:
             return
-
-        print(f"DEBUG: Going from index: {current_index} to {target_index}")
 
         if target_index < current_index:
             for _ in range(current_index - target_index):
@@ -337,10 +327,6 @@ class DataHandler:
                         value=kwargs.get("value"),
                     )
                 elif current_op_type in ["merge", "concatenate", "export_google_sheets"]:
-                    print(
-                        f"Skipping '{current_op_type}' macro step "
-                        f"(requires external state/datasets)."
-                    )
                     continue
                 else:
                     self.clean_data(action=current_op_type, **kwargs)

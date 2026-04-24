@@ -2,8 +2,9 @@ import traceback
 from typing import TYPE_CHECKING
 import weakref
 
-from PyQt6.QtWidgets import QMessageBox, QInputDialog, QListWidgetItem, QApplication, QFileDialog, QDialog
+from PyQt6.QtWidgets import QMessageBox, QInputDialog, QApplication, QFileDialog, QDialog
 from PyQt6.QtCore import Qt, QThreadPool
+import pandas as pd
 
 from core.data_handler import DataHandler
 from core.aggregation_manager import AggregationManager
@@ -1243,7 +1244,6 @@ class DataTabController:
             except Exception as PivotDataError:
                 QMessageBox.critical(self.view, "Error", f"Failed to pivot data:\n{str(PivotDataError)}")
                 self.status_bar.log(f"Pivot Failed: {str(PivotDataError)}", "ERROR")
-                print(PivotDataError)
 
     def open_merge_dialog(self):
         """Opens the dialog for merging data"""
@@ -1568,9 +1568,7 @@ class DataTabController:
                     try:
                         self.subset_manager.apply_subset(self.data_handler.df, name)
                     except Exception as ApplySubsetError:
-                        print(
-                            f"Warning: Could not apply subset {name}: {str(ApplySubsetError)}"
-                        )
+                        self.status_bar.log(f"Warning: Could not apply subset {name}: {str(ApplySubsetError)}", "WARNING")
 
             for name in self.subset_manager.list_subsets():
                 subset = self.subset_manager.get_subset(name)
@@ -1580,7 +1578,7 @@ class DataTabController:
                 subset_data.append((name, row_text))
             self.view.operations_panel.update_active_subsets_list(subset_data)
         except Exception as RefreshSubsetListError:
-            print(f"Warning: Could not refresh subset list: {RefreshSubsetListError}")
+            self.status_bar.log(f"Warning: Could not refresh subset list: {RefreshSubsetListError}", "ERROR")
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -1961,7 +1959,6 @@ class DataTabController:
             return
         
         col1, col2 = selected_columns
-        import pandas as pd
         # verify that both columns are numeric
         if not pd.api.types.is_numeric_dtype(self.data_handler.df[col1]) or not pd.api.types.is_numeric_dtype(self.data_handler.df[col2]):
             QMessageBox.warning(

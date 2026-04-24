@@ -1,7 +1,6 @@
 # core/project_manager.py
 from pathlib import Path
 from typing import Dict, Any, Optional
-from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
 from resources.version import APPLICATION_VERSION, PROJECT_EXTENSION, DATA_EXTENSION
 import zipfile
@@ -38,21 +37,14 @@ class ProjectManager:
             "operations": []
         }
     
-    def save_project(self, project_data: Dict[str, Any], filepath: Optional[str] = None) -> str:
+    def save_project(self, project_data: Dict[str, Any], filepath: str) -> str:
         
-        if filepath is None:
-            filepath, _ = QFileDialog.getSaveFileName(
-                None,
-                "Save Project Package",
-                "",
-                f"DataPlotStudio Portable Files (*{self.PROJECT_EXTENSION});;All Files (*)"
-            )
-            if not filepath:
-                raise Exception(f"Save cancelled")
+        if not filepath:
+            raise ValueError("A valid filepath must be provided to save the project")
         
         filepath_obj = Path(filepath)
-        if not filepath_obj.suffix == ".dps":
-            filepath_obj = filepath_obj.with_suffix(".dps")
+        if not filepath_obj.suffix == self.PROJECT_EXTENSION:
+            filepath_obj = filepath_obj.with_suffix(self.PROJECT_EXTENSION)
         try:
             self._create_dps_package(project_data, filepath_obj)
             self.current_project_path = filepath_obj
@@ -198,15 +190,6 @@ class ProjectManager:
         
         except Exception as LoadProjectError:
             raise Exception(f"Error extracting files to load project: {LoadProjectError}")
-    
-    def open_project_dialog(self) -> Optional[str]:
-        filepath, _ = QFileDialog.getOpenFileName(
-            None,
-            "Open Project",
-            "",
-            f"DataPlotStudio Portable Files (*{self.PROJECT_EXTENSION});;All Files (*)"
-        )
-        return filepath if filepath else None
     
     def get_current_project_path(self) -> Optional[str]:
         return str(self.current_project_path) if self.current_project_path else None

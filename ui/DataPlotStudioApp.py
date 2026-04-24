@@ -41,10 +41,11 @@ class DataPlotStudio(QMainWindow):
         self.status_bar_widget.log("DataPlotStudio started", "INFO")
 
         # Load settings
+        app_settings = QSettings("DataPlotStudio", "UserSettings")
         self.settings = {
-            "dark_mode": False,
-            "font_family": "Consolas",
-            "font_size": 10
+            "dark_mode": app_settings.value("dark_mode", False, type=bool),
+            "font_family": app_settings.value("font_family", "Consolas", type=str),
+            "font_size": app_settings.value("font_size", 10, type=int)
         }
         self.apply_settings(self.settings)
 
@@ -203,7 +204,7 @@ class DataPlotStudio(QMainWindow):
             settings.setValue("geometry", self.saveGeometry())
             settings.setValue("windowState", self.saveState())
         
-        if hasattr(self.main_widget, "unsaved_changes") and self.main_widget._unsaved_changes:
+        if hasattr(self.main_widget, "unsaved_changes") and self.main_widget.unsaved_changes:
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
@@ -232,6 +233,10 @@ class DataPlotStudio(QMainWindow):
         if dialog.exec():
             new_settings = dialog.get_settings()
             self.settings.update(new_settings)
+            
+            app_settings = QSettings("DataPlotStudio", "UserSettings")
+            for key, value in self.settings.items():
+                app_settings.setValue(key, value)
             self.apply_settings(self.settings)
             self.status_bar_widget.log("Settings updated", "INFO")
     
@@ -258,18 +263,7 @@ class DataPlotStudio(QMainWindow):
                     if css_file.name not in ["style.css", "dark_theme.css"]:
                         light_stylesheets.append(f"ui/styles/{css_file.name}")
             base_css = self.load_stylesheets(light_stylesheets)
-        
-        different_css = base_css + f"""
-            QWidget {{
-                font-family: "{settings['font_family']}";
-                font-size: {settings['font_size']}pt;
-            }}
-            QGroupBox {{
-                font-weight: bold;
-                font-size: {settings['font_size'] + 2}pt; 
-            }}
-        """
-        QApplication.instance().setStyleSheet(different_css)
+        QApplication.instance().setStyleSheet(base_css)
     
     def get_dark_theme(self):
         return self.load_stylesheets("ui/styles/dark_theme.css")

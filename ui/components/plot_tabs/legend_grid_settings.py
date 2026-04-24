@@ -210,7 +210,7 @@ class LegendGridSettingstab(QWidget):
         layout.addWidget(self.global_grid_group)
 
         # Independent grids
-        self.independent_grid_check = DataPlotStudioToggleSwitch("Enable Independent Axis Customization")
+        self.independent_grid_check = DataPlotStudioToggleSwitch("Enable Independent Gridline Customization")
         self.independent_grid_check.setChecked(False)
         layout.addWidget(self.independent_grid_check)
 

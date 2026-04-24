@@ -24,7 +24,7 @@ import numpy as np
 from scipy import stats
 from scipy.stats import t as t_dist
 import matplotlib.dates as mdates
-from matplotlib.ticker import MaxNLocator, FuncFormatter
+from matplotlib.ticker import MaxNLocator, FuncFormatter, AutoMinorLocator, NullLocator
 import seaborn as sns
 import matplotlib.pyplot as plt
 import traceback
@@ -323,9 +323,13 @@ class PlotTab(PlotTabUI):
         self.view.x_auto_check.stateChanged.connect(lambda: self.view.x_max_spin.setEnabled(not self.view.x_auto_check.isChecked()))
         self.view.y_auto_check.stateChanged.connect(lambda: self.view.y_min_spin.setEnabled(not self.view.y_auto_check.isChecked()))
         self.view.y_auto_check.stateChanged.connect(lambda: self.view.y_max_spin.setEnabled(not self.view.y_auto_check.isChecked()))
+        
         self.view.custom_datetime_check.stateChanged.connect(self.toggle_datetime_format)
+        self.view.custom_datetime_check.stateChanged.connect(self.on_data_changed)
         self.view.x_datetime_format_combo.currentTextChanged.connect(self.on_x_datetime_format_changed)
         self.view.y_datetime_format_combo.currentTextChanged.connect(self.on_y_datetime_format_changed)
+        self.view.x_custom_datetime_input.textChanged.connect(self.on_data_changed)
+        self.view.y_custom_datetime_format_input.textChanged.connect(self.on_data_changed)
         
         self.view.flip_axes_check.stateChanged.connect(self.on_data_changed)
         self.view.x_auto_check.stateChanged.connect(self.on_style_changed)
@@ -346,10 +350,14 @@ class PlotTab(PlotTabUI):
         self.view.y_major_tick_direction_combo.currentTextChanged.connect(self.on_style_changed)
         self.view.x_major_tick_width_spin.valueChanged.connect(self.on_style_changed)
         self.view.y_major_tick_width_spin.valueChanged.connect(self.on_style_changed)
-        self.view.x_scale_combo.currentTextChanged.connect(self.on_style_changed)
-        self.view.y_scale_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_scale_combo.currentTextChanged.connect(self.on_data_changed)
+        self.view.y_scale_combo.currentTextChanged.connect(self.on_data_changed)
         self.view.x_display_units_combo.currentTextChanged.connect(self.on_style_changed)
         self.view.y_display_units_combo.currentTextChanged.connect(self.on_style_changed)
+        self.view.x_top_axis_check.stateChanged.connect(self.on_style_changed)
+        self.view.x_invert_axis_check.stateChanged.connect(self.on_style_changed)
+        self.view.y_invert_axis_check.stateChanged.connect(self.on_style_changed)
+        
         
     def _connect_legend_grid_tab_signals(self) -> None:
         """Connect signals for the Legend and Grid tab"""
@@ -1061,11 +1069,11 @@ class PlotTab(PlotTabUI):
     def refresh_subset_list(self):
         """Refresh the list of available subsets"""
         if not self.subset_manager:
-            print("Warning: Subset manager not available")
+            self.status_bar.log("Warning: Subset manager not available", "WARNING")
             return
         
         if not hasattr(self, 'subset_combo'):
-            print("Warning: Subset combo not initialized")
+            self.status_bar.log("Warning: Subset combobox not initialized", "WARNING")
             return
         
         try:
@@ -2090,15 +2098,17 @@ class PlotTab(PlotTabUI):
         #enable the custom input if custom is selected from the box
         if is_enabled:
             self.view.x_custom_datetime_input.setEnabled(self.view.x_datetime_format_combo.currentText() == "Custom")
-            self.view.x_custom_datetime_input.setEnabled(self.view.y_datetime_format_combo.currentText() == "Custom")
+            self.view.y_custom_datetime_format_input.setEnabled(self.view.y_datetime_format_combo.currentText() == "Custom")
     
     def on_x_datetime_format_changed(self, text) -> None:
         """Handle x-axis format change"""
         self.view.x_custom_datetime_input.setEnabled(text == "Custom")
+        self.on_data_changed()
     
     def on_y_datetime_format_changed(self, text) -> None:
         """Handle y-axis format change"""
         self.view.x_custom_datetime_input.setEnabled(text == "Custom")
+        self.on_data_changed()
     
     def generate_plot(self):
         """Generate plot based on current settings"""
@@ -2118,7 +2128,14 @@ class PlotTab(PlotTabUI):
             return
         
         plot_type = self.current_plot_type_name
+        axes_flipped = self.view.flip_axes_check.isChecked()
+        x_scale, y_scale = self.view.x_scale_combo.currentText(), self.view.y_scale_combo.currentText()
 
+        x_dt_fmt = self.view.x_datetime_format_combo.currentText() if self.view.custom_datetime_check.isChecked() else None
+        y_dt_fmt = self.view.y_datetime_format_combo.currentText() if self.view.custom_datetime_check.isChecked() else None
+        x_dt_custom = self.view.x_custom_datetime_input.text() if x_dt_fmt == "Custom" else None
+        y_dt_custom = self.view.y_custom_datetime_format_input.text() if y_dt_fmt == "Custom" else None
+        
         data_params = [
             id(active_df),
             active_df.shape,
@@ -2126,7 +2143,14 @@ class PlotTab(PlotTabUI):
             x_col,
             tuple(y_cols) if y_cols else None,
             subset_name,
-            quick_filter
+            quick_filter,
+            axes_flipped,
+            x_scale,
+            y_scale,
+            x_dt_fmt,
+            y_dt_fmt,
+            x_dt_custom,
+            y_dt_custom
         ]
         current_data_signature = tuple(data_params)
         if (hasattr(self, "_last_data_signature") and self._last_data_signature == current_data_signature and hasattr(self, "_cached_active_df") and self._cached_active_df is not None):
@@ -2577,8 +2601,8 @@ class PlotTab(PlotTabUI):
             y_locator_name = type(self.plot_engine.current_ax.yaxis.get_major_locator()).__name__
             if y_locator_name in allowed_locators:
                 self.plot_engine.current_ax.yaxis.set_major_locator(MaxNLocator(nbins=self.view.y_max_ticks_spin.value()))
-        except:
-            pass
+        except Exception as TickError:
+            self.status_bar.log(f"Could not apply tick formatting: {str(tick_err)}", "WARNING")
 
         self._update_progress(progress_dialog, 70, "Applying formatting")
 
@@ -3040,7 +3064,6 @@ class PlotTab(PlotTabUI):
             
             # X-Axis Minor
             if self.view.x_minor_grid_check.isChecked():
-                self.plot_engine.current_ax.minorticks_on()
                 style = grid_style_map.get(self.view.x_minor_grid_style_combo.currentText(), ":")
                 self.plot_engine.current_ax.grid(
                     visible=True, which="minor", axis="x",
@@ -3064,7 +3087,6 @@ class PlotTab(PlotTabUI):
 
             # Y-Axis Minor
             if self.view.y_minor_grid_check.isChecked():
-                self.plot_engine.current_ax.minorticks_on()
                 style = grid_style_map.get(self.view.y_minor_grid_style_combo.currentText(), ":")
                 self.plot_engine.current_ax.grid(
                     visible=True, which="minor", axis="y",
@@ -3080,9 +3102,6 @@ class PlotTab(PlotTabUI):
             #  GLOBAL 
             which_type = self.view.grid_which_type_combo.currentText()
             axis = self.view.grid_axis_combo.currentText()
-
-            if which_type in ["minor", "both"]:
-                self.plot_engine.current_ax.minorticks_on()
             
             # Apply global settings
             self.plot_engine.current_ax.grid(
@@ -3122,23 +3141,63 @@ class PlotTab(PlotTabUI):
 
 
         #minor tickmarks
+        needs_x_minor = self.view.x_show_minor_ticks_check.isChecked()
+        needs_y_minor = self.view.y_show_minor_ticks_check.isChecked()
+        
+        if self.view.grid_check.isChecked():
+            if self.view.independent_grid_check.isChecked():
+                if self.view.x_minor_grid_check.isChecked(): 
+                    needs_x_minor = True
+                if self.view.y_minor_grid_check.isChecked(): 
+                    needs_y_minor = True
+            else:
+                which = self.view.grid_which_type_combo.currentText()
+                axis = self.view.grid_axis_combo.currentText()
+                if which in ["minor", "both"]:
+                    if axis in ["x", "both"]: 
+                        needs_x_minor = True
+                    if axis in ["y", "both"]: 
+                        needs_y_minor = True
+
+        try:
+            if needs_x_minor:
+                if type(self.plot_engine.current_ax.xaxis.get_major_locator()).__name__ in ["AutoLocator", "MaxNLocator"]:
+                    self.plot_engine.current_ax.xaxis.set_minor_locator(AutoMinorLocator())
+            else:
+                self.plot_engine.current_ax.xaxis.set_minor_locator(NullLocator())
+                
+            if needs_y_minor:
+                if type(self.plot_engine.current_ax.yaxis.get_major_locator()).__name__ in ["AutoLocator", "MaxNLocator"]:
+                    self.plot_engine.current_ax.yaxis.set_minor_locator(AutoMinorLocator())
+            else:
+                self.plot_engine.current_ax.yaxis.set_minor_locator(NullLocator())
+        except Exception as LocatorErr:
+            self.status_bar.log(f"Warning mapping minor locators: {str(LocatorErr)}", "WARNING")
+
+        #minor tickmarks styling
         if self.view.x_show_minor_ticks_check.isChecked():
-            self.plot_engine.current_ax.minorticks_on()
             self.plot_engine.current_ax.tick_params(
                 axis="x",
                 which="minor",
+                bottom=True,
+                top=self.view.x_top_axis_check.isChecked(),
                 direction=self.view.x_minor_tick_direction_combo.currentText(),
                 width=self.view.x_minor_tick_width_spin.value()
             )
+        else:
+            self.plot_engine.current_ax.tick_params(axis="x", which="minor", bottom=False, top=False)
         
         if self.view.y_show_minor_ticks_check.isChecked():
-            self.plot_engine.current_ax.minorticks_on()
             self.plot_engine.current_ax.tick_params(
                 axis="y",
                 which="minor",
+                left=True,
+                right=False,
                 direction=self.view.y_minor_tick_direction_combo.currentText(),
                 width=self.view.y_minor_tick_width_spin.value()
             )
+        else:
+            self.plot_engine.current_ax.tick_params(axis="y", which="minor", left=False, right=False)
         
         # add formatts if user specified
         try:
@@ -3156,6 +3215,40 @@ class PlotTab(PlotTabUI):
         except Exception as ApplyDisplayUnitsError:
             self.status_bar.log(f"Failed to apply display units: {str(ApplyDisplayUnitsError)}", "WARNING")
 
+        if self.view.custom_datetime_check.isChecked():
+            format_map = {
+                "YYYY-MM-DD": "%Y-%m-%d",
+                "MM/DD/YYYY": "%m/%d/%Y",
+                "DD/MM/YYYY": "%d/%m/%Y",
+                "YYYY/MM/DD": "%Y/%m/%d",
+                "DD-MM-YYYY": "%d-%m-%Y",
+                "Mon DD, YYYY": "%b %d, %Y",
+                "DD Mon YYYY": "%d %b %Y",
+                "YYYY-MM": "%Y-%m",
+                "MM-YYYY": "%m-%Y",
+                "HH:MM:SS": "%H:%M:%S",
+                "YYYY-MM-DD HH:MM": "%Y-%m-%d %H:%M"
+            }
+            
+            x_fmt_name = self.view.x_datetime_format_combo.currentText()
+            if x_fmt_name and x_fmt_name != "None":
+                fmt_str = self.view.x_custom_datetime_input.text() if x_fmt_name == "Custom" else format_map.get(x_fmt_name)
+                if fmt_str:
+                    try:
+                        self.plot_engine.current_ax.xaxis.set_major_formatter(mdates.DateFormatter(fmt_str))
+                        self.plot_engine.current_ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=15))
+                    except Exception:
+                        pass
+                        
+            y_fmt_name = self.view.y_datetime_format_combo.currentText()
+            if y_fmt_name and y_fmt_name != "None":
+                fmt_str = self.view.y_custom_datetime_format_input.text() if y_fmt_name == "Custom" else format_map.get(y_fmt_name)
+                if fmt_str:
+                    try:
+                        self.plot_engine.current_ax.yaxis.set_major_formatter(mdates.DateFormatter(fmt_str))
+                        self.plot_engine.current_ax.yaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=15))
+                    except Exception:
+                        pass
         
         #rotation
         plt.setp(self.plot_engine.current_ax.get_xticklabels(), rotation=self.view.xtick_rotation_spin.value())

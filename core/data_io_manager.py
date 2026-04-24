@@ -110,11 +110,9 @@ class DataIOManager:
                     ).arrow()
                     return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
-                    print(f"DEBUG: DuckDB failed: {str(DuckDBError)}. Using native pandas")
                     try:
                         return pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
                     except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
                         return pd.read_csv(
                             filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip"
                         )
@@ -129,14 +127,9 @@ class DataIOManager:
                     ).arrow()
                     return arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as DuckDBError:
-                    print(
-                        f"DEBUG: DuckDB failed: ({str(DuckDBError)}), "
-                        f"falling back to pandas pyarrow engine"
-                    )
                     try:
                         return pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
                     except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
                         return pd.read_csv(
                             filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip"
                         )
@@ -182,14 +175,9 @@ class DataIOManager:
                     ).arrow()
                     df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
-                    print(
-                        f"DEBUG: DuckDB failed ({str(ImportFileError)}), "
-                        f"falling back to pandas pyarrow engine"
-                    )
                     try:
                         df = pd.read_csv(filepath, engine="pyarrow", dtype_backend="pyarrow")
                     except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
                         df = pd.read_csv(
                             filepath, engine="c", dtype_backend="pyarrow", on_bad_lines="skip"
                         )
@@ -204,14 +192,9 @@ class DataIOManager:
                     ).arrow()
                     df = arrow_table.to_pandas(types_mapper=pd.ArrowDtype)
                 except Exception as ImportFileError:
-                    print(
-                        f"DEBUG: DuckDB failed: ({str(ImportFileError)}), "
-                        f"falling back to pandas pyarrow engine"
-                    )
                     try:
                         df = pd.read_csv(filepath, sep="\t", engine="pyarrow", dtype_backend="pyarrow")
                     except Exception as PyArrowError:
-                        print(f"DEBUG: PyArrow engine failed: {str(PyArrowError)}. Using standard C engine")
                         df = pd.read_csv(
                             filepath, sep="\t", engine="c", dtype_backend="pyarrow", on_bad_lines="skip"
                         )
@@ -282,12 +265,6 @@ class DataIOManager:
             self.last_gsheet_gid = gid
             self.last_db_connection_string = None
             self.last_db_query = None
-
-            print("DEBUG data_io_manager.py->import_google_sheets: Storing parameters:")
-            print(f"  - Delimiter: '{self.last_gsheet_delimiter}'")
-            print(f"  - Decimal: '{self.last_gsheet_decimal}'")
-            print(f"  - Thousands: {repr(self.last_gsheet_thousands)}")
-            print(f"  - GID: {self.last_gsheet_gid}")
 
             base_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
             params = {"tqx": "out:csv"}
