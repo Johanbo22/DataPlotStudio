@@ -3,9 +3,7 @@ from ui.LineNumberArea import LineNumberArea
 
 from PyQt6.QtCore import QRect, Qt, QStringListModel
 from PyQt6.QtGui import QColor, QFont, QPainter, QTextCursor, QTextFormat, QAction, QKeySequence, QKeyEvent
-from PyQt6.QtWidgets import QPlainTextEdit, QTextEdit, QCompleter, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QWidget
-
-
+from PyQt6.QtWidgets import QPlainTextEdit, QTextEdit, QCompleter, QMessageBox
 
 class CodeEditor(QPlainTextEdit):
     """Custom texedit widget that serves as a code editor"""
@@ -107,6 +105,7 @@ class CodeEditor(QPlainTextEdit):
         self.completer.setWidget(self)
         self.completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.completer.popup().setObjectName("interactive_console_popup")
         self.completer.activated.connect(self.insertCompletion)
         
         try:
@@ -171,6 +170,8 @@ class CodeEditor(QPlainTextEdit):
         
         cursor_rect = self.cursorRect()
         cursor_rect.setWidth(self.completer.popup().sizeHintForColumn(0) + self.completer.popup().verticalScrollBar().sizeHint().width())
+        cursor_rect.translate(0, 6)
+        
         self.completer.complete(cursor_rect)
     
     def showFindReplaceDialog(self):
