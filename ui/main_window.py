@@ -11,6 +11,7 @@ from core.subset_manager import SubsetManager
 from ui.workers import FileImportWorker, GoogleSheetsImportWorker
 from ui.data_tab import DataTab
 from ui.plot_tab import PlotTab
+from ui.widgets.AutosaveIndicator import AutosaveIndicator
 from core.data_handler import DataHandler
 from core.project_manager import ProjectManager
 from core.code_exporter import CodeExporter
@@ -51,10 +52,11 @@ class MainWindow(QWidget):
         self._connect_subset_managers()
         
         # Setup of autosave timers
-        self.autosave_interval_ms: int = 5 * 60 * 1000
+        self.autosave_interval_ms: int = 5 * 60 * 100
         self.autosave_timer = QTimer()
         self.autosave_timer.timeout.connect(self._perform_autosave)
         self.autosave_timer.start(self.autosave_interval_ms)
+        self.autosave_indicator = AutosaveIndicator(self)
         
         QTimer.singleShot(0, self._check_recovery)
     
@@ -125,6 +127,8 @@ class MainWindow(QWidget):
         Executes the autosave if there are unsaved changes
         """
         if self.unsaved_changes and self.data_handler.df is not None:
+            self.autosave_indicator.show_indicator()
+            QApplication.processEvents()
             self.project_manager.auto_save(self.get_project_data())
     
     @pyqtSlot()
@@ -333,6 +337,11 @@ class MainWindow(QWidget):
             event.accept()
         else:
             event.ignore()
+    
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "autosave_indicator") and self.autosave_indicator.isVisible():
+            self.autosave_indicator.move(self.rect().width() - self.autosave_indicator.width() - 20, 20)
     
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle the drag event for filre imports"""

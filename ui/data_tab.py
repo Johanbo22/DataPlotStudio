@@ -134,6 +134,7 @@ class DataTab(QWidget):
         self.data_view_widget = QWidget()
         data_view_layout = QVBoxLayout(self.data_view_widget)
         data_view_layout.setContentsMargins(0, 0, 0, 0)
+        data_view_layout.setSpacing(6)
         self.left_stack.addWidget(self.data_view_widget)
 
         # data toolbar
@@ -311,6 +312,7 @@ class DataTab(QWidget):
 
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(0, 0, 0, 0)
 
         self.operations_panel = DataOperationsPanel(parent=self, controller=self.controller)
 

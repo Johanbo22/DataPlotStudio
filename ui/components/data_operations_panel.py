@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout
 from PyQt6.QtGui import QIcon
 
 from typing import TYPE_CHECKING, Optional
@@ -25,6 +25,10 @@ class DataOperationsPanel(QWidget):
     def init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.setContentsMargins(0, 0, 0, 0)
         
         reset_button = DataPlotStudioButton(
             "Reset to Original",
@@ -35,7 +39,8 @@ class DataOperationsPanel(QWidget):
         )
         reset_button.setIcon(IconBuilder.build(IconType.Redo))
         reset_button.clicked.connect(self.controller.reset_data)
-        layout.addWidget(reset_button)
+        top_bar_layout.addWidget(reset_button)
+        layout.addLayout(top_bar_layout)
         
         self.ops_tabs = QTabWidget()
         self.ops_tabs.setObjectName("ops_tabs")
