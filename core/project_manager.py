@@ -114,16 +114,26 @@ class ProjectManager:
         Serializes the current state of the autosave file
         to prevent data loss
         """
+        temp_autosave_path: Path = self.autosave_path.with_suffix(".dps.tmp")
         try:
-            self._create_dps_package(project_data, self.autosave_path)
-        except OSError:
-            pass
+            self._create_dps_package(project_data, temp_autosave_path)
+            temp_autosave_path.replace(self.autosave_path)
+        except Exception:
+            if temp_autosave_path.exists():
+                try:
+                    temp_autosave_path.unlink()
+                except OSError:
+                    pass
     
     def has_autosave(self) -> bool:
         return self.autosave_path.exists() and self.autosave_path.is_file()
 
     def recover_autosave(self) -> Dict[str, Any]:
-        return self.load_project(str(self.autosave_path))
+        try:
+            return self.load_project(str(self.autosave_path))
+        except Exception as RecoveryError:
+            self.cleanup_autosave()
+            raise Exception(f"Auto-save file is corrupted and has bee deleted: {RecoveryError}")
 
     def cleanup_autosave(self) -> None:
         """

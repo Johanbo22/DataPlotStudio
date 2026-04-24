@@ -1,3 +1,7 @@
+<div align="center">
+    <img src="resources/images/logo.png" alt="DataPlotStudio Logo" width="200" height="200">
+</div>
+
 # DataPlotStudio
 
 DataPlotStudio is a GUI implementation of the Matplotlib plotting and pandas data analytics capabilities. 

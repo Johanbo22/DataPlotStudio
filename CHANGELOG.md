@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## v0.1.2 [Prerelease]
+### Added
+- Search bar inside the Data Explorer
+- Worker to handle searching in a background thread
+- BaseTab class with methods to set up a scrollable layout and a Hbox layout(button+icon)
+- IconTypes for Search, Close, Up/DownArrow
+- Added an method to build the DataPlotStudioIcon
+- Added more animations to help_animations folder
+- Added preview of colormaps with grayscaling test, discrete test and updated performance of filtering colormaps
+- Added indeterminate states to ProgressBar
+- Added credits for libraries used in AboutDialog
+- Added a bug report link to AboutDialog
+- Added an Autosave indicator that spawns every 5 minutes
+
+### Changed
+- Refactored DataOperationsPanel to separate classes for each tab.
+- Creating a new dataset opens a more interactive dialog rather than the old input dialog.
+- Redesigned the Create a new dataset dialog
+- Updated ProgressBar visuals
+- Highlighting rules for python syntax highlighting
+- Updated CodeEditor completer instructions
+
+### Fixed
+- Fixed issue with correlation matricies calculation for Heatmaps
+- Fixed issue with ColobarObjects on canvas retaining position upon deletion.
+- Fixed and issue where clearing the redo stack would not free up allocated memory correctly.
+- Fixed a bug where history items and operations were not being rendered.
+- Fixed a bug where cancelling an operation where the ProgressBar is visible would not cancel the operation properly.
+- Fixed CodeEditors completer being overlapped with the typed text
+- Fixed a misalignment issue between the Data table and Data operations panel control widgets
+
+### Removed
+- SearchResultDialog will be removed as searching happens in the data table instead of in a dialog
+- Methods in DataTab to search for items in the data table, linked to the old method of searching data.
+- Methods relating to Plotly forgotten to be removed
+
 ## v0.1.1 [Prerelease]
 ### Added
 - Caching logic (_compile_rules) to pre-process conditional formatting dictionary constraints into native Python execution tuples.

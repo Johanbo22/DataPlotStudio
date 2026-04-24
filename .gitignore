@@ -20,3 +20,5 @@ whats_new_template.html
 .pytest_cache
 review_file.md
 macro.json
+generate_ico.py
+DataPlotStudio.ico
