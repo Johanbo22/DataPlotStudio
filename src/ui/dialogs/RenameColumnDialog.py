@@ -2,8 +2,9 @@ import keyword
 from enum import Enum, auto
 from typing import List, Optional, Tuple
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
+from PyQt6.QtCore import QAbstractAnimation, QPropertyAnimation, Qt
+from PyQt6.QtWidgets import QDialog, QFormLayout, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QLineEdit, QPushButton, \
+    QVBoxLayout
 
 from src.core.global_signals import ToastLevel, global_signals
 
@@ -23,13 +24,15 @@ class RenameColumnDialog(QDialog):
         self.setWindowTitle("Rename Column")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.setModal(True)
-        self.resize(400, 150)
+        self.resize(420, 180)
 
         self.column_name: str = column_name
         self.existing_columns: List[str] = existing_columns if existing_columns else []
         self.new_name_input: Optional[QLineEdit] = None
         self.error_label: Optional[QLabel] = None
         self.rename_button: Optional[QPushButton] = None
+        self.error_animation: Optional[QPropertyAnimation] = None
+
         self.init_ui()
 
     def init_ui(self):
@@ -37,40 +40,50 @@ class RenameColumnDialog(QDialog):
         layout = QVBoxLayout()
         layout.setObjectName("rename_dialog_main_layout")
 
+        form_layout = QFormLayout()
+        form_layout.setSpacing(10)
+
         # Old name display
-        old_name_layout = QHBoxLayout()
         current_name_label = QLabel("Current Name:")
         current_name_label.setObjectName("current_name_label")
-        old_name_layout.addWidget(current_name_label)
 
         old_name_display = QLineEdit()
         old_name_display.setObjectName("current_name_display")
         old_name_display.setText(self.column_name)
         old_name_display.setReadOnly(True)
-        old_name_layout.addWidget(old_name_display)
-        layout.addLayout(old_name_layout)
+        form_layout.addRow(current_name_label, old_name_display)
 
         # New name input
-        new_name_layout = QHBoxLayout()
         new_name_label = QLabel("New Name:")
         new_name_label.setObjectName("new_name_label")
-        new_name_layout.addWidget(new_name_label)
 
         self.new_name_input = QLineEdit()
         self.new_name_input.setObjectName("new_name_input")
         self.new_name_input.setPlaceholderText(f"Enter new name for '{self.column_name}'")
         self.new_name_input.setMinimumWidth(200)
         self.new_name_input.textChanged.connect(self.on_name_text_changed)
-        new_name_layout.addWidget(self.new_name_input)
-        layout.addLayout(new_name_layout)
+        form_layout.addRow(new_name_label, self.new_name_input)
+
+        layout.addLayout(form_layout)
 
         # Error display label
         self.error_label = QLabel("")
         self.error_label.setObjectName("rename_error_label")
-        self.error_label.setVisible(False)
-        layout.addWidget(self.error_label)
 
-        layout.addSpacing(20)
+        opacity_effect = QGraphicsOpacityEffect(self.error_label)
+        start_opacity: float = 0.0
+        opacity_effect.setOpacity(start_opacity)
+        self.error_label.setGraphicsEffect(opacity_effect)
+
+        self.error_animation = QPropertyAnimation(opacity_effect, b"opacity")
+        animation_duration: int = 200
+        end_opacity: float = 1.0
+        self.error_animation.setDuration(animation_duration)
+        self.error_animation.setStartValue(start_opacity)
+        self.error_animation.setEndValue(end_opacity)
+
+        layout.addWidget(self.error_label)
+        layout.addSpacing(10)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -91,6 +104,7 @@ class RenameColumnDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+        self.new_name_input.selectAll()
         self.new_name_input.setFocus()
         self.new_name_input.returnPressed.connect(self.rename_button.click)
 
@@ -108,6 +122,20 @@ class RenameColumnDialog(QDialog):
 
         return ValidationState.Valid, ""
 
+    def _animate_error(self, show: bool, message: str = "") -> None:
+        """Fade the error label in or out based on the validation state"""
+        if not self.error_label or not self.error_animation:
+            return
+
+        if show:
+            self.error_label.setText(message)
+            self.error_animation.setDirection(QAbstractAnimation.Direction.Forward)
+        else:
+            self.error_animation.setDirection(QAbstractAnimation.Direction.Backward)
+
+        if self.error_animation.state() != QAbstractAnimation.State.Running:
+            self.error_animation.start()
+
     def on_name_text_changed(self, text: str) -> None:
         if not self.error_label or not self.rename_button or not self.new_name_input:
             return
@@ -116,12 +144,11 @@ class RenameColumnDialog(QDialog):
         state, error_message = self.validate_name(clean_text)
 
         if state == ValidationState.Valid:
-            self.error_label.setVisible(False)
+            self._animate_error(False)
             self.rename_button.setEnabled(True)
             self.new_name_input.setProperty("inputState", "valid")
         else:
-            self.error_label.setText(error_message)
-            self.error_label.setVisible(True)
+            self._animate_error(True, error_message)
             self.rename_button.setEnabled(False)
             self.new_name_input.setProperty("inputState", "error")
 
