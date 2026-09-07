@@ -251,6 +251,8 @@ class AnnotationManager:
         arrow_y = self.view.annotations_tab.arrow_y_spin.value()
 
         self.view.annotations_tab.annotation_locator.set_arrow_enabled(has_arrow)
+        self.view.annotations_tab.annotation_locator.set_arrow_preset(
+            self.view.annotations_tab.arrow_preset_combo.currentText())
         self.view.annotations_tab.annotation_locator.set_text_color(QColor(self.annotation_color))
         self.view.annotations_tab.annotation_locator.set_text_pos(x, y)
         if has_arrow:
@@ -347,6 +349,7 @@ class AnnotationManager:
             self._toggle_arrow_inputs(has_arrow)
 
             self.view.annotations_tab.annotation_locator.set_arrow_enabled(has_arrow)
+            self.view.annotations_tab.annotation_locator.set_arrow_preset(ann.get("arrow_preset", "Subtle Pointer"))
             self.view.annotations_tab.annotation_locator.set_text_color(QColor(self.annotation_color))
             self.view.annotations_tab.annotation_locator.set_text_pos(ann.get("x", 0.5), ann.get("y", 0.5))
             if has_arrow:
